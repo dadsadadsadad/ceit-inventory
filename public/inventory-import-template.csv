@@ -1,0 +1,2 @@
+name,category,location,room number,asset tag,serial number,type,quantity,status,condition,manufacturer,model,purchase date,warranty end,is computer,operating system,os version,processor,memory GB,storage GB,storage type,MAC address,IP address,notes
+Sample Laboratory PC,Computer Equipment,CEIT Laboratory 1,101,CEIT-PC-001,SAMPLE-SERIAL-001,asset,1,ok,good,Example Manufacturer,Example Model,2026-01-15,2029-01-15,yes,Windows 11 Pro,24H2,Intel Core i5,16,512,NVMe SSD,00:11:22:33:44:55,192.168.1.50,Replace or remove this example row before importing.

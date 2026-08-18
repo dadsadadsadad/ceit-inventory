@@ -1,37 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 
 import { ThemeToggle } from "./components/theme-toggle";
 import "./globals.css";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-    title: "CEIT Inventory",
-    description: "Inventory management dashboard for CEIT resources.",
+  title: "CEIT Inventory",
+  description: "Inventory management dashboard for CEIT resources.",
 };
 
-// Root wrapper shared by every page in the app.
-export default function RootLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    return (
-        <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-            <body>
-                {children}
-                {/* Global dark/light mode button. */}
-                <ThemeToggle />
-            </body>
-        </html>
-    );
+const themeBootstrap = `try{const theme=localStorage.getItem("ceit-theme");if(theme==="light"||theme==="dark")document.documentElement.dataset.theme=theme}catch{}`;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Script id="ceit-theme-bootstrap" strategy="beforeInteractive">{themeBootstrap}</Script>
+        <a href="#main-content" className="skip-link">Skip to content</a>
+        <div id="main-content">{children}</div>
+        <ThemeToggle />
+      </body>
+    </html>
+  );
 }

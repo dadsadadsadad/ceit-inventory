@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ItemType {
+  ASSET
+  SUPPLY
+}
+
+enum ItemStatus {
+  OK
+  WORKING
+  DEPLOYED
+  DEFECTIVE
+  NOT_TESTED
+  RETIRED
+  LOST
+}
+
+enum ItemCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  FOR_REPAIR
+}
+
+enum AuditAction {
+  CREATED
+  UPDATED
+  MOVED
+  STATUS_CHANGED
+  SCANNED
+}
+
+enum BorrowStatus {
+  REQUESTED
+  BORROWED
+  RETURNED
+  DECLINED
+}
+
+enum UserRole {
+  ADMINISTRATOR
+  CUSTODIAN
+  STAFF
+  VIEWER
+}
+
+model Location {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String
+  building    String?
+  floor       String?
+  roomNumber  String?
+  description String?
+  isActive    Boolean         @default(true)
+  items       InventoryItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([building, roomNumber])
+  @@index([name])
+}
+
+model Category {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String          @unique
+  description String?
+  isActive    Boolean         @default(true)
+  items       InventoryItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model InventoryItem {
+  id              String           @id @default(uuid()) @db.Uuid
+  assetTag        String?          @unique
+  qrCode          String           @unique @default(cuid())
+  name            String
+  description     String?
+  itemType        ItemType         @default(ASSET)
+  quantity        Int              @default(1)
+  status          ItemStatus       @default(OK)
+  condition       ItemCondition    @default(GOOD)
+  manufacturer    String?
+  model           String?
+  serialNumber    String?          @unique
+  purchaseDate    DateTime?
+  warrantyEndsAt  DateTime?
+  notes           String?
+  imageUrl        String?
+  categoryId      String           @db.Uuid
+  locationId      String           @db.Uuid
+  category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  location        Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  computer        Computer?
+  auditEvents     InventoryAudit[]
+  borrowRequests  BorrowRequest[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([locationId, status])
+  @@index([categoryId])
+  @@index([itemType])
+}
+
+model Computer {
+  id              String             @id @default(uuid()) @db.Uuid
+  itemId          String             @unique @db.Uuid
+  operatingSystem String?
+  osVersion       String?
+  processor       String?
+  memoryGb        Int?
+  storageGb       Int?
+  storageType     String?
+  graphics        String?
+  macAddress      String?            @unique
+  ipAddress       String?
+  lastCheckedAt   DateTime?
+  item            InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  software        ComputerSoftware[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model ComputerSoftware {
+  id               String    @id @default(uuid()) @db.Uuid
+  computerId       String    @db.Uuid
+  name             String
+  version          String?
+  licenseKeyHint   String?
+  licenseExpiresAt DateTime?
+  installedAt      DateTime?
+  computer         Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([computerId, name])
+}
+
+model InventoryAudit {
+  id        String        @id @default(uuid()) @db.Uuid
+  itemId    String        @db.Uuid
+  action    AuditAction
+  summary   String
+  actorId   String?
+  actorName String?
+  metadata  Json?
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@index([itemId, createdAt])
+}
+
+model BorrowRequest {
+  id                 String       @id @default(uuid()) @db.Uuid
+  inventoryItemId    String       @db.Uuid
+  borrowerName       String
+  studentNumber      String
+  contact            String
+  purpose            String
+  requestedQuantity  Int          @default(1)
+  expectedReturnDate DateTime
+  status             BorrowStatus @default(REQUESTED)
+  staffNotes         String?
+  requestedAt        DateTime     @default(now())
+  processedAt        DateTime?
+  returnedAt         DateTime?
+  processedByName    String?
+  returnedByName     String?
+  inventoryItem      InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([inventoryItemId, status])
+  @@index([status, requestedAt])
+}
+
+model User {
+  id                   String        @id @default(uuid()) @db.Uuid
+  email                String        @unique
+  passwordHash         String
+  role                 UserRole      @default(VIEWER)
+  isActive             Boolean       @default(true)
+  failedSignInCount    Int           @default(0)
+  firstFailedSignInAt  DateTime?
+  lockedUntil          DateTime?
+  sessions             UserSession[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model UserSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DashboardNote {
+  id            String   @id @default(uuid()) @db.Uuid
+  scope         String   @unique @default("shared-dashboard")
+  content       String   @default("")
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
