@@ -1,0 +1,133 @@
+"use client";
+
+import type { FormEvent } from "react";
+import type { IScannerControls } from "@zxing/browser";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
+const qrCodePattern = /^[a-zA-Z0-9_-]{8,128}$/;
+
+function codeFromScan(value: string) {
+  const trimmed = value.trim();
+  if (qrCodePattern.test(trimmed)) return trimmed;
+
+  try {
+    const url = new URL(trimmed);
+    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin : window.location.origin;
+    if (url.origin !== window.location.origin && url.origin !== configuredOrigin) return "";
+    const segments = url.pathname.split("/").filter(Boolean);
+    const code = segments.length === 2 && segments[0] === "scan" ? decodeURIComponent(segments[1]) : "";
+    return qrCodePattern.test(code) ? code : "";
+  } catch {
+    return "";
+  }
+}
+
+export function QrScanner() {
+  const router = useRouter();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
+  const attemptRef = useRef(0);
+  const mountedRef = useRef(true);
+  const [message, setMessage] = useState("Camera is off.");
+  const [isScanning, setIsScanning] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+
+  function stopCamera(updateState = true) {
+    attemptRef.current += 1;
+    try {
+      controlsRef.current?.stop();
+    } catch {
+    }
+    controlsRef.current = null;
+    const stream = videoRef.current?.srcObject;
+    if (stream instanceof MediaStream) stream.getTracks().forEach((track) => track.stop());
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (updateState && mountedRef.current) {
+      setIsScanning(false);
+      setIsStarting(false);
+    }
+  }
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    stopCamera(false);
+  }, []);
+
+  function openRecord(value: string) {
+    const code = codeFromScan(value);
+    if (!code) {
+      setMessage("This is not a CEIT inventory QR label. Enter the code printed under the QR image instead.");
+      return;
+    }
+    stopCamera();
+    router.push(`/scan/${encodeURIComponent(code)}`);
+  }
+
+  async function startCamera() {
+    if (isStarting || isScanning || !navigator.mediaDevices?.getUserMedia || !videoRef.current) {
+      if (!navigator.mediaDevices?.getUserMedia) setMessage("Camera access is unavailable on this device. Use the printed code instead.");
+      return;
+    }
+
+    const attempt = ++attemptRef.current;
+    setIsStarting(true);
+    setMessage("Starting camera…");
+    try {
+      const { BrowserQRCodeReader } = await import("@zxing/browser");
+      const reader = new BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 250, delayBetweenScanSuccess: 750 });
+      const controls = await reader.decodeFromConstraints(
+        { audio: false, video: { facingMode: { ideal: "environment" } } },
+        videoRef.current,
+        (result, _error, activeControls) => {
+          if (attempt !== attemptRef.current) {
+            activeControls.stop();
+            return;
+          }
+          if (result) openRecord(result.getText());
+        },
+      );
+
+      if (attempt !== attemptRef.current || !mountedRef.current) {
+        controls.stop();
+        return;
+      }
+      controlsRef.current = controls;
+      setMessage("Point the camera at a CEIT inventory QR label.");
+      setIsScanning(true);
+    } catch {
+      if (attempt === attemptRef.current && mountedRef.current) {
+        stopCamera();
+        setMessage("Camera permission was not granted or the camera could not start. You can enter the QR code manually.");
+      }
+    } finally {
+      if (attempt === attemptRef.current && mountedRef.current) setIsStarting(false);
+    }
+  }
+
+  function submitManualCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    openRecord(manualCode);
+  }
+
+  return (
+    <section className="card rounded-lg p-5 sm:p-7">
+      <div className="overflow-hidden rounded-lg bg-black"><video ref={videoRef} muted playsInline aria-label="QR scanner camera preview" className="aspect-[3/4] w-full object-cover" /></div>
+      <p className="muted mt-4 text-sm leading-6" aria-live="polite">{message}</p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button type="button" onClick={isScanning ? () => stopCamera() : startCamera} disabled={isStarting} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
+          {isStarting ? "Starting camera…" : isScanning ? "Stop camera" : "Use camera"}
+        </button>
+      </div>
+      <div className="divider mt-6 border-t pt-5">
+        <h2 className="text-sm font-semibold">Manual lookup</h2>
+        <form onSubmit={submitManualCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <label className="sr-only" htmlFor="manual-qr-code">QR code</label>
+          <input id="manual-qr-code" value={manualCode} onChange={(event) => setManualCode(event.target.value)} maxLength={128} className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm" placeholder="Paste or type QR code" />
+          <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Open item</button>
+        </form>
+      </div>
+    </section>
+  );
+}

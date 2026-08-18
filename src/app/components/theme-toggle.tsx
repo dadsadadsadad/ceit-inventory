@@ -7,7 +7,6 @@ type Theme = "dark" | "light";
 
 const storageKey = "ceit-theme";
 
-// Reads the saved theme from the browser.
 function getThemeSnapshot(): Theme {
   if (typeof window === "undefined") {
     return "dark";
@@ -16,7 +15,6 @@ function getThemeSnapshot(): Theme {
   return window.localStorage.getItem(storageKey) === "light" ? "light" : "dark";
 }
 
-// Lets React update this button when the theme changes.
 function subscribeToThemeChanges(callback: () => void) {
   window.addEventListener("storage", callback);
   window.addEventListener("ceit-theme-change", callback);
@@ -30,14 +28,12 @@ function subscribeToThemeChanges(callback: () => void) {
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribeToThemeChanges, getThemeSnapshot, () => "dark");
 
-  // Applies the selected theme to the whole document.
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
   const nextTheme = theme === "dark" ? "light" : "dark";
 
-  // Saves the next theme and tells the UI to refresh.
   function toggleTheme() {
     document.documentElement.dataset.theme = nextTheme;
     window.localStorage.setItem(storageKey, nextTheme);
