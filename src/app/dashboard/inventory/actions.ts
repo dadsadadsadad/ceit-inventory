@@ -4,7 +4,7 @@ import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prism
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdministrator, requireWriteAccess } from "@/lib/supabase/server";
+import { requireAdministrator, requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const statuses = Object.values(ItemStatus);
@@ -34,6 +34,14 @@ function requiredId(formData: FormData, key: string) {
   return value;
 }
 
+function selectedIds(formData: FormData) {
+  const ids = [...new Set(formData.getAll("itemIds").map((value) => String(value).trim()).filter(Boolean))];
+  if (!ids.length) throw new Error("Select at least one inventory record.");
+  if (ids.length > 100) throw new Error("Update up to 100 inventory records at a time.");
+  if (ids.some((id) => !uuidPattern.test(id))) throw new Error("One or more selected inventory records are invalid.");
+  return ids;
+}
+
 function identifier(formData: FormData, key: string) {
   return optionalText(formData, key, 255)?.toUpperCase() ?? null;
 }
@@ -61,18 +69,6 @@ function optionalDate(formData: FormData, key: string) {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) throw new Error(`${key} is not a valid date.`);
   return parsed;
-}
-
-function optionalImageUrl(formData: FormData) {
-  const value = optionalText(formData, "imageUrl", 2_000);
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error();
-    return url.toString();
-  } catch {
-    throw new Error("imageUrl must be an http or https URL.");
-  }
 }
 
 function computerData(formData: FormData, includeCheckTime = false) {
@@ -108,6 +104,7 @@ async function requireComputerForItem(itemId: string, computerId: string) {
 function refreshInventoryViews(itemId?: string) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/inventory");
+  revalidatePath("/dashboard/reports");
   if (itemId) revalidatePath(`/dashboard/inventory/${itemId}`);
 }
 
@@ -143,8 +140,6 @@ export async function createInventoryItem(formData: FormData) {
       model: optionalText(formData, "model", 255),
       serialNumber: identifier(formData, "serialNumber"),
       purchaseDate: optionalDate(formData, "purchaseDate"),
-      warrantyEndsAt: optionalDate(formData, "warrantyEndsAt"),
-      imageUrl: optionalImageUrl(formData),
       notes: optionalText(formData, "notes", 5_000),
       computer: isComputer ? { create: { ...computerData(formData), lastCheckedAt: new Date() } } : undefined,
       auditEvents: { create: { action: AuditAction.CREATED, summary: "Inventory item created.", actorId: actor.id, actorName: actor.email, metadata: { source: "manual" } } },
@@ -180,8 +175,6 @@ export async function updateInventoryItem(formData: FormData) {
     model: optionalText(formData, "model", 255),
     serialNumber: identifier(formData, "serialNumber"),
     purchaseDate: optionalDate(formData, "purchaseDate"),
-    warrantyEndsAt: optionalDate(formData, "warrantyEndsAt"),
-    imageUrl: optionalImageUrl(formData),
     notes: optionalText(formData, "notes", 5_000),
   };
   const changes = updatedFields(existing, data);
@@ -226,6 +219,51 @@ export async function retireInventoryItem(formData: FormData) {
   redirect(`/dashboard/inventory/${id}`);
 }
 
+export async function bulkUpdateInventory(formData: FormData) {
+  const actor = await requireWriteAccess();
+  const ids = selectedIds(formData);
+  const action = requiredText(formData, "bulkAction", 64);
+  let data: Prisma.InventoryItemUncheckedUpdateManyInput;
+  let summary: string;
+
+  if (action === "location") {
+    const locationId = requiredId(formData, "bulkLocationId");
+    const location = await prisma.location.findFirst({ where: { id: locationId, isActive: true }, select: { name: true } });
+    if (!location) throw new Error("Choose an active location.");
+    data = { locationId };
+    summary = `Bulk update: moved to ${location.name}.`;
+  } else if (action === "status") {
+    const status = enumValue(formData, "bulkStatus", statuses, ItemStatus.OK);
+    data = { status };
+    summary = `Bulk update: status changed to ${status}.`;
+  } else if (action === "condition") {
+    const condition = enumValue(formData, "bulkCondition", conditions, ItemCondition.GOOD);
+    data = { condition };
+    summary = `Bulk update: condition changed to ${condition}.`;
+  } else if (action === "retire") {
+    data = { status: ItemStatus.RETIRED };
+    summary = "Bulk update: inventory items retired.";
+  } else {
+    throw new Error("Choose a valid bulk action.");
+  }
+
+  await prisma.$transaction([
+    prisma.inventoryItem.updateMany({ where: { id: { in: ids } }, data }),
+    prisma.inventoryAudit.createMany({
+      data: ids.map((itemId) => ({
+        itemId,
+        action: action === "location" ? AuditAction.MOVED : action === "status" || action === "retire" ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
+        summary,
+        actorId: actor.id,
+        actorName: actor.email,
+        metadata: { bulkAction: action, itemCount: ids.length },
+      })),
+    }),
+  ]);
+  refreshInventoryViews();
+  redirect("/dashboard/inventory?bulk=updated");
+}
+
 export async function deleteInventoryItem(formData: FormData) {
   await requireAdministrator();
   const id = requiredId(formData, "id");
@@ -247,6 +285,60 @@ export async function deleteInventoryItem(formData: FormData) {
   }
   refreshInventoryViews(id);
   redirect("/dashboard/inventory");
+}
+
+const maximumItemPhotos = 4;
+const maximumPhotoBytes = 3 * 1024 * 1024;
+const supportedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function photoFileName(value: string) {
+  const name = value.replaceAll(/[^a-zA-Z0-9._-]/g, "_").replaceAll(/_+/g, "_").slice(0, 120);
+  return name || "item-photo";
+}
+
+function imageTypeMatchesBytes(contentType: string, bytes: Uint8Array) {
+  if (contentType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (contentType === "image/png") return bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  return contentType === "image/webp" && bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+}
+
+export async function uploadInventoryItemPhoto(formData: FormData) {
+  const actor = await requireWriteAccess();
+  const itemId = requiredId(formData, "itemId");
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) throw new Error("Choose an image to upload.");
+  if (file.size > maximumPhotoBytes) throw new Error("Each photo must be 3 MB or smaller.");
+  if (!supportedPhotoTypes.has(file.type)) throw new Error("Use a JPEG, PNG, or WebP image.");
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!imageTypeMatchesBytes(file.type, bytes)) throw new Error("The image file does not match its declared type.");
+
+  await prisma.$transaction(async (transaction) => {
+    const [item, photoCount] = await Promise.all([
+      transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } }),
+      transaction.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
+    ]);
+    if (!item) throw new Error("This inventory item no longer exists.");
+    if (photoCount >= maximumItemPhotos) throw new Error(`Each item can have up to ${maximumItemPhotos} photos.`);
+    await transaction.inventoryItemPhoto.create({ data: { inventoryItemId: itemId, fileName: photoFileName(file.name), contentType: file.type, byteSize: bytes.byteLength, data: Buffer.from(bytes) } });
+    await transaction.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: "Item photo added.", actorId: actor.id, actorName: actor.email, metadata: { source: "photo-upload", contentType: file.type, byteSize: bytes.byteLength } } });
+  });
+
+  refreshInventoryViews(itemId);
+}
+
+export async function deleteInventoryItemPhoto(formData: FormData) {
+  const actor = await requireWriteAccess();
+  const itemId = requiredId(formData, "itemId");
+  const photoId = requiredId(formData, "photoId");
+  const photo = await prisma.inventoryItemPhoto.findFirst({ where: { id: photoId, inventoryItemId: itemId }, select: { id: true, fileName: true } });
+  if (!photo) throw new Error("This photo no longer belongs to the item.");
+
+  await prisma.$transaction([
+    prisma.inventoryItemPhoto.delete({ where: { id: photo.id } }),
+    prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: `Item photo removed: ${photo.fileName}.`, actorId: actor.id, actorName: actor.email, metadata: { source: "photo-delete" } } }),
+  ]);
+  refreshInventoryViews(itemId);
 }
 
 export async function addComputerDetails(formData: FormData) {

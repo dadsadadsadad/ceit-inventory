@@ -1,6 +1,6 @@
 # CEIT Inventory
 
-Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled assets. The app is built for deployment on Vercel with Supabase PostgreSQL as its primary database.
+Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled assets. During development, the application uses Supabase PostgreSQL. When the school launches it, the same code can move to the school's own PostgreSQL server without an application rewrite.
 
 ## What is included
 
@@ -21,11 +21,15 @@ Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled as
 Install dependencies and create `.env.local` from the following template:
 
 ```env
-DATABASE_URL="postgresql://..."
+DATABASE_URL="postgresql://USER:PASSWORD@SUPABASE_HOST:6543/postgres?pgbouncer=true"
 
-DIRECT_URL="postgresql://..."
+# Optional direct Supabase connection for Prisma migrations.
+# DIRECT_URL="postgresql://USER:PASSWORD@SUPABASE_HOST:5432/postgres"
 
-NEXT_PUBLIC_APP_URL="https://your-project.vercel.app"
+# Optional school-local PostgreSQL override. It takes priority when present.
+# SCHOOL_DATABASE_URL="postgresql://..."
+
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
 Generate the client and apply the tracked migration:
@@ -42,27 +46,21 @@ Then open **Settings** to add rooms and categories, create inventory records, an
 
 The current development database contains an administrator account created for testing. Its credentials are intentionally not stored in this repository. Change its password or deactivate it from **Users** before sharing the app beyond development.
 
-## Supabase and Vercel deployment
+## Development with Supabase PostgreSQL
 
-1. Create a Supabase project and copy its PostgreSQL connection strings. Use the pooler string for `DATABASE_URL` and the direct string for `DIRECT_URL`.
-2. In Vercel, set `DATABASE_URL`, `DIRECT_URL`, and `NEXT_PUBLIC_APP_URL` for Production (and Preview if desired).
-3. Run `npm run db:migrate:deploy` once against the Supabase project before the first deployment, or run that command in a controlled deployment job.
-4. Deploy the repository to Vercel. The Vercel URL must match `NEXT_PUBLIC_APP_URL` before printing labels for production use.
-5. Before exposing a fresh database, create an initial `ADMINISTRATOR` account in the `User` table through the school's secured database-administration process. That administrator can then create all normal app accounts from **Users**.
+Keep `DATABASE_URL` set to the Supabase PostgreSQL connection string while developing and testing through Vercel. If the Supabase project uses a connection pooler, use its pooler URL for `DATABASE_URL` and its direct PostgreSQL URL for `DIRECT_URL` when running Prisma migrations.
 
-`DATABASE_URL` is used by the running app; `DIRECT_URL` is intentionally reserved for Prisma migrations so migration traffic does not go through the transaction pooler. Never commit either value, a Supabase service key, or user credentials.
+The application does not use Supabase Storage or Supabase Auth. Prisma connects directly to the Supabase-hosted PostgreSQL database, so the same database code also works with an ordinary local PostgreSQL server.
 
-The migration enables row-level security and removes direct Supabase Data API access from the `anon` and `authenticated` roles. Inventory data is accessed only through the protected Next.js server and Prisma connection.
+## School-local PostgreSQL launch
 
-## School-local PostgreSQL copy
+1. Install PostgreSQL on the school-managed server and create a dedicated database plus a least-privileged application user.
+2. Copy `.env.example` to `.env.local` on the school deployment server. Set `SCHOOL_DATABASE_URL` to the school's PostgreSQL connection string; it takes priority over the temporary Supabase `DATABASE_URL` automatically.
+3. Run `npm run db:migrate:deploy` once against the school database, then create the first `ADMINISTRATOR` through the school's secured database-administration process.
+4. Set `NEXT_PUBLIC_APP_URL` to the school-managed application URL before printing production QR labels.
+5. Deploy the application where it can privately reach the school database. A hosted application service needs a secured network path to an on-campus database; otherwise host the application on the school's server or private network too.
 
-Keep Supabase as the single source of truth. The safe first version of a local copy is **one-way and read-only**:
-
-1. Run a school-managed scheduled job that exports Supabase data and restores it into the local PostgreSQL server.
-2. Run the same Prisma migration history on the local server before restoring data.
-3. Point reporting tools at the local copy only; staff should continue editing through the Vercel app.
-
-Do not make the local database a second writable source until conflict resolution, identity mapping, and a monitored synchronization process have been designed. If near-real-time replication becomes necessary, have the school infrastructure team configure PostgreSQL logical replication or a managed replication tool; it must be tested against restores and network outages before staff use it.
+`DATABASE_URL`, `SCHOOL_DATABASE_URL`, and `DIRECT_URL` are server-only secrets. Never commit any of them or user credentials. `DIRECT_URL` is optional and is only useful when a provider uses a separate connection pooler for normal application traffic.
 
 ## Production access control
 

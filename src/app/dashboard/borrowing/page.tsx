@@ -5,7 +5,7 @@ import type { BorrowStatus, Prisma } from "@prisma/client";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { borrowStatus, borrowStatuses } from "@/lib/borrow-status";
-import { requireWriteAccess } from "@/lib/supabase/server";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 import { declineBorrowRequest, markBorrowed, returnBorrowRequest } from "./actions";
@@ -79,7 +79,7 @@ function paginationEntries(totalPages: number, currentPage: number) {
 }
 
 function borrowStatusLabel(status: BorrowStatus) {
-  return status.charAt(0) + status.slice(1).toLowerCase();
+  return status.toLowerCase().replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
 }
 
 function borrowStatusClass(status: BorrowStatus) {
@@ -88,6 +88,8 @@ function borrowStatusClass(status: BorrowStatus) {
       return "status-pill status-pill-pending";
     case borrowStatus.BORROWED:
       return "status-pill status-pill-deployed";
+    case borrowStatus.RETURN_REQUESTED:
+      return "status-pill status-pill-pending";
     case borrowStatus.RETURNED:
       return "status-pill status-pill-positive";
     case borrowStatus.DECLINED:
@@ -123,13 +125,13 @@ function BorrowingActions({ request }: { request: BorrowingRecord }) {
     );
   }
 
-  if (request.status === borrowStatus.BORROWED) {
+  if (request.status === borrowStatus.BORROWED || request.status === borrowStatus.RETURN_REQUESTED) {
     return (
       <FeedbackForm action={returnBorrowRequest} className="flex flex-wrap gap-2">
         <input type="hidden" name="requestId" value={request.id} />
         <label className="sr-only" htmlFor={`return-note-${request.id}`}>Return note</label>
         <input id={`return-note-${request.id}`} name="staffNotes" maxLength={2_000} className="field min-w-48 flex-1 rounded-lg px-3 py-2 text-sm" placeholder="Optional return note" />
-        <SubmitButton pendingLabel="Recording…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Mark returned</SubmitButton>
+        <SubmitButton pendingLabel="Recording…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">{request.status === borrowStatus.RETURN_REQUESTED ? "Confirm returned" : "Mark returned"}</SubmitButton>
       </FeedbackForm>
     );
   }
@@ -181,8 +183,8 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Equipment lending</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing requests</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review student requests, check equipment out, and record each item&apos;s return.</p>
+            <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing history</h1>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests, confirm QR return requests, and keep a complete equipment lending history.</p>
           </div>
           <Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link>
         </header>
@@ -229,6 +231,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
                   </div>
                   <div><p className="muted text-xs font-bold uppercase tracking-wide">Purpose</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.purpose}</p></div>
                   {request.staffNotes ? <div><p className="muted text-xs font-bold uppercase tracking-wide">Staff note</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.staffNotes}</p></div> : null}
+                  {request.returnRequestNotes ? <div><p className="muted text-xs font-bold uppercase tracking-wide">Borrower return note</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.returnRequestNotes}</p></div> : null}
                   {request.processedByName ? <p className="muted text-xs">Processed by {request.processedByName}{request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}</p> : null}
                   {request.returnedByName ? <p className="muted text-xs">Returned by {request.returnedByName}{request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}</p> : null}
                   <BorrowingActions request={request} />
@@ -252,8 +255,8 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
                     <tr key={request.id} className="table-row border-b align-top last:border-0">
                       <td className="px-5 py-4 text-sm"><Link href={`/dashboard/inventory/${request.inventoryItem.id}`} className="accent-link font-semibold">{request.inventoryItem.name}</Link><p className="muted mt-1 text-xs">{request.inventoryItem.assetTag ?? "No asset tag"} · {request.inventoryItem.quantity} available</p></td>
                       <td className="px-5 py-4"><BorrowerDetails request={request} /></td>
-                      <td className="px-5 py-4 text-sm"><p>{request.requestedQuantity} requested</p><p className="muted mt-1">Return by {formatDate(request.expectedReturnDate)}</p><p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">{request.purpose}</p>{request.staffNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Staff: {request.staffNotes}</p> : null}</td>
-                      <td className="px-5 py-4"><span className={`${borrowStatusClass(request.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{borrowStatusLabel(request.status)}</span><p className="muted mt-3 max-w-48 text-xs leading-5">Requested {formatDateTime(request.requestedAt)}</p>{request.processedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Processed by {request.processedByName}{request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}</p> : null}{request.returnedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Returned by {request.returnedByName}{request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}</p> : null}</td>
+                      <td className="px-5 py-4 text-sm"><p>{request.requestedQuantity} requested</p><p className="muted mt-1">Return by {formatDate(request.expectedReturnDate)}</p><p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">{request.purpose}</p>{request.staffNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Staff: {request.staffNotes}</p> : null}{request.returnRequestNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Borrower return note: {request.returnRequestNotes}</p> : null}</td>
+                      <td className="px-5 py-4"><span className={`${borrowStatusClass(request.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{borrowStatusLabel(request.status)}</span><p className="muted mt-3 max-w-48 text-xs leading-5">Requested {formatDateTime(request.requestedAt)}</p>{request.returnRequestedAt ? <p className="muted mt-2 max-w-48 text-xs leading-5">Return requested {formatDateTime(request.returnRequestedAt)}</p> : null}{request.processedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Processed by {request.processedByName}{request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}</p> : null}{request.returnedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Returned by {request.returnedByName}{request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}</p> : null}</td>
                       <td className="min-w-[25rem] px-5 py-4"><BorrowingActions request={request} /></td>
                     </tr>
                   ))}

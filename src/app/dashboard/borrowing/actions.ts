@@ -4,7 +4,7 @@ import { AuditAction, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { borrowStatus } from "@/lib/borrow-status";
-import { requireWriteAccess } from "@/lib/supabase/server";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -152,7 +152,7 @@ export async function returnBorrowRequest(formData: FormData) {
   const itemId = await withSerializableRetry(() => prisma.$transaction(async (transaction) => {
     const request = await transaction.borrowRequest.findUnique({ where: { id }, select: { id: true, inventoryItemId: true, requestedQuantity: true, status: true } });
     if (!request) throw new Error("This borrowing request no longer exists.");
-    if (request.status !== borrowStatus.BORROWED) throw new Error("Only checked-out requests can be marked as returned.");
+    if (request.status !== borrowStatus.BORROWED && request.status !== borrowStatus.RETURN_REQUESTED) throw new Error("Only checked-out requests can be marked as returned.");
 
     await transaction.inventoryItem.update({
       where: { id: request.inventoryItemId },

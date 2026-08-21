@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireWriteAccess } from "@/lib/supabase/server";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const sharedDashboardNoteScope = "shared-dashboard";

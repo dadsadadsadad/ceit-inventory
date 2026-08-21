@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { requireWriteAccess } from "@/lib/supabase/server";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 
 import { ImportForm } from "./import-form";
 
@@ -11,7 +11,7 @@ export default async function ImportInventoryPage() {
     <div className="page">
       <div className="page-narrow space-y-6">
         <header>
-          <Link href="/dashboard/inventory" className="muted text-sm font-semibold hover:text-orange-400">
+          <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
             ← Inventory
           </Link>
           <p className="eyebrow mt-5">Bulk import</p>

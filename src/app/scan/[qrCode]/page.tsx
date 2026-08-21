@@ -2,10 +2,10 @@ import { ItemStatus, ItemType } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getCurrentInventoryUser, canManageInventory } from "@/lib/supabase/server";
+import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
-import { BorrowRequestForm } from "../borrow-request-form";
+import { BorrowReturnChooser } from "../borrow-return-chooser";
 import { ScanAuditLogger } from "../scan-audit-logger";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function ScannedItemPage({
   searchParams,
 }: {
   params: Promise<{ qrCode: string }>;
-  searchParams: Promise<{ request?: string | string[] }>;
+  searchParams: Promise<{ request?: string | string[]; return?: string | string[] }>;
 }) {
   const [{ qrCode }, search, user] = await Promise.all([params, searchParams, getCurrentInventoryUser()]);
   if (!qrCodePattern.test(qrCode)) notFound();
@@ -53,6 +53,7 @@ export default async function ScannedItemPage({
 
   const canManage = Boolean(user && canManageInventory(user.role));
   const requestSent = (Array.isArray(search.request) ? search.request[0] : search.request) === "sent";
+  const returnSent = (Array.isArray(search.return) ? search.return[0] : search.return) === "sent";
   const borrowable = isBorrowableItem(item);
 
   return (
@@ -80,6 +81,7 @@ export default async function ScannedItemPage({
             Your borrowing request was sent to CEIT staff. Please wait for confirmation before collecting the item.
           </div>
         ) : null}
+        {returnSent ? <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">Your return request was sent. Please bring the equipment to CEIT staff for inspection and confirmation.</div> : null}
 
         <article className="card rounded-lg p-5 sm:p-7">
           <dl className="grid gap-5 sm:grid-cols-2">
@@ -90,13 +92,7 @@ export default async function ScannedItemPage({
           </dl>
         </article>
 
-        {borrowable ? (
-          <BorrowRequestForm qrCode={item.qrCode} itemName={item.name} maximumQuantity={item.quantity} />
-        ) : (
-          <div className="notice rounded-lg px-5 py-4 text-sm" role="status">
-            This item is not currently available for a borrowing request. Please contact CEIT staff if you need assistance.
-          </div>
-        )}
+        {item.itemType === ItemType.ASSET ? <BorrowReturnChooser qrCode={item.qrCode} itemName={item.name} maximumQuantity={item.quantity} borrowable={borrowable} /> : <div className="notice rounded-lg px-5 py-4 text-sm" role="status">This supply item cannot be borrowed or returned through QR requests. Please contact CEIT staff if you need assistance.</div>}
 
         {canManage ? (
           <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="staff-tools-heading">

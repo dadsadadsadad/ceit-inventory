@@ -70,7 +70,7 @@ export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowR
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="muted text-xs leading-5">Staff will use your contact number after reviewing this request.</p>
-        <SubmitButton pendingLabel="Sending requestâ€¦" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold sm:w-auto">Send request</SubmitButton>
+        <SubmitButton pendingLabel="Sending request…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold sm:w-auto">Send request</SubmitButton>
       </div>
     </FeedbackForm>
   );

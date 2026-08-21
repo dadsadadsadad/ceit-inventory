@@ -9,7 +9,7 @@ import {
 } from "./actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { requireAdministrator } from "@/lib/supabase/server";
+import { requireAdministrator } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +25,12 @@ function CategoryEditor({ category }: { category: { id: string; name: string; de
         <input type="hidden" name="id" value={category.id} />
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Name</span><input required name="name" defaultValue={category.name} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Description</span><input name="description" defaultValue={category.description ?? ""} maxLength={2_000} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
-        <SubmitButton pendingLabel="Saving…" className="card rounded-lg px-4 py-2 text-sm font-semibold hover:text-orange-400">Save</SubmitButton>
+        <SubmitButton pendingLabel="Saving…" className="secondary-button rounded-lg px-4 py-2 text-sm font-semibold">Save</SubmitButton>
       </FeedbackForm>
       <FeedbackForm action={setCategoryActive} className="mt-3">
         <input type="hidden" name="id" value={category.id} />
         <input type="hidden" name="isActive" value={String(!category.isActive)} />
-        <SubmitButton pendingLabel="Updating…" className="text-xs font-semibold text-orange-400 hover:text-orange-300">{category.isActive ? "Deactivate category" : "Reactivate category"}</SubmitButton>
+        <SubmitButton pendingLabel="Updating…" className="accent-link text-xs font-semibold">{category.isActive ? "Deactivate category" : "Reactivate category"}</SubmitButton>
         {category.isActive && category._count.items > 0 ? <span className="muted ml-2 text-xs">Existing records keep this category.</span> : null}
       </FeedbackForm>
     </details>
@@ -51,12 +51,12 @@ function LocationEditor({ location }: { location: { id: string; name: string; ro
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Location name</span><input required name="name" defaultValue={location.name} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Room number</span><input name="roomNumber" defaultValue={location.roomNumber ?? ""} maxLength={100} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label className="sm:col-span-2"><span className="muted text-xs font-bold uppercase tracking-wide">Description</span><input name="description" defaultValue={location.description ?? ""} maxLength={2_000} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
-        <SubmitButton pendingLabel="Saving…" className="card justify-self-start rounded-lg px-4 py-2 text-sm font-semibold hover:text-orange-400">Save location</SubmitButton>
+        <SubmitButton pendingLabel="Saving…" className="secondary-button justify-self-start rounded-lg px-4 py-2 text-sm font-semibold">Save location</SubmitButton>
       </FeedbackForm>
       <FeedbackForm action={setLocationActive} className="mt-3">
         <input type="hidden" name="id" value={location.id} />
         <input type="hidden" name="isActive" value={String(!location.isActive)} />
-        <SubmitButton pendingLabel="Updating…" className="text-xs font-semibold text-orange-400 hover:text-orange-300">{location.isActive ? "Deactivate location" : "Reactivate location"}</SubmitButton>
+        <SubmitButton pendingLabel="Updating…" className="accent-link text-xs font-semibold">{location.isActive ? "Deactivate location" : "Reactivate location"}</SubmitButton>
         {location.isActive && location._count.items > 0 ? <span className="muted ml-2 text-xs">Existing records remain assigned here.</span> : null}
       </FeedbackForm>
       <FeedbackForm action={deleteLocation} className="divider mt-4 border-t pt-4">

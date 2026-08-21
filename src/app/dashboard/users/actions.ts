@@ -4,7 +4,7 @@ import { Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { hashPassword, passwordValidationMessage, requireAdministrator } from "@/lib/supabase/server";
+import { hashPassword, passwordValidationMessage, requireAdministrator } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const roles = Object.values(UserRole);

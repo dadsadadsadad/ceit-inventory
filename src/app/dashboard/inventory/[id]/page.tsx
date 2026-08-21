@@ -6,17 +6,19 @@ import { ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 import {
   addComputerDetails,
   addComputerSoftware,
+  deleteInventoryItemPhoto,
   deleteInventoryItem,
   removeComputerSoftware,
   retireInventoryItem,
   updateComputerDetails,
   updateComputerSoftware,
   updateInventoryItem,
+  uploadInventoryItemPhoto,
 } from "../actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
-import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/supabase/server";
+import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -142,6 +144,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
         category: true,
         location: true,
         computer: { include: { software: { orderBy: { name: "asc" } } } },
+        photos: { orderBy: { createdAt: "desc" }, select: { id: true, fileName: true, byteSize: true, createdAt: true } },
         auditEvents: { orderBy: { createdAt: "desc" }, take: 12 },
       },
     }),
@@ -166,6 +169,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
           </div>
           <div className="flex flex-wrap gap-3">
             {canManage ? <Link href="#edit-record" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Edit record</Link> : null}
+            {canManage ? <Link href={`/dashboard/maintenance?item=${item.id}`} className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Report an issue</Link> : null}
             <Link href={`/dashboard/inventory/${item.id}/label`} className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Print QR label</Link>
           </div>
         </header>
@@ -178,8 +182,10 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 <span className={`${inventoryStatusClass(item.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span>
               </div>
               <div className="mt-5 flex flex-col gap-5 sm:flex-row">
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="h-32 w-32 rounded-lg object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                {item.photos.length ? (
+                  <div className="grid grid-cols-2 gap-2 sm:w-44">
+                    {item.photos.slice(0, 4).map((photo) => <img key={photo.id} src={`/dashboard/inventory/${item.id}/photos/${photo.id}`} alt={`Photo of ${item.name}`} className="h-20 w-full rounded-lg object-cover" loading="lazy" />)}
+                  </div>
                 ) : null}
                 <dl className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <Detail label="Category">{item.category.name}</Detail>
@@ -189,7 +195,6 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   <Detail label="Manufacturer / model">{[item.manufacturer, item.model].filter(Boolean).join(" ") || "Not recorded"}</Detail>
                   <Detail label="Serial number">{item.serialNumber ?? "Not recorded"}</Detail>
                   <Detail label="Purchased">{displayDate(item.purchaseDate)}</Detail>
-                  <Detail label="Warranty ends">{displayDate(item.warrantyEndsAt)}</Detail>
                   <Detail label="Record type">{item.itemType === ItemType.ASSET ? "Tracked asset" : "Supply / stock"}</Detail>
                 </dl>
               </div>
@@ -325,12 +330,21 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 <TextField name="model" label="Model" value={item.model} maxLength={255} />
                 <TextField name="serialNumber" label="Serial number" value={item.serialNumber} maxLength={255} />
                 <TextField name="purchaseDate" label="Purchase date" value={dateValue(item.purchaseDate)} type="date" />
-                <TextField name="warrantyEndsAt" label="Warranty ends" value={dateValue(item.warrantyEndsAt)} type="date" />
-                <TextField name="imageUrl" label="Image URL" value={item.imageUrl} type="url" placeholder="https://…" maxLength={2_000} />
                 <label className="block"><span className="text-sm font-semibold">Description</span><textarea name="description" rows={3} defaultValue={item.description ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
                 <label className="block"><span className="text-sm font-semibold">Notes</span><textarea name="notes" rows={3} defaultValue={item.notes ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
                 <SubmitButton pendingLabel="Saving update…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold">Save update</SubmitButton>
               </FeedbackForm>
+
+              <section className="divider mt-6 border-t pt-5" aria-labelledby="item-photos-heading">
+                <h3 id="item-photos-heading" className="text-sm font-semibold">Item photos</h3>
+                <p className="muted mt-2 text-xs leading-5">Photos are stored in the PostgreSQL inventory database. Add up to four JPEG, PNG, or WebP images, 3 MB each.</p>
+                <FeedbackForm action={uploadInventoryItemPhoto} successMessage="Photo added." className="mt-4 space-y-3">
+                  <input type="hidden" name="itemId" value={item.id} />
+                  <label className="block"><span className="sr-only">Choose item photo</span><input required name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="field w-full rounded-lg px-3 py-2 text-sm" /></label>
+                  <SubmitButton pendingLabel="Uploading…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Add photo</SubmitButton>
+                </FeedbackForm>
+                {item.photos.length ? <div className="mt-4 space-y-2">{item.photos.map((photo) => <div key={photo.id} className="card-muted flex items-center gap-3 rounded-lg p-2"><img src={`/dashboard/inventory/${item.id}/photos/${photo.id}`} alt="" className="h-12 w-12 rounded-md object-cover" loading="lazy" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{photo.fileName}</p><p className="muted mt-0.5 text-xs">{Math.ceil(photo.byteSize / 1024)} KB · {displayDate(photo.createdAt)}</p></div><FeedbackForm action={deleteInventoryItemPhoto}><input type="hidden" name="itemId" value={item.id} /><input type="hidden" name="photoId" value={photo.id} /><SubmitButton pendingLabel="Removing…" className="accent-link px-2 py-1 text-xs font-semibold">Remove</SubmitButton></FeedbackForm></div>)}</div> : null}
+              </section>
 
               <section className="divider mt-6 border-t pt-5" aria-labelledby="record-lifecycle">
                 <h3 id="record-lifecycle" className="text-sm font-semibold">Record lifecycle</h3>
@@ -343,7 +357,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 {canDelete ? (
                   <details className="danger-zone mt-4 rounded-lg p-3">
                     <summary className="cursor-pointer text-sm font-semibold">Permanently remove this item</summary>
-                    <p className="mt-2 text-xs leading-5">This also permanently deletes the attached PC, software, and activity history. Type <strong>DELETE</strong> to continue.</p>
+                    <p className="mt-2 text-xs leading-5">This also permanently deletes the attached PC, photos, software, and activity history. Type <strong>DELETE</strong> to continue.</p>
                     <FeedbackForm action={deleteInventoryItem} className="mt-3 space-y-3">
                       <input type="hidden" name="id" value={item.id} />
                       <input required name="confirmation" maxLength={16} className="field w-full rounded-lg px-3 py-2 text-sm" placeholder="Type DELETE" aria-label="Type DELETE to permanently remove this item" />

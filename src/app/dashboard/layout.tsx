@@ -1,5 +1,5 @@
 import { DashboardNavigation } from "./dashboard-navigation";
-import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/supabase/server";
+import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
 

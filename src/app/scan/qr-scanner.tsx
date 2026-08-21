@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import type { IScannerControls } from "@zxing/browser";
+import { ScanLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -113,7 +114,11 @@ export function QrScanner() {
 
   return (
     <section className="card rounded-lg p-5 sm:p-7">
-      <div className="overflow-hidden rounded-lg bg-black"><video ref={videoRef} muted playsInline aria-label="QR scanner camera preview" className="aspect-[3/4] w-full object-cover" /></div>
+      <div className="scanner-preview relative overflow-hidden rounded-lg bg-black">
+        <video ref={videoRef} muted playsInline aria-label="QR scanner camera preview" className="aspect-[4/5] w-full object-cover sm:aspect-[3/4]" />
+        <div className="scanner-corners pointer-events-none absolute inset-7 rounded-2xl" aria-hidden="true" />
+        {!isScanning && !isStarting ? <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center"><div className="scanner-empty-state"><ScanLine className="mx-auto h-7 w-7" aria-hidden="true" /><p className="mt-3 text-sm font-semibold">Camera preview</p><p className="mt-1 text-xs leading-5">Tap Use camera to scan a CEIT QR label.</p></div></div> : null}
+      </div>
       <p className="muted mt-4 text-sm leading-6" aria-live="polite">{message}</p>
       <div className="mt-5 flex flex-wrap gap-3">
         <button type="button" onClick={isScanning ? () => stopCamera() : startCamera} disabled={isStarting} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
