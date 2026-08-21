@@ -5,11 +5,11 @@ import { Readable } from "node:stream";
 import { AuditAction, ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { requireWriteAccess } from "@/lib/supabase/server";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
-export type ImportResult = { errors: string[]; imported: number; skipped: number };
-const emptyImportResult: ImportResult = { errors: [], imported: 0, skipped: 0 };
+export type ImportResult = { errors: string[]; imported: number; previewed: boolean; skipped: number };
+const emptyImportResult: ImportResult = { errors: [], imported: 0, previewed: false, skipped: 0 };
 
 type ColumnMap = Record<string, number | undefined>;
 type SetupRecord = { id: string; isActive: boolean };
@@ -45,8 +45,6 @@ const columnAliases: Record<string, string[]> = {
   manufacturer: ["manufacturer", "brand"],
   model: ["model", "productinfo"],
   purchaseDate: ["purchasedate", "datepurchased"],
-  warrantyEndsAt: ["warrantyendsat", "warrantyend", "warrantyexpiry"],
-  imageUrl: ["imageurl", "photo", "photourl"],
   notes: ["notes", "remarks"],
   graphics: ["graphics", "gpu"],
   legacyChecked: ["checked"],
@@ -105,17 +103,6 @@ function parseDate(value: string, field: string) {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) throw new Error(`${field} is not a valid date.`);
   return parsed;
-}
-
-function imageUrl(value: string) {
-  if (!value) return null;
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
-    return parsed.toString();
-  } catch {
-    throw new Error("image URL must be an http or https URL.");
-  }
 }
 
 function enumValue<T extends string>(value: string, values: readonly T[], fallback: T) {
@@ -183,6 +170,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
   const actor = await requireWriteAccess();
   const file = formData.get("file");
   const allowCreateSetup = formData.get("createMissingSetup") === "on";
+  const previewOnly = formData.get("previewOnly") === "on";
   let defaultLocationName: string | null;
   let defaultBuilding: string | null;
   let defaultRoomNumber: string | null;
@@ -232,6 +220,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
   const categoryCache = new Map<string, SetupRecord>();
   const locationCache = new Map<string, SetupRecord>();
   const errors: string[] = [];
+  const previewIdentifiers = new Set<string>();
   let imported = 0;
   let skipped = 0;
 
@@ -284,6 +273,18 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
         ["Comments", valueAt(row, "legacyComments")],
       ]);
 
+      if (previewOnly) {
+        const identifiers = [
+          optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase(),
+          optionalText(valueAt(row, "serialNumber"), "serial number", 255)?.toUpperCase(),
+          hasComputerDetails ? optionalText(valueAt(row, "macAddress"), "MAC address", 255)?.toUpperCase() : null,
+        ].filter(Boolean) as string[];
+        if (identifiers.some((identifier) => previewIdentifiers.has(identifier))) throw new Error("a repeated asset tag, serial number, or PC MAC address appears in this file.");
+        identifiers.forEach((identifier) => previewIdentifiers.add(identifier));
+        imported += 1;
+        continue;
+      }
+
       const cachedCategory = categoryCache.get(categoryKey);
       const cachedLocation = locationCache.get(locationKey);
       if (cachedCategory && cachedLocation) {
@@ -297,8 +298,6 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             model: optionalText(valueAt(row, "model"), "model", 255),
             notes,
             purchaseDate,
-            warrantyEndsAt: parseDate(valueAt(row, "warrantyEndsAt"), "warranty end date"),
-            imageUrl: imageUrl(optionalText(valueAt(row, "imageUrl"), "image URL", 2_000) ?? ""),
             itemType,
             quantity,
             status: explicitStatus
@@ -372,8 +371,6 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             model: optionalText(valueAt(row, "model"), "model", 255),
             notes,
             purchaseDate,
-            warrantyEndsAt: parseDate(valueAt(row, "warrantyEndsAt"), "warranty end date"),
-            imageUrl: imageUrl(optionalText(valueAt(row, "imageUrl"), "image URL", 2_000) ?? ""),
             itemType,
             quantity,
             status: explicitStatus
@@ -426,5 +423,5 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/inventory");
   revalidatePath("/dashboard/settings");
-  return { imported, skipped, errors: errors.slice(0, 20) };
+  return { imported, skipped, errors: errors.slice(0, 20), previewed: previewOnly };
 }

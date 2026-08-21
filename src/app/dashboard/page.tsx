@@ -4,7 +4,7 @@ import { ItemStatus } from "@prisma/client";
 
 import { DashboardNoteForm } from "./dashboard-note-form";
 
-import { canManageInventory, requireInventoryAccess } from "@/lib/supabase/server";
+import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";

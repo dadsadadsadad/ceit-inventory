@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import { importInventory, type ImportResult } from "./actions";
 
-const initialImportResult: ImportResult = { errors: [], imported: 0, skipped: 0 };
+const initialImportResult: ImportResult = { errors: [], imported: 0, previewed: false, skipped: 0 };
 
 export function ImportForm() {
   const [result, action, pending] = useActionState(importInventory, initialImportResult);
@@ -16,7 +16,7 @@ export function ImportForm() {
           <h2 className="text-lg font-semibold">Choose a spreadsheet</h2>
           <p className="muted mt-1 text-sm leading-6">Use the template for a new file, or upload an existing inventory export directly.</p>
         </div>
-        <a href="/inventory-import-template.csv" download className="card-muted rounded-lg px-3 py-2 text-center text-sm font-semibold hover:text-orange-400">
+        <a href="/inventory-import-template.csv" download className="card-muted rounded-lg px-3 py-2 text-center text-sm font-semibold accent-link">
           Download CSV template
         </a>
       </div>
@@ -58,6 +58,14 @@ export function ImportForm() {
         </span>
       </label>
 
+      <label className="flex items-start gap-3 text-sm leading-5">
+        <input name="previewOnly" type="checkbox" className="mt-0.5 h-4 w-4" />
+        <span>
+          <strong>Validate before importing.</strong>
+          <span className="muted block">Checks every row&apos;s format and repeated identifiers without saving anything. Uncheck it when the preview is clean to import.</span>
+        </span>
+      </label>
+
       <div className="card-muted rounded-lg p-4 text-sm leading-6">
         <p>
           Required data: <code>name</code>/<code>item name</code>, <code>category</code>/<code>classification</code>, and a location
@@ -79,12 +87,13 @@ export function ImportForm() {
       </p>
 
       <button disabled={pending} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
-        {pending ? "Importing…" : "Import inventory"}
+        {pending ? "Checking file…" : "Validate or import inventory"}
       </button>
 
       {result.imported || result.skipped ? (
         <div className="notice rounded-lg px-4 py-3 text-sm" aria-live="polite">
-          <strong>{result.imported} imported</strong>
+          <strong>{result.imported} {result.previewed ? "valid row" : "imported"}{result.previewed && result.imported !== 1 ? "s" : ""}</strong>
+          {result.previewed ? " · no records were saved" : ""}
           {result.skipped ? ` · ${result.skipped} skipped` : ""}
         </div>
       ) : null}

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Prisma } from "@prisma/client";
 
-import { requireInventoryAccess } from "@/lib/supabase/server";
+import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";

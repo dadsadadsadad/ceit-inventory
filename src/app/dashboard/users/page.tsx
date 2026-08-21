@@ -3,7 +3,7 @@ import { UserRole } from "@prisma/client";
 import { createUser, updateUser } from "./actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { requireAdministrator } from "@/lib/supabase/server";
+import { requireAdministrator } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function UsersPage() {
                 <label><span className="muted text-xs font-bold uppercase tracking-wide">Role</span><select name="role" defaultValue={user.role} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">{Object.values(UserRole).map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}</select></label>
                 <label className="flex h-10 items-center gap-2 text-sm font-semibold"><input type="checkbox" name="isActive" defaultChecked={user.isActive} className="h-4 w-4" /> Active</label>
                 <label><span className="muted text-xs font-bold uppercase tracking-wide">New password</span><input minLength={8} maxLength={256} type="password" name="password" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" autoComplete="new-password" placeholder="Leave blank to keep" /></label>
-                <SubmitButton pendingLabel="Saving…" className="card rounded-lg px-4 py-2.5 text-sm font-semibold hover:text-orange-400">Save</SubmitButton>
+                <SubmitButton pendingLabel="Saving…" className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Save</SubmitButton>
               </FeedbackForm>
             ))}
           </div>

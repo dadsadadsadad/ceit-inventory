@@ -21,13 +21,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div><div className="text-base font-semibold tracking-tight">CEIT Inventory</div><div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Inventory management</div></div>
         </div>
         <div className="max-w-xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-orange-100">Authorized access</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/80">Authorized access</p>
           <h1 className="mt-4 text-4xl font-bold tracking-tight">Track CEIT resources with the right information in the right hands.</h1>
-          <p className="mt-5 text-sm leading-6 text-white/75">Use your school-provisioned inventory account to manage rooms, assets, and QR scans.</p>
+          <p className="mt-5 text-sm leading-6 text-white/75">Use your authorized inventory account to manage rooms, assets, and QR scans.</p>
         </div>
       </section>
 
-      <section className="flex items-center justify-center">
+      <section className="flex flex-col items-center justify-center gap-5">
+        <div className="flex items-center gap-3 text-white lg:hidden">
+          <div className="brand-mark grid h-10 w-10 place-items-center rounded-lg"><Boxes className="h-5 w-5" aria-hidden="true" /></div>
+          <div><div className="text-sm font-semibold tracking-tight">CEIT Inventory</div><div className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-white/70">Inventory management</div></div>
+        </div>
         <div className="card w-full max-w-md rounded-lg p-6 sm:p-8">
           <div className="mb-7">
             <p className="eyebrow">Welcome</p>
@@ -38,7 +42,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <form action={signIn} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-semibold">Email</label>
-              <input required type="email" id="email" name="email" autoComplete="email" maxLength={254} className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition" placeholder="name@ceit.edu" />
+              <input required type="email" id="email" name="email" autoComplete="email" maxLength={254} className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition" placeholder="name@example.com" />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-semibold">Password</label>

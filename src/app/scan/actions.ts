@@ -3,7 +3,7 @@
 import { AuditAction } from "@prisma/client";
 
 import { prisma } from "@/prisma";
-import { requireInventoryAccess } from "@/lib/supabase/server";
+import { requireInventoryAccess } from "@/lib/inventory-auth";
 
 const scanDeduplicationWindowMs = 15_000;
 

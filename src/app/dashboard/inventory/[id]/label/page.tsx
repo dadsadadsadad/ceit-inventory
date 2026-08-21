@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 
 import { PrintLabel } from "@/app/components/print-label";
-import { requireInventoryAccess } from "@/lib/supabase/server";
+import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
   return (
     <main className="page">
       <div className="page-narrow space-y-6">
-        <div className="no-print flex items-center justify-between gap-4"><Link href={`/dashboard/inventory/${item.id}`} className="muted text-sm font-semibold hover:text-orange-400">← Back to item</Link><PrintLabel /></div>
+        <div className="no-print flex items-center justify-between gap-4"><Link href={`/dashboard/inventory/${item.id}`} className="accent-link text-sm font-semibold">← Back to item</Link><PrintLabel /></div>
         <article className="print-label mx-auto max-w-md rounded-lg p-7 text-center">
           <p className="eyebrow">CEIT inventory</p>
           <h1 className="mt-3 text-2xl font-bold">{item.name}</h1>

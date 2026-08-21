@@ -1,6 +1,6 @@
 "use server";
 
-import { ItemStatus, ItemType, Prisma } from "@prisma/client";
+import { AuditAction, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -182,4 +182,43 @@ export async function submitBorrowRequest(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/borrowing");
   redirect(`/scan/${encodeURIComponent(qrCode)}?request=sent`);
+}
+
+export async function submitReturnRequest(formData: FormData) {
+  if (readText(formData, "website", 255)) throw new Error("Unable to submit this request. Please try again.");
+
+  const qrCode = readQrCode(formData);
+  const studentNumber = readStudentNumber(formData);
+  const contact = readContact(formData);
+  const returnRequestNotes = readText(formData, "returnRequestNotes", 1_000);
+
+  await prisma.$transaction(async (transaction) => {
+    const request = await transaction.borrowRequest.findFirst({
+      where: {
+        studentNumber,
+        contact,
+        status: borrowStatus.BORROWED,
+        inventoryItem: { is: { qrCode } },
+      },
+      select: { id: true, inventoryItemId: true },
+    });
+    if (!request) return;
+    await transaction.borrowRequest.update({
+      where: { id: request.id },
+      data: { status: borrowStatus.RETURN_REQUESTED, returnRequestedAt: new Date(), returnRequestNotes: returnRequestNotes || null },
+    });
+    await transaction.inventoryAudit.create({
+      data: {
+        itemId: request.inventoryItemId,
+        action: AuditAction.UPDATED,
+        summary: "Borrower submitted a QR return request.",
+        metadata: { borrowRequestId: request.id, transition: borrowStatus.RETURN_REQUESTED, source: "public-qr" },
+      },
+    });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/borrowing");
+  revalidatePath(`/scan/${encodeURIComponent(qrCode)}`);
+  redirect(`/scan/${encodeURIComponent(qrCode)}?return=sent`);
 }

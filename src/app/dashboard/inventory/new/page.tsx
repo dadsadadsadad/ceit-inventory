@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { NewInventoryForm } from "./new-inventory-form";
 import { prisma } from "@/prisma";
-import { requireWriteAccess } from "@/lib/supabase/server";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function NewInventoryItemPage() {
 
   return (
     <div className="page"><div className="page-narrow space-y-6">
-      <header><Link href="/dashboard/inventory" className="muted text-sm font-semibold hover:text-orange-400">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add inventory item</h1><p className="muted mt-2 text-sm leading-6">Create a tracked asset, supply record, or PC with complete technical and lifecycle details.</p></header>
+      <header><Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add inventory item</h1><p className="muted mt-2 text-sm leading-6">Create a tracked asset, supply record, or PC with complete technical and lifecycle details.</p></header>
       {!ready ? <div className="notice rounded-lg px-5 py-4 text-sm">Add at least one active category and location in Settings before creating inventory records.</div> : <NewInventoryForm categories={categories} locations={locations} />}
     </div></div>
   );

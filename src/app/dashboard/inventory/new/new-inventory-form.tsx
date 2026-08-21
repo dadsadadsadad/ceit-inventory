@@ -72,8 +72,6 @@ export function NewInventoryForm({ categories, locations }: { categories: SetupO
           <InputField name="model" label="Model" />
           <InputField name="serialNumber" label="Serial number" />
           <InputField name="purchaseDate" label="Purchase date" type="date" />
-          <InputField name="warrantyEndsAt" label="Warranty end" type="date" />
-          <InputField name="imageUrl" label="Photo URL" type="url" max={2_000} placeholder="https://…" />
         </div>
       </section>
 

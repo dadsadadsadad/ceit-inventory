@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { clearSession, createSession, verifyPassword } from "@/lib/supabase/server";
+import { clearSession, createSession, verifyPassword } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const maxEmailLength = 254;

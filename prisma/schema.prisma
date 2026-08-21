@@ -40,8 +40,21 @@ enum AuditAction {
 enum BorrowStatus {
   REQUESTED
   BORROWED
+  RETURN_REQUESTED
   RETURNED
   DECLINED
+}
+
+enum MaintenancePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  OPEN
+  RESOLVED
 }
 
 enum UserRole {
@@ -91,16 +104,16 @@ model InventoryItem {
   model           String?
   serialNumber    String?          @unique
   purchaseDate    DateTime?
-  warrantyEndsAt  DateTime?
   notes           String?
-  imageUrl        String?
   categoryId      String           @db.Uuid
   locationId      String           @db.Uuid
   category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   location        Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
   computer        Computer?
   auditEvents     InventoryAudit[]
+  photos          InventoryItemPhoto[]
   borrowRequests  BorrowRequest[]
+  maintenanceTickets MaintenanceTicket[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -173,12 +186,48 @@ model BorrowRequest {
   returnedAt         DateTime?
   processedByName    String?
   returnedByName     String?
+  returnRequestedAt  DateTime?
+  returnRequestNotes String?
   inventoryItem      InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
   @@index([inventoryItemId, status])
   @@index([status, requestedAt])
+  @@index([status, returnRequestedAt])
+}
+
+model InventoryItemPhoto {
+  id              String        @id @default(uuid()) @db.Uuid
+  inventoryItemId String        @db.Uuid
+  fileName        String
+  contentType     String
+  byteSize        Int
+  data            Bytes
+  createdAt       DateTime      @default(now())
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId, createdAt])
+}
+
+model MaintenanceTicket {
+  id              String              @id @default(uuid()) @db.Uuid
+  inventoryItemId String              @db.Uuid
+  title           String
+  description     String
+  priority        MaintenancePriority @default(NORMAL)
+  status          MaintenanceStatus   @default(OPEN)
+  reportedByName  String?
+  assignedToName  String?
+  resolutionNotes String?
+  openedAt        DateTime            @default(now())
+  resolvedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  inventoryItem   InventoryItem       @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@index([inventoryItemId, status])
+  @@index([status, priority, openedAt])
 }
 
 model User {

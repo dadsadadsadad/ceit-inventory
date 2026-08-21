@@ -4,10 +4,11 @@ const { Client } = require("pg");
 
 async function main() {
   const candidates = [
+    ["SCHOOL_DATABASE_URL", process.env.SCHOOL_DATABASE_URL],
     ["DATABASE_URL", process.env.DATABASE_URL],
     ["DIRECT_URL", process.env.DIRECT_URL],
   ].filter(([, connectionString]) => connectionString);
-  if (!candidates.length) throw new Error("DATABASE_URL or DIRECT_URL is missing.");
+  if (!candidates.length) throw new Error("SCHOOL_DATABASE_URL, DATABASE_URL, or DIRECT_URL is missing.");
 
   const failures = [];
   for (const [source, connectionString] of candidates) {

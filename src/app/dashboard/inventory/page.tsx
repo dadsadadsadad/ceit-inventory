@@ -3,12 +3,18 @@ import Link from "next/link";
 import { ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
-import { canManageInventory, requireInventoryAccess } from "@/lib/supabase/server";
+import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
+
+import { FeedbackForm } from "@/app/components/feedback-form";
+import { SubmitButton } from "@/app/components/submit-button";
+import { bulkUpdateInventory } from "./actions";
+import { BulkSelectionToggle } from "./bulk-selection-toggle";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
+  bulk?: string;
   category?: string;
   condition?: string;
   direction?: string;
@@ -153,6 +159,23 @@ function ItemActions({ canManage, itemId }: { canManage: boolean; itemId: string
   );
 }
 
+function InventoryFormContainer({ canManage, children }: { canManage: boolean; children: React.ReactNode }) {
+  if (!canManage) return <>{children}</>;
+  return <FeedbackForm action={bulkUpdateInventory} className="space-y-3">{children}</FeedbackForm>;
+}
+
+function BulkControls({ locations }: { locations: { id: string; name: string }[] }) {
+  return (
+    <div className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_auto] xl:items-end">
+      <div className="sm:col-span-2 xl:col-span-1"><p className="text-sm font-semibold">Bulk update selected records</p><p className="muted mt-1 text-xs leading-5">Select records below, choose one action, and only complete its matching value.</p></div>
+      <label><span className="muted text-xs font-bold uppercase tracking-wide">Action</span><select required name="bulkAction" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"><option value="" disabled>Choose action</option><option value="location">Move to location</option><option value="status">Change status</option><option value="condition">Change condition</option><option value="retire">Retire selected items</option></select></label>
+      <label><span className="muted text-xs font-bold uppercase tracking-wide">Location</span><select name="bulkLocationId" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"><option value="">Used for move only</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
+      <div><span className="muted text-xs font-bold uppercase tracking-wide">Status / condition</span><div className="mt-2 grid grid-cols-2 gap-2"><select name="bulkStatus" defaultValue="OK" aria-label="New status" className="field min-w-0 rounded-lg px-2 py-2.5 text-sm">{Object.values(ItemStatus).map((status) => <option key={status} value={status}>{inventoryStatusLabel(status)}</option>)}</select><select name="bulkCondition" defaultValue="GOOD" aria-label="New condition" className="field min-w-0 rounded-lg px-2 py-2.5 text-sm">{Object.values(ItemCondition).map((condition) => <option key={condition} value={condition}>{enumLabel(condition)}</option>)}</select></div></div>
+      <SubmitButton pendingLabel="Updating…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Apply action</SubmitButton>
+    </div>
+  );
+}
+
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const [user, search] = await Promise.all([
     requireInventoryAccess(),
@@ -258,14 +281,19 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           </div>
         </form>
 
+        {search.bulk === "updated" ? <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">The selected inventory records were updated.</div> : null}
+
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">Inventory could not be loaded. Confirm the database connection and try again.</div>
         ) : inventoryItems.length === 0 ? (
           <div className="notice rounded-lg px-5 py-4 text-sm">No records match these filters. {canManage ? "Add an item or import an existing file to get started." : "Try clearing a filter."}</div>
         ) : (
+          <InventoryFormContainer canManage={canManage}>
+            {canManage ? <BulkControls locations={locations} /> : null}
           <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
-            <div className="divider flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3">
+            <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
               <p className="muted text-sm">{totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>
+              {canManage ? <BulkSelectionToggle /> : null}
             </div>
 
             <div className="divide-y md:hidden">
@@ -277,7 +305,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                         <Link href={`/dashboard/inventory/${item.id}`} className="accent-link font-semibold">{item.name}</Link>
                         <p className="muted mt-1 text-xs">{item.category.name}{item.computer ? " · PC" : ""}</p>
                       </div>
-                      <span className={`${inventoryStatusClass(item.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span>
+                      <div className="flex items-center gap-2"><span className={`${inventoryStatusClass(item.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span>{canManage ? <input name="itemIds" value={item.id} type="checkbox" data-bulk-selection-item="true" className="h-4 w-4" aria-label={`Select ${item.name}`} /> : null}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <p className="muted">{item.assetTag ?? "No asset tag"}</p>
@@ -294,6 +322,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
               <table className="w-full">
                 <thead>
                   <tr className="table-heading divider border-b">
+                    {canManage ? <th scope="col" className="w-12 px-3 py-4"><span className="sr-only">Select</span></th> : null}
                     <SortableHeader field="assetTag" label="Asset tag" search={search} />
                     <SortableHeader field="item" label="Item" search={search} />
                     <SortableHeader field="location" label="Location" search={search} />
@@ -306,6 +335,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                   {inventoryItems.map((item) => {
                     return (
                       <tr key={item.id} className="table-row border-b last:border-0">
+                        {canManage ? <td className="px-3 py-4"><input name="itemIds" value={item.id} type="checkbox" data-bulk-selection-item="true" className="h-4 w-4" aria-label={`Select ${item.name}`} /></td> : null}
                         <td className="muted px-5 py-4 text-sm">{item.assetTag ?? "–"}</td>
                         <td className="px-5 py-4 text-sm"><Link href={`/dashboard/inventory/${item.id}`} className="accent-link font-semibold">{item.name}</Link><div className="muted mt-1 text-xs">{item.category.name}{item.computer ? " · PC" : ""}</div></td>
                         <td className="muted px-5 py-4 text-sm">{item.location.name}</td>
@@ -335,6 +365,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
               </nav>
             ) : null}
           </section>
+          </InventoryFormContainer>
         )}
       </div>
     </div>

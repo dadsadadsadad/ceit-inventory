@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, HandHelping, LayoutDashboard, Package, ScanLine, Settings, Users } from "lucide-react";
+import { BarChart3, Boxes, HandHelping, LayoutDashboard, Package, ScanLine, Settings, Users, Wrench } from "lucide-react";
 
 import { signOut } from "@/app/auth/actions";
 
@@ -14,6 +14,8 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
     { label: "Dashboard", href: "/dashboard", Icon: LayoutDashboard },
     { label: "Inventory", href: "/dashboard/inventory", Icon: Package },
     ...(canManageInventory ? [{ label: "Borrowing", href: "/dashboard/borrowing", Icon: HandHelping }] : []),
+    ...(canManageInventory ? [{ label: "Maintenance", href: "/dashboard/maintenance", Icon: Wrench }] : []),
+    { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
     { label: "Scan QR", href: "/scan", Icon: ScanLine },
     ...(canManageAdministration ? [
       { label: "Users", href: "/dashboard/users", Icon: Users },
@@ -31,12 +33,12 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
       </div>
 
       <nav className="px-3 pb-4 lg:flex-1 lg:px-4" aria-label="Dashboard navigation">
-        <ul className="flex gap-2 overflow-x-auto lg:block lg:space-y-1">
+        <ul className="dashboard-nav-list lg:space-y-1">
           {navItems.map(({ label, href, Icon }) => {
             const active = href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
             return (
-              <li key={label} className="shrink-0 lg:shrink">
-                <Link href={href} aria-current={active ? "page" : undefined} className={`nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 ${active ? "nav-link-active" : ""}`}>
+              <li key={label} className="dashboard-nav-item lg:shrink">
+                <Link href={href} aria-current={active ? "page" : undefined} className={`nav-link mobile-nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none ${active ? "nav-link-active" : ""}`}>
                   <span className="nav-marker grid h-7 w-7 place-items-center rounded-md text-xs font-semibold"><Icon className="h-4 w-4" aria-hidden="true" /></span>
                   <span>{label}</span>
                 </Link>

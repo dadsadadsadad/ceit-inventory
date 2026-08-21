@@ -3,10 +3,10 @@ import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const prismaSchemaVersion = "2026-08-12-remove-reorder-level";
+const prismaSchemaVersion = "2026-08-22-postgresql-item-photos";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; prismaSchemaVersion?: string };
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error("DATABASE_URL is required to start the inventory application.");
+const connectionString = process.env.SCHOOL_DATABASE_URL ?? process.env.DATABASE_URL;
+if (!connectionString) throw new Error("Set SCHOOL_DATABASE_URL for the school server or DATABASE_URL for development.");
 const adapter = new PrismaPg({ connectionString });
 
 const cachedPrisma = globalForPrisma.prisma;

@@ -44,7 +44,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="theme-toggle grid h-12 w-12 place-items-center rounded-full transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 cursor-pointer"
+      className="theme-toggle grid h-12 w-12 place-items-center rounded-full transition-transform hover:-translate-y-0.5 focus:outline-none cursor-pointer"
       aria-label={`Switch to ${nextTheme} mode`}
       title={`Switch to ${nextTheme} mode`}
     >
