@@ -16,6 +16,7 @@ function getAppUrl() {
   if (configuredUrl) {
     const url = new URL(configuredUrl);
     if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("NEXT_PUBLIC_APP_URL must use http or https.");
+    if (process.env.NODE_ENV === "production" && url.protocol !== "https:") throw new Error("NEXT_PUBLIC_APP_URL must use HTTPS in production.");
     return url.toString().replace(/\/$/, "");
   }
   if (process.env.NODE_ENV === "production") throw new Error("NEXT_PUBLIC_APP_URL is required before printing production QR labels.");

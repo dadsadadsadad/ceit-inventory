@@ -2,6 +2,7 @@
 
 import ExcelJS from "exceljs";
 import { Readable } from "node:stream";
+import * as yauzl from "yauzl";
 import { AuditAction, ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -17,6 +18,8 @@ type SetupRecord = { id: string; isActive: boolean };
 const maximumFileBytes = 10 * 1024 * 1024;
 const maximumRows = 1_000;
 const maximumColumns = 40;
+const maximumXlsxArchiveEntries = 2_000;
+const maximumXlsxUncompressedBytes = 50 * 1024 * 1024;
 
 const columnAliases: Record<string, string[]> = {
   name: ["name", "itemname"],
@@ -156,6 +159,23 @@ function isXlsxFile(data: Buffer) {
   return data.length >= 4 && data[0] === 0x50 && data[1] === 0x4b && data[2] === 0x03 && data[3] === 0x04;
 }
 
+async function validateXlsxArchive(data: Buffer) {
+  const archive = await yauzl.fromBufferPromise(data, { lazyEntries: true, validateEntrySizes: true });
+  try {
+    if (archive.entryCount > maximumXlsxArchiveEntries) throw new Error("The Excel workbook contains too many files.");
+    let uncompressedBytes = 0;
+    for await (const entry of archive.eachEntry()) {
+      if (entry.fileName.endsWith("/")) continue;
+      uncompressedBytes += entry.uncompressedSize;
+      if (uncompressedBytes > maximumXlsxUncompressedBytes) {
+        throw new Error("The Excel workbook expands beyond the allowed size.");
+      }
+    }
+  } finally {
+    archive.close();
+  }
+}
+
 function messageForImportError(error: unknown) {
   if (error instanceof Error && /required|must|too long|active|single tracked|already exists/i.test(error.message)) return error.message;
   if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
@@ -188,11 +208,13 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
     const data = Buffer.from(await file.arrayBuffer());
     if (extension === "xlsx" && !isXlsxFile(data)) return { ...emptyImportResult, errors: ["The selected file is not a valid Excel workbook."] };
     if (extension === "csv" && data.includes(0)) return { ...emptyImportResult, errors: ["The selected CSV file contains unsupported binary data."] };
+    if (extension === "xlsx") await validateXlsxArchive(data);
     workbook = new ExcelJS.Workbook();
     if (extension === "csv") await workbook.csv.read(Readable.from([data]));
     else await workbook.xlsx.load(data as unknown as Parameters<typeof workbook.xlsx.load>[0]);
-  } catch {
-    return { ...emptyImportResult, errors: ["The spreadsheet could not be read. Save it again as a CSV or .xlsx file and retry."] };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return { ...emptyImportResult, errors: [message.includes("allowed") || message.includes("too many") ? message : "The spreadsheet could not be read. Save it again as a CSV or .xlsx file and retry."] };
   }
 
   const source = findInventorySheet(workbook);

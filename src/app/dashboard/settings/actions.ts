@@ -37,22 +37,30 @@ function refreshSetupPages() {
   revalidatePath("/dashboard/inventory");
 }
 
-function locationWriteError(error: unknown) {
+function setupWriteError(error: unknown, label: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return new Error("A location with that name already exists.");
+    return new Error(`A ${label.toLowerCase()} with that name already exists.`);
   }
   return error;
 }
 
 export async function createCategory(formData: FormData) {
   await requireAdministrator();
-  await prisma.category.create({ data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
+  try {
+    await prisma.category.create({ data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
+  } catch (error) {
+    throw setupWriteError(error, "category");
+  }
   refreshSetupPages();
 }
 
 export async function updateCategory(formData: FormData) {
   await requireAdministrator();
-  await prisma.category.update({ where: { id: requiredId(formData) }, data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
+  try {
+    await prisma.category.update({ where: { id: requiredId(formData) }, data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
+  } catch (error) {
+    throw setupWriteError(error, "category");
+  }
   refreshSetupPages();
 }
 
@@ -67,7 +75,7 @@ export async function createLocation(formData: FormData) {
       },
     });
   } catch (error) {
-    throw locationWriteError(error);
+    throw setupWriteError(error, "location");
   }
   refreshSetupPages();
 }
@@ -84,7 +92,7 @@ export async function updateLocation(formData: FormData) {
       },
     });
   } catch (error) {
-    throw locationWriteError(error);
+    throw setupWriteError(error, "location");
   }
   refreshSetupPages();
 }

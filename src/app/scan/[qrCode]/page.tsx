@@ -3,14 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
+import { isInventoryQrCode } from "@/lib/qr-code";
 import { prisma } from "@/prisma";
 
 import { BorrowReturnChooser } from "../borrow-return-chooser";
 import { ScanAuditLogger } from "../scan-audit-logger";
 
 export const dynamic = "force-dynamic";
-
-const qrCodePattern = /^[a-z0-9_-]{8,128}$/i;
 
 function readableStatus(status: ItemStatus) {
   return status.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
@@ -32,7 +31,7 @@ export default async function ScannedItemPage({
   searchParams: Promise<{ request?: string | string[]; return?: string | string[] }>;
 }) {
   const [{ qrCode }, search, user] = await Promise.all([params, searchParams, getCurrentInventoryUser()]);
-  if (!qrCodePattern.test(qrCode)) notFound();
+  if (!isInventoryQrCode(qrCode)) notFound();
 
   const item = await prisma.inventoryItem.findUnique({
     where: { qrCode },

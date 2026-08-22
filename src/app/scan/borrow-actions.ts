@@ -1,10 +1,12 @@
 "use server";
 
-import { AuditAction, ItemStatus, ItemType, Prisma } from "@prisma/client";
+import { AuditAction, ItemStatus, ItemType, Prisma, PublicRequestKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { borrowStatus } from "@/lib/borrow-status";
+import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
+import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
 import { prisma } from "@/prisma";
 
 const qrCodePattern = /^[a-z0-9_-]{8,128}$/i;
@@ -152,6 +154,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
             purpose: input.purpose,
             requestedQuantity: input.requestedQuantity,
             expectedReturnDate: input.expectedReturnDate,
+            personalDataExpiresAt: borrowerDataExpiresAt(),
             status: borrowStatus.REQUESTED,
           },
         });
@@ -166,6 +169,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
 
 export async function submitBorrowRequest(formData: FormData) {
   if (readText(formData, "website", 255)) throw new Error("Unable to submit this request. Please try again.");
+  await enforcePublicRequestRateLimit(PublicRequestKind.BORROW);
 
   const qrCode = readQrCode(formData);
   const input: BorrowRequestInput = {
@@ -186,6 +190,7 @@ export async function submitBorrowRequest(formData: FormData) {
 
 export async function submitReturnRequest(formData: FormData) {
   if (readText(formData, "website", 255)) throw new Error("Unable to submit this request. Please try again.");
+  await enforcePublicRequestRateLimit(PublicRequestKind.RETURN);
 
   const qrCode = readQrCode(formData);
   const studentNumber = readStudentNumber(formData);

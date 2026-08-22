@@ -57,6 +57,11 @@ enum MaintenanceStatus {
   RESOLVED
 }
 
+enum PublicRequestKind {
+  BORROW
+  RETURN
+}
+
 enum UserRole {
   ADMINISTRATOR
   CUSTODIAN
@@ -183,6 +188,7 @@ model BorrowRequest {
   returnedByName     String?
   returnRequestedAt  DateTime?
   returnRequestNotes String?
+  personalDataExpiresAt DateTime
   inventoryItem      InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
@@ -190,6 +196,19 @@ model BorrowRequest {
   @@index([inventoryItemId, status])
   @@index([status, requestedAt])
   @@index([status, returnRequestedAt])
+  @@index([personalDataExpiresAt])
+}
+
+model PublicRequestAttempt {
+  id              String            @id @default(uuid()) @db.Uuid
+  fingerprint     String
+  kind            PublicRequestKind
+  windowStartedAt DateTime
+  attempts        Int               @default(1)
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([fingerprint, kind])
+  @@index([updatedAt])
 }
 
 model InventoryItemPhoto {
