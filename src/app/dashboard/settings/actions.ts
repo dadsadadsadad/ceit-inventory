@@ -37,6 +37,13 @@ function refreshSetupPages() {
   revalidatePath("/dashboard/inventory");
 }
 
+function locationWriteError(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    return new Error("A location with that name already exists.");
+  }
+  return error;
+}
+
 export async function createCategory(formData: FormData) {
   await requireAdministrator();
   await prisma.category.create({ data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
@@ -51,26 +58,34 @@ export async function updateCategory(formData: FormData) {
 
 export async function createLocation(formData: FormData) {
   await requireAdministrator();
-  await prisma.location.create({
-    data: {
-      name: requiredText(formData, "name"),
-      roomNumber: optionalText(formData, "roomNumber", 100),
-      description: optionalText(formData, "description", 2_000),
-    },
-  });
+  try {
+    await prisma.location.create({
+      data: {
+        name: requiredText(formData, "name"),
+        roomNumber: optionalText(formData, "roomNumber", 100),
+        description: optionalText(formData, "description", 2_000),
+      },
+    });
+  } catch (error) {
+    throw locationWriteError(error);
+  }
   refreshSetupPages();
 }
 
 export async function updateLocation(formData: FormData) {
   await requireAdministrator();
-  await prisma.location.update({
-    where: { id: requiredId(formData) },
-    data: {
-      name: requiredText(formData, "name"),
-      roomNumber: optionalText(formData, "roomNumber", 100),
-      description: optionalText(formData, "description", 2_000),
-    },
-  });
+  try {
+    await prisma.location.update({
+      where: { id: requiredId(formData) },
+      data: {
+        name: requiredText(formData, "name"),
+        roomNumber: optionalText(formData, "roomNumber", 100),
+        description: optionalText(formData, "description", 2_000),
+      },
+    });
+  } catch (error) {
+    throw locationWriteError(error);
+  }
   refreshSetupPages();
 }
 
