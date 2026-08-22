@@ -8,6 +8,8 @@ on:
 jobs:
   application:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://unused:unused@127.0.0.1:5432/unused
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,11 +17,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run db:generate
       - run: npm run test:unit
       - run: npm run verify
 
   public-browser-flows:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://unused:unused@127.0.0.1:5432/unused
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,5 +32,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run db:generate
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
