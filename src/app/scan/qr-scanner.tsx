@@ -5,23 +5,11 @@ import type { IScannerControls } from "@zxing/browser";
 import { ScanLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const qrCodePattern = /^[a-zA-Z0-9_-]{8,128}$/;
+import { inventoryQrCodeFromScan } from "@/lib/qr-code";
 
 function codeFromScan(value: string) {
-  const trimmed = value.trim();
-  if (qrCodePattern.test(trimmed)) return trimmed;
-
-  try {
-    const url = new URL(trimmed);
-    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin : window.location.origin;
-    if (url.origin !== window.location.origin && url.origin !== configuredOrigin) return "";
-    const segments = url.pathname.split("/").filter(Boolean);
-    const code = segments.length === 2 && segments[0] === "scan" ? decodeURIComponent(segments[1]) : "";
-    return qrCodePattern.test(code) ? code : "";
-  } catch {
-    return "";
-  }
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin : undefined;
+  return inventoryQrCodeFromScan(value, window.location.origin, configuredOrigin);
 }
 
 export function QrScanner() {
