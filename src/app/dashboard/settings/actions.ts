@@ -2,7 +2,6 @@
 
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { prisma } from "@/prisma";
 import { requireAdministrator } from "@/lib/inventory-auth";
@@ -42,14 +41,12 @@ export async function createCategory(formData: FormData) {
   await requireAdministrator();
   await prisma.category.create({ data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
   refreshSetupPages();
-  redirect("/dashboard/settings");
 }
 
 export async function updateCategory(formData: FormData) {
   await requireAdministrator();
   await prisma.category.update({ where: { id: requiredId(formData) }, data: { name: requiredText(formData, "name"), description: optionalText(formData, "description", 2_000) } });
   refreshSetupPages();
-  redirect("/dashboard/settings");
 }
 
 export async function createLocation(formData: FormData) {
@@ -62,7 +59,6 @@ export async function createLocation(formData: FormData) {
     },
   });
   refreshSetupPages();
-  redirect("/dashboard/settings");
 }
 
 export async function updateLocation(formData: FormData) {
@@ -76,21 +72,18 @@ export async function updateLocation(formData: FormData) {
     },
   });
   refreshSetupPages();
-  redirect("/dashboard/settings");
 }
 
 export async function setCategoryActive(formData: FormData) {
   await requireAdministrator();
   await prisma.category.update({ where: { id: requiredId(formData) }, data: { isActive: String(formData.get("isActive")) === "true" } });
   refreshSetupPages();
-  redirect("/dashboard/settings");
 }
 
 export async function setLocationActive(formData: FormData) {
   await requireAdministrator();
   await prisma.location.update({ where: { id: requiredId(formData) }, data: { isActive: String(formData.get("isActive")) === "true" } });
   refreshSetupPages();
-  redirect("/dashboard/settings");
 }
 
 export async function deleteLocation(formData: FormData) {
@@ -115,7 +108,7 @@ export async function deleteLocation(formData: FormData) {
         await transaction.location.delete({ where: { id } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       refreshSetupPages();
-      redirect("/dashboard/settings");
+      return;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
         throw new Error("This location now has an inventory record assigned to it. Move or remove that record before deleting the location.");
