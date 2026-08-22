@@ -37,8 +37,6 @@ const columnAliases: Record<string, string[]> = {
   macAddress: ["macaddress", "mac"],
   ipAddress: ["ipaddress", "ip"],
   lastCheckedAt: ["lastcheckedat", "lastchecked", "lastdatechecked"],
-  building: ["building"],
-  floor: ["floor"],
   status: ["status"],
   condition: ["condition"],
   description: ["description"],
@@ -159,7 +157,7 @@ function isXlsxFile(data: Buffer) {
 }
 
 function messageForImportError(error: unknown) {
-  if (error instanceof Error && /required|must|too long|active|single tracked|different building/i.test(error.message)) return error.message;
+  if (error instanceof Error && /required|must|too long|active|single tracked|already exists/i.test(error.message)) return error.message;
   if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
     return "a unique asset tag, serial number, or PC MAC address already exists.";
   }
@@ -172,14 +170,10 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
   const allowCreateSetup = formData.get("createMissingSetup") === "on";
   const previewOnly = formData.get("previewOnly") === "on";
   let defaultLocationName: string | null;
-  let defaultBuilding: string | null;
   let defaultRoomNumber: string | null;
-  let defaultFloor: string | null;
   try {
     defaultLocationName = optionalText(formText(formData, "defaultLocation"), "default location", 160);
-    defaultBuilding = optionalText(formText(formData, "defaultBuilding"), "default building", 120);
     defaultRoomNumber = optionalText(formText(formData, "defaultRoomNumber"), "default room number", 80);
-    defaultFloor = optionalText(formText(formData, "defaultFloor"), "default floor", 80);
   } catch (error) {
     return { ...emptyImportResult, errors: [messageForImportError(error)] };
   }
@@ -241,14 +235,12 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
       const safeName = boundedText(name, "name", 255);
       const safeCategoryName = boundedText(categoryName, "category", 120);
       const safeLocationName = boundedText(locationName, "location", 160);
-      const building = optionalText(valueAt(row, "building") || defaultBuilding || "", "building", 120);
       const locationColumnIsRoomNumber = columns.location !== undefined && columns.location === columns.roomNumber;
       const roomNumber = locationColumnIsRoomNumber
         ? safeLocationName
         : optionalText(valueAt(row, "roomNumber") || defaultRoomNumber || "", "room number", 80);
-      const floor = optionalText(valueAt(row, "floor") || defaultFloor || "", "floor", 80);
       const categoryKey = normalizedValue(safeCategoryName);
-      const locationKey = [safeLocationName, building ?? "", roomNumber ?? ""].map(normalizedValue).join("|");
+      const locationKey = normalizedValue(safeLocationName);
       const itemType = enumValue(valueAt(row, "itemType"), Object.values(ItemType), ItemType.ASSET);
       const quantity = parseNumber(valueAt(row, "quantity"), 1, "quantity") ?? 1;
       const hasComputerDetails = isTrue(valueAt(row, "isComputer")) || ["operatingSystem", "processor", "memoryGb", "macAddress"].some((column) => valueAt(row, column) !== "");
@@ -351,11 +343,10 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
 
         let location = locationCache.get(locationKey);
         if (!location) {
-          const namedLocations = await transaction.location.findMany({ where: { name: { equals: safeLocationName, mode: "insensitive" } }, select: { id: true, isActive: true, building: true, roomNumber: true } });
-          location = namedLocations.find((candidate) => normalizedValue(candidate.building ?? "") === normalizedValue(building ?? "") && normalizedValue(candidate.roomNumber ?? "") === normalizedValue(roomNumber ?? ""));
-          if (!location && namedLocations.length) throw new Error(`location “${safeLocationName}” already exists with a different building or room number.`);
+          const existingLocation = await transaction.location.findFirst({ where: { name: { equals: safeLocationName, mode: "insensitive" } }, select: { id: true, isActive: true } });
+          if (existingLocation) location = existingLocation;
           if (!location && allowCreateSetup) {
-            location = await transaction.location.create({ data: { name: safeLocationName, building, roomNumber, floor }, select: { id: true, isActive: true } });
+            location = await transaction.location.create({ data: { name: safeLocationName, roomNumber }, select: { id: true, isActive: true } });
           }
           if (!location) throw new Error(`location “${safeLocationName}” does not exist. Enable setup creation or add it in Settings first.`);
         }

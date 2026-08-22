@@ -66,18 +66,13 @@ enum UserRole {
 
 model Location {
   id          String          @id @default(uuid()) @db.Uuid
-  name        String
-  building    String?
-  floor       String?
+  name        String          @unique
   roomNumber  String?
   description String?
   isActive    Boolean         @default(true)
   items       InventoryItem[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
-
-  @@unique([building, roomNumber])
-  @@index([name])
 }
 
 model Category {
