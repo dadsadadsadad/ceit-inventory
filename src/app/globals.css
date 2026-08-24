@@ -1017,3 +1017,416 @@ summary:focus-visible {
     padding-right: 2.5rem;
   }
 }
+
+/* Comprehensive page treatments */
+.page-inner > header:not(.card),
+.page-narrow > header:not(.card) {
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent) 19%, transparent), transparent 15rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-highlight) 94%, transparent), transparent 50%),
+    var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow);
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(1.35rem, 3vw, 2.1rem);
+  position: relative;
+}
+
+.page-inner > header:not(.card)::before,
+.page-narrow > header:not(.card)::before {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 42%, transparent), transparent 70%),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) 0 1px, transparent 1px 0.7rem);
+  bottom: 0;
+  content: "";
+  height: 0.22rem;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+}
+
+.page-inner > header:not(.card)::after,
+.page-narrow > header:not(.card)::after {
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 69%);
+  content: "";
+  height: 20rem;
+  pointer-events: none;
+  position: absolute;
+  right: -9rem;
+  top: -12rem;
+  width: 20rem;
+  z-index: -1;
+}
+
+.page-inner > header:not(.card) > *,
+.page-narrow > header:not(.card) > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page-inner > header:not(.card) .eyebrow,
+.page-narrow > header:not(.card) .eyebrow {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.page-inner > header:not(.card) .eyebrow::before,
+.page-narrow > header:not(.card) .eyebrow::before {
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  content: "";
+  height: 0.42rem;
+  width: 0.42rem;
+}
+
+.page-inner > header:not(.card) .title,
+.page-narrow > header:not(.card) .title {
+  font-size: clamp(2rem, 4vw, 3.1rem);
+}
+
+.page-inner > header:not(.card) > .accent-link:first-child,
+.page-narrow > header:not(.card) > .accent-link:first-child {
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  padding: 0.45rem 0.75rem;
+}
+
+.page-inner > header:not(.card) .card,
+.page-narrow > header:not(.card) .card {
+  background: color-mix(in srgb, var(--surface-soft) 68%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow: 0 9px 18px rgba(0, 0, 0, 0.12);
+}
+
+.page-inner > header:not(.card) .primary-button {
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--accent-strong) 31%, transparent);
+}
+
+.inventory-page::before,
+.item-detail-page::before {
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 23%, transparent), transparent 68%);
+}
+
+.borrowing-page::before,
+.activity-page::before {
+  background: radial-gradient(circle, color-mix(in srgb, #60a5fa 20%, transparent), transparent 70%);
+}
+
+.maintenance-page::before {
+  background: radial-gradient(circle, color-mix(in srgb, #f87171 18%, transparent), transparent 70%);
+}
+
+.reports-page::before,
+.settings-page::before,
+.users-page::before {
+  background: radial-gradient(circle, color-mix(in srgb, #a78bfa 18%, transparent), transparent 70%);
+}
+
+.new-item-page::before,
+.import-page::before,
+.scan-page::before,
+.scan-item-page::before {
+  background: radial-gradient(circle, color-mix(in srgb, #fbbf24 18%, transparent), transparent 70%);
+}
+
+.inventory-page form.card,
+.borrowing-page form.card,
+.maintenance-page form.card {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-soft) 50%, transparent), transparent 28%),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+
+.inventory-page section.card,
+.borrowing-page section.card,
+.activity-page section.card {
+  box-shadow: 0 22px 48px color-mix(in srgb, black 22%, transparent);
+}
+
+.inventory-page .table-heading,
+.borrowing-page .table-heading {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-soft) 58%, transparent), transparent),
+    var(--surface-soft);
+}
+
+.inventory-page .table-row:nth-child(even),
+.borrowing-page .table-row:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-soft) 36%, transparent);
+}
+
+.activity-page section > ol > li {
+  border-left: 2px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+  margin-left: 1.45rem;
+  padding-left: 1.55rem;
+  position: relative;
+}
+
+.activity-page section > ol > li::before {
+  background: var(--accent);
+  border: 4px solid var(--surface);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  content: "";
+  height: 0.88rem;
+  left: -0.55rem;
+  position: absolute;
+  top: 1.35rem;
+  width: 0.88rem;
+}
+
+.maintenance-page article.card {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, #f87171 8%, transparent), transparent 32%),
+    var(--surface);
+}
+
+.maintenance-page article.card:hover {
+  border-color: color-mix(in srgb, #f87171 35%, var(--border));
+}
+
+.reports-page .page-inner > .grid > article.card,
+.settings-page .page-inner > .grid > section.card,
+.users-page .page-inner > section.card {
+  overflow: hidden;
+}
+
+.reports-page .page-inner > .grid > article.card::after,
+.settings-page .page-inner > .grid > section.card::after,
+.users-page .page-inner > section.card::after {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 52%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.reports-page .page-inner > .grid > article.card > *,
+.settings-page .page-inner > .grid > section.card > *,
+.users-page .page-inner > section.card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-page details.card-muted {
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.item-detail-page .page-inner > .grid > article.card:first-child,
+.item-detail-page .page-inner > .grid > aside.card {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+}
+
+.item-detail-page dl > div,
+.scan-item-page dl > div {
+  background: color-mix(in srgb, var(--surface-soft) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+}
+
+.new-item-page form.card,
+.import-page form.card,
+.scan-page section.card,
+.scan-item-page article.card {
+  border-color: color-mix(in srgb, var(--accent) 29%, var(--border));
+  box-shadow: 0 24px 50px color-mix(in srgb, black 20%, transparent);
+}
+
+.new-item-page form.card,
+.import-page form.card {
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 17rem),
+    var(--surface);
+}
+
+.scan-page .scanner-preview {
+  border-radius: 1rem;
+  min-height: min(62vw, 28rem);
+}
+
+.scan-page .scanner-corners {
+  border-radius: 1.25rem;
+}
+
+.scan-item-page > .page-narrow > article.card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 42%, transparent), transparent 50%),
+    var(--surface);
+}
+
+.label-page .no-print {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+  padding: 0.9rem 1rem;
+}
+
+.label-page .print-label {
+  position: relative;
+}
+
+.label-page .print-label::before {
+  background: linear-gradient(90deg, var(--accent), #fbbf24, var(--accent));
+  border-radius: 999px;
+  content: "";
+  height: 0.28rem;
+  left: 1.5rem;
+  position: absolute;
+  right: 1.5rem;
+  top: 1rem;
+}
+
+.system-page .card {
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 19rem),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  box-shadow: 0 28px 64px color-mix(in srgb, black 35%, transparent);
+}
+
+.system-page .card::before {
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 7px var(--accent-soft);
+  content: "";
+  height: 0.55rem;
+  left: calc(50% - 0.275rem);
+  position: absolute;
+  top: 1.4rem;
+  width: 0.55rem;
+}
+
+.system-page .eyebrow {
+  margin-top: 1.8rem;
+}
+
+.login-page {
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+}
+
+.login-page::before,
+.login-page::after {
+  border-radius: 999px;
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+.login-page::before {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  height: 24rem;
+  right: -10rem;
+  top: -9rem;
+  width: 24rem;
+}
+
+.login-page::after {
+  background: color-mix(in srgb, #fbbf24 11%, transparent);
+  bottom: -12rem;
+  height: 28rem;
+  left: -12rem;
+  width: 28rem;
+}
+
+.login-panel {
+  overflow: hidden;
+  position: relative;
+}
+
+.login-panel::after {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 2.7rem 2.7rem;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(130deg, black, transparent 72%);
+  pointer-events: none;
+  position: absolute;
+}
+
+.login-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.loading-page .skeleton:first-child {
+  border-radius: 999px;
+}
+
+@media (max-width: 639px) {
+  .page {
+    padding: 1rem 1rem 6.25rem;
+  }
+
+  .page::before {
+    height: 20rem;
+    right: -11rem;
+    top: -8rem;
+    width: 20rem;
+  }
+
+  .page-inner > header:not(.card),
+  .page-narrow > header:not(.card) {
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+
+  .page-inner > header:not(.card) .title,
+  .page-narrow > header:not(.card) .title {
+    font-size: 2rem;
+    line-height: 1.08;
+  }
+
+  .page-inner > header:not(.card) > .flex:last-child,
+  .page-narrow > header:not(.card) > .flex:last-child {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .page-inner > header:not(.card) > .flex:last-child > a,
+  .page-narrow > header:not(.card) > .flex:last-child > a {
+    flex: 1 1 10rem;
+  }
+
+  .scan-page .scanner-preview {
+    min-height: 17rem;
+  }
+
+  .activity-page section > ol > li {
+    margin-left: 0.65rem;
+    padding-left: 1.2rem;
+  }
+
+  .label-page .no-print {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .label-page .no-print button,
+  .label-page .no-print a {
+    text-align: center;
+  }
+}
+
+@media print {
+  .page::before,
+  .page-inner > header:not(.card)::before,
+  .page-inner > header:not(.card)::after,
+  .label-page .print-label::before {
+    display: none;
+  }
+}

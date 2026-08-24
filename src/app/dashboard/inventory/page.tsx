@@ -218,7 +218,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
 
   return (
-    <div className="page">
+    <div className="page inventory-page">
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

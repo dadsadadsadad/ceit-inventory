@@ -17,7 +17,7 @@ export default async function UsersPage() {
   const users = await prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { email: "asc" }] });
 
   return (
-    <div className="page">
+    <div className="page users-page">
       <div className="page-inner space-y-6">
         <header>
           <p className="eyebrow">Users</p>

@@ -10,7 +10,7 @@ export default async function ScanPage() {
   await requireInventoryAccess();
 
   return (
-    <main className="page">
+    <main className="page scan-page">
       <div className="page-narrow space-y-6">
         <header>
           <Link href="/dashboard" className="accent-link text-sm font-semibold">← Dashboard</Link>
