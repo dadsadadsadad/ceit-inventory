@@ -74,7 +74,7 @@ export default async function ActivityHistoryPage({ searchParams }: { searchPara
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
 
   return (
-    <div className="page">
+    <div className="page activity-page">
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

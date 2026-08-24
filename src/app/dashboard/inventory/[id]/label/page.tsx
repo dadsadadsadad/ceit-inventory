@@ -35,7 +35,7 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
   const qrDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "M", margin: 1, width: 560 });
 
   return (
-    <main className="page">
+    <main className="page label-page">
       <div className="page-narrow space-y-6">
         <div className="no-print flex items-center justify-between gap-4"><Link href={`/dashboard/inventory/${item.id}`} className="accent-link text-sm font-semibold">← Back to item</Link><PrintLabel /></div>
         <article className="print-label mx-auto max-w-md rounded-lg p-7 text-center">

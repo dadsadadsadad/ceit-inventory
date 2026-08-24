@@ -158,7 +158,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
   const selectableLocations = locations.filter((location) => location.isActive || location.id === item.locationId);
 
   return (
-    <div className="page">
+    <div className="page item-detail-page">
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

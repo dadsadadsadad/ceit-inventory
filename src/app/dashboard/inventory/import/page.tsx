@@ -8,7 +8,7 @@ export default async function ImportInventoryPage() {
   await requireWriteAccess();
 
   return (
-    <div className="page">
+    <div className="page import-page">
       <div className="page-narrow space-y-6">
         <header>
           <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">

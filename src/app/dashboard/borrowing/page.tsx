@@ -178,7 +178,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
 
   return (
-    <div className="page">
+    <div className="page borrowing-page">
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

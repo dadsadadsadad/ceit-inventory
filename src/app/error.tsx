@@ -8,7 +8,7 @@ export default function ApplicationError({ error, retry }: { error: Error & { di
   }, [error]);
 
   return (
-    <main className="page grid min-h-screen place-items-center">
+    <main className="page system-page grid min-h-screen place-items-center">
       <section className="card w-full max-w-lg rounded-lg p-7 text-center">
         <p className="eyebrow">Something went wrong</p>
         <h1 className="title mt-3 text-3xl">This screen could not be loaded</h1>

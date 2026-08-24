@@ -56,7 +56,7 @@ export default async function ScannedItemPage({
   const borrowable = isBorrowableItem(item);
 
   return (
-    <main className="page">
+    <main className="page scan-item-page">
       {canManage ? <ScanAuditLogger itemId={item.id} /> : null}
       <div className="page-narrow space-y-6">
         <header>

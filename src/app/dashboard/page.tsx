@@ -50,7 +50,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="page">
+    <div className="page dashboard-overview-page">
       <div className="page-inner space-y-6">
         <header className="card dashboard-hero rounded-lg px-6 py-7 sm:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

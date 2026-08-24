@@ -79,7 +79,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="page">
+    <div className="page settings-page">
       <div className="page-inner space-y-6">
         <header>
           <p className="eyebrow">Settings</p>
