@@ -32,6 +32,7 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
         </div>
       </div>
 
+      <p className="sidebar-section-label hidden lg:block">Workspace</p>
       <nav className="px-3 pb-4 lg:flex-1 lg:px-4" aria-label="Dashboard navigation">
         <ul className="dashboard-nav-list lg:space-y-1">
           {navItems.map(({ label, href, Icon }) => {
