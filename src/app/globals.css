@@ -942,9 +942,28 @@ summary:focus-visible {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--surface-soft), var(--surface-muted), var(--surface-soft));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 9%, var(--surface-soft)),
+    color-mix(in srgb, var(--accent) 28%, var(--surface-muted)),
+    color-mix(in srgb, var(--accent) 9%, var(--surface-soft))
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.bulk-action-toolbar {
+  background:
+    linear-gradient(125deg, color-mix(in srgb, var(--accent-soft) 74%, transparent), transparent 44%),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  box-shadow: 0 15px 34px color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.bulk-action-retire-note {
+  background: color-mix(in srgb, #b45309 13%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, #f59e0b 34%, var(--border));
+  color: var(--foreground);
 }
 
 @keyframes shimmer {

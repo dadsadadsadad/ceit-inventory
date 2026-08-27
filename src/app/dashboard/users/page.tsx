@@ -3,7 +3,7 @@ import { UserRole } from "@prisma/client";
 import { createUser, updateUser } from "./actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { requireAdministrator } from "@/lib/inventory-auth";
+import { requireAdministrationPageAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ function roleLabel(role: UserRole) {
 }
 
 export default async function UsersPage() {
-  await requireAdministrator();
+  await requireAdministrationPageAccess();
   const users = await prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { email: "asc" }] });
 
   return (

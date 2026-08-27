@@ -9,7 +9,7 @@ import {
 } from "./actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { requireAdministrator } from "@/lib/inventory-auth";
+import { requireAdministrationPageAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -72,7 +72,7 @@ function LocationEditor({ location }: { location: { id: string; name: string; ro
 }
 
 export default async function SettingsPage() {
-  await requireAdministrator();
+  await requireAdministrationPageAccess();
   const [categories, locations] = await Promise.all([
     prisma.category.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { items: true } } } }),
     prisma.location.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { items: true } } } }),

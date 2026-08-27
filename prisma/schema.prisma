@@ -97,6 +97,7 @@ model InventoryItem {
   name            String
   description     String?
   itemType        ItemType         @default(ASSET)
+  isComputer      Boolean          @default(false)
   quantity        Int              @default(1)
   status          ItemStatus       @default(OK)
   condition       ItemCondition    @default(GOOD)

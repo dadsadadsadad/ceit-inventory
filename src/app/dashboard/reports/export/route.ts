@@ -1,6 +1,7 @@
 import { MaintenanceStatus } from "@prisma/client";
 
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { manilaCalendarDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ function exportLimitReached(recordCount: number) {
 export async function GET(request: Request) {
   const user = await requireInventoryAccess();
   const kind = new URL(request.url).searchParams.get("kind");
-  const date = new Date().toISOString().slice(0, 10);
+  const date = manilaCalendarDate();
 
   if (kind === "inventory") {
     const items = await prisma.inventoryItem.findMany({ include: { category: true, location: true, computer: true }, orderBy: [{ name: "asc" }, { assetTag: "asc" }], take: maximumExportRecords + 1 });

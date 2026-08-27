@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 
-import { CommandMenu } from "./components/command-menu";
 import { ThemeToggle } from "./components/theme-toggle";
 import "./globals.css";
 
@@ -19,7 +18,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="ceit-appearance-bootstrap" strategy="beforeInteractive">{appearanceBootstrap}</Script>
         <a href="#main-content" className="skip-link">Skip to content</a>
         <div id="main-content">{children}</div>
-        <CommandMenu />
         <ThemeToggle />
       </body>
     </html>

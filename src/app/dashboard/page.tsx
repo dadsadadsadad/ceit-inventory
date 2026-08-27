@@ -6,6 +6,7 @@ import { ArrowRight, ArrowUpRight, BarChart3, ClipboardCheck, FileUp, MapPin, Pa
 import { DashboardNoteForm } from "./dashboard-note-form";
 
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -123,7 +124,7 @@ export default async function DashboardPage() {
                     {dashboard.recentActivity.map((event) => (
                       <li key={event.id} className="dashboard-activity-item flex items-start justify-between gap-4 px-6 py-4">
                         <div><p className="text-sm font-semibold">{event.summary}</p><Link href={`/dashboard/inventory/${event.item.id}`} className="muted mt-1 block text-xs hover:text-[var(--accent)]">{event.item.name}</Link></div>
-                        <time className="muted shrink-0 text-xs" dateTime={event.createdAt.toISOString()}>{event.createdAt.toLocaleDateString()}</time>
+                        <time className="muted shrink-0 text-xs" dateTime={event.createdAt.toISOString()}>{formatManilaDate(event.createdAt, { day: "numeric", month: "short" })}</time>
                       </li>
                     ))}
                   </ol>

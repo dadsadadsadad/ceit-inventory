@@ -7,9 +7,9 @@ import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth
 import { prisma } from "@/prisma";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
-import { SubmitButton } from "@/app/components/submit-button";
 import { bulkUpdateInventory } from "./actions";
 import { BulkSelectionToggle } from "./bulk-selection-toggle";
+import { InventoryBulkActions } from "./inventory-bulk-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -164,18 +164,6 @@ function InventoryFormContainer({ canManage, children }: { canManage: boolean; c
   return <FeedbackForm action={bulkUpdateInventory} className="space-y-3">{children}</FeedbackForm>;
 }
 
-function BulkControls({ locations }: { locations: { id: string; name: string }[] }) {
-  return (
-    <div className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_auto] xl:items-end">
-      <div className="sm:col-span-2 xl:col-span-1"><p className="text-sm font-semibold">Bulk update selected records</p><p className="muted mt-1 text-xs leading-5">Select records below, choose one action, and only complete its matching value.</p></div>
-      <label><span className="muted text-xs font-bold uppercase tracking-wide">Action</span><select required name="bulkAction" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"><option value="" disabled>Choose action</option><option value="location">Move to location</option><option value="status">Change status</option><option value="condition">Change condition</option><option value="retire">Retire selected items</option></select></label>
-      <label><span className="muted text-xs font-bold uppercase tracking-wide">Location</span><select name="bulkLocationId" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"><option value="">Used for move only</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
-      <div><span className="muted text-xs font-bold uppercase tracking-wide">Status / condition</span><div className="mt-2 grid grid-cols-2 gap-2"><select name="bulkStatus" defaultValue="OK" aria-label="New status" className="field min-w-0 rounded-lg px-2 py-2.5 text-sm">{Object.values(ItemStatus).map((status) => <option key={status} value={status}>{inventoryStatusLabel(status)}</option>)}</select><select name="bulkCondition" defaultValue="GOOD" aria-label="New condition" className="field min-w-0 rounded-lg px-2 py-2.5 text-sm">{Object.values(ItemCondition).map((condition) => <option key={condition} value={condition}>{enumLabel(condition)}</option>)}</select></div></div>
-      <SubmitButton pendingLabel="Updating…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Apply action</SubmitButton>
-    </div>
-  );
-}
-
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const [user, search] = await Promise.all([
     requireInventoryAccess(),
@@ -289,7 +277,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           <div className="notice rounded-lg px-5 py-4 text-sm">No records match these filters. {canManage ? "Add an item or import an existing file to get started." : "Try clearing a filter."}</div>
         ) : (
           <InventoryFormContainer canManage={canManage}>
-            {canManage ? <BulkControls locations={locations} /> : null}
+            {canManage ? <InventoryBulkActions locations={locations.map((location) => ({ label: location.name, value: location.id }))} statuses={Object.values(ItemStatus).map((status) => ({ label: inventoryStatusLabel(status), value: status }))} conditions={Object.values(ItemCondition).map((condition) => ({ label: enumLabel(condition), value: condition }))} /> : null}
           <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
             <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
               <p className="muted text-sm">{totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>

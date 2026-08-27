@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AuditAction, Prisma } from "@prisma/client";
 
 import { requireInventoryAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -146,7 +147,7 @@ function eventDetail(event: ActivityEvent) {
 }
 
 function formattedTimestamp(value: Date) {
-  return value.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" });
+  return formatManilaDate(value, { dateStyle: "medium", timeStyle: "short" });
 }
 
 export default async function ActivityHistoryPage({ searchParams }: { searchParams: Promise<SearchParams> }) {

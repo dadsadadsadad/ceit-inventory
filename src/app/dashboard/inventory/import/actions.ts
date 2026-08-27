@@ -326,6 +326,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             purchaseDate,
             purchasePrice,
             itemType,
+            isComputer: hasComputerDetails,
             quantity,
             status: explicitStatus
               ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK)
@@ -399,6 +400,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             purchaseDate,
             purchasePrice,
             itemType,
+            isComputer: hasComputerDetails,
             quantity,
             status: explicitStatus
               ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK)

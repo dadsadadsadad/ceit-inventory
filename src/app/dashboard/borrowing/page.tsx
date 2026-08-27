@@ -5,7 +5,8 @@ import type { BorrowStatus, Prisma } from "@prisma/client";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { borrowStatus, borrowStatuses } from "@/lib/borrow-status";
-import { requireWriteAccess } from "@/lib/inventory-auth";
+import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 import { declineBorrowRequest, markBorrowed, returnBorrowRequest } from "./actions";
@@ -98,11 +99,11 @@ function borrowStatusClass(status: BorrowStatus) {
 }
 
 function formatDate(value: Date) {
-  return value.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function formatDateTime(value: Date) {
-  return value.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+  return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function BorrowingActions({ request }: { request: BorrowingRecord }) {
@@ -150,7 +151,7 @@ function BorrowerDetails({ request }: { request: BorrowingRecord }) {
 }
 
 export default async function BorrowingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireWriteAccess();
+  await requireInventoryManagementPageAccess();
   const search = await searchParams;
   const where = borrowRequestWhere(search);
   const requestedPage = safePage(search.page);

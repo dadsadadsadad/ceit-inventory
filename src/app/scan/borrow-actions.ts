@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { borrowStatus } from "@/lib/borrow-status";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
+import { manilaCalendarDate } from "@/lib/manila-date";
 import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
 import { prisma } from "@/prisma";
 
@@ -53,17 +54,6 @@ function readQuantity(formData: FormData) {
     throw new Error("Choose a quantity between 1 and 1,000.");
   }
   return quantity;
-}
-
-function manilaCalendarDate(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function readExpectedReturnDate(formData: FormData) {

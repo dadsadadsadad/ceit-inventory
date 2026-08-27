@@ -2,12 +2,12 @@ import Link from "next/link";
 
 import { NewInventoryForm } from "./new-inventory-form";
 import { prisma } from "@/prisma";
-import { requireWriteAccess } from "@/lib/inventory-auth";
+import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewInventoryItemPage() {
-  await requireWriteAccess();
+  await requireInventoryManagementPageAccess();
   const [categories, locations] = await Promise.all([
     prisma.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.location.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
