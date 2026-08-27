@@ -4,7 +4,8 @@ import { MaintenancePriority, MaintenanceStatus } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { requireWriteAccess } from "@/lib/inventory-auth";
+import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 import { createMaintenanceTicket, updateMaintenanceTicket } from "./actions";
@@ -32,11 +33,11 @@ function ticketTone(status: MaintenanceStatus) {
 }
 
 function formatDate(value: Date) {
-  return value.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default async function MaintenancePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireWriteAccess();
+  await requireInventoryManagementPageAccess();
   const search = await searchParams;
   const requestedStatus = first(search.status);
   const status = Object.values(MaintenanceStatus).includes(requestedStatus as MaintenanceStatus) ? requestedStatus as MaintenanceStatus : undefined;

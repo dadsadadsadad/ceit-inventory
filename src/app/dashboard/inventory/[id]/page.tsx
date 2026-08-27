@@ -19,6 +19,8 @@ import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
+import { canHaveComputerDetails } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +50,7 @@ function dateValue(value?: Date | null) {
 }
 
 function displayDate(value?: Date | null) {
-  return value ? value.toLocaleDateString() : "Not recorded";
+  return value ? formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" }) : "Not recorded";
 }
 
 const philippinePeso = new Intl.NumberFormat("en-PH", { currency: "PHP", minimumFractionDigits: 2, style: "currency" });
@@ -276,7 +278,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   ) : null}
                 </div>
               </article>
-            ) : canManage && item.itemType === ItemType.ASSET && item.quantity === 1 ? (
+            ) : canManage && canHaveComputerDetails(item) ? (
               <article className="card rounded-lg p-5 sm:p-6">
                 <h2 className="text-lg font-semibold">Add PC details</h2>
                 <p className="muted mt-2 text-sm">Create a PC record for this single tracked asset.</p>
@@ -295,7 +297,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   {item.auditEvents.map((event) => (
                     <li key={event.id} className="divider border-l pl-4 text-sm">
                       <p className="font-semibold">{event.summary}</p>
-                      <p className="muted mt-1 text-xs">{event.actorName ?? "System"} · {event.createdAt.toLocaleString()}</p>
+                      <p className="muted mt-1 text-xs">{event.actorName ?? "System"} · {formatManilaDate(event.createdAt, { dateStyle: "medium", timeStyle: "short" })}</p>
                     </li>
                   ))}
                 </ol>
@@ -324,14 +326,19 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   </select>
                 </label>
                 {computer ? (
-                  <div><span className="text-sm font-semibold">Record type</span><p className="muted mt-2 text-sm">Tracked asset (locked while PC details exist)</p><input type="hidden" name="itemType" value={ItemType.ASSET} /></div>
+                  <div><span className="text-sm font-semibold">Record type</span><p className="muted mt-2 text-sm">Tracked asset (locked while PC details exist)</p><input type="hidden" name="itemType" value={ItemType.ASSET} /><input type="hidden" name="isComputer" value="on" /></div>
                 ) : (
-                  <label>
-                    <span className="text-sm font-semibold">Record type</span>
-                    <select name="itemType" defaultValue={item.itemType} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
-                      {Object.values(ItemType).map((value) => <option key={value} value={value}>{value === ItemType.ASSET ? "Tracked asset" : "Supply / stock"}</option>)}
-                    </select>
-                  </label>
+                  <>
+                    <label>
+                      <span className="text-sm font-semibold">Record type</span>
+                      <select name="itemType" defaultValue={item.itemType} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+                        {Object.values(ItemType).map((value) => <option key={value} value={value}>{value === ItemType.ASSET ? "Tracked asset" : "Supply / stock"}</option>)}
+                      </select>
+                    </label>
+                    {item.itemType === ItemType.ASSET ? (
+                      <label className="card-muted flex items-start gap-3 rounded-lg p-3 text-sm font-semibold"><input name="isComputer" type="checkbox" defaultChecked={item.isComputer} className="mt-0.5 h-4 w-4 shrink-0" /><span>This tracked asset is a PC<span className="muted mt-1 block text-xs font-normal leading-5">Only PC-designated single tracked assets can have hardware and software details.</span></span></label>
+                    ) : <p className="muted text-xs leading-5">Supply records cannot be designated as PCs. Change the record type to a tracked asset first.</p>}
+                  </>
                 )}
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
                   <label><span className="text-sm font-semibold">Status</span><select name="status" defaultValue={item.status} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">{Object.values(ItemStatus).map((value) => <option key={value} value={value}>{inventoryStatusLabel(value)}</option>)}</select></label>

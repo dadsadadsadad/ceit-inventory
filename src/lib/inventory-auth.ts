@@ -120,3 +120,15 @@ export async function requireAdministrator() {
   if (!canManageAdministration(user.role)) throw new Error("Only administrators can manage accounts and inventory setup.");
   return user;
 }
+
+export async function requireInventoryManagementPageAccess() {
+  const user = await requireInventoryAccess();
+  if (!canManageInventory(user.role)) redirect("/dashboard");
+  return user;
+}
+
+export async function requireAdministrationPageAccess() {
+  const user = await requireInventoryAccess();
+  if (!canManageAdministration(user.role)) redirect("/dashboard");
+  return user;
+}

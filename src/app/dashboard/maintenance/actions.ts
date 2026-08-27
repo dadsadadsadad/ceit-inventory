@@ -1,6 +1,6 @@
 "use server";
 
-import { AuditAction, ItemStatus, MaintenancePriority, MaintenanceStatus } from "@prisma/client";
+import { AuditAction, ItemStatus, MaintenancePriority, MaintenanceStatus, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -37,13 +37,28 @@ function revalidate(itemId?: string) {
   if (itemId) revalidatePath(`/dashboard/inventory/${itemId}`);
 }
 
+async function activeStaffAssignee(value: string | null) {
+  if (!value) return null;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      email: { equals: value, mode: "insensitive" },
+      isActive: true,
+      role: { in: [UserRole.ADMINISTRATOR, UserRole.CUSTODIAN, UserRole.STAFF] },
+    },
+    select: { email: true },
+  });
+  if (!user) throw new Error("Choose an active staff member to assign this service request.");
+  return user.email;
+}
+
 export async function createMaintenanceTicket(formData: FormData) {
   const actor = await requireWriteAccess();
   const itemId = id(formData, "itemId");
   const title = text(formData, "title", 255, true);
   const description = text(formData, "description", 5_000, true);
   const priority = enumValue(formData, "priority", Object.values(MaintenancePriority), MaintenancePriority.NORMAL);
-  const assignedToName = text(formData, "assignedToName", 255);
+  const assignedToName = await activeStaffAssignee(text(formData, "assignedToName", 255));
   const markDefective = formData.get("markDefective") === "on";
 
   await prisma.$transaction(async (transaction) => {
@@ -75,7 +90,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
   const actor = await requireWriteAccess();
   const ticketId = id(formData, "ticketId");
   const status = enumValue(formData, "status", Object.values(MaintenanceStatus), MaintenanceStatus.OPEN);
-  const assignedToName = text(formData, "assignedToName", 255);
+  const assignedToName = await activeStaffAssignee(text(formData, "assignedToName", 255));
   const resolutionNotes = text(formData, "resolutionNotes", 5_000);
 
   const ticket = await prisma.$transaction(async (transaction) => {

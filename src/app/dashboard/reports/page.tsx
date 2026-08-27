@@ -4,15 +4,10 @@ import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
 
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
+import { startOfManilaDay } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
-
-function startOfDay() {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
 
 const philippinePeso = new Intl.NumberFormat("en-PH", { currency: "PHP", minimumFractionDigits: 2, style: "currency" });
 
@@ -23,7 +18,7 @@ function displayPurchasePrice(value?: { toString: () => string } | null) {
 export default async function ReportsPage() {
   const user = await requireInventoryAccess();
   const canManage = canManageInventory(user.role);
-  const today = startOfDay();
+  const today = startOfManilaDay();
   const [itemCount, statusCounts, categoryCounts, locationCounts, openTicketCount, activeBorrowCount, overdueBorrowCount, acquisitionSummary] = await Promise.all([
     prisma.inventoryItem.count(),
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),

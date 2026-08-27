@@ -2,6 +2,7 @@
 
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
+import { nextManilaCalendarDate } from "@/lib/manila-date";
 
 import { submitBorrowRequest } from "./borrow-actions";
 
@@ -10,16 +11,6 @@ type BorrowRequestFormProps = {
   maximumQuantity: number;
   qrCode: string;
 };
-
-function tomorrowDate() {
-  const tomorrow = new Date();
-  tomorrow.setHours(0, 0, 0, 0);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const year = tomorrow.getFullYear();
-  const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
-  const day = String(tomorrow.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowRequestFormProps) {
   const clientMaximumQuantity = Math.min(Math.max(Math.trunc(maximumQuantity) || 1, 1), 1_000);
@@ -58,7 +49,7 @@ export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowR
         </label>
         <label>
           <span className="text-sm font-semibold">Expected return *</span>
-          <input name="expectedReturnDate" required type="date" min={tomorrowDate()} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />
+          <input name="expectedReturnDate" required type="date" min={nextManilaCalendarDate()} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />
           <span className="muted mt-1 block text-xs">Choose a date after today.</span>
         </label>
       </div>

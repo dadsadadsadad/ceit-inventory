@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireAdministrator, requireWriteAccess } from "@/lib/inventory-auth";
+import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
 
 const statuses = Object.values(ItemStatus);
@@ -132,7 +133,7 @@ export async function createInventoryItem(formData: FormData) {
   const itemType = enumValue(formData, "itemType", itemTypes, ItemType.ASSET);
   const quantity = optionalInteger(formData, "quantity") ?? 1;
   const isComputer = formData.get("isComputer") === "on";
-  if (isComputer && (itemType !== ItemType.ASSET || quantity !== 1)) throw new Error("A PC must be a single tracked asset, not a supply record.");
+  if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) throw new Error("A PC must be a single tracked asset, not a supply record.");
   await assertActiveAssignments(categoryId, locationId);
 
   const item = await prisma.inventoryItem.create({
@@ -142,6 +143,7 @@ export async function createInventoryItem(formData: FormData) {
       categoryId,
       locationId,
       itemType,
+      isComputer,
       quantity,
       status: enumValue(formData, "status", statuses, ItemStatus.OK),
       condition: enumValue(formData, "condition", conditions, ItemCondition.GOOD),
@@ -169,7 +171,8 @@ export async function updateInventoryItem(formData: FormData) {
   const locationId = requiredId(formData, "locationId");
   const itemType = enumValue(formData, "itemType", itemTypes, existing.itemType);
   const quantity = optionalInteger(formData, "quantity") ?? existing.quantity;
-  if (existing.computer && (itemType !== ItemType.ASSET || quantity !== 1)) throw new Error("A PC must remain a single tracked asset.");
+  const isComputer = existing.computer ? true : formData.get("isComputer") === "on";
+  if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) throw new Error("A PC must be a single tracked asset, not a supply record.");
   await assertActiveAssignments(categoryId, locationId, existing);
 
   const data = {
@@ -178,6 +181,7 @@ export async function updateInventoryItem(formData: FormData) {
     categoryId,
     locationId,
     itemType,
+    isComputer,
     status: enumValue(formData, "status", statuses, existing.status),
     condition: enumValue(formData, "condition", conditions, existing.condition),
     quantity,
@@ -357,7 +361,7 @@ export async function addComputerDetails(formData: FormData) {
   const actor = await requireWriteAccess();
   const itemId = requiredId(formData, "itemId");
   const item = await prisma.inventoryItem.findUniqueOrThrow({ where: { id: itemId }, include: { computer: true } });
-  if (item.computer || item.itemType !== ItemType.ASSET || item.quantity !== 1) throw new Error("Only a single tracked asset without an existing PC record can receive PC details.");
+  if (item.computer || !canHaveComputerDetails(item)) throw new Error("Only a PC-designated single tracked asset without an existing PC record can receive PC details.");
 
   await prisma.$transaction([
     prisma.computer.create({ data: { itemId, ...computerData(formData), lastCheckedAt: new Date() } }),

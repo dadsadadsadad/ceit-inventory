@@ -10,25 +10,32 @@ type CommandItem = {
   href: string;
   Icon: LucideIcon;
   label: string;
+  requires?: "administrator" | "inventory-manager";
 };
 
 const commands: CommandItem[] = [
   { label: "Open dashboard", description: "See the live CEIT overview", href: "/dashboard", Icon: LayoutDashboard },
   { label: "Browse inventory", description: "Search equipment and supplies", href: "/dashboard/inventory", Icon: Package },
   { label: "Scan a QR label", description: "Open the camera scanner", href: "/scan", Icon: ScanLine },
-  { label: "Add inventory", description: "Register an asset or supply", href: "/dashboard/inventory/new", Icon: PackagePlus },
+  { label: "Add inventory", description: "Register an asset or supply", href: "/dashboard/inventory/new", Icon: PackagePlus, requires: "inventory-manager" },
   { label: "View activity", description: "Review recent edits and scans", href: "/dashboard/activity", Icon: Clock3 },
   { label: "Open reports", description: "Review current inventory trends", href: "/dashboard/reports", Icon: BarChart3 },
-  { label: "Open settings", description: "Manage rooms and categories", href: "/dashboard/settings", Icon: Settings2 },
+  { label: "Open settings", description: "Manage rooms and categories", href: "/dashboard/settings", Icon: Settings2, requires: "administrator" },
 ];
 
-export function CommandMenu() {
+type CommandMenuProps = { canManageAdministration: boolean; canManageInventory: boolean };
+
+export function CommandMenu({ canManageAdministration, canManageInventory }: CommandMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const visibleCommands = commands.filter((command) => `${command.label} ${command.description}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const visibleCommands = commands.filter((command) => {
+    if (command.requires === "administrator" && !canManageAdministration) return false;
+    if (command.requires === "inventory-manager" && !canManageInventory) return false;
+    return `${command.label} ${command.description}`.toLowerCase().includes(query.trim().toLowerCase());
+  });
 
   function openMenu() {
     setQuery("");

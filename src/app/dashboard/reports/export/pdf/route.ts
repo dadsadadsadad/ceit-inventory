@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { formatManilaDate, manilaCalendarDate, startOfManilaDay } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ type ReportWriter = {
 };
 
 function reportDate(value: Date) {
-  return value.toLocaleDateString("en-PH", { day: "numeric", month: "long", year: "numeric" });
+  return formatManilaDate(value, { day: "numeric", month: "long", year: "numeric" });
 }
 
 function clampText(value: string, maximum = 96) {
@@ -151,8 +152,8 @@ function createReportWriter(document: PDFDocument, regular: PDFFont, bold: PDFFo
 export async function GET() {
   const user = await requireInventoryAccess();
   const canManage = canManageInventory(user.role);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = startOfManilaDay();
+  const calendarDate = manilaCalendarDate();
   const [itemCount, statusCounts, categoryCounts, locationCounts, openTicketCount, activeBorrowCount, overdueBorrowCount] = await Promise.all([
     prisma.inventoryItem.count(),
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
@@ -206,7 +207,7 @@ export async function GET() {
   const bytes = await document.save();
   const body = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(body).set(bytes);
-  const filename = `ceit-inventory-overview-${today.toISOString().slice(0, 10)}.pdf`;
+  const filename = `ceit-inventory-overview-${calendarDate}.pdf`;
   return new Response(body, {
     headers: {
       "Content-Disposition": `attachment; filename="${filename}"`,

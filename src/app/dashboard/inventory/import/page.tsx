@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-import { requireWriteAccess } from "@/lib/inventory-auth";
+import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 import { ImportForm } from "./import-form";
 
 export default async function ImportInventoryPage() {
-  await requireWriteAccess();
+  await requireInventoryManagementPageAccess();
 
   return (
     <div className="page import-page">
