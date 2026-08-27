@@ -1,33 +1,50 @@
 "use client";
 
 import { Check, Moon, Palette, Sun } from "lucide-react";
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 
 type Theme = "dark" | "light";
-type Accent = "orange" | "violet" | "blue" | "emerald";
+type Accent = string | null;
 
 const themeStorageKey = "ceit-theme";
 const accentStorageKey = "ceit-accent";
 const appearanceChangeEvent = "ceit-appearance-change";
+const defaultPickerColor = "#f97316";
 
-const accentOptions: ReadonlyArray<{
-  value: Accent;
-  label: string;
-  description: string;
-  color: string;
-}> = [
-  { value: "orange", label: "CEIT orange", description: "Warm and familiar", color: "#f97316" },
-  { value: "violet", label: "Violet", description: "Focused and expressive", color: "#8b5cf6" },
-  { value: "blue", label: "Blue", description: "Clear and calm", color: "#0ea5e9" },
-  { value: "emerald", label: "Emerald", description: "Fresh and balanced", color: "#10b981" },
-];
+const legacyAccentColors: Readonly<Record<string, string | null>> = {
+  orange: null,
+  violet: "#8b5cf6",
+  blue: "#0ea5e9",
+  emerald: "#10b981",
+};
+
+const customAccentProperties = [
+  "--accent",
+  "--accent-hover",
+  "--accent-soft",
+  "--accent-strong",
+  "--accent-text",
+  "--border-strong",
+  "--sidebar",
+  "--sidebar-deep",
+] as const;
 
 function isTheme(value: string | null): value is Theme {
   return value === "dark" || value === "light";
 }
 
-function isAccent(value: string | null): value is Accent {
-  return value === "orange" || value === "violet" || value === "blue" || value === "emerald";
+function sanitizeHexColor(value: string | null | undefined): string | null {
+  const match = value?.trim().match(/^#([\da-f]{6})$/i);
+  return match ? `#${match[1].toLowerCase()}` : null;
+}
+
+function resolveAccent(value: string | null): Accent {
+  const customColor = sanitizeHexColor(value);
+  if (customColor) {
+    return customColor;
+  }
+
+  return value ? legacyAccentColors[value.toLowerCase()] ?? null : null;
 }
 
 function getThemeSnapshot(): Theme {
@@ -46,17 +63,13 @@ function getThemeSnapshot(): Theme {
 
 function getAccentSnapshot(): Accent {
   if (typeof window === "undefined") {
-    return "orange";
+    return null;
   }
 
   try {
-    const storedAccent = window.localStorage.getItem(accentStorageKey);
-    return isAccent(storedAccent) ? storedAccent : "orange";
+    return resolveAccent(window.localStorage.getItem(accentStorageKey));
   } catch {
-    const documentAccent = document.documentElement.dataset.accent;
-    return documentAccent === "orange" || documentAccent === "violet" || documentAccent === "blue" || documentAccent === "emerald"
-      ? documentAccent
-      : "orange";
+    return resolveAccent(document.documentElement.style.getPropertyValue("--accent"));
   }
 }
 
@@ -70,24 +83,80 @@ function subscribeToAppearanceChanges(callback: () => void) {
   };
 }
 
+function colorMix(color: string, percentage: number, mixWith: string) {
+  return `color-mix(in srgb, ${color} ${percentage}%, ${mixWith})`;
+}
+
+function accentTextColor(color: string) {
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+
+  return brightness >= 145 ? "#201006" : "#fffaf3";
+}
+
+function clearCustomAccentProperties(root: HTMLElement) {
+  customAccentProperties.forEach((property) => root.style.removeProperty(property));
+}
+
 function applyAppearance(theme: Theme, accent: Accent) {
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.dataset.accent = accent;
+  const root = document.documentElement;
+  const customColor = sanitizeHexColor(accent);
+
+  root.dataset.theme = theme;
+
+  if (!customColor) {
+    root.dataset.accent = "orange";
+    clearCustomAccentProperties(root);
+    return;
+  }
+
+  const isLight = theme === "light";
+  root.dataset.accent = "custom";
+  root.style.setProperty("--accent", customColor);
+  root.style.setProperty("--accent-hover", colorMix(customColor, isLight ? 78 : 64, isLight ? "black" : "white"));
+  root.style.setProperty("--accent-soft", colorMix(customColor, isLight ? 12 : 17, "transparent"));
+  root.style.setProperty("--accent-strong", colorMix(customColor, isLight ? 79 : 74, "black"));
+  root.style.setProperty("--accent-text", accentTextColor(customColor));
+  root.style.setProperty("--border-strong", colorMix(customColor, isLight ? 43 : 53, "transparent"));
+  root.style.setProperty("--sidebar", colorMix(customColor, isLight ? 83 : 76, isLight ? "#5b1a08" : "#2f0c04"));
+  root.style.setProperty("--sidebar-deep", colorMix(customColor, isLight ? 58 : 56, isLight ? "#200704" : "#080405"));
+}
+
+function migrateAccentStorage(accent: Accent) {
+  try {
+    const storedAccent = window.localStorage.getItem(accentStorageKey);
+
+    if (accent) {
+      if (storedAccent !== accent) {
+        window.localStorage.setItem(accentStorageKey, accent);
+      }
+    } else if (storedAccent !== null) {
+      window.localStorage.removeItem(accentStorageKey);
+    }
+  } catch {
+    // Storage is optional; the current page still receives the selected color.
+  }
 }
 
 export function ThemeToggle() {
   const theme = useSyncExternalStore<Theme>(subscribeToAppearanceChanges, getThemeSnapshot, () => "dark");
-  const accent = useSyncExternalStore<Accent>(subscribeToAppearanceChanges, getAccentSnapshot, () => "orange");
+  const accent = useSyncExternalStore<Accent>(subscribeToAppearanceChanges, getAccentSnapshot, () => null);
   const [isOpen, setIsOpen] = useState(false);
   const controlRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogId = useId();
   const headingId = useId();
+  const colorInputId = useId();
 
   useEffect(() => {
     // Read storage again so the first hydration effect never overrides the
     // synchronous bootstrap choice with the server fallback values.
-    applyAppearance(getThemeSnapshot(), getAccentSnapshot());
+    const currentTheme = getThemeSnapshot();
+    const currentAccent = getAccentSnapshot();
+    applyAppearance(currentTheme, currentAccent);
+    migrateAccentStorage(currentAccent);
   }, [theme, accent]);
 
   useEffect(() => {
@@ -122,7 +191,12 @@ export function ThemeToggle() {
 
     try {
       window.localStorage.setItem(themeStorageKey, nextTheme);
-      window.localStorage.setItem(accentStorageKey, nextAccent);
+
+      if (nextAccent) {
+        window.localStorage.setItem(accentStorageKey, nextAccent);
+      } else {
+        window.localStorage.removeItem(accentStorageKey);
+      }
     } catch {
       // Appearance choices should still work for the current session when
       // storage is unavailable (for example, in a restricted browser mode).
@@ -135,9 +209,19 @@ export function ThemeToggle() {
     saveAppearance(nextTheme, accent);
   }
 
-  function selectAccent(nextAccent: Accent) {
-    saveAppearance(theme, nextAccent);
+  function selectAccent(event: ChangeEvent<HTMLInputElement>) {
+    const nextAccent = sanitizeHexColor(event.currentTarget.value);
+    if (nextAccent) {
+      saveAppearance(theme, nextAccent);
+    }
   }
+
+  function resetAccent() {
+    saveAppearance(theme, null);
+  }
+
+  const pickerColor = accent ?? defaultPickerColor;
+  const accentLabel = accent ? `${accent} custom accent` : "CEIT orange accent";
 
   return (
     <div
@@ -159,7 +243,7 @@ export function ThemeToggle() {
             </span>
             <div>
               <h2 id={headingId} className="text-sm font-semibold tracking-tight">Appearance</h2>
-              <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">Choose a mode and accent for this device.</p>
+              <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">Choose a mode and a personal accent for this device.</p>
             </div>
           </div>
 
@@ -197,39 +281,36 @@ export function ThemeToggle() {
 
           <fieldset className="mt-5 border-0 p-0">
             <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Accent color</legend>
-            <div role="group" aria-label="Accent color" className="grid grid-cols-2 gap-2">
-              {accentOptions.map((option) => {
-                const isSelected = accent === option.value;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => selectAccent(option.value)}
-                    className={`appearance-color-option flex min-h-14 items-center gap-2 rounded-xl border px-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                      isSelected
-                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)]"
-                        : "border-[var(--border)] bg-transparent hover:border-[var(--border-strong)]"
-                    }`}
-                  >
-                    <span
-                      className="h-6 w-6 shrink-0 rounded-full border-2 border-white/70 shadow-sm"
-                      style={{ backgroundColor: option.color }}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-semibold text-[var(--foreground)]">{option.label}</span>
-                      <span className="mt-0.5 block truncate text-[10px] text-[var(--muted)]">{option.description}</span>
-                    </span>
-                    {isSelected ? <Check className="h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden="true" /> : null}
-                  </button>
-                );
-              })}
+            <div className="appearance-color-picker flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-3">
+              <input
+                id={colorInputId}
+                type="color"
+                value={pickerColor}
+                onChange={selectAccent}
+                aria-label="Choose a custom accent color"
+                className="appearance-color-input h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-[var(--border-strong)] bg-transparent p-1"
+              />
+              <label htmlFor={colorInputId} className="min-w-0 flex-1 cursor-pointer">
+                <span className="block text-xs font-semibold text-[var(--foreground)]">Choose a custom color</span>
+                <span className="mt-0.5 block truncate font-mono text-[11px] text-[var(--muted)]">{accent ?? "CEIT orange"}</span>
+              </label>
+              <button
+                type="button"
+                onClick={resetAccent}
+                aria-pressed={accent === null}
+                className={`appearance-reset-color inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                  accent === null
+                    ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                    : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
+                }`}
+              >
+                {accent === null ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                CEIT orange
+              </button>
             </div>
           </fieldset>
 
-          <p className="sr-only" aria-live="polite">{`${theme} mode with ${accent} accent selected.`}</p>
+          <p className="sr-only" aria-live="polite">{`${theme} mode with ${accentLabel} selected.`}</p>
         </section>
       ) : null}
 

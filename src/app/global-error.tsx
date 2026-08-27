@@ -9,7 +9,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
 
   return (
     <html lang="en">
-      <body style={{ alignItems: "center", background: "radial-gradient(circle at 85% 5%, rgba(255,146,73,.18), transparent 26rem), radial-gradient(circle at 10% 90%, rgba(180,70,15,.16), transparent 24rem), #0b0c10", color: "#fffaf5", display: "grid", fontFamily: "Inter, Arial, sans-serif", margin: 0, minHeight: "100vh", padding: "1.25rem", placeItems: "center" }}>
+      <body style={{ alignItems: "center", background: "linear-gradient(125deg, rgba(255,146,73,.16), transparent 37%, rgba(180,70,15,.08) 72%, transparent), #0b0c10", color: "#fffaf5", display: "grid", fontFamily: "Inter, Arial, sans-serif", margin: 0, minHeight: "100vh", padding: "1.25rem", placeItems: "center" }}>
         <main style={{ background: "linear-gradient(135deg, rgba(255,255,255,.06), transparent 45%), #17171c", border: "1px solid rgba(255,164,92,.3)", borderRadius: "20px", boxShadow: "0 28px 64px rgba(0,0,0,.38)", maxWidth: "32rem", padding: "2.5rem 2rem", position: "relative", textAlign: "center" }}>
           <div style={{ background: "#ff9b50", borderRadius: "99px", boxShadow: "0 0 0 7px rgba(255,155,80,.15)", height: "9px", left: "calc(50% - 4.5px)", position: "absolute", top: "1.35rem", width: "9px" }} />
           <p style={{ color: "#ffb778", fontSize: ".72rem", fontWeight: 800, letterSpacing: ".17em", margin: "1.1rem 0 0", textTransform: "uppercase" }}>Temporary issue</p>

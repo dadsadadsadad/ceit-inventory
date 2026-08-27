@@ -82,8 +82,7 @@ body {
 
 body {
   background:
-    radial-gradient(circle at 84% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 31rem),
-    radial-gradient(circle at 3% 56%, color-mix(in srgb, var(--sidebar) 9%, transparent), transparent 32rem),
+    linear-gradient(118deg, color-mix(in srgb, var(--accent) 8%, transparent) -8%, transparent 31%, color-mix(in srgb, var(--sidebar) 4%, transparent) 72%, transparent 100%),
     var(--background);
   color-scheme: dark;
   color: var(--foreground);
@@ -123,15 +122,14 @@ body::before {
 .dashboard-shell {
   min-height: 100vh;
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--surface) 36%, transparent), transparent 32%),
+    linear-gradient(125deg, color-mix(in srgb, var(--surface) 42%, transparent), transparent 36%),
     transparent;
   color: var(--foreground);
 }
 
 .dashboard-sidebar {
   background:
-    radial-gradient(circle at 5% 5%, rgba(255, 255, 255, 0.2), transparent 18rem),
-    linear-gradient(160deg, #ce5a12 0%, var(--sidebar) 38%, var(--sidebar-deep) 100%);
+    linear-gradient(156deg, color-mix(in srgb, var(--sidebar) 72%, white 28%) 0%, var(--sidebar) 43%, var(--sidebar-deep) 100%);
   border-color: rgba(255, 255, 255, 0.14);
   color: white;
   overflow: hidden;
@@ -205,14 +203,20 @@ body::before {
 }
 
 .page::before {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent), transparent 69%);
+  background:
+    linear-gradient(124deg, transparent 13%, color-mix(in srgb, var(--accent) 11%, transparent) 47%, transparent 77%),
+    repeating-linear-gradient(124deg, transparent 0 1.65rem, color-mix(in srgb, var(--accent) 10%, transparent) 1.65rem 1.72rem, transparent 1.72rem 3.45rem);
+  clip-path: polygon(25% 0, 100% 0, 100% 62%, 56% 100%, 0 52%);
   content: "";
-  height: 30rem;
+  height: 21rem;
+  opacity: 0.82;
   pointer-events: none;
   position: absolute;
-  right: -17rem;
-  top: -12rem;
-  width: 30rem;
+  right: -13rem;
+  top: -3rem;
+  transform: rotate(-4deg);
+  transform-origin: top right;
+  width: 48rem;
 }
 
 .page-inner {
@@ -569,15 +573,15 @@ summary:focus-visible {
 
 .login-page {
   background:
-    radial-gradient(circle at 75% 55%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 27rem),
+    linear-gradient(128deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 43%),
     var(--background);
 }
 
 .login-panel {
   background:
-    radial-gradient(circle at 8% 10%, rgba(255, 255, 255, 0.2), transparent 19rem),
-    radial-gradient(circle at 85% 88%, rgba(255, 173, 96, 0.22), transparent 25rem),
-    linear-gradient(160deg, #d15b12, var(--sidebar) 52%, var(--sidebar-deep));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 31%),
+    linear-gradient(315deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 46%),
+    linear-gradient(160deg, color-mix(in srgb, var(--sidebar) 76%, white 24%), var(--sidebar) 52%, var(--sidebar-deep));
 }
 
 /* Shared page polish */
@@ -605,14 +609,15 @@ summary:focus-visible {
 }
 
 .page-inner > header.card::before {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 28%, transparent), transparent 68%);
+  background: linear-gradient(124deg, transparent 20%, color-mix(in srgb, var(--accent) 22%, transparent) 51%, transparent 79%);
   content: "";
-  height: 22rem;
+  height: 8rem;
   pointer-events: none;
   position: absolute;
-  right: -8rem;
-  top: -15rem;
-  width: 22rem;
+  right: -4rem;
+  top: -1.8rem;
+  transform: rotate(-8deg);
+  width: 24rem;
 }
 
 .page-inner > header.card > * {
@@ -678,14 +683,15 @@ summary:focus-visible {
 }
 
 .dashboard-stat-card::after {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 68%);
+  background: linear-gradient(128deg, transparent 22%, color-mix(in srgb, var(--accent) 17%, transparent) 53%, transparent 78%);
   content: "";
-  height: 8.5rem;
+  height: 5.5rem;
   pointer-events: none;
   position: absolute;
-  right: -4.5rem;
-  top: -4.5rem;
-  width: 8.5rem;
+  right: -2.5rem;
+  top: -1.5rem;
+  transform: rotate(-8deg);
+  width: 14rem;
 }
 
 .dashboard-stat-card > * {
@@ -714,7 +720,7 @@ summary:focus-visible {
 
 .dashboard-command-card {
   background:
-    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent) 21%, transparent), transparent 15rem),
+    linear-gradient(128deg, color-mix(in srgb, var(--accent) 13%, transparent), transparent 38%),
     linear-gradient(145deg, var(--surface-highlight), transparent 40%),
     var(--surface);
   overflow: hidden;
@@ -768,28 +774,28 @@ summary:focus-visible {
 
 .dashboard-pulse-card {
   background:
-    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.13), transparent 13rem),
+    linear-gradient(128deg, color-mix(in srgb, white 12%, transparent), transparent 32%),
     linear-gradient(145deg, color-mix(in srgb, var(--sidebar) 91%, black 9%), var(--sidebar-deep));
   border-color: color-mix(in srgb, var(--accent) 48%, transparent);
   color: white;
 }
 
 .dashboard-pulse-card .eyebrow {
-  color: #ffd09b;
+  color: color-mix(in srgb, white 70%, var(--accent));
 }
 
 .dashboard-pulse-card .dashboard-pulse-icon {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.14);
-  color: #fff4e7;
+  color: color-mix(in srgb, white 86%, var(--accent));
   height: 2.15rem;
   width: 2.15rem;
 }
 
 .dashboard-pulse-signal {
-  background: #a7f3d0;
+  background: var(--accent-hover);
   border-radius: 999px;
-  box-shadow: 0 0 0 5px rgba(167, 243, 208, 0.13), 0 0 18px rgba(167, 243, 208, 0.6);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 16%, transparent), 0 0 18px color-mix(in srgb, var(--accent) 62%, transparent);
   height: 0.5rem;
   margin: 0.35rem;
   width: 0.5rem;
@@ -986,11 +992,14 @@ summary:focus-visible {
 
 @media (min-width: 1024px) {
   .dashboard-shell {
+    align-items: stretch;
     display: flex;
   }
 
   .dashboard-sidebar {
-    position: sticky;
+    align-self: stretch;
+    min-height: 100%;
+    position: relative;
   }
 
   .dashboard-nav-list {
@@ -1022,7 +1031,7 @@ summary:focus-visible {
 .page-inner > header:not(.card),
 .page-narrow > header:not(.card) {
   background:
-    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent) 19%, transparent), transparent 15rem),
+    linear-gradient(124deg, color-mix(in srgb, var(--accent) 11%, transparent), transparent 42%),
     linear-gradient(135deg, color-mix(in srgb, var(--surface-highlight) 94%, transparent), transparent 50%),
     var(--surface);
   border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
@@ -1051,14 +1060,16 @@ summary:focus-visible {
 
 .page-inner > header:not(.card)::after,
 .page-narrow > header:not(.card)::after {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 69%);
+  background: linear-gradient(124deg, transparent 24%, color-mix(in srgb, var(--accent) 16%, transparent) 52%, transparent 78%);
   content: "";
-  height: 20rem;
+  height: 8rem;
+  opacity: 0.86;
   pointer-events: none;
   position: absolute;
-  right: -9rem;
-  top: -12rem;
-  width: 20rem;
+  right: -5rem;
+  top: -2rem;
+  transform: rotate(-8deg);
+  width: 28rem;
   z-index: -1;
 }
 
@@ -1111,33 +1122,6 @@ summary:focus-visible {
   box-shadow: 0 12px 22px color-mix(in srgb, var(--accent-strong) 31%, transparent);
 }
 
-.inventory-page::before,
-.item-detail-page::before {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 23%, transparent), transparent 68%);
-}
-
-.borrowing-page::before,
-.activity-page::before {
-  background: radial-gradient(circle, color-mix(in srgb, #60a5fa 20%, transparent), transparent 70%);
-}
-
-.maintenance-page::before {
-  background: radial-gradient(circle, color-mix(in srgb, #f87171 18%, transparent), transparent 70%);
-}
-
-.reports-page::before,
-.settings-page::before,
-.users-page::before {
-  background: radial-gradient(circle, color-mix(in srgb, #a78bfa 18%, transparent), transparent 70%);
-}
-
-.new-item-page::before,
-.import-page::before,
-.scan-page::before,
-.scan-item-page::before {
-  background: radial-gradient(circle, color-mix(in srgb, #fbbf24 18%, transparent), transparent 70%);
-}
-
 .inventory-page form.card,
 .borrowing-page form.card,
 .maintenance-page form.card {
@@ -1150,7 +1134,7 @@ summary:focus-visible {
 .inventory-page section.card,
 .borrowing-page section.card,
 .activity-page section.card {
-  box-shadow: 0 22px 48px color-mix(in srgb, black 22%, transparent);
+  box-shadow: 0 16px 36px color-mix(in srgb, black 17%, transparent);
 }
 
 .inventory-page .table-heading,
@@ -1240,13 +1224,13 @@ summary:focus-visible {
 .scan-page section.card,
 .scan-item-page article.card {
   border-color: color-mix(in srgb, var(--accent) 29%, var(--border));
-  box-shadow: 0 24px 50px color-mix(in srgb, black 20%, transparent);
+  box-shadow: 0 18px 40px color-mix(in srgb, black 16%, transparent);
 }
 
 .new-item-page form.card,
 .import-page form.card {
   background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 17rem),
+    linear-gradient(125deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
     var(--surface);
 }
 
@@ -1290,10 +1274,10 @@ summary:focus-visible {
 
 .system-page .card {
   background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 19rem),
+    linear-gradient(125deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 38%),
     var(--surface);
   border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
-  box-shadow: 0 28px 64px color-mix(in srgb, black 35%, transparent);
+  box-shadow: 0 20px 46px color-mix(in srgb, black 28%, transparent);
 }
 
 .system-page .card::before {
@@ -1320,7 +1304,7 @@ summary:focus-visible {
 
 .login-page::before,
 .login-page::after {
-  border-radius: 999px;
+  clip-path: polygon(17% 0, 100% 0, 100% 68%, 58% 100%, 0 55%, 0 16%);
   content: "";
   pointer-events: none;
   position: absolute;
@@ -1328,19 +1312,21 @@ summary:focus-visible {
 }
 
 .login-page::before {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-  height: 24rem;
-  right: -10rem;
-  top: -9rem;
-  width: 24rem;
+  background: linear-gradient(128deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
+  height: 22rem;
+  right: -7rem;
+  top: -5rem;
+  transform: rotate(-9deg);
+  width: 30rem;
 }
 
 .login-page::after {
-  background: color-mix(in srgb, #fbbf24 11%, transparent);
-  bottom: -12rem;
-  height: 28rem;
-  left: -12rem;
-  width: 28rem;
+  background: linear-gradient(128deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 72%);
+  bottom: -9rem;
+  height: 24rem;
+  left: -7rem;
+  transform: rotate(12deg);
+  width: 32rem;
 }
 
 .login-panel {
@@ -1389,10 +1375,10 @@ summary:focus-visible {
   }
 
   .page::before {
-    height: 20rem;
-    right: -11rem;
-    top: -8rem;
-    width: 20rem;
+    height: 13rem;
+    right: -7rem;
+    top: -2rem;
+    width: 28rem;
   }
 
   .page-inner > header:not(.card),
@@ -1447,71 +1433,17 @@ summary:focus-visible {
   }
 }
 
-/* Accent palettes: these deliberately change the app's emphasis, not its whole identity. */
-html[data-accent="violet"] {
-  --accent: #c084fc;
-  --accent-hover: #e9d5ff;
-  --accent-soft: color-mix(in srgb, #c084fc 17%, transparent);
-  --accent-strong: #8b2fd6;
-  --accent-text: #25053f;
-  --border-strong: color-mix(in srgb, #c084fc 52%, transparent);
-}
-
-html[data-accent="blue"] {
-  --accent: #60a5fa;
-  --accent-hover: #bfdbfe;
-  --accent-soft: color-mix(in srgb, #60a5fa 17%, transparent);
-  --accent-strong: #2563eb;
-  --accent-text: #061a3a;
-  --border-strong: color-mix(in srgb, #60a5fa 52%, transparent);
-}
-
-html[data-accent="emerald"] {
-  --accent: #34d399;
-  --accent-hover: #a7f3d0;
-  --accent-soft: color-mix(in srgb, #34d399 17%, transparent);
-  --accent-strong: #07855b;
-  --accent-text: #052a1e;
-  --border-strong: color-mix(in srgb, #34d399 52%, transparent);
-}
-
-html[data-theme="light"][data-accent="violet"] {
-  --accent: #7e22ce;
-  --accent-hover: #5b159d;
-  --accent-soft: color-mix(in srgb, #7e22ce 12%, transparent);
-  --accent-strong: #6b21a8;
-  --accent-text: #fff;
-  --border-strong: color-mix(in srgb, #7e22ce 42%, transparent);
-}
-
-html[data-theme="light"][data-accent="blue"] {
-  --accent: #1d4ed8;
-  --accent-hover: #1e40af;
-  --accent-soft: color-mix(in srgb, #1d4ed8 12%, transparent);
-  --accent-strong: #1d4ed8;
-  --accent-text: #fff;
-  --border-strong: color-mix(in srgb, #1d4ed8 42%, transparent);
-}
-
-html[data-theme="light"][data-accent="emerald"] {
-  --accent: #047857;
-  --accent-hover: #065f46;
-  --accent-soft: color-mix(in srgb, #047857 12%, transparent);
-  --accent-strong: #047857;
-  --accent-text: #fff;
-  --border-strong: color-mix(in srgb, #047857 42%, transparent);
-}
-
 /* Final interface polish */
 .dashboard-shell {
   background:
-    radial-gradient(circle at 78% 3%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 34rem),
-    linear-gradient(145deg, color-mix(in srgb, var(--surface) 34%, transparent), transparent 32%),
+    linear-gradient(124deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 34%, transparent), transparent 36%),
     transparent;
 }
 
 .dashboard-sidebar {
   box-shadow: 18px 0 42px rgba(24, 8, 3, 0.1);
+  min-height: 100%;
 }
 
 .dashboard-sidebar .brand-mark {
@@ -1545,7 +1477,7 @@ html[data-theme="light"][data-accent="emerald"] {
 .page-narrow > .card,
 .page-inner > section.card,
 .page-narrow > section.card {
-  box-shadow: 0 20px 46px color-mix(in srgb, black 19%, transparent);
+  box-shadow: 0 14px 34px color-mix(in srgb, black 15%, transparent);
 }
 
 .page-inner > form.card,
@@ -1685,7 +1617,7 @@ label:has(.field) > span:first-child {
 }
 
 .item-detail-page .page-inner > .grid > aside.card {
-  box-shadow: 0 22px 48px color-mix(in srgb, black 20%, transparent);
+  box-shadow: 0 16px 36px color-mix(in srgb, black 16%, transparent);
 }
 
 .item-detail-page .page-inner > .grid > aside.card h2 {
@@ -1713,7 +1645,7 @@ label:has(.field) > span:first-child {
 
 .scan-page .scanner-preview {
   background:
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
     #040404;
 }
 
@@ -1769,27 +1701,55 @@ label:has(.field) > span:first-child {
   right: 0;
 }
 
-.appearance-color-option {
+.appearance-color-picker {
   align-items: center;
-  background: color-mix(in srgb, var(--surface-soft) 75%, transparent);
-  border: 1px solid transparent;
+  background:
+    linear-gradient(125deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%),
+    var(--surface-soft);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 0.8rem;
   color: var(--foreground);
   display: flex;
   gap: 0.6rem;
-  min-height: 2.65rem;
-  padding: 0.5rem 0.6rem;
+  min-height: 4rem;
+  padding: 0.65rem;
   text-align: left;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.appearance-color-option:hover,
-.appearance-color-option[aria-pressed="true"] {
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+.appearance-color-picker:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
-.appearance-color-option:hover {
+.appearance-color-input {
+  appearance: none;
+  background: transparent;
+  border-radius: 0.65rem;
+  box-shadow: 0 5px 12px color-mix(in srgb, black 16%, transparent);
+  overflow: hidden;
+}
+
+.appearance-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.appearance-color-input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 0.48rem;
+}
+
+.appearance-color-input::-moz-color-swatch {
+  border: 0;
+  border-radius: 0.48rem;
+}
+
+.appearance-reset-color {
+  white-space: nowrap;
+}
+
+.appearance-reset-color:hover:not([aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
   transform: translateY(-1px);
 }
 
@@ -1838,7 +1798,7 @@ label:has(.field) > span:first-child {
 .command-menu {
   animation: command-menu-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 16rem),
+    linear-gradient(125deg, color-mix(in srgb, var(--accent) 11%, transparent), transparent 42%),
     var(--surface);
   border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
   border-radius: 1.25rem;
