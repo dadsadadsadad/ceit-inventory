@@ -51,6 +51,13 @@ function displayDate(value?: Date | null) {
   return value ? value.toLocaleDateString() : "Not recorded";
 }
 
+const philippinePeso = new Intl.NumberFormat("en-PH", { currency: "PHP", minimumFractionDigits: 2, style: "currency" });
+
+function displayPurchasePrice(value?: { toString: () => string } | null) {
+  if (value === null || value === undefined) return "Not recorded";
+  return philippinePeso.format(Number(value.toString()));
+}
+
 function TextField({
   name,
   label: fieldLabel,
@@ -59,7 +66,9 @@ function TextField({
   placeholder,
   required = false,
   maxLength,
+  max,
   min,
+  step,
   readOnly = false,
 }: {
   name: string;
@@ -69,7 +78,9 @@ function TextField({
   placeholder?: string;
   required?: boolean;
   maxLength?: number;
+  max?: number;
   min?: number;
+  step?: number;
   readOnly?: boolean;
 }) {
   return (
@@ -81,8 +92,10 @@ function TextField({
         defaultValue={value ?? ""}
         placeholder={placeholder}
         required={required}
+        max={max}
         maxLength={maxLength}
         min={min}
+        step={step}
         readOnly={readOnly}
         className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
       />
@@ -195,6 +208,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   <Detail label="Manufacturer / model">{[item.manufacturer, item.model].filter(Boolean).join(" ") || "Not recorded"}</Detail>
                   <Detail label="Serial number">{item.serialNumber ?? "Not recorded"}</Detail>
                   <Detail label="Purchased">{displayDate(item.purchaseDate)}</Detail>
+                  {item.purchasePrice !== null ? <Detail label="Acquisition value">{displayPurchasePrice(item.purchasePrice)}</Detail> : null}
                   <Detail label="Record type">{item.itemType === ItemType.ASSET ? "Tracked asset" : "Supply / stock"}</Detail>
                 </dl>
               </div>
@@ -330,6 +344,10 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 <TextField name="model" label="Model" value={item.model} maxLength={255} />
                 <TextField name="serialNumber" label="Serial number" value={item.serialNumber} maxLength={255} />
                 <TextField name="purchaseDate" label="Purchase date" value={dateValue(item.purchaseDate)} type="date" />
+                <div>
+                  <TextField name="purchasePrice" label="Purchase price (PHP)" value={item.purchasePrice?.toString()} type="number" min={0} max={99_999_999.99} step={0.01} />
+                  <p className="muted mt-1 text-xs leading-5">Optional total paid for this record. It stays off the inventory list and is included in the acquisition report.</p>
+                </div>
                 <label className="block"><span className="text-sm font-semibold">Description</span><textarea name="description" rows={3} defaultValue={item.description ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
                 <label className="block"><span className="text-sm font-semibold">Notes</span><textarea name="notes" rows={3} defaultValue={item.notes ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
                 <SubmitButton pendingLabel="Saving update…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold">Save update</SubmitButton>

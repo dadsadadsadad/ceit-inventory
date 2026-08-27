@@ -62,6 +62,16 @@ function optionalInteger(formData: FormData, key: string, maximum = 1_000_000) {
   return parsed;
 }
 
+function optionalPurchasePrice(formData: FormData, key = "purchasePrice") {
+  const value = optionalText(formData, key, 32);
+  if (!value) return null;
+  if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(value)) {
+    throw new Error("Purchase price must be a non-negative Philippine peso amount with up to two decimal places.");
+  }
+  const [whole, decimal = ""] = value.split(".");
+  return new Prisma.Decimal(`${whole}.${decimal.padEnd(2, "0")}`).toString();
+}
+
 function optionalDate(formData: FormData, key: string) {
   const value = optionalText(formData, key, 10);
   if (!value) return null;
@@ -140,9 +150,10 @@ export async function createInventoryItem(formData: FormData) {
       model: optionalText(formData, "model", 255),
       serialNumber: identifier(formData, "serialNumber"),
       purchaseDate: optionalDate(formData, "purchaseDate"),
+      purchasePrice: optionalPurchasePrice(formData),
       notes: optionalText(formData, "notes", 5_000),
       computer: isComputer ? { create: { ...computerData(formData), lastCheckedAt: new Date() } } : undefined,
-      auditEvents: { create: { action: AuditAction.CREATED, summary: "Inventory item created.", actorId: actor.id, actorName: actor.email, metadata: { source: "manual" } } },
+      auditEvents: { create: { action: AuditAction.CREATED, summary: "Inventory item created.", actorId: actor.id, actorName: actor.email, metadata: { source: "manual", activityKind: "record-create" } } },
     },
   });
 
@@ -175,6 +186,7 @@ export async function updateInventoryItem(formData: FormData) {
     model: optionalText(formData, "model", 255),
     serialNumber: identifier(formData, "serialNumber"),
     purchaseDate: optionalDate(formData, "purchaseDate"),
+    purchasePrice: optionalPurchasePrice(formData),
     notes: optionalText(formData, "notes", 5_000),
   };
   const changes = updatedFields(existing, data);
@@ -184,7 +196,7 @@ export async function updateInventoryItem(formData: FormData) {
     where: { id },
     data: {
       ...data,
-      auditEvents: { create: { action, summary: Object.keys(changes).length ? `Updated ${Object.keys(changes).join(", ")}.` : "Inventory record saved with no field changes.", actorId: actor.id, actorName: actor.email, metadata: { changes } } },
+      auditEvents: { create: { action, summary: Object.keys(changes).length ? `Updated ${Object.keys(changes).join(", ")}.` : "Inventory record saved with no field changes.", actorId: actor.id, actorName: actor.email, metadata: { changes, activityKind: "record-edit" } } },
     },
   });
 
