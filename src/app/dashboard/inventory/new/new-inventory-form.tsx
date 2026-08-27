@@ -8,7 +8,7 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { createInventoryItem } from "../actions";
 
 type SetupOption = { id: string; name: string };
-type InputFieldProps = { label: string; max?: number; name: string; placeholder?: string; required?: boolean; type?: string };
+type InputFieldProps = { label: string; max?: number; maxValue?: number; min?: number; name: string; placeholder?: string; required?: boolean; step?: number; type?: string };
 
 const statusOptions = ["OK", "WORKING", "DEPLOYED", "DEFECTIVE", "NOT_TESTED", "RETIRED", "LOST"];
 const conditionOptions = ["EXCELLENT", "GOOD", "FAIR", "POOR", "FOR_REPAIR"];
@@ -17,11 +17,11 @@ function readable(value: string) {
   return value.toLowerCase().split("_").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
 }
 
-function InputField({ label, max = 255, name, placeholder, required = false, type = "text" }: InputFieldProps) {
+function InputField({ label, max = 255, maxValue, min, name, placeholder, required = false, step, type = "text" }: InputFieldProps) {
   return (
     <label>
       <span className="text-sm font-semibold">{label}{required ? " *" : ""}</span>
-      <input name={name} required={required} maxLength={max} type={type} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder={placeholder} />
+      <input name={name} required={required} max={maxValue} maxLength={max} min={min} step={step} type={type} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder={placeholder} />
     </label>
   );
 }
@@ -72,6 +72,10 @@ export function NewInventoryForm({ categories, locations }: { categories: SetupO
           <InputField name="model" label="Model" />
           <InputField name="serialNumber" label="Serial number" />
           <InputField name="purchaseDate" label="Purchase date" type="date" />
+          <div>
+            <InputField name="purchasePrice" label="Purchase price (PHP)" type="number" min={0} maxValue={99_999_999.99} step={0.01} placeholder="e.g. 35000.00" />
+            <p className="muted mt-1 text-xs leading-5">Optional total paid for this inventory record. It is visible only in the record details and acquisition report.</p>
+          </div>
         </div>
       </section>
 

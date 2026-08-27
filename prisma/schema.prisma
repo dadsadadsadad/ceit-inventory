@@ -104,6 +104,7 @@ model InventoryItem {
   model           String?
   serialNumber    String?          @unique
   purchaseDate    DateTime?
+  purchasePrice   Decimal?         @db.Decimal(12, 2)
   notes           String?
   categoryId      String           @db.Uuid
   locationId      String           @db.Uuid

@@ -28,9 +28,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       </section>
 
       <section className="flex flex-col items-center justify-center gap-5">
-        <div className="flex items-center gap-3 text-white lg:hidden">
+        <div className="login-mobile-brand flex items-center gap-3 lg:hidden">
           <div className="brand-mark grid h-10 w-10 place-items-center rounded-lg"><Boxes className="h-5 w-5" aria-hidden="true" /></div>
-          <div><div className="text-sm font-semibold tracking-tight">CEIT Inventory</div><div className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-white/70">Inventory management</div></div>
+          <div><div className="text-sm font-semibold tracking-tight">CEIT Inventory</div><div className="login-mobile-subtitle text-[0.65rem] font-medium uppercase tracking-[0.18em]">Inventory management</div></div>
         </div>
         <div className="card w-full max-w-md rounded-lg p-6 sm:p-8">
           <div className="mb-7">

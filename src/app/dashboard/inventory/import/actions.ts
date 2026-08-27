@@ -3,7 +3,7 @@
 import ExcelJS from "exceljs";
 import { Readable } from "node:stream";
 import * as yauzl from "yauzl";
-import { AuditAction, ItemCondition, ItemStatus, ItemType } from "@prisma/client";
+import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { requireWriteAccess } from "@/lib/inventory-auth";
@@ -46,6 +46,7 @@ const columnAliases: Record<string, string[]> = {
   manufacturer: ["manufacturer", "brand"],
   model: ["model", "productinfo"],
   purchaseDate: ["purchasedate", "datepurchased"],
+  purchasePrice: ["purchaseprice", "price", "acquisitionvalue", "acquisitioncost", "cost"],
   notes: ["notes", "remarks"],
   graphics: ["graphics", "gpu"],
   legacyChecked: ["checked"],
@@ -96,6 +97,16 @@ function parseNumber(value: string, fallback: number | null, field: string, maxi
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed > maximum) throw new Error(`${field} is outside the allowed range.`);
   return parsed;
+}
+
+function parsePurchasePrice(value: string) {
+  const amount = boundedText(value, "purchase price", 32);
+  if (!amount) return null;
+  if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(amount)) {
+    throw new Error("purchase price must be a non-negative Philippine peso amount with up to two decimal places.");
+  }
+  const [whole, decimal = ""] = amount.split(".");
+  return new Prisma.Decimal(`${whole}.${decimal.padEnd(2, "0")}`).toString();
 }
 
 function parseDate(value: string, field: string) {
@@ -278,6 +289,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
         : /^\d{4}-\d{2}-\d{2}$/.test(legacyAcquisitionDate)
           ? parseDate(legacyAcquisitionDate, "known acquisition date")
           : null;
+      const purchasePrice = parsePurchasePrice(valueAt(row, "purchasePrice"));
       const notes = legacyNotes(valueAt(row, "notes"), [
         ["Original unit", valueAt(row, "legacyUnit")],
         ["Legacy counter", valueAt(row, "legacyCounter")],
@@ -312,6 +324,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             model: optionalText(valueAt(row, "model"), "model", 255),
             notes,
             purchaseDate,
+            purchasePrice,
             itemType,
             quantity,
             status: explicitStatus
@@ -344,7 +357,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
                 summary: "Inventory item imported from file.",
                 actorId: actor.id,
                 actorName: actor.email,
-                metadata: { source: "import", sheet: sheet.name, row: rowNumber },
+                metadata: { source: "import", sheet: sheet.name, row: rowNumber, activityKind: "record-create" },
               },
             },
           },
@@ -384,6 +397,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             model: optionalText(valueAt(row, "model"), "model", 255),
             notes,
             purchaseDate,
+            purchasePrice,
             itemType,
             quantity,
             status: explicitStatus
@@ -416,7 +430,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
                 summary: "Inventory item imported from file.",
                 actorId: actor.id,
                 actorName: actor.email,
-                metadata: { source: "import", sheet: sheet.name, row: rowNumber },
+                metadata: { source: "import", sheet: sheet.name, row: rowNumber, activityKind: "record-create" },
               },
             },
           },
@@ -435,6 +449,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/inventory");
+  revalidatePath("/dashboard/reports");
   revalidatePath("/dashboard/settings");
   return { imported, skipped, errors: errors.slice(0, 20), previewed: previewOnly };
 }
