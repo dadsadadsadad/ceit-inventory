@@ -17,7 +17,7 @@ function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export type InventoryUser = { email: string; id: string; role: string };
+export type InventoryUser = { email: string; id: string; role: string; username: string };
 
 export function canManageInventory(role: string) {
   return writableRoles.includes(role as (typeof writableRoles)[number]);
@@ -100,7 +100,12 @@ export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {
     include: { user: true },
   });
   if (!session || session.expiresAt <= new Date() || !session.user.isActive) return null;
-  return { id: session.user.id, email: session.user.email, role: session.user.role.toLowerCase() };
+  return {
+    id: session.user.id,
+    email: session.user.email,
+    username: session.user.username,
+    role: session.user.role.toLowerCase(),
+  };
 }
 
 export async function requireInventoryAccess() {

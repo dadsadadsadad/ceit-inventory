@@ -2,11 +2,14 @@
 
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/prisma";
-import { requireAdministrator } from "@/lib/inventory-auth";
+import { clearSession, hashPassword, passwordValidationMessage, requireAdministrator, requireInventoryAccess, verifyPassword } from "@/lib/inventory-auth";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const usernamePattern = /^[a-z0-9._-]{3,32}$/;
 
 function fieldLabel(key: string) {
   return key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
@@ -28,6 +31,85 @@ function requiredId(formData: FormData) {
   const id = requiredText(formData, "id", 64);
   if (!uuidPattern.test(id)) throw new Error("Invalid setup record.");
   return id;
+}
+
+function accountEmail(formData: FormData) {
+  const email = requiredText(formData, "email", 254).toLowerCase();
+  if (!emailPattern.test(email)) throw new Error("Enter a valid email address.");
+  return email;
+}
+
+function accountUsername(formData: FormData) {
+  const username = requiredText(formData, "username", 32).toLowerCase();
+  if (!usernamePattern.test(username)) {
+    throw new Error("Use 3–32 letters, numbers, periods, underscores, or hyphens for the username.");
+  }
+  return username;
+}
+
+function currentPassword(formData: FormData) {
+  const password = String(formData.get("currentPassword") ?? "");
+  if (password.length > 256) throw new Error("Passwords must be 256 characters or fewer.");
+  return password;
+}
+
+function newPassword(formData: FormData) {
+  const password = String(formData.get("newPassword") ?? "");
+  if (!password) return null;
+  if (password.length > 256) throw new Error("Passwords must be 256 characters or fewer.");
+  const message = passwordValidationMessage(password);
+  if (message) throw new Error(message);
+  return password;
+}
+
+function accountWriteError(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    return new Error("That email address or username is already assigned to an account.");
+  }
+  return error;
+}
+
+export async function updateOwnAccount(formData: FormData) {
+  const actor = await requireInventoryAccess();
+  const email = accountEmail(formData);
+  const username = accountUsername(formData);
+  const password = newPassword(formData);
+  const confirmation = String(formData.get("confirmPassword") ?? "");
+  const current = currentPassword(formData);
+
+  if (!password && confirmation) throw new Error("Enter a new password before confirming it.");
+  if (password && password !== confirmation) throw new Error("The new password and confirmation do not match.");
+
+  const account = await prisma.user.findUnique({
+    where: { id: actor.id },
+    select: { email: true, passwordHash: true, username: true },
+  });
+  if (!account) throw new Error("Your account is no longer available.");
+
+  const identityChanged = account.email !== email || account.username !== username;
+  if (!identityChanged && !password) throw new Error("Make a change before saving your account.");
+  if (!current) throw new Error("Enter your current password to update your account.");
+  if (!(await verifyPassword(current, account.passwordHash))) throw new Error("Your current password is incorrect.");
+
+  try {
+    await prisma.$transaction(async (transaction) => {
+      await transaction.user.update({
+        where: { id: actor.id },
+        data: { email, username, ...(password ? { passwordHash: await hashPassword(password) } : {}) },
+      });
+      if (password) await transaction.userSession.deleteMany({ where: { userId: actor.id } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    throw accountWriteError(error);
+  }
+
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/settings");
+
+  if (password) {
+    await clearSession();
+    redirect("/auth/login?notice=password-updated");
+  }
 }
 
 function refreshSetupPages() {

@@ -9,6 +9,7 @@ import { prisma } from "@/prisma";
 
 const roles = Object.values(UserRole);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const usernamePattern = /^[a-z0-9._-]{3,32}$/;
 
 function requiredText(formData: FormData, key: string, maximumLength = 255) {
   const value = String(formData.get(key) ?? "").trim();
@@ -27,6 +28,14 @@ function emailFrom(formData: FormData) {
   const email = requiredText(formData, "email", 254).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
   return email;
+}
+
+function usernameFrom(formData: FormData) {
+  const username = requiredText(formData, "username", 32).toLowerCase();
+  if (!usernamePattern.test(username)) {
+    throw new Error("Use 3–32 letters, numbers, periods, underscores, or hyphens for the username.");
+  }
+  return username;
 }
 
 function roleFrom(formData: FormData) {
@@ -57,12 +66,13 @@ export async function createUser(formData: FormData) {
     await prisma.user.create({
       data: {
         email: emailFrom(formData),
+        username: usernameFrom(formData),
         passwordHash: await hashPassword(password),
         role: roleFrom(formData),
       },
     });
   } catch (error) {
-    if (knownWriteError(error)) throw new Error("That email address is already assigned to an account.");
+    if (knownWriteError(error)) throw new Error("That email address or username is already assigned to an account.");
     throw error;
   }
 
@@ -77,6 +87,7 @@ export async function updateUser(formData: FormData) {
   const isActive = formData.get("isActive") === "on";
   const password = passwordFrom(formData, false);
   const email = emailFrom(formData);
+  const username = usernameFrom(formData);
   const passwordHash = password ? await hashPassword(password) : null;
 
   if (id === administrator.id && (!isActive || role !== UserRole.ADMINISTRATOR)) {
@@ -97,14 +108,14 @@ export async function updateUser(formData: FormData) {
 
         await transaction.user.update({
           where: { id },
-          data: { email, role, isActive, ...(passwordHash ? { passwordHash } : {}) },
+          data: { email, username, role, isActive, ...(passwordHash ? { passwordHash } : {}) },
         });
         if (passwordHash || !isActive) await transaction.userSession.deleteMany({ where: { userId: id } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       revalidatePath("/dashboard/users");
       redirect("/dashboard/users");
     } catch (error) {
-      if (knownWriteError(error)) throw new Error("That email address is already assigned to an account.");
+      if (knownWriteError(error)) throw new Error("That email address or username is already assigned to an account.");
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 2) continue;
       throw error;
     }

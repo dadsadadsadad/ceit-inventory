@@ -5,13 +5,17 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { signIn } from "../actions";
 
 const messages: Record<string, string> = {
-  "invalid-credentials": "The email address or password is incorrect.",
-  "missing-credentials": "Enter both your email address and password.",
+  "invalid-credentials": "The email address, username, or password is incorrect.",
+  "missing-credentials": "Enter your email address or username and password.",
   "temporarily-locked": "For security, this account is temporarily locked. Try again in about 15 minutes or ask an administrator for help.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+const notices: Record<string, string> = {
+  "password-updated": "Your password was updated. Sign in again with your new password.",
+};
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; notice?: string }> }) {
+  const { error, notice } = await searchParams;
 
   return (
     <main className="login-page grid min-h-screen px-5 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-0">
@@ -39,10 +43,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="muted mt-2 text-sm leading-6">Enter your authorized CEIT inventory account details.</p>
           </div>
           {error && messages[error] ? <div className="notice mb-5 rounded-lg px-4 py-3 text-sm" role="alert">{messages[error]}</div> : null}
+          {notice && notices[notice] ? <div className="notice notice-success mb-5 rounded-lg px-4 py-3 text-sm" role="status">{notices[notice]}</div> : null}
           <form action={signIn} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold">Email</label>
-              <input required type="email" id="email" name="email" autoComplete="email" maxLength={254} className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition" placeholder="name@example.com" />
+              <label htmlFor="identifier" className="block text-sm font-semibold">Email address or username</label>
+              <input required type="text" id="identifier" name="identifier" autoComplete="username" maxLength={254} className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition" placeholder="name@example.com or ceit.staff" />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-semibold">Password</label>
