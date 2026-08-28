@@ -10,6 +10,7 @@ import { FeedbackForm } from "@/app/components/feedback-form";
 import { bulkUpdateInventory } from "./actions";
 import { BulkSelectionToggle } from "./bulk-selection-toggle";
 import { InventoryBulkActions } from "./inventory-bulk-actions";
+import { InventoryRowNavigation } from "./inventory-row-navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,7 @@ function inventoryOrderBy(sort: ReturnType<typeof currentSort>): Prisma.Inventor
   }
 }
 
-function pageLink(search: SearchParams, page: number) {
+function inventoryFilterParameters(search: SearchParams) {
   const parameters = new URLSearchParams();
   if (search.q?.trim()) parameters.set("q", search.q.trim().slice(0, 120));
   if (isItemStatus(search.status)) parameters.set("status", search.status);
@@ -104,6 +105,15 @@ function pageLink(search: SearchParams, page: number) {
   if (search.category && uuidPattern.test(search.category)) parameters.set("category", search.category);
   if (isItemType(search.itemType)) parameters.set("itemType", search.itemType);
   if (isItemCondition(search.condition)) parameters.set("condition", search.condition);
+  return parameters;
+}
+
+function selectionKey(search: SearchParams) {
+  return inventoryFilterParameters(search).toString() || "all";
+}
+
+function pageLink(search: SearchParams, page: number) {
+  const parameters = inventoryFilterParameters(search);
   const sort = currentSort(search);
   if (sort) {
     parameters.set("sort", sort.field);
@@ -178,17 +188,20 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   let categories: { id: string; name: string }[] = [];
   let totalRecords = 0;
   let inventoryItems: InventoryListItem[] = [];
+  let allMatchingItemIds: string[] = [];
   let currentPage = requestedPage;
 
   try {
-    const [availableLocations, availableCategories, recordCount] = await Promise.all([
+    const [availableLocations, availableCategories, recordCount, matchingItemIds] = await Promise.all([
       prisma.location.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
       prisma.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
       prisma.inventoryItem.count({ where }),
+      canManage ? prisma.inventoryItem.findMany({ where, select: { id: true } }) : Promise.resolve([]),
     ]);
     locations = availableLocations;
     categories = availableCategories;
     totalRecords = recordCount;
+    allMatchingItemIds = matchingItemIds.map((item) => item.id);
     const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
     currentPage = Math.min(requestedPage, totalPages);
     inventoryItems = await prisma.inventoryItem.findMany({
@@ -204,9 +217,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   }
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const persistentSelectionKey = selectionKey(search);
 
   return (
     <div className="page inventory-page">
+      <InventoryRowNavigation />
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -277,23 +292,23 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           <div className="notice rounded-lg px-5 py-4 text-sm">No records match these filters. {canManage ? "Add an item or import an existing file to get started." : "Try clearing a filter."}</div>
         ) : (
           <InventoryFormContainer canManage={canManage}>
-            {canManage ? <InventoryBulkActions locations={locations.map((location) => ({ label: location.name, value: location.id }))} statuses={Object.values(ItemStatus).map((status) => ({ label: inventoryStatusLabel(status), value: status }))} conditions={Object.values(ItemCondition).map((condition) => ({ label: enumLabel(condition), value: condition }))} /> : null}
+            {canManage ? <InventoryBulkActions allItemIds={allMatchingItemIds} clearSelectionOnLoad={search.bulk === "updated"} locations={locations.map((location) => ({ label: location.name, value: location.id }))} selectionKey={persistentSelectionKey} statuses={Object.values(ItemStatus).map((status) => ({ label: inventoryStatusLabel(status), value: status }))} conditions={Object.values(ItemCondition).map((condition) => ({ label: enumLabel(condition), value: condition }))} /> : null}
           <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
             <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
               <p className="muted text-sm">{totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>
-              {canManage ? <BulkSelectionToggle /> : null}
+              {canManage ? <BulkSelectionToggle allItemIds={allMatchingItemIds} selectionKey={persistentSelectionKey} /> : null}
             </div>
 
             <div className="divide-y md:hidden">
               {inventoryItems.map((item) => {
                 return (
-                  <article key={item.id} className="space-y-3 p-4">
+                  <article key={item.id} data-inventory-row-url={`/dashboard/inventory/${item.id}`} tabIndex={0} aria-label={`Open ${item.name}`} className="cursor-pointer space-y-3 p-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <Link href={`/dashboard/inventory/${item.id}`} className="accent-link font-semibold">{item.name}</Link>
                         <p className="muted mt-1 text-xs">{item.category.name}{item.computer ? " · PC" : ""}</p>
                       </div>
-                      <div className="flex items-center gap-2"><span className={`${inventoryStatusClass(item.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span>{canManage ? <input name="itemIds" value={item.id} type="checkbox" data-bulk-selection-item="true" className="h-4 w-4" aria-label={`Select ${item.name}`} /> : null}</div>
+                      <div className="flex items-center gap-2"><span className={`${inventoryStatusClass(item.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span>{canManage ? <input value={item.id} type="checkbox" data-bulk-selection-item="true" className="h-4 w-4" aria-label={`Select ${item.name}`} /> : null}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <p className="muted">{item.assetTag ?? "No asset tag"}</p>
@@ -322,8 +337,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                 <tbody>
                   {inventoryItems.map((item) => {
                     return (
-                      <tr key={item.id} className="table-row border-b last:border-0">
-                        {canManage ? <td className="px-3 py-4"><input name="itemIds" value={item.id} type="checkbox" data-bulk-selection-item="true" className="h-4 w-4" aria-label={`Select ${item.name}`} /></td> : null}
+                      <tr key={item.id} data-inventory-row-url={`/dashboard/inventory/${item.id}`} tabIndex={0} aria-label={`Open ${item.name}`} className="table-row cursor-pointer border-b last:border-0 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]">
+                        {canManage ? <td className="px-3 py-4"><input value={item.id} type="checkbox" data-bulk-selection-item="true" className="h-4 w-4" aria-label={`Select ${item.name}`} /></td> : null}
                         <td className="muted px-5 py-4 text-sm">{item.assetTag ?? "–"}</td>
                         <td className="px-5 py-4 text-sm"><Link href={`/dashboard/inventory/${item.id}`} className="accent-link font-semibold">{item.name}</Link><div className="muted mt-1 text-xs">{item.category.name}{item.computer ? " · PC" : ""}</div></td>
                         <td className="muted px-5 py-4 text-sm">{item.location.name}</td>

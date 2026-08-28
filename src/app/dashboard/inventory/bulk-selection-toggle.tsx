@@ -2,49 +2,55 @@
 
 import { useEffect, useState } from "react";
 
-import { itemSelector, notifySelectionChange, selectableItemCount, selectedItemCount, setAllItemSelection, syncMatchingItemSelection } from "./inventory-bulk-actions";
+import { addSelectionChangeListener, isSelectionChangeForKey, itemSelector, notifySelectionChange, saveSelectedItemIds, selectedItemIds, syncVisibleItemSelection, updateSelectedItem } from "./inventory-selection";
 
-export function BulkSelectionToggle() {
-  const [itemCount, setItemCount] = useState(0);
+export function BulkSelectionToggle({ allItemIds, selectionKey }: { allItemIds: string[]; selectionKey: string }) {
   const [selectedCount, setSelectedCount] = useState(0);
 
   useEffect(() => {
     const syncSelection = () => {
-      setItemCount(selectableItemCount());
-      setSelectedCount(selectedItemCount());
+      const eligibleIds = new Set(allItemIds);
+      const itemIds = selectedItemIds(selectionKey).filter((itemId) => eligibleIds.has(itemId));
+      if (itemIds.length !== selectedItemIds(selectionKey).length) saveSelectedItemIds(selectionKey, itemIds);
+      syncVisibleItemSelection(itemIds);
+      setSelectedCount(itemIds.length);
     };
     const handleChange = (event: Event) => {
       if (event.target instanceof HTMLInputElement && event.target.matches(itemSelector)) {
-        syncMatchingItemSelection(event.target);
-        syncSelection();
-        notifySelectionChange();
+        updateSelectedItem(selectionKey, event.target.value, event.target.checked);
       }
+    };
+    const handleSelectionChange = (event: Event) => {
+      if (isSelectionChangeForKey(event, selectionKey)) syncSelection();
     };
 
     syncSelection();
     document.addEventListener("change", handleChange);
-    document.addEventListener("inventory-bulk-selection-change", syncSelection);
+    const removeSelectionChangeListener = addSelectionChangeListener(handleSelectionChange);
     return () => {
       document.removeEventListener("change", handleChange);
-      document.removeEventListener("inventory-bulk-selection-change", syncSelection);
+      removeSelectionChangeListener();
     };
-  }, []);
+  }, [allItemIds, selectionKey]);
 
-  function setPageSelection(checked: boolean) {
-    setAllItemSelection(checked);
+  function setAllSelection(checked: boolean) {
+    const itemIds = checked ? allItemIds : [];
+    saveSelectedItemIds(selectionKey, itemIds);
+    syncVisibleItemSelection(itemIds);
+    notifySelectionChange(selectionKey);
   }
 
-  const allSelected = itemCount > 0 && selectedCount === itemCount;
-  const selectionLabel = selectedCount ? `${selectedCount} of ${itemCount} selected` : `${itemCount} on this page`;
+  const allSelected = allItemIds.length > 0 && selectedCount === allItemIds.length;
+  const selectionLabel = selectedCount ? `${selectedCount} of ${allItemIds.length} selected` : `${allItemIds.length} matching items`;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 text-xs font-semibold" role="group" aria-label="Inventory selection controls">
       <span className="muted whitespace-nowrap font-medium">{selectionLabel}</span>
       <div className="flex items-center gap-2">
-        <button type="button" onClick={() => setPageSelection(true)} disabled={!itemCount || allSelected} className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50" aria-label={`Select all ${itemCount} inventory records on this page`}>Select all</button>
-        <button type="button" onClick={() => setPageSelection(false)} disabled={!selectedCount} className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50" aria-label={`Deselect all ${selectedCount} selected inventory records`}>Deselect all</button>
+        <button type="button" onClick={() => setAllSelection(true)} disabled={!allItemIds.length || allSelected} className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50" aria-label={`Select all ${allItemIds.length} matching inventory records`}>Select all</button>
+        <button type="button" onClick={() => setAllSelection(false)} disabled={!selectedCount} className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50" aria-label={`Deselect all ${selectedCount} selected inventory records`}>Deselect all</button>
       </div>
-      <p className="sr-only" aria-live="polite">{`${selectedCount} of ${itemCount} inventory records selected.`}</p>
+      <p className="sr-only" aria-live="polite">{`${selectedCount} of ${allItemIds.length} matching inventory records selected.`}</p>
     </div>
   );
 }

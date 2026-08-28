@@ -373,10 +373,10 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
 
               <section className="divider mt-6 border-t pt-5" aria-labelledby="record-lifecycle">
                 <h3 id="record-lifecycle" className="text-sm font-semibold">Record lifecycle</h3>
-                <p className="muted mt-2 text-xs leading-5">Retiring is reversible and keeps the PC, software, and activity history available.</p>
+                <p className="muted mt-2 text-xs leading-5">Removing from active inventory is reversible and keeps the PC, software, and activity history available.</p>
                 <FeedbackForm action={retireInventoryItem} className="mt-3">
                   <input type="hidden" name="id" value={item.id} />
-                  <SubmitButton disabled={item.status === ItemStatus.RETIRED} pendingLabel="Retiring…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">{item.status === ItemStatus.RETIRED ? "Item is retired" : "Retire item"}</SubmitButton>
+                  <SubmitButton disabled={item.status === ItemStatus.RETIRED} pendingLabel="Removing…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">{item.status === ItemStatus.RETIRED ? "Item is removed" : "Remove item"}</SubmitButton>
                 </FeedbackForm>
 
                 {canDelete ? (

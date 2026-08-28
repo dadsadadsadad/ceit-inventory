@@ -60,7 +60,7 @@ The application does not use Supabase Storage or Supabase Auth. Prisma connects 
 2. Have the school DBA create the `ceit_inventory_migrator` and `ceit_inventory_app` roles before the first migration. The migration role owns database objects; the app role receives only runtime table and sequence access through the final migration.
 3. Copy `.env.example` to `.env.local` on the school deployment server. Set `SCHOOL_DATABASE_URL` to the `ceit_inventory_app` connection, `DIRECT_URL` to the temporary `ceit_inventory_migrator` connection, and `REQUEST_RATE_LIMIT_SECRET` to a random value of at least 32 characters.
 4. Run `npm run db:migrate:deploy` once, then remove `DIRECT_URL` from the application service environment. The migration config reads both `.env.local` and `.env`.
-5. Create the first `ADMINISTRATOR` through the school's secured database-administration process, set `NEXT_PUBLIC_APP_URL` to the school-managed HTTPS URL, and print production QR labels only after that.
+5. Create the first `ADMINISTRATOR` through the school's secured database-administration process, set `NEXT_PUBLIC_APP_URL` to the school-managed public URL (use HTTPS when available; trusted LAN deployments may use HTTP), and print QR labels only after that.
 6. Deploy the application where it can privately reach the school database. A hosted application service needs a secured network path to an on-campus database; otherwise host the application on the school's server or private network too.
 
 See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, backups, and restoration checks.

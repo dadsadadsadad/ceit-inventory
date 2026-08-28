@@ -12,6 +12,7 @@ const statuses = Object.values(ItemStatus);
 const conditions = Object.values(ItemCondition);
 const itemTypes = Object.values(ItemType);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const maximumBulkSelection = 10_000;
 
 function fieldLabel(key: string) {
   return key.replace(/Id$/, "").replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
@@ -38,7 +39,7 @@ function requiredId(formData: FormData, key: string) {
 function selectedIds(formData: FormData) {
   const ids = [...new Set(formData.getAll("itemIds").map((value) => String(value).trim()).filter(Boolean))];
   if (!ids.length) throw new Error("Select at least one inventory record.");
-  if (ids.length > 100) throw new Error("Update up to 100 inventory records at a time.");
+  if (ids.length > maximumBulkSelection) throw new Error(`Update up to ${maximumBulkSelection.toLocaleString()} inventory records at a time.`);
   if (ids.some((id) => !uuidPattern.test(id))) throw new Error("One or more selected inventory records are invalid.");
   return ids;
 }
@@ -221,7 +222,7 @@ export async function retireInventoryItem(formData: FormData) {
         auditEvents: {
           create: {
             action: AuditAction.STATUS_CHANGED,
-            summary: "Inventory item retired.",
+            summary: "Inventory item removed from active inventory.",
             actorId: actor.id,
             actorName: actor.email,
             metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
@@ -256,9 +257,9 @@ export async function bulkUpdateInventory(formData: FormData) {
     const condition = enumValue(formData, "bulkCondition", conditions, ItemCondition.GOOD);
     data = { condition };
     summary = `Bulk update: condition changed to ${condition}.`;
-  } else if (action === "retire") {
+  } else if (action === "remove" || action === "retire") {
     data = { status: ItemStatus.RETIRED };
-    summary = "Bulk update: inventory items retired.";
+    summary = "Bulk update: inventory items removed from active inventory.";
   } else {
     throw new Error("Choose a valid bulk action.");
   }
@@ -268,7 +269,7 @@ export async function bulkUpdateInventory(formData: FormData) {
     prisma.inventoryAudit.createMany({
       data: ids.map((itemId) => ({
         itemId,
-        action: action === "location" ? AuditAction.MOVED : action === "status" || action === "retire" ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
+        action: action === "location" ? AuditAction.MOVED : action === "status" || action === "remove" || action === "retire" ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
         summary,
         actorId: actor.id,
         actorName: actor.email,
@@ -288,14 +289,14 @@ export async function deleteInventoryItem(formData: FormData) {
 
   const borrowingHistoryCount = await prisma.borrowRequest.count({ where: { inventoryItemId: id } });
   if (borrowingHistoryCount) {
-    throw new Error(`This item has ${borrowingHistoryCount} borrowing request${borrowingHistoryCount === 1 ? "" : "s"}. Retire it instead to preserve the borrowing history.`);
+    throw new Error(`This item has ${borrowingHistoryCount} borrowing request${borrowingHistoryCount === 1 ? "" : "s"}. Remove it from active inventory instead to preserve the borrowing history.`);
   }
 
   try {
     await prisma.inventoryItem.delete({ where: { id } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-      throw new Error("This item now has borrowing history. Retire it instead to preserve that history.");
+      throw new Error("This item now has borrowing history. Remove it from active inventory instead to preserve that history.");
     }
     throw error;
   }

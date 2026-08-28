@@ -3,86 +3,69 @@
 import { useEffect, useState } from "react";
 
 import { SubmitButton } from "@/app/components/submit-button";
+import { addSelectionChangeListener, isSelectionChangeForKey, notifySelectionChange, saveSelectedItemIds, selectedItemIds, syncVisibleItemSelection } from "./inventory-selection";
 
-type BulkAction = "condition" | "location" | "retire" | "status";
+type BulkAction = "condition" | "location" | "remove" | "status";
 type SelectOption = { label: string; value: string };
 
-const itemSelector = 'input[data-bulk-selection-item="true"]';
-const selectionChangeEvent = "inventory-bulk-selection-change";
-
-function inventoryItemInputs() {
-  return [...document.querySelectorAll<HTMLInputElement>(itemSelector)];
-}
-
-function selectedItemCount() {
-  return new Set(inventoryItemInputs().filter((input) => input.checked).map((input) => input.value)).size;
-}
-
-function selectableItemCount() {
-  return new Set(inventoryItemInputs().map((input) => input.value)).size;
-}
-
-function syncMatchingItemSelection(source: HTMLInputElement) {
-  inventoryItemInputs().forEach((input) => {
-    if (input.value === source.value) input.checked = source.checked;
-  });
-}
-
-function setAllItemSelection(checked: boolean) {
-  inventoryItemInputs().forEach((input) => {
-    input.checked = checked;
-  });
-  notifySelectionChange();
-}
-
-function notifySelectionChange() {
-  document.dispatchEvent(new Event(selectionChangeEvent));
-}
-
 export function InventoryBulkActions({
+  allItemIds,
+  clearSelectionOnLoad = false,
   conditions,
   locations,
+  selectionKey,
   statuses,
 }: {
+  allItemIds: string[];
+  clearSelectionOnLoad?: boolean;
   conditions: SelectOption[];
   locations: SelectOption[];
+  selectionKey: string;
   statuses: SelectOption[];
 }) {
   const [action, setAction] = useState<BulkAction>("status");
-  const [selectedCount, setSelectedCount] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
-    const syncSelection = () => setSelectedCount(selectedItemCount());
-    const handleChange = (event: Event) => {
-      if (event.target instanceof HTMLInputElement && event.target.matches(itemSelector)) syncSelection();
+    const syncSelection = () => {
+      const eligibleIds = new Set(allItemIds);
+      const itemIds = selectedItemIds(selectionKey).filter((itemId) => eligibleIds.has(itemId));
+      if (itemIds.length !== selectedItemIds(selectionKey).length) saveSelectedItemIds(selectionKey, itemIds);
+      syncVisibleItemSelection(itemIds);
+      setSelectedIds(itemIds);
+    };
+    const handleSelectionChange = (event: Event) => {
+      if (isSelectionChangeForKey(event, selectionKey)) syncSelection();
     };
 
+    if (clearSelectionOnLoad) {
+      saveSelectedItemIds(selectionKey, []);
+      notifySelectionChange(selectionKey);
+    }
     syncSelection();
-    document.addEventListener("change", handleChange);
-    document.addEventListener(selectionChangeEvent, syncSelection);
-    return () => {
-      document.removeEventListener("change", handleChange);
-      document.removeEventListener(selectionChangeEvent, syncSelection);
-    };
-  }, []);
+    return addSelectionChangeListener(handleSelectionChange);
+  }, [allItemIds, clearSelectionOnLoad, selectionKey]);
 
   function clearSelection() {
-    setAllItemSelection(false);
+    saveSelectedItemIds(selectionKey, []);
+    syncVisibleItemSelection([]);
+    notifySelectionChange(selectionKey);
   }
 
-  if (!selectedCount) return null;
+  if (!selectedIds.length) return null;
 
-  const countLabel = `${selectedCount} item${selectedCount === 1 ? "" : "s"} selected`;
+  const countLabel = `${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"} selected`;
   const actionDetails = action === "location"
     ? "Move every selected item to one active location."
     : action === "status"
       ? "Apply one status to every selected item."
       : action === "condition"
         ? "Apply one condition to every selected item."
-        : "Retire selected items from active inventory while preserving their history.";
+        : "Remove selected items from active inventory while preserving their history.";
 
   return (
     <section className="bulk-action-toolbar card rounded-xl p-4 sm:p-5" aria-label="Bulk actions for selected inventory items">
+      {selectedIds.map((itemId) => <input key={itemId} type="hidden" name="itemIds" value={itemId} />)}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-xl">
           <p className="eyebrow">Selected inventory</p>
@@ -102,12 +85,12 @@ export function InventoryBulkActions({
             <option value="status">Edit status</option>
             <option value="condition">Edit condition</option>
             <option value="location">Move to location</option>
-            <option value="retire">Retire selected items</option>
+            <option value="remove">Remove selected items</option>
           </select>
         </label>
 
         <div>
-          <span className="muted text-xs font-bold uppercase tracking-wide">{action === "retire" ? "What this does" : "New value"}</span>
+          <span className="muted text-xs font-bold uppercase tracking-wide">{action === "remove" ? "What this does" : "New value"}</span>
           {action === "location" ? (
             <select required name="bulkLocationId" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" aria-label="New location">
               <option value="" disabled>Choose an active location</option>
@@ -122,18 +105,16 @@ export function InventoryBulkActions({
               {conditions.map((condition) => <option key={condition.value} value={condition.value}>{condition.label}</option>)}
             </select>
           ) : (
-            <p className="bulk-action-retire-note mt-2 rounded-lg px-3 py-2.5 text-sm leading-5">{actionDetails}</p>
+            <p className="bulk-action-remove-note mt-2 rounded-lg px-3 py-2.5 text-sm leading-5">{actionDetails}</p>
           )}
         </div>
 
         <div className="xl:min-w-40">
           <input type="hidden" name="bulkAction" value={action} />
           <p className="muted mb-2 hidden text-xs leading-5 xl:block">{actionDetails}</p>
-          <SubmitButton pendingLabel="Updating…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold">Apply to {selectedCount}</SubmitButton>
+          <SubmitButton pendingLabel="Updating…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold">{action === "remove" ? `Remove ${selectedIds.length}` : `Apply to ${selectedIds.length}`}</SubmitButton>
         </div>
       </div>
     </section>
   );
 }
-
-export { itemSelector, notifySelectionChange, selectableItemCount, selectedItemCount, setAllItemSelection, syncMatchingItemSelection };

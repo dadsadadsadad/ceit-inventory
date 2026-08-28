@@ -125,11 +125,6 @@ type AccentColorPickerProps = {
 function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
   const hsv = hexToHsv(color);
   const hexInputId = useId();
-  const [hexValue, setHexValue] = useState(() => color.slice(1));
-
-  useEffect(() => {
-    setHexValue(color.slice(1));
-  }, [color]);
 
   function setColorFromPlane(target: HTMLDivElement, clientX: number, clientY: number) {
     const bounds = target.getBoundingClientRect();
@@ -188,7 +183,6 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
 
   function handleHexChange(event: ChangeEvent<HTMLInputElement>) {
     const nextValue = event.currentTarget.value.replace(/^#/, "");
-    setHexValue(nextValue);
     const nextColor = sanitizeHexColor(`#${nextValue}`);
     if (nextColor) {
       onChange(nextColor);
@@ -251,12 +245,13 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
           <span className="sr-only">Hex color</span>
           <span aria-hidden="true">#</span>
           <input
+            key={color}
             id={hexInputId}
-            value={hexValue}
+            defaultValue={color.slice(1)}
             onChange={handleHexChange}
-            onBlur={() => {
-              if (!sanitizeHexColor(`#${hexValue}`)) {
-                setHexValue(color.slice(1));
+            onBlur={(event) => {
+              if (!sanitizeHexColor(`#${event.currentTarget.value}`)) {
+                event.currentTarget.value = color.slice(1);
               }
             }}
             maxLength={6}
