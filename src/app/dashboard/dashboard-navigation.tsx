@@ -17,10 +17,8 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
     ...(canManageInventory ? [{ label: "Maintenance", href: "/dashboard/maintenance", Icon: Wrench }] : []),
     { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
     { label: "Scan QR", href: "/scan", Icon: ScanLine },
-    ...(canManageAdministration ? [
-      { label: "Users", href: "/dashboard/users", Icon: Users },
-      { label: "Settings", href: "/dashboard/settings", Icon: Settings },
-    ] : []),
+    ...(canManageAdministration ? [{ label: "Users", href: "/dashboard/users", Icon: Users }] : []),
+    { label: "Settings", href: "/dashboard/settings", Icon: Settings },
   ];
 
   return (
