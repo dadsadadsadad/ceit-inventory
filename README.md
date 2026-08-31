@@ -69,7 +69,7 @@ See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, b
 
 ## Production access control
 
-The dashboard and QR scan flow use application accounts stored in PostgreSQL. Every inventory-changing server action rechecks the signed-in role, so a QR label identifies an item but does not grant permission to edit it. `ADMINISTRATOR`, `CUSTODIAN`, and `STAFF` accounts can make changes; `VIEWER` accounts are read-only.
+The dashboard and QR scan flow use application accounts stored in PostgreSQL. Every inventory-changing server action rechecks the signed-in role, so a QR label identifies an item but does not grant permission to edit it. `ADMINISTRATOR` and `STAFF` accounts can make changes; `VIEWER` accounts are read-only.
 
 Before any public deployment, replace or remove every temporary development account and verify that only school-approved administrators remain active.
 

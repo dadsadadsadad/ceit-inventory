@@ -44,7 +44,7 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
   const selectedItem = first(search.item);
   const [items, users, tickets] = await Promise.all([
     prisma.inventoryItem.findMany({ where: { status: { not: "RETIRED" } }, orderBy: [{ name: "asc" }, { assetTag: "asc" }], select: { id: true, name: true, assetTag: true }, take: 2_000 }),
-    prisma.user.findMany({ where: { isActive: true, role: { in: ["ADMINISTRATOR", "CUSTODIAN", "STAFF"] } }, orderBy: { email: "asc" }, select: { email: true } }),
+    prisma.user.findMany({ where: { isActive: true, role: { in: ["ADMINISTRATOR", "STAFF"] } }, orderBy: { email: "asc" }, select: { email: true } }),
     prisma.maintenanceTicket.findMany({ where: status ? { status } : undefined, include: { inventoryItem: { select: { id: true, name: true, assetTag: true } } }, orderBy: [{ status: "asc" }, { priority: "desc" }, { openedAt: "desc" }] }),
   ]);
 

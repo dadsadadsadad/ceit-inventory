@@ -258,6 +258,8 @@ export async function bulkUpdateInventory(formData: FormData) {
     data = { condition };
     summary = `Bulk update: condition changed to ${condition}.`;
   } else if (action === "remove" || action === "retire") {
+    const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
+    if (confirmation !== "RETIRE") throw new Error("Type RETIRE to remove selected records from active inventory.");
     data = { status: ItemStatus.RETIRED };
     summary = "Bulk update: inventory items removed from active inventory.";
   } else {

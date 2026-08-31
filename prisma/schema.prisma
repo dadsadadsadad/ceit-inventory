@@ -64,7 +64,6 @@ enum PublicRequestKind {
 
 enum UserRole {
   ADMINISTRATOR
-  CUSTODIAN
   STAFF
   VIEWER
 }

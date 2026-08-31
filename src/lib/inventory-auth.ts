@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/prisma";
 
 const sessionCookie = "ceit_inventory_session";
-const writableRoles = ["administrator", "custodian", "staff"] as const;
+const writableRoles = ["administrator", "staff"] as const;
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
 const maximumSessionsPerUser = 5;
 const sessionTokenPattern = /^[a-f0-9]{64}$/;

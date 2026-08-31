@@ -44,7 +44,7 @@ async function activeStaffAssignee(value: string | null) {
     where: {
       email: { equals: value, mode: "insensitive" },
       isActive: true,
-      role: { in: [UserRole.ADMINISTRATOR, UserRole.CUSTODIAN, UserRole.STAFF] },
+      role: { in: [UserRole.ADMINISTRATOR, UserRole.STAFF] },
     },
     select: { email: true },
   });

@@ -25,9 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div><div className="text-base font-semibold tracking-tight">CEIT Inventory</div><div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Inventory management</div></div>
         </div>
         <div className="max-w-xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/80">Authorized access</p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight">Track CEIT resources with the right information in the right hands.</h1>
-          <p className="mt-5 text-sm leading-6 text-white/75">Use your authorized inventory account to manage rooms, assets, and QR scans.</p>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight">Track CEIT resources efficiently.</h1>
         </div>
       </section>
 
@@ -40,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="mb-7">
             <p className="eyebrow">Welcome</p>
             <h1 className="title mt-3 text-3xl">Sign in</h1>
-            <p className="muted mt-2 text-sm leading-6">Enter your authorized CEIT inventory account details.</p>
+            <p className="muted mt-2 text-sm leading-6">Enter your CEIT inventory account details.</p>
           </div>
           {error && messages[error] ? <div className="notice mb-5 rounded-lg px-4 py-3 text-sm" role="alert">{messages[error]}</div> : null}
           {notice && notices[notice] ? <div className="notice notice-success mb-5 rounded-lg px-4 py-3 text-sm" role="status">{notices[notice]}</div> : null}
