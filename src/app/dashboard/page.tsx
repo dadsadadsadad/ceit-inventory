@@ -37,15 +37,15 @@ export default async function DashboardPage() {
   }
 
   const cards = dashboard ? [
-    { label: "Inventory records", value: dashboard.itemCount.toLocaleString(), detail: "Assets and supply records", href: "/dashboard/inventory", Icon: Package },
+    { label: "Inventory records", value: dashboard.itemCount.toLocaleString(), detail: "Equipment records", href: "/dashboard/inventory", Icon: Package },
     { label: "Active locations", value: dashboard.locationCount.toLocaleString(), detail: "Rooms, labs, and storage areas", href: "/dashboard/settings", Icon: MapPin },
     { label: "Needs attention", value: dashboard.attentionCount.toLocaleString(), detail: "Defective items", href: "/dashboard/inventory?status=DEFECTIVE", Icon: TriangleAlert },
   ] : [];
   const quickActions = [
     { label: "Scan an item", detail: "Open a label with your camera", href: "/scan", Icon: ScanLine },
-    { label: "View reports", detail: "See the current inventory picture", href: "/dashboard/reports", Icon: BarChart3 },
+    { label: "View reports", detail: "See the current inventory reports", href: "/dashboard/reports", Icon: BarChart3 },
     ...(canManage ? [
-      { label: "Add a record", detail: "Register equipment or stock", href: "/dashboard/inventory/new", Icon: PackagePlus },
+      { label: "Add a record", detail: "Register equipment", href: "/dashboard/inventory/new", Icon: PackagePlus },
       { label: "Import a file", detail: "Bring in an existing register", href: "/dashboard/inventory/import", Icon: FileUp },
     ] : []),
   ];
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
               <div className="dashboard-hero-kicker"><span className="dashboard-kicker-dot" aria-hidden="true" />Live workspace</div>
               <p className="eyebrow mt-4">Overview</p>
               <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory dashboard</h1>
-              <p className="muted mt-3 max-w-2xl text-sm leading-6">A live overview of CEIT equipment, supplies, rooms, and records that need a check.</p>
+              <p className="muted mt-3 max-w-2xl text-sm leading-6">A live overview of CEIT equipment, supplies, rooms, and records.</p>
             </div>
             <div className={`connection-status ${dashboard ? "connection-status-online" : "connection-status-offline"} rounded-lg px-4 py-3 text-sm font-medium`} role="status">
               {dashboard ? "Database connected" : "Database unavailable"}

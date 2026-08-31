@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, Clock3, Command, LayoutDashboard, Package, PackagePlus, ScanLine, Search, Settings2, Users, X } from "lucide-react";
+import { BarChart3, Clock3, Command, HandHelping, LayoutDashboard, Package, PackagePlus, ScanLine, Search, Settings2, Users, Wrench, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +18,8 @@ const commands: CommandItem[] = [
   { label: "Browse inventory", description: "Search equipment and supplies", href: "/dashboard/inventory", Icon: Package },
   { label: "Scan a QR label", description: "Open the camera scanner", href: "/scan", Icon: ScanLine },
   { label: "Add inventory", description: "Register an asset or supply", href: "/dashboard/inventory/new", Icon: PackagePlus, requires: "inventory-manager" },
+  { label: "Open borrowing", description: "Review equipment lending requests", href: "/dashboard/borrowing", Icon: HandHelping, requires: "inventory-manager" },
+  { label: "Open maintenance", description: "Report and resolve service requests", href: "/dashboard/maintenance", Icon: Wrench, requires: "inventory-manager" },
   { label: "View activity", description: "Review recent edits and scans", href: "/dashboard/activity", Icon: Clock3 },
   { label: "Open reports", description: "Review current inventory trends", href: "/dashboard/reports", Icon: BarChart3 },
   { label: "Manage users", description: "Create and update CEIT inventory accounts", href: "/dashboard/users", Icon: Users, requires: "administrator" },
@@ -26,10 +28,15 @@ const commands: CommandItem[] = [
 
 type CommandMenuProps = { canManageAdministration: boolean; canManageInventory: boolean };
 
+const focusableSelector = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])";
+
 export function CommandMenu({ canManageAdministration, canManageInventory }: CommandMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const dialogRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
   const visibleCommands = commands.filter((command) => {
@@ -39,13 +46,18 @@ export function CommandMenu({ canManageAdministration, canManageInventory }: Com
   });
 
   function openMenu() {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : triggerRef.current;
     setQuery("");
     setIsOpen(true);
   }
 
-  function closeMenu() {
+  function closeMenu(restoreFocus = true) {
     setIsOpen(false);
     setQuery("");
+
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+    }
   }
 
   useEffect(() => {
@@ -56,7 +68,10 @@ export function CommandMenu({ canManageAdministration, canManageInventory }: Com
         else openMenu();
       }
 
-      if (event.key === "Escape") closeMenu();
+      if (isOpen && event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+      }
     }
 
     window.addEventListener("keydown", handleKeyboardShortcut);
@@ -71,13 +86,39 @@ export function CommandMenu({ canManageAdministration, canManageInventory }: Com
   }, [isOpen]);
 
   function openCommand(command: CommandItem) {
-    closeMenu();
+    closeMenu(false);
     router.push(command.href);
+  }
+
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key !== "Tab") return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusableElements = [...dialog.querySelectorAll<HTMLElement>(focusableSelector)]
+      .filter((element) => element.getClientRects().length > 0);
+    if (!focusableElements.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    const activeElement = document.activeElement;
+
+    if (event.shiftKey && (activeElement === firstElement || !dialog.contains(activeElement))) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && (activeElement === lastElement || !dialog.contains(activeElement))) {
+      event.preventDefault();
+      firstElement.focus();
+    }
   }
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         className="command-trigger"
         onClick={openMenu}
@@ -90,14 +131,14 @@ export function CommandMenu({ canManageAdministration, canManageInventory }: Com
       </button>
 
       {isOpen ? (
-        <div className="command-menu-backdrop" role="presentation" onMouseDown={closeMenu}>
-          <section className="command-menu" role="dialog" aria-modal="true" aria-labelledby="command-menu-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="command-menu-backdrop" role="presentation" onMouseDown={() => closeMenu()}>
+          <section ref={dialogRef} className="command-menu" role="dialog" aria-modal="true" aria-labelledby="command-menu-title" onKeyDown={handleDialogKeyDown} onMouseDown={(event) => event.stopPropagation()}>
             <div className="command-menu-heading">
               <div>
                 <p className="eyebrow">Quick navigation</p>
                 <h2 id="command-menu-title" className="mt-1 text-lg font-semibold">Where would you like to go?</h2>
               </div>
-              <button type="button" className="command-menu-close" onClick={closeMenu} aria-label="Close quick navigation">
+              <button type="button" className="command-menu-close" onClick={() => closeMenu()} aria-label="Close quick navigation">
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>

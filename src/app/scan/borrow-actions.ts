@@ -115,7 +115,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
           itemUnavailable();
         }
 
-        const activeStatuses = [borrowStatus.REQUESTED, borrowStatus.BORROWED];
+        const activeStatuses = [borrowStatus.REQUESTED, borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED];
         const existingRequest = await transaction.borrowRequest.findFirst({
           where: {
             inventoryItemId: item.id,

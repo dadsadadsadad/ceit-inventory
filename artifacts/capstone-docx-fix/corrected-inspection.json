@@ -1,0 +1,2945 @@
+{
+  "source": "D:\\Webstorm\\ceit-inventory\\output\\Capstone_ QR Code-Based Smart Inventory System - Corrected Highlighted.docx",
+  "sha256": "42a6ff7fc73ec5b60389fa12df6f20ed987c4432a10215ec8b33b11cdd5b3eaa",
+  "bytes": 1750164,
+  "cached_pages": null,
+  "paragraph_count": 754,
+  "nonempty_paragraph_count": 472,
+  "style_counts": {
+    "null": 389,
+    "Heading1": 35,
+    "Heading3": 18,
+    "Heading2": 30
+  },
+  "headings": [
+    {
+      "index": 22,
+      "style": null,
+      "text": "CHAPTER 1: INTRODUCTION ................................................ 0"
+    },
+    {
+      "index": 33,
+      "style": null,
+      "text": "CHAPTER 2: METHODS ................................................ 0"
+    },
+    {
+      "index": 44,
+      "style": null,
+      "text": "References ................................................ 0"
+    },
+    {
+      "index": 45,
+      "style": null,
+      "text": "CHAPTER 1"
+    },
+    {
+      "index": 86,
+      "style": "Heading1",
+      "text": "Review of Related Literature"
+    },
+    {
+      "index": 87,
+      "style": "Heading3",
+      "text": "Web-Based Laboratory Inventory Application Using QR Code and RFID "
+    },
+    {
+      "index": 89,
+      "style": "Heading3",
+      "text": "Rabiah, Lindawati, and Sarjana (2022) developed a web-based laboratory inventory application using QR Code and Radio Frequency Identification (RFID) for the Telecommunication Engineering laboratories and workshops at the State Polytechnic of Sriwijaya. The study was developed in response to the laboratory's manual equipment borrowing process, where students had to fill out loan forms and technicians had to manage inventory records manually. The researchers proposed a web-based application to provide stock information and facilitate equipment borrowing and inventory management. "
+    },
+    {
+      "index": 211,
+      "style": "Heading3",
+      "text": "1. Technology Acceptance Model (TAM) - Davis (1989)"
+    },
+    {
+      "index": 215,
+      "style": "Heading3",
+      "text": "2. General Systems Theory - von Bertalanffy (1968)"
+    },
+    {
+      "index": 219,
+      "style": "Heading3",
+      "text": "3. Lean Management Principles - Ohno (1988)"
+    },
+    {
+      "index": 223,
+      "style": "Heading3",
+      "text": "Synthesis of the Theoretical Framework"
+    },
+    {
+      "index": 246,
+      "style": "Heading1",
+      "text": "(Existing Conceptual Framework)"
+    },
+    {
+      "index": 248,
+      "style": "Heading2",
+      "text": "Input"
+    },
+    {
+      "index": 251,
+      "style": "Heading2",
+      "text": "Process"
+    },
+    {
+      "index": 255,
+      "style": "Heading2",
+      "text": "Output"
+    },
+    {
+      "index": 266,
+      "style": "Heading2",
+      "text": "Input"
+    },
+    {
+      "index": 270,
+      "style": "Heading2",
+      "text": "Process"
+    },
+    {
+      "index": 275,
+      "style": "Heading2",
+      "text": "Output"
+    },
+    {
+      "index": 280,
+      "style": "Heading1",
+      "text": "Research Questions"
+    },
+    {
+      "index": 281,
+      "style": "Heading1",
+      "text": "This study seeks to answer the following questions:"
+    },
+    {
+      "index": 282,
+      "style": "Heading1",
+      "text": "1. What challenges are encountered by the CEIT Department in managing computer laboratory equipment through the current manual and spreadsheet-based process, particularly in terms of:"
+    },
+    {
+      "index": 283,
+      "style": "Heading1",
+      "text": "1.1. accuracy and updating of inventory records; 1.2. equipment identification and record retrieval; 1.3. borrowing and return monitoring; 1.4. equipment condition, status, and recorded location; and 1.5. maintenance and accountability of laboratory equipment?"
+    },
+    {
+      "index": 285,
+      "style": "Heading1",
+      "text": "2. What functional and non-functional requirements are needed for the development of a QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department?"
+    },
+    {
+      "index": 287,
+      "style": "Heading1",
+      "text": "3. How can the system be designed and developed to provide the following functions:"
+    },
+    {
+      "index": 288,
+      "style": "Heading1",
+      "text": "3.1. equipment and supply registration and inventory management; 3.2. QR label generation and scanning; 3.3. borrowing and return-request management; 3.4. recorded location, status, condition, and availability monitoring; 3.5. maintenance-ticket management; 3.6. account access, role-based permissions, and activity history; and 3.7. inventory overview and exportable reports?"
+    },
+    {
+      "index": 289,
+      "style": "Heading1",
+      "text": "4. How can the system be developed through the Software Development Life Cycle (SDLC) and Waterfall Model to address the identified inventory-management requirements of the CEIT Department?"
+    },
+    {
+      "index": 291,
+      "style": "Heading1",
+      "text": "5. How can the developed system be evaluated in terms of:"
+    },
+    {
+      "index": 292,
+      "style": "Heading1",
+      "text": "5.1. functionality; 5.2. usability; 5.3. efficiency; 5.4. reliability; and 5.5. asset accountability?"
+    },
+    {
+      "index": 294,
+      "style": "Heading1",
+      "text": "6. To what extent can the developed system address the limitations of the existing manual and spreadsheet-based inventory process, particularly in reducing manual recording, searching, updating, and monitoring of computer laboratory equipment?"
+    },
+    {
+      "index": 295,
+      "style": "Heading1",
+      "text": "Research Objectives"
+    },
+    {
+      "index": 296,
+      "style": "Heading2",
+      "text": "General Objective"
+    },
+    {
+      "index": 297,
+      "style": "Heading1",
+      "text": "The general objective of this study is to design and develop a QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department that provides centralized inventory records, QR labels, role-based access, borrowing and return-request management, maintenance tickets, activity history, and reports for computer laboratory equipment."
+    },
+    {
+      "index": 298,
+      "style": "Heading2",
+      "text": "Specific Objectives"
+    },
+    {
+      "index": 299,
+      "style": "Heading1",
+      "text": "Specifically, this study aims to:"
+    },
+    {
+      "index": 300,
+      "style": "Heading1",
+      "text": "Identify and analyze the existing inventory management practices and challenges encountered by the CEIT Department in managing computer laboratory equipment, particularly in terms of inaccurate or outdated records, equipment misplacement, borrowing and return monitoring, equipment condition, asset location, and maintenance tracking."
+    },
+    {
+      "index": 302,
+      "style": "Heading1",
+      "text": "Determine the functional and non-functional requirements of the proposed QR Code Based Smart Inventory and Asset Tracking System based on the existing inventory process and the needs of authorized laboratory personnel."
+    },
+    {
+      "index": 304,
+      "style": "Heading1",
+      "text": "Design and develop a QR code-based smart inventory and asset tracking system that provides centralized equipment records and efficient identification, monitoring, and updating of laboratory assets."
+    },
+    {
+      "index": 306,
+      "style": "Heading1",
+      "text": "Integrate essential system functionalities, including equipment and supply registration, QR label generation and scanning, borrowing and return requests with staff confirmation, recorded status, condition, and location, maintenance tickets, role-based account access, activity history, and inventory reports that can be viewed or exported."
+    },
+    {
+      "index": 308,
+      "style": "Heading1",
+      "text": "Implement the proposed system using the Software Development Life Cycle (SDLC) and Waterfall Model to ensure systematic requirements analysis, system design, development, testing, deployment, and maintenance."
+    },
+    {
+      "index": 310,
+      "style": "Heading1",
+      "text": "Evaluate the developed system in terms of functionality, usability, efficiency, reliability, and its ability to improve inventory management, asset accountability, equipment monitoring, and maintenance documentation within the CEIT Department."
+    },
+    {
+      "index": 312,
+      "style": "Heading1",
+      "text": "Determine whether the developed system can reduce the limitations associated with the existing spreadsheet-based inventory process, particularly manual recording, searching, updating, and monitoring of laboratory equipment."
+    },
+    {
+      "index": 313,
+      "style": "Heading1",
+      "text": "Significance of the Study"
+    },
+    {
+      "index": 316,
+      "style": "Heading3",
+      "text": "College of Engineering and Information Technology (CEIT) Department"
+    },
+    {
+      "index": 318,
+      "style": "Heading3",
+      "text": "Laboratory Personnel and Administrators"
+    },
+    {
+      "index": 320,
+      "style": "Heading3",
+      "text": "Faculty Members"
+    },
+    {
+      "index": 322,
+      "style": "Heading3",
+      "text": "Students"
+    },
+    {
+      "index": 324,
+      "style": "Heading3",
+      "text": "Siena College of Taytay"
+    },
+    {
+      "index": 326,
+      "style": "Heading3",
+      "text": "Future Researchers"
+    },
+    {
+      "index": 328,
+      "style": "Heading1",
+      "text": "Scope and Delimitations"
+    },
+    {
+      "index": 329,
+      "style": "Heading2",
+      "text": "Scope of the Study"
+    },
+    {
+      "index": 335,
+      "style": "Heading2",
+      "text": "Delimitations of the Study"
+    },
+    {
+      "index": 348,
+      "style": "Heading1",
+      "text": "Definition of Terms"
+    },
+    {
+      "index": 404,
+      "style": null,
+      "text": "CHAPTER 2 "
+    },
+    {
+      "index": 413,
+      "style": "Heading1",
+      "text": "Research Instruments"
+    },
+    {
+      "index": 430,
+      "style": "Heading1",
+      "text": "Data Gathering"
+    },
+    {
+      "index": 444,
+      "style": "Heading1",
+      "text": "Research Development"
+    },
+    {
+      "index": 445,
+      "style": "Heading2",
+      "text": "Software Development Methodology"
+    },
+    {
+      "index": 448,
+      "style": "Heading3",
+      "text": "1. Requirements Analysis"
+    },
+    {
+      "index": 451,
+      "style": "Heading3",
+      "text": "2. System Design"
+    },
+    {
+      "index": 454,
+      "style": "Heading3",
+      "text": "3. Implementation and Development"
+    },
+    {
+      "index": 457,
+      "style": "Heading3",
+      "text": "4. Testing"
+    },
+    {
+      "index": 460,
+      "style": "Heading3",
+      "text": "5. Deployment and Maintenance"
+    },
+    {
+      "index": 463,
+      "style": "Heading3",
+      "text": "Rationale for Using the Waterfall Model"
+    },
+    {
+      "index": 480,
+      "style": "Heading1",
+      "text": "Current System"
+    },
+    {
+      "index": 486,
+      "style": "Heading1",
+      "text": "Proposed System"
+    },
+    {
+      "index": 514,
+      "style": "Heading1",
+      "text": "Functional Requirements"
+    },
+    {
+      "index": 516,
+      "style": "Heading2",
+      "text": "1. User Authentication and Access Control"
+    },
+    {
+      "index": 524,
+      "style": "Heading2",
+      "text": "2. Item Registration and Management"
+    },
+    {
+      "index": 532,
+      "style": "Heading2",
+      "text": "3. QR Code Generation"
+    },
+    {
+      "index": 538,
+      "style": "Heading2",
+      "text": "4. QR Code Scanning"
+    },
+    {
+      "index": 546,
+      "style": "Heading2",
+      "text": "5. Inventory and Asset Tracking"
+    },
+    {
+      "index": 556,
+      "style": "Heading2",
+      "text": "6. Borrowing and Return-Request Management"
+    },
+    {
+      "index": 566,
+      "style": "Heading2",
+      "text": "7. Equipment Condition and Maintenance Management"
+    },
+    {
+      "index": 576,
+      "style": "Heading2",
+      "text": "8. Search and Filter"
+    },
+    {
+      "index": 582,
+      "style": "Heading2",
+      "text": "9. Report Generation"
+    },
+    {
+      "index": 592,
+      "style": "Heading1",
+      "text": "Non-Functional Requirements"
+    },
+    {
+      "index": 594,
+      "style": "Heading2",
+      "text": "1. Usability"
+    },
+    {
+      "index": 602,
+      "style": "Heading2",
+      "text": "2. Performance"
+    },
+    {
+      "index": 607,
+      "style": "Heading2",
+      "text": "3. Reliability"
+    },
+    {
+      "index": 615,
+      "style": "Heading2",
+      "text": "4. Security"
+    },
+    {
+      "index": 623,
+      "style": "Heading2",
+      "text": "5. Scalability"
+    },
+    {
+      "index": 627,
+      "style": "Heading2",
+      "text": "6. Maintainability"
+    },
+    {
+      "index": 633,
+      "style": "Heading2",
+      "text": "7. Compatibility"
+    },
+    {
+      "index": 637,
+      "style": "Heading1",
+      "text": "System Architecture"
+    },
+    {
+      "index": 639,
+      "style": "Heading2",
+      "text": "Data Layer"
+    },
+    {
+      "index": 664,
+      "style": "Heading2",
+      "text": "Presentation Layer"
+    },
+    {
+      "index": 688,
+      "style": "Heading2",
+      "text": "Application Logic and Access Control"
+    },
+    {
+      "index": 746,
+      "style": "Heading1",
+      "text": "References"
+    }
+  ],
+  "paragraphs": [
+    {
+      "index": 0,
+      "style": null,
+      "text": "DESIGN AND DEVELOPMENT OF A QR CODE-BASED SMART INVENTORY AND ASSET TRACKING SYSTEM FOR COMPUTER LABORATORY EQUIPMENT IN THE CEIT DEPARTMENT"
+    },
+    {
+      "index": 2,
+      "style": null,
+      "text": "BSCS/BSIT - 4"
+    },
+    {
+      "index": 4,
+      "style": null,
+      "text": "A Thesis/Capstone Project Presented to"
+    },
+    {
+      "index": 5,
+      "style": null,
+      "text": "The Faculty of the College of Engineering and Information Technology"
+    },
+    {
+      "index": 6,
+      "style": null,
+      "text": "Siena College of Taytay, Rizal"
+    },
+    {
+      "index": 9,
+      "style": null,
+      "text": "In Fulfillment of the Requirements"
+    },
+    {
+      "index": 10,
+      "style": null,
+      "text": "For the Degree of Bachelor of Science in Information Technology"
+    },
+    {
+      "index": 13,
+      "style": null,
+      "text": "Rafaelle San Miguel. Francisco"
+    },
+    {
+      "index": 14,
+      "style": null,
+      "text": "Kim Shaina Soliman. Calderon"
+    },
+    {
+      "index": 15,
+      "style": null,
+      "text": "Maverick Miguel Tegero. Gonzales"
+    },
+    {
+      "index": 20,
+      "style": null,
+      "text": "March 2026"
+    },
+    {
+      "index": 21,
+      "style": null,
+      "text": "TABLE OF CONTENTS"
+    },
+    {
+      "index": 22,
+      "style": null,
+      "text": "CHAPTER 1: INTRODUCTION ................................................ 0"
+    },
+    {
+      "index": 23,
+      "style": null,
+      "text": "Background of the Study ................................................ 0"
+    },
+    {
+      "index": 24,
+      "style": null,
+      "text": "Statement of the Problem ................................................ 0"
+    },
+    {
+      "index": 25,
+      "style": null,
+      "text": "Review of Related Literature ................................................ 0"
+    },
+    {
+      "index": 26,
+      "style": null,
+      "text": "Theoretical Framework ................................................ 0"
+    },
+    {
+      "index": 27,
+      "style": null,
+      "text": "Conceptual Framework ................................................ 0"
+    },
+    {
+      "index": 28,
+      "style": null,
+      "text": "Research Questions ................................................ 0"
+    },
+    {
+      "index": 29,
+      "style": null,
+      "text": "Research Objectives ................................................ 0"
+    },
+    {
+      "index": 30,
+      "style": null,
+      "text": "Significance of the Study ................................................ 0"
+    },
+    {
+      "index": 31,
+      "style": null,
+      "text": "Scope and Delimitations ................................................ 0"
+    },
+    {
+      "index": 32,
+      "style": null,
+      "text": "Definition of Terms ................................................ 0"
+    },
+    {
+      "index": 33,
+      "style": null,
+      "text": "CHAPTER 2: METHODS ................................................ 0"
+    },
+    {
+      "index": 34,
+      "style": null,
+      "text": "Research Design ................................................ 0"
+    },
+    {
+      "index": 35,
+      "style": null,
+      "text": "Research Instruments ................................................ 0"
+    },
+    {
+      "index": 36,
+      "style": null,
+      "text": "Data Gathering ................................................ 0"
+    },
+    {
+      "index": 37,
+      "style": null,
+      "text": "Research Development ................................................ 0"
+    },
+    {
+      "index": 38,
+      "style": null,
+      "text": "Current System ................................................ 0"
+    },
+    {
+      "index": 39,
+      "style": null,
+      "text": "Developed System ................................................ 0"
+    },
+    {
+      "index": 40,
+      "style": null,
+      "text": "Functional Requirements ................................................ 0"
+    },
+    {
+      "index": 41,
+      "style": null,
+      "text": "Non-Functional Requirements ................................................ 0"
+    },
+    {
+      "index": 42,
+      "style": null,
+      "text": "System Architecture ................................................ 0"
+    },
+    {
+      "index": 43,
+      "style": null,
+      "text": "System Diagrams ................................................ 0"
+    },
+    {
+      "index": 44,
+      "style": null,
+      "text": "References ................................................ 0"
+    },
+    {
+      "index": 45,
+      "style": null,
+      "text": "CHAPTER 1"
+    },
+    {
+      "index": 46,
+      "style": null,
+      "text": "Introduction "
+    },
+    {
+      "index": 47,
+      "style": null,
+      "text": "Background of the Study"
+    },
+    {
+      "index": 48,
+      "style": null,
+      "text": "The effective management of information technology (IT) equipment is an important part of maintaining an organized, secure, and productive educational environment. Computer laboratories contain numerous valuable assets, including computer units, monitors, keyboards, mice, headsets, networking devices, and other peripherals that are regularly used by students, faculty members, and laboratory personnel. As the number of equipment and users increases, maintaining accurate information regarding the location, condition, availability, borrowing history, and maintenance status of these assets becomes increasingly important. One technology that can support this process is the Quick Response (QR) code, a two-dimensional code that can be scanned using a mobile device or scanner to quickly retrieve stored information. In the present system, a QR code is assigned to each registered inventory record to provide easier identification, monitoring, and updating of asset records."
+    },
+    {
+      "index": 49,
+      "style": null,
+      "text": "Globally, educational institutions and organizations face challenges in managing large quantities of IT and laboratory equipment, particularly when traditional manual methods such as paper records and spreadsheets are used. Manual inventory processes can result in human errors, outdated records, misplaced equipment, and delays in updating asset information. These challenges are especially relevant in environments where equipment is frequently transferred, borrowed, repaired, replaced, or used by different individuals. Recent developments in digital laboratory management have demonstrated the potential of QR codes, RFID, mobile applications, and centralized databases to improve laboratory asset management and information retrieval. Digital asset-tracking systems can provide more timely and reliable records by allowing personnel to identify equipment, monitor its status, and access information through a centralized platform. This shift toward smart asset management reflects the growing need for educational institutions to adopt technologies that can improve operational efficiency, accountability, and resource utilization."
+    },
+    {
+      "index": 50,
+      "style": null,
+      "text": "Similar concerns can be observed in Philippine educational settings, where schools and higher education institutions increasingly depend on computers, networking equipment, and other ICT resources for teaching, learning, administration, and research. Maintaining accurate inventory records and using technology resources properly are important in educational institutions. As schools acquire and use more technology-based resources, there is a growing need for systems that can support the monitoring and management of these assets."
+    },
+    {
+      "index": 51,
+      "style": null,
+      "text": "In the College of Engineering and Information Technology (CEIT) Department, computer laboratories are essential facilities used by students for academic activities, practical exercises, programming, networking, and other technology-related learning. The department has several laboratories, including the Mikrotik Laboratory, Mac Laboratory, and Computer Laboratory, which contain various types of equipment such as computer units, monitors, keyboards, mice, headsets, networking devices, and other laboratory tools. These resources are continuously used by students and personnel, making proper inventory and maintenance important for ensuring that the laboratories remain functional and ready for academic use."
+    },
+    {
+      "index": 52,
+      "style": null,
+      "text": "Currently, the CEIT Department primarily uses a manual inventory process through spreadsheets or Microsoft Excel to monitor its laboratory equipment. While spreadsheets can provide a basic method of recording inventory information, they have limitations when equipment is frequently borrowed, transferred, repaired, replaced, or used by different students. Information may not always be updated immediately, resulting in records that may not accurately reflect the current status, location, or condition of an asset. Personnel may also need to spend additional time searching through multiple records to determine whether a particular piece of equipment is available, borrowed, damaged, missing, or undergoing maintenance."
+    },
+    {
+      "index": 53,
+      "style": null,
+      "text": "Another concern involves the proper use and accountability of laboratory computer equipment. Students may borrow equipment such as keyboards, headsets, or other peripherals from the department, while laboratory computers may also be subject to unauthorized changes, including the installation of games or other software. Without an efficient tracking and monitoring mechanism, it can be difficult to determine when equipment was used, who was responsible for it, whether an asset was returned in its proper condition, or whether a computer requires inspection or maintenance. These circumstances may contribute to equipment misplacement, delayed maintenance, inaccurate inventory records, and increased workload for laboratory personnel."
+    },
+    {
+      "index": 54,
+      "style": null,
+      "text": "Although existing studies and systems have demonstrated the usefulness of QR codes and digital asset-management technologies, there remains a need for a system specifically designed to address the operational requirements of an academic computer laboratory. Some existing solutions focus mainly on inventory recording, while others are designed for larger organizations with different asset-management requirements. There is a gap in providing a localized and integrated system that combines QR-based equipment identification with inventory monitoring, equipment condition tracking, borrowing and return records, asset location, and maintenance information specifically for the CEIT Department. Addressing this gap can provide a more practical and suitable solution for the department's existing inventory-management challenges."
+    },
+    {
+      "index": 55,
+      "style": null,
+      "text": "In response to these concerns, this study proposes the Design and Development of a QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. The system uses a QR code for each registered inventory record and a centralized digital platform to manage relevant asset information. Administrators and Staff can access and update inventory records, while Viewers can view records and reports. A person who opens a QR label can view limited item information and submit a borrowing or return request. Staff or Administrators review and confirm these requests. The system is intended to reduce dependence on manual spreadsheet-based monitoring while improving the accuracy, accessibility, efficiency, and accountability of laboratory asset management."
+    },
+    {
+      "index": 56,
+      "style": null,
+      "text": "Therefore, the general objective of this study is to design and develop a QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department that will improve the management, monitoring, and accountability of laboratory assets. The study aims to provide the department with a more reliable and organized approach to inventory management, enabling personnel to monitor equipment more efficiently, support timely maintenance, record changes in item location and activity history, and maintain accurate records of computer laboratory resources."
+    },
+    {
+      "index": 60,
+      "style": null,
+      "text": "Statement of the problem "
+    },
+    {
+      "index": 61,
+      "style": null,
+      "text": "This study focuses on the Design and Development of a QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. It aims to address the limitations of the current manual inventory process and improve the monitoring, tracking, maintenance, and accountability of computer laboratory equipment. Specifically, it seeks to:"
+    },
+    {
+      "index": 62,
+      "style": null,
+      "text": "Identify and analyze the existing challenges encountered by the CEIT Department in managing computer laboratory equipment using manual inventory methods, particularly in terms of inaccurate or outdated records, equipment misplacement, borrowing and return monitoring, equipment condition, and maintenance tracking."
+    },
+    {
+      "index": 64,
+      "style": null,
+      "text": "Design and develop a QR code-based smart inventory and asset tracking system that can provide efficient equipment identification, centralized inventory records, recorded location changes and activity history, and timely updates of equipment information."
+    },
+    {
+      "index": 66,
+      "style": null,
+      "text": "Determine and integrate essential system features that can improve the management and usability of laboratory equipment, including QR code scanning, borrowing requests and return management, equipment status and condition monitoring, maintenance records, user accountability, and inventory reporting."
+    },
+    {
+      "index": 68,
+      "style": null,
+      "text": "Evaluate the effectiveness and usability of the developed system in improving inventory management, reducing errors in equipment records, increasing asset accountability, and making the monitoring and maintenance of computer laboratory equipment more efficient."
+    },
+    {
+      "index": 86,
+      "style": "Heading1",
+      "text": "Review of Related Literature"
+    },
+    {
+      "index": 87,
+      "style": "Heading3",
+      "text": "Web-Based Laboratory Inventory Application Using QR Code and RFID "
+    },
+    {
+      "index": 89,
+      "style": "Heading3",
+      "text": "Rabiah, Lindawati, and Sarjana (2022) developed a web-based laboratory inventory application using QR Code and Radio Frequency Identification (RFID) for the Telecommunication Engineering laboratories and workshops at the State Polytechnic of Sriwijaya. The study was developed in response to the laboratory's manual equipment borrowing process, where students had to fill out loan forms and technicians had to manage inventory records manually. The researchers proposed a web-based application to provide stock information and facilitate equipment borrowing and inventory management. "
+    },
+    {
+      "index": 92,
+      "style": null,
+      "text": "Figure 1. Screenshot of the Existing Web-Based Laboratory Inventory Application (Rabiah et al., 2022)."
+    },
+    {
+      "index": 101,
+      "style": null,
+      "text": "The system provides different functions for administrators, students, and laboratory technicians. It includes tool and component data, QR-code identification, equipment borrowing, item retrieval, and transaction recording. The tool data menu displays information about laboratory equipment and includes a QR code for identification. During borrowing, students provide their identification and the technician scans the QR code of the required equipment. The system records the borrowing transaction and can generate PDF reports."
+    },
+    {
+      "index": 102,
+      "style": null,
+      "text": "Strengths of the Existing System "
+    },
+    {
+      "index": 104,
+      "style": null,
+      "text": "The system provides several advantages for laboratory inventory management. QR codes allow equipment to be identified quickly through scanning instead of manually searching inventory records."
+    },
+    {
+      "index": 105,
+      "style": null,
+      "text": "The web-based application centralizes equipment information, supports equipment borrowing, and records transactions automatically. The study reported that QR-code scanning displayed the matching equipment information in the web application."
+    },
+    {
+      "index": 107,
+      "style": null,
+      "text": "Weakness of the Existing System "
+    },
+    {
+      "index": 109,
+      "style": null,
+      "text": "While the system provides QR-code-based inventory and borrowing functions, it focuses on equipment and tool borrowing within a Telecommunication Engineering laboratory. It also uses RFID to identify students during borrowing. Its features are therefore tailored to the laboratory processes of the researchers' institution. The study still supports the development of an inventory system designed for computer hardware, equipment details, recorded location, and condition in an academic department."
+    },
+    {
+      "index": 111,
+      "style": null,
+      "text": "Research Gap "
+    },
+    {
+      "index": 113,
+      "style": null,
+      "text": "The research shows that QR-code technology enhances the identification and tracking of laboratory equipment. However, the existing system was designed for Telecommunications Engineering laboratories and focuses on equipment lending and student identification through RFID. The proposed system focuses on computer hardware, equipment, and supplies in an academic department. It provides a centralized inventory database that can include computer specifications, installed software information, recorded location, status, and condition. It uses QR labels for rapid identification and can generate and print a label for each registered inventory record."
+    },
+    {
+      "index": 118,
+      "style": null,
+      "text": "Cloud-Based Inventory System with QR Tagging for Technology Workshops "
+    },
+    {
+      "index": 120,
+      "style": null,
+      "text": "Sermonia and Pabelona (2025) developed a cloud-based inventory system with Quick Response (QR) tagging for technology workshops. The study addressed traditional inventory practices where tools and equipment were counted and recorded manually in inventory forms. It aimed to manage equipment and user data, generate printed QR codes, scan equipment QR codes, monitor reports, and support a mobile application with Internet synchronization."
+    },
+    {
+      "index": 129,
+      "style": null,
+      "text": "Figure 2. Screenshot of the Cloud-Based Inventory System with QR Tagging (Sermonia & Pabelona, 2025)."
+    },
+    {
+      "index": 133,
+      "style": null,
+      "text": "The system provides a web-based platform where authorized users can manage equipment information. The equipment page allows users to add and update item details, including name, brand, location, cost, and acquisition date. It also allows users to update status, view equipment history, and generate QR codes for equipment labels. The system can also generate inventory reports."
+    },
+    {
+      "index": 134,
+      "style": null,
+      "text": "The system also includes a mobile application that lets users view equipment and scan QR codes. When a QR code is scanned, the application displays the related equipment details. Users can record equipment use and submit reports. The mobile application can work offline after login and synchronizes data when an internet connection is available."
+    },
+    {
+      "index": 138,
+      "style": null,
+      "text": "Strengths of the Existing System "
+    },
+    {
+      "index": 139,
+      "style": null,
+      "text": "The system offers several benefits for inventory management. It replaces manual methods with a cloud-based platform that stores information in one place. QR codes make equipment identification faster, while the system shows equipment history and current status. The mobile application can save data locally and synchronize it when an internet connection is available."
+    },
+    {
+      "index": 140,
+      "style": null,
+      "text": "Weakness of the Existing System "
+    },
+    {
+      "index": 141,
+      "style": null,
+      "text": "The system provides inventory tracking and QR-tagging tools, but it was designed for hard-skills technology workshops, including Automotive, Machine Shop, Refrigeration and Air Conditioning, Electronics, and Electricity. The mobile application lets users view equipment, scan QR codes, and submit reports, while inventory management is performed through the web application by authorized users."
+    },
+    {
+      "index": 142,
+      "style": null,
+      "text": "The study supports the use of QR codes in equipment management. However, its features and covered equipment types were designed for technology workshops and do not fully match the requirements of a computer-related department."
+    },
+    {
+      "index": 144,
+      "style": null,
+      "text": "Research Gap"
+    },
+    {
+      "index": 146,
+      "style": null,
+      "text": "The study shows that cloud-based inventory management with QR tagging can improve the monitoring and identification of equipment. It includes equipment registration, QR-code generation and scanning, location management, status monitoring, equipment history, and report generation. These features are related to the objectives of the proposed system."
+    },
+    {
+      "index": 147,
+      "style": null,
+      "text": "However, the existing system was developed for technology workshops and covers equipment categories such as Automotive, Machine Shop, Refrigeration and Air Conditioning, Electronics, and Electricity. The proposed system focuses on computer laboratory equipment and supplies in one department. It can record computer specifications, hardware and software information, location, status, condition, and other relevant inventory details."
+    },
+    {
+      "index": 148,
+      "style": null,
+      "text": "Therefore, the study of Sermonia and Pabelona (2025) serves as a reference for the proposed system because it demonstrates the feasibility of QR tagging, cloud-based inventory management, equipment monitoring, and mobile QR-code scanning. The proposed system adapts these concepts to a web system that uses QR labels and can be accessed through a mobile browser."
+    },
+    {
+      "index": 153,
+      "style": null,
+      "text": "The Asset Management and Tracking System for TVET Institutions Based on Ubiquitous Computing "
+    },
+    {
+      "index": 156,
+      "style": null,
+      "text": "Sulistyo, Achmad, and Purnama (2022) developed an asset management and tracking system for Technical and Vocational Education and Training (TVET) institutions. The study was conducted at Politeknik Negeri Balikpapan and addressed the limitations of paper records and spreadsheets. The researchers developed a web and mobile system that used QR codes to identify movable and fixed assets. The system also used geolocation to record the position of movable assets."
+    },
+    {
+      "index": 158,
+      "style": null,
+      "text": "Figure 3. Screenshot of the Asset Management and Tracking System (Sulistyo et al., 2022)."
+    },
+    {
+      "index": 164,
+      "style": null,
+      "text": "The study is useful because it provides a web-based asset-management application and an Android application connected to a database. The web application allows administrators to manage asset data, view asset history, and generate QR codes from asset identification numbers. The labels can be attached to physical assets. Through the Android application, administrators and students can scan a QR code to view an asset's specifications. The system also supports borrowing and returning assets through QR-code scanning."
+    },
+    {
+      "index": 169,
+      "style": null,
+      "text": "Strengths of the Existing System "
+    },
+    {
+      "index": 170,
+      "style": null,
+      "text": "The system replaces paper-based and spreadsheet-based records with a cloud database. It uses QR codes for fast asset identification and allows administrators to generate and print QR labels. It records asset history and circulation so administrators can see who used an asset and when it was borrowed or returned. It also provides geolocation information for tracking movable assets."
+    },
+    {
+      "index": 171,
+      "style": null,
+      "text": "Another strength is that the system provides interfaces for different users. The web application is used to manage asset data and monitor circulation, while the Android application allows administrators and students to scan QR codes and view asset information. Both applications are connected to a database, which allows information to be shared between them."
+    },
+    {
+      "index": 172,
+      "style": null,
+      "text": "Weakness of the Existing System "
+    },
+    {
+      "index": 173,
+      "style": null,
+      "text": "Despite its useful features, the study identifies several challenges in implementing the system."
+    },
+    {
+      "index": 174,
+      "style": null,
+      "text": "The system requires an Internet connection and suitable infrastructure. Low bandwidth may affect performance. The study also notes that staff and students may need training, supervision, and technical support because they are familiar with manual processes."
+    },
+    {
+      "index": 175,
+      "style": null,
+      "text": "The researchers also noted a limitation in the geolocation feature. Asset movement is recorded only when users scan the QR code at the required time. If a user does not scan the code, the movement may not be recorded correctly. The mobile application was also limited to Android smartphones during the study."
+    },
+    {
+      "index": 176,
+      "style": null,
+      "text": "Research Gap"
+    },
+    {
+      "index": 177,
+      "style": null,
+      "text": "The study shows that QR codes, cloud databases, mobile applications, and asset tracking can be used in educational institutions. It includes functions such as asset registration, QR-code generation and scanning, user history, and location data. These functions can guide the development of inventory systems for schools."
+    },
+    {
+      "index": 178,
+      "style": null,
+      "text": "However, this system was mainly developed for the Civil Engineering Department at Politeknik Negeri Balikpapan and for both fixed and movable TVET assets. The proposed system focuses on computer hardware, equipment, and supplies in an academic department. It can store computer specifications and other inventory details, record assigned locations, and use QR labels for identification. It does not use geolocation."
+    },
+    {
+      "index": 182,
+      "style": null,
+      "text": "Asset Guard: A Multi-Platform Asset Management System Using QR Code and Geolocation "
+    },
+    {
+      "index": 183,
+      "style": null,
+      "text": "Hortizuela (2019) developed Asset Guard, a multi-platform asset-management system that uses QR codes and geolocation to manage assets issued to employees. The study aimed to automate asset encoding, inventory management, report preparation, and location recording. It used the Extreme Programming model and QR codes to identify and track assets."
+    },
+    {
+      "index": 185,
+      "style": null,
+      "text": "Figure 4. Screenshot of the Asset Guard Asset Management System (Hortizuela, 2019)."
+    },
+    {
+      "index": 187,
+      "style": null,
+      "text": "The system includes modules for managing organizational assets. The Encode Asset module allows users to enter asset details and record a location through OpenStreetMap. The Manage Asset module lets users update asset records, change an asset's status, delete records, and print QR codes. A printed QR label contains asset information and a code that can be scanned to retrieve more details."
+    },
+    {
+      "index": 189,
+      "style": null,
+      "text": "Strengths of the Existing System "
+    },
+    {
+      "index": 191,
+      "style": null,
+      "text": "Asset Guard reduces the need for paper records by storing asset details digitally. It uses QR codes so a phone can identify an item and retrieve its information. It allows users to record whether equipment is working, needs repair, or should be retired. It can show an asset's recorded location on a map through OpenStreetMap and print inventory lists, card sheets, and receipts."
+    },
+    {
+      "index": 193,
+      "style": null,
+      "text": "Weakness of the Existing System "
+    },
+    {
+      "index": 194,
+      "style": null,
+      "text": "Asset Guard provides asset-management functions for property issued to employees. It focuses on employee-issued property, inventory checks, and company-owned equipment. Users must scan and update information regularly to keep the records current."
+    },
+    {
+      "index": 195,
+      "style": null,
+      "text": "In comparison to the proposed system Asset Guard does not focus on managing computer hardware or equipment inventory within a department. Its asset data is designed for organizational use not for detailed tracking of computer-specific items or equipment used in educational settings, like schools."
+    },
+    {
+      "index": 197,
+      "style": null,
+      "text": "Research Gap"
+    },
+    {
+      "index": 198,
+      "style": null,
+      "text": "The Asset Guard study shows that QR codes can support a multi-platform asset-management system. It includes asset encoding, QR-code generation and scanning, status updates, location recording, inventory management, and report generation. These ideas can guide the development of inventory systems."
+    },
+    {
+      "index": 199,
+      "style": null,
+      "text": "The original system was mainly designed for managing assets issued to employees. The proposed system focuses on computer hardware, equipment, and supplies in a college department and can record equipment details, computer specifications, location, status, condition, and other relevant inventory information."
+    },
+    {
+      "index": 200,
+      "style": null,
+      "text": "The Asset Guard study provides a basis for QR-code identification, asset status monitoring, and digital inventory management. The proposed system adapts those ideas to computer hardware and equipment in a school setting without using geolocation."
+    },
+    {
+      "index": 209,
+      "style": null,
+      "text": "Theoretical Framework"
+    },
+    {
+      "index": 210,
+      "style": null,
+      "text": "The development of the QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department is anchored on theoretical perspectives that explain user acceptance of technology, the interaction of system components, and the improvement of operational processes. These foundations provide a basis for designing a system that can support the identification, monitoring, tracking, and management of computer laboratory equipment."
+    },
+    {
+      "index": 211,
+      "style": "Heading3",
+      "text": "1. Technology Acceptance Model (TAM) - Davis (1989)"
+    },
+    {
+      "index": 212,
+      "style": null,
+      "text": "The Technology Acceptance Model (TAM) developed by Fred Davis explains how users accept and adopt information technologies. The model emphasizes two major factors: perceived usefulness and perceived ease of use. Perceived usefulness refers to the extent to which a person believes that using a particular system will improve work performance, while perceived ease of use refers to the extent to which a person believes that using the system will require minimal effort."
+    },
+    {
+      "index": 213,
+      "style": null,
+      "text": "Application to the Study"
+    },
+    {
+      "index": 214,
+      "style": null,
+      "text": "TAM is relevant to the proposed QR Code Based Smart Inventory and Asset Tracking System because the effectiveness of the system depends partly on whether laboratory personnel and other authorized users can understand and use its functions. QR code scanning can provide a convenient method of identifying equipment, while functions such as inventory recording, equipment status monitoring, borrowing-request and return-request management, maintenance recording, and report generation can improve the usefulness of the system. Applying the principles of perceived usefulness and perceived ease of use can guide the researchers in developing a system that is practical and accessible to its intended users."
+    },
+    {
+      "index": 215,
+      "style": "Heading3",
+      "text": "2. General Systems Theory - von Bertalanffy (1968)"
+    },
+    {
+      "index": 216,
+      "style": null,
+      "text": "General Systems Theory, associated with Ludwig von Bertalanffy, views a system as a set of interconnected and interdependent components that interact with one another to achieve a common purpose. The theory emphasizes that individual components should not be viewed independently because their relationships and interactions contribute to the performance of the entire system."
+    },
+    {
+      "index": 217,
+      "style": null,
+      "text": "Application to the Study"
+    },
+    {
+      "index": 218,
+      "style": null,
+      "text": "General Systems Theory is applicable to the proposed inventory and asset tracking system because the system consists of interconnected components, including users, computer laboratory equipment, QR codes, inventory records, databases, and administrative processes. The system receives equipment and user information as inputs, processes these through registration, QR code identification, inventory updating, transaction recording, and data management, and produces outputs such as updated inventory records, equipment status information, borrowing history, maintenance records, and reports. By connecting these components within one system, the proposed solution aims to improve the coordination and efficiency of computer laboratory asset management."
+    },
+    {
+      "index": 219,
+      "style": "Heading3",
+      "text": "3. Lean Management Principles - Ohno (1988)"
+    },
+    {
+      "index": 220,
+      "style": null,
+      "text": "Lean Management Principles, associated with the work of Taiichi Ohno, emphasize the reduction of unnecessary activities, elimination of waste, improvement of workflow, and efficient use of resources. These principles focus on identifying activities that do not add value and improving processes to make operations more efficient and systematic."
+    },
+    {
+      "index": 221,
+      "style": null,
+      "text": "Application to the Study"
+    },
+    {
+      "index": 222,
+      "style": null,
+      "text": "Lean Management Principles are relevant to the study because the existing manual inventory process may involve repetitive searching, manual encoding, verification of records, and updating of spreadsheets. These activities may consume time and increase the possibility of inconsistent or outdated information. The proposed QR-based system applies the principle of process improvement by reducing unnecessary manual encoding and simplifying equipment identification through QR code scanning. Centralized records can also reduce duplication and make equipment information easier to retrieve and update. Through these improvements, the proposed system aims to provide a more streamlined and efficient inventory process for the CEIT Department."
+    },
+    {
+      "index": 223,
+      "style": "Heading3",
+      "text": "Synthesis of the Theoretical Framework"
+    },
+    {
+      "index": 224,
+      "style": null,
+      "text": "The three theoretical foundations complement one another in guiding the development of the proposed system. Technology Acceptance Model provides a basis for considering the usefulness and ease of use of the system from the perspective of its intended users. General Systems Theory provides a basis for understanding how the users, equipment, QR codes, database, and inventory processes interact as interconnected components of one system. Lean Management Principles provide a basis for improving the efficiency of the existing inventory process by reducing unnecessary manual activities and streamlining asset-management procedures."
+    },
+    {
+      "index": 225,
+      "style": null,
+      "text": "Together, these foundations guide the researchers in developing a QR-based inventory and asset tracking system that is user-oriented, interconnected, and focused on improving the efficiency of computer laboratory asset management."
+    },
+    {
+      "index": 245,
+      "style": null,
+      "text": "Conceptual Framework"
+    },
+    {
+      "index": 246,
+      "style": "Heading1",
+      "text": "(Existing Conceptual Framework)"
+    },
+    {
+      "index": 247,
+      "style": null,
+      "text": "The existing conceptual framework describes the current inventory management process used by the College of Engineering and Information Technology (CEIT) Department for monitoring and managing computer laboratory equipment. Based on the existing inventory records, the department uses a spreadsheet-based manual inventory system to record information about its laboratory properties and defective equipment. The framework follows the Input-Process-Output (IPO) Model to illustrate how equipment information is collected, manually recorded and monitored, and converted into inventory and defective-item reports."
+    },
+    {
+      "index": 248,
+      "style": "Heading2",
+      "text": "Input"
+    },
+    {
+      "index": 249,
+      "style": null,
+      "text": "The input phase consists of the equipment and inventory information collected by the CEIT Department. This includes the ID number, item name, quantity, unit, classification, description, year encoded, known acquisition date, remarks, checked status, last date checked, and inventory code of each laboratory asset. The inventory covers different types of equipment and materials, including computer units, Mac computers, laptops, adapters, cables, networking equipment, peripherals, and other laboratory tools."
+    },
+    {
+      "index": 250,
+      "style": null,
+      "text": "The existing records also include information about defective equipment. The Defective Items Report contains the quantity, unit, item description, category, identified problem or test result, and date encoded. This information serves as the basis for identifying equipment that requires repair, replacement, inspection, or further action."
+    },
+    {
+      "index": 251,
+      "style": "Heading2",
+      "text": "Process"
+    },
+    {
+      "index": 252,
+      "style": null,
+      "text": "The process phase involves the manual recording, updating, checking, and monitoring of laboratory equipment using a spreadsheet. Personnel enter the information of each asset into the inventory spreadsheet and assign an inventory code for identification. Equipment information is then manually updated whenever an item is checked, inspected, transferred, repaired, or identified as defective."
+    },
+    {
+      "index": 253,
+      "style": null,
+      "text": "The inventory also requires personnel to manually check the condition and status of equipment. Statuses such as OK, Working, Defective, and Deployed are recorded in the spreadsheet, together with the date when the equipment was last checked. When defective equipment is identified, the information is separately recorded in the Defective Items Report, including the problem observed and the date it was documented."
+    },
+    {
+      "index": 254,
+      "style": null,
+      "text": "This process depends heavily on manual data entry, checking, updating, and searching of spreadsheet records. Personnel must review the records to determine the current status and condition of equipment. As a result, inventory monitoring requires continuous manual effort and depends on the accuracy and timeliness of personnel when updating the records."
+    },
+    {
+      "index": 255,
+      "style": "Heading2",
+      "text": "Output"
+    },
+    {
+      "index": 256,
+      "style": null,
+      "text": "The output of the existing inventory process consists of spreadsheet-based inventory records and defective equipment reports. These records provide information regarding the quantity, classification, condition, status, location-related information, and identification of laboratory equipment."
+    },
+    {
+      "index": 257,
+      "style": null,
+      "text": "The existing process allows the CEIT Department to maintain a record of its available properties and identify equipment that is defective or requires attention. However, because the process is primarily manual and spreadsheet-based, it may have limitations in immediate record updating, recording equipment movement, borrowing and return monitoring, and centralized maintenance monitoring."
+    },
+    {
+      "index": 258,
+      "style": null,
+      "text": "Therefore, the existing conceptual framework establishes the current condition of inventory management and provides the basis for identifying the limitations and gaps that the proposed QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in CEIT Department aims to address."
+    },
+    {
+      "index": 260,
+      "style": null,
+      "text": "Figure 5. Input-Process-Output (IPO) Diagram of the Existing Inventory Process."
+    },
+    {
+      "index": 264,
+      "style": null,
+      "text": "(Proposed Conceptual Framework)"
+    },
+    {
+      "index": 265,
+      "style": null,
+      "text": "The conceptual framework of this study is guided by the Input-Process-Output (IPO) Model, which explains how the proposed QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in CEIT Department transforms collected equipment and inventory information into an organized, efficient, and reliable asset management system. The IPO model serves as the foundation for identifying the necessary inputs, development processes, and expected outputs of the study."
+    },
+    {
+      "index": 266,
+      "style": "Heading2",
+      "text": "Input"
+    },
+    {
+      "index": 267,
+      "style": null,
+      "text": "The input phase of the study consists of the data, information, and requirements needed for the development of the proposed system. This includes information about the existing inventory practices of the CEIT Department and the equipment and supplies being managed, such as computer units, monitors, keyboards, mice, headsets, networking devices, cables, adapters, and other laboratory items. Data regarding asset tags, categories, locations, quantities, status, condition, computer specifications, installed software information, borrowing requests, and maintenance records are also considered."
+    },
+    {
+      "index": 268,
+      "style": null,
+      "text": "Problem identification is conducted to determine the challenges encountered in the existing manual inventory process, including inaccurate or outdated records, difficulty in tracking borrowed or misplaced equipment, inefficient maintenance monitoring, and the time required to manually update inventory information. User requirements are then identified based on the needs of laboratory personnel and other authorized users who will interact with the system."
+    },
+    {
+      "index": 269,
+      "style": null,
+      "text": "In addition, related literature and existing studies on QR code technology, inventory management, asset tracking, and digital laboratory management are reviewed to provide a theoretical and technical foundation for the proposed system. These inputs serve as the basis for determining the system requirements, features, and functionalities needed to address the identified problems."
+    },
+    {
+      "index": 270,
+      "style": "Heading2",
+      "text": "Process"
+    },
+    {
+      "index": 271,
+      "style": null,
+      "text": "The process phase involves the Software Development Life Cycle (SDLC) using the Waterfall Model as the development approach for the proposed system. The process begins with the requirements analysis phase, where the researchers identify and document the functional and non-functional requirements of the system based on the existing inventory process and the needs of the CEIT Department."
+    },
+    {
+      "index": 272,
+      "style": null,
+      "text": "This is followed by the system design phase, where the overall structure, database, user interface, QR code functionality, inventory management features, and recorded asset activity are planned. The design includes equipment and supply registration, QR label generation and scanning, role-based account access, public borrowing and return requests with staff review, status and condition monitoring, maintenance tickets, activity history, and reports that can be viewed or exported."
+    },
+    {
+      "index": 273,
+      "style": null,
+      "text": "During the development phase, the planned system components and functionalities are implemented into a working system. QR codes are assigned to registered inventory records and may be printed as labels. The database stores asset information, computer details, software information, borrowing and return requests, maintenance tickets, audit events, and other relevant data."
+    },
+    {
+      "index": 274,
+      "style": null,
+      "text": "The developed system then undergoes the testing phase to identify errors, bugs, functionality issues, and other problems that may affect system performance. The system is evaluated to determine whether its features function according to the identified requirements. After testing and necessary revisions, the system proceeds to the deployment phase, where it is prepared for implementation within the CEIT Department. The final phase involves maintenance, which includes monitoring the system and making necessary improvements or corrections to maintain its reliability and functionality."
+    },
+    {
+      "index": 275,
+      "style": "Heading2",
+      "text": "Output"
+    },
+    {
+      "index": 276,
+      "style": null,
+      "text": "The output of the conceptual framework is a functional QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. The system provides a centralized digital inventory. Administrators and Staff can manage records, while Viewers can view records and reports. A QR label opens a limited public item page for borrowing or return requests, and Staff or Administrators review and confirm these requests."
+    },
+    {
+      "index": 277,
+      "style": null,
+      "text": "The expected outputs include organized inventory records, QR labels, recorded locations, status and condition details, borrowing and return request history, maintenance tickets, activity history, and inventory overview reports with manual PDF or CSV export. The system does not provide GPS, RFID, or real-time physical location tracking. Ultimately, the system is expected to provide the CEIT Department with a more efficient, reliable, and organized approach to managing its computer laboratory equipment."
+    },
+    {
+      "index": 279,
+      "style": null,
+      "text": "Figure 6. Input-Process-Output (IPO) Diagram of the Developed System."
+    },
+    {
+      "index": 280,
+      "style": "Heading1",
+      "text": "Research Questions"
+    },
+    {
+      "index": 281,
+      "style": "Heading1",
+      "text": "This study seeks to answer the following questions:"
+    },
+    {
+      "index": 282,
+      "style": "Heading1",
+      "text": "1. What challenges are encountered by the CEIT Department in managing computer laboratory equipment through the current manual and spreadsheet-based process, particularly in terms of:"
+    },
+    {
+      "index": 283,
+      "style": "Heading1",
+      "text": "1.1. accuracy and updating of inventory records; 1.2. equipment identification and record retrieval; 1.3. borrowing and return monitoring; 1.4. equipment condition, status, and recorded location; and 1.5. maintenance and accountability of laboratory equipment?"
+    },
+    {
+      "index": 285,
+      "style": "Heading1",
+      "text": "2. What functional and non-functional requirements are needed for the development of a QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department?"
+    },
+    {
+      "index": 287,
+      "style": "Heading1",
+      "text": "3. How can the system be designed and developed to provide the following functions:"
+    },
+    {
+      "index": 288,
+      "style": "Heading1",
+      "text": "3.1. equipment and supply registration and inventory management; 3.2. QR label generation and scanning; 3.3. borrowing and return-request management; 3.4. recorded location, status, condition, and availability monitoring; 3.5. maintenance-ticket management; 3.6. account access, role-based permissions, and activity history; and 3.7. inventory overview and exportable reports?"
+    },
+    {
+      "index": 289,
+      "style": "Heading1",
+      "text": "4. How can the system be developed through the Software Development Life Cycle (SDLC) and Waterfall Model to address the identified inventory-management requirements of the CEIT Department?"
+    },
+    {
+      "index": 291,
+      "style": "Heading1",
+      "text": "5. How can the developed system be evaluated in terms of:"
+    },
+    {
+      "index": 292,
+      "style": "Heading1",
+      "text": "5.1. functionality; 5.2. usability; 5.3. efficiency; 5.4. reliability; and 5.5. asset accountability?"
+    },
+    {
+      "index": 294,
+      "style": "Heading1",
+      "text": "6. To what extent can the developed system address the limitations of the existing manual and spreadsheet-based inventory process, particularly in reducing manual recording, searching, updating, and monitoring of computer laboratory equipment?"
+    },
+    {
+      "index": 295,
+      "style": "Heading1",
+      "text": "Research Objectives"
+    },
+    {
+      "index": 296,
+      "style": "Heading2",
+      "text": "General Objective"
+    },
+    {
+      "index": 297,
+      "style": "Heading1",
+      "text": "The general objective of this study is to design and develop a QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department that provides centralized inventory records, QR labels, role-based access, borrowing and return-request management, maintenance tickets, activity history, and reports for computer laboratory equipment."
+    },
+    {
+      "index": 298,
+      "style": "Heading2",
+      "text": "Specific Objectives"
+    },
+    {
+      "index": 299,
+      "style": "Heading1",
+      "text": "Specifically, this study aims to:"
+    },
+    {
+      "index": 300,
+      "style": "Heading1",
+      "text": "Identify and analyze the existing inventory management practices and challenges encountered by the CEIT Department in managing computer laboratory equipment, particularly in terms of inaccurate or outdated records, equipment misplacement, borrowing and return monitoring, equipment condition, asset location, and maintenance tracking."
+    },
+    {
+      "index": 302,
+      "style": "Heading1",
+      "text": "Determine the functional and non-functional requirements of the proposed QR Code Based Smart Inventory and Asset Tracking System based on the existing inventory process and the needs of authorized laboratory personnel."
+    },
+    {
+      "index": 304,
+      "style": "Heading1",
+      "text": "Design and develop a QR code-based smart inventory and asset tracking system that provides centralized equipment records and efficient identification, monitoring, and updating of laboratory assets."
+    },
+    {
+      "index": 306,
+      "style": "Heading1",
+      "text": "Integrate essential system functionalities, including equipment and supply registration, QR label generation and scanning, borrowing and return requests with staff confirmation, recorded status, condition, and location, maintenance tickets, role-based account access, activity history, and inventory reports that can be viewed or exported."
+    },
+    {
+      "index": 308,
+      "style": "Heading1",
+      "text": "Implement the proposed system using the Software Development Life Cycle (SDLC) and Waterfall Model to ensure systematic requirements analysis, system design, development, testing, deployment, and maintenance."
+    },
+    {
+      "index": 310,
+      "style": "Heading1",
+      "text": "Evaluate the developed system in terms of functionality, usability, efficiency, reliability, and its ability to improve inventory management, asset accountability, equipment monitoring, and maintenance documentation within the CEIT Department."
+    },
+    {
+      "index": 312,
+      "style": "Heading1",
+      "text": "Determine whether the developed system can reduce the limitations associated with the existing spreadsheet-based inventory process, particularly manual recording, searching, updating, and monitoring of laboratory equipment."
+    },
+    {
+      "index": 313,
+      "style": "Heading1",
+      "text": "Significance of the Study"
+    },
+    {
+      "index": 314,
+      "style": null,
+      "text": "The study entitled “Design and Development of a QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in CEIT Department” is significant because it seeks to address the challenges associated with the existing manual and spreadsheet-based inventory process used for managing computer laboratory equipment. By integrating QR code technology with centralized digital inventory management, the proposed system is intended to improve equipment identification, monitoring, accountability, maintenance documentation, and accessibility of inventory information."
+    },
+    {
+      "index": 315,
+      "style": null,
+      "text": "The findings and developed system may provide benefits to the following:"
+    },
+    {
+      "index": 316,
+      "style": "Heading3",
+      "text": "College of Engineering and Information Technology (CEIT) Department"
+    },
+    {
+      "index": 317,
+      "style": null,
+      "text": "The College of Engineering and Information Technology (CEIT) Department may benefit from a more organized and centralized approach to managing its computer laboratory equipment. The proposed system can help the department maintain updated records of laboratory assets, monitor their status and condition, record changes in equipment location and activity history, document maintenance activities, and improve equipment accountability. This may support more efficient laboratory operations and better utilization of the department's resources."
+    },
+    {
+      "index": 318,
+      "style": "Heading3",
+      "text": "Laboratory Personnel and Administrators"
+    },
+    {
+      "index": 319,
+      "style": null,
+      "text": "Laboratory personnel and administrators may benefit from reduced reliance on manual spreadsheet-based inventory procedures. QR code scanning can provide a faster means of identifying equipment, while centralized records can make information regarding asset status, location, borrowing transactions, and maintenance history easier to retrieve and update. The system may also assist personnel in monitoring equipment that requires inspection, repair, or other corrective action."
+    },
+    {
+      "index": 320,
+      "style": "Heading3",
+      "text": "Faculty Members"
+    },
+    {
+      "index": 321,
+      "style": null,
+      "text": "Faculty members may benefit from improved availability and monitoring of laboratory resources. More accurate inventory records can help faculty members determine the availability and condition of equipment needed for laboratory activities and academic instruction. The improved tracking of equipment may also support greater accountability for assets used during academic activities."
+    },
+    {
+      "index": 322,
+      "style": "Heading3",
+      "text": "Students"
+    },
+    {
+      "index": 323,
+      "style": null,
+      "text": "Students may indirectly benefit from better-managed and properly maintained computer laboratory equipment. Improved monitoring and timely identification of defective or unavailable equipment may contribute to a more organized laboratory environment and help ensure that necessary resources are available for academic activities. Students may also open a QR label to view limited item information and submit a borrowing or return request, subject to staff confirmation."
+    },
+    {
+      "index": 324,
+      "style": "Heading3",
+      "text": "Siena College of Taytay"
+    },
+    {
+      "index": 325,
+      "style": null,
+      "text": "Siena College of Taytay may benefit from the study through the application of a technology-based solution to an actual institutional inventory-management concern. The proposed system may demonstrate how QR code technology, database management, and software development can be applied to improve the management and accountability of institutional resources. It may also serve as a reference for future digitalization initiatives within the institution."
+    },
+    {
+      "index": 326,
+      "style": "Heading3",
+      "text": "Future Researchers"
+    },
+    {
+      "index": 327,
+      "style": null,
+      "text": "Future researchers may use this study as a reference for related studies involving QR code technology, inventory management, asset tracking, laboratory management systems, and other digital solutions for educational institutions. The study may also provide a foundation for future improvements, additional features, or similar systems designed for other departments or organizations."
+    },
+    {
+      "index": 328,
+      "style": "Heading1",
+      "text": "Scope and Delimitations"
+    },
+    {
+      "index": 329,
+      "style": "Heading2",
+      "text": "Scope of the Study"
+    },
+    {
+      "index": 330,
+      "style": null,
+      "text": "This study focuses on the design and development of a QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. The proposed system is intended to improve the existing manual and spreadsheet-based inventory process by providing a centralized digital platform for recording, identifying, monitoring, and managing computer laboratory equipment."
+    },
+    {
+      "index": 331,
+      "style": null,
+      "text": "The study covers the inventory items managed by the CEIT Department, including equipment and supplies such as computer units, monitors, keyboards, mice, headsets, networking devices, cables, adapters, and other relevant laboratory items. The system maintains asset tag, item description, item type, category, location, quantity, status, condition, manufacturer, model, serial number, purchase date, optional purchase price, notes, and other inventory details. For items marked as computers, it may also store hardware specifications, operating-system details, installed software and license details, the last date checked, and attached item photos."
+    },
+    {
+      "index": 332,
+      "style": null,
+      "text": "The system uses a unique QR code for each registered inventory record. Logged-in users can generate and print QR labels. A signed-in Administrator or Staff member can use a phone camera to open and update a record, while any person who opens a valid label link can view limited item information and submit a borrowing or return request. The system includes inventory registration, QR labels, request review, status, condition, and location records, maintenance tickets, account roles, activity history, search and filtering, and reports."
+    },
+    {
+      "index": 333,
+      "style": null,
+      "text": "The study also covers the development of a centralized database for storing and managing equipment information, borrowing and return requests, maintenance records, audit events, and other relevant asset-management data. The system will be developed using the Software Development Life Cycle (SDLC) with the Waterfall Model, covering requirements analysis, system design, development, testing, deployment, and maintenance."
+    },
+    {
+      "index": 334,
+      "style": null,
+      "text": "The developed system will be evaluated based on selected software quality and user-related criteria, particularly its functionality, usability, efficiency, and reliability. The evaluation will focus on determining whether the proposed system can address the identified weaknesses of the existing inventory process and improve the management and accountability of CEIT computer laboratory equipment."
+    },
+    {
+      "index": 335,
+      "style": "Heading2",
+      "text": "Delimitations of the Study"
+    },
+    {
+      "index": 336,
+      "style": null,
+      "text": "This study is limited to the inventory and asset management of computer laboratory equipment within the CEIT Department. It does not cover inventory management for other departments, offices, classrooms, or institutional facilities outside the defined scope of the study."
+    },
+    {
+      "index": 337,
+      "style": null,
+      "text": "The dashboard is intended for authenticated CEIT users. It does not provide public access to full inventory records or account functions. However, a person who opens a valid QR-label link may view limited item information and submit a borrowing or return request. Staff or Administrators review and confirm the request."
+    },
+    {
+      "index": 338,
+      "style": null,
+      "text": "The study focuses on equipment identification, inventory recording, recorded item location, borrowing and return-request monitoring, condition and status monitoring, maintenance documentation, user accountability, and report generation. It does not include automated physical tracking technologies such as GPS, RFID, Bluetooth-based tracking, or real-time location tracking. QR codes are used for item identification. A public QR scan displays limited item information, while signed-in Staff or Administrators can open the full record based on their permissions."
+    },
+    {
+      "index": 339,
+      "style": null,
+      "text": "Although the system can record installed software and license details for designated computer items, it does not automatically detect unauthorized software, games, or other applications. The system is limited to recording and monitoring equipment and software information rather than performing automated computer-system auditing or software detection."
+    },
+    {
+      "index": 340,
+      "style": null,
+      "text": "The system does not include automated repair of defective equipment, procurement of replacement equipment, depreciation computation, or automated purchasing processes. It may store purchase price as optional reference information and show a total recorded acquisition value. It does not perform financial accounting. Maintenance functionality is limited to recording and monitoring maintenance-related information."
+    },
+    {
+      "index": 341,
+      "style": null,
+      "text": "The study is also delimited by the data and information made available by the CEIT Department. The accuracy and completeness of inventory records generated by the system depend on the information entered and maintained by authorized users. The effectiveness of the system may therefore be influenced by proper user adoption, accurate data entry, availability of the required devices for QR scanning, and compliance with established inventory procedures."
+    },
+    {
+      "index": 342,
+      "style": null,
+      "text": "Finally, the study focuses on the development and evaluation of the proposed system within the defined research setting and does not claim that the system is universally applicable to all educational institutions. Future implementation in other departments or organizations may require modifications based on their specific inventory procedures, equipment types, user requirements, and operational conditions."
+    },
+    {
+      "index": 348,
+      "style": "Heading1",
+      "text": "Definition of Terms"
+    },
+    {
+      "index": 349,
+      "style": null,
+      "text": "This section presents the important terms used in the study \"Design and Development of a QR Code-Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department.\" The terms are defined according to their operational meaning within the study or their contextual meaning based on their accepted use in information technology, inventory management, and software development."
+    },
+    {
+      "index": 350,
+      "style": null,
+      "text": "Account Settings."
+    },
+    {
+      "index": 351,
+      "style": null,
+      "text": "Refers to the page where every signed-in user can update their own email address, username, and password after confirming the current password."
+    },
+    {
+      "index": 352,
+      "style": null,
+      "text": "Administrator."
+    },
+    {
+      "index": 353,
+      "style": null,
+      "text": "Refers to the system role that can manage user accounts, roles, categories, locations, inventory records, borrowing and return processing, maintenance, and reports."
+    },
+    {
+      "index": 354,
+      "style": null,
+      "text": "Asset."
+    },
+    {
+      "index": 355,
+      "style": null,
+      "text": "Refers to a registered inventory item classified as an asset. The system also supports supply items, which are stored in the same inventory register but cannot be borrowed through a QR request."
+    },
+    {
+      "index": 356,
+      "style": null,
+      "text": "Asset Accountability."
+    },
+    {
+      "index": 357,
+      "style": null,
+      "text": "Refers to the recording of the Staff or Administrator associated with inventory actions and the borrower details recorded in borrowing and return requests."
+    },
+    {
+      "index": 358,
+      "style": null,
+      "text": "Asset Location Tracking. "
+    },
+    {
+      "index": 359,
+      "style": null,
+      "text": "Refers to the recording of the current or assigned location of computer laboratory equipment within the CEIT Department."
+    },
+    {
+      "index": 360,
+      "style": null,
+      "text": "Asset Tracking. "
+    },
+    {
+      "index": 361,
+      "style": null,
+      "text": "Refers to the recording and review of an inventory item's identification, assigned location, status, condition, changes, and usage history through the system. It does not refer to GPS or real-time physical tracking."
+    },
+    {
+      "index": 362,
+      "style": null,
+      "text": "Availability."
+    },
+    {
+      "index": 363,
+      "style": null,
+      "text": "Refers to whether an asset may be requested through the QR page. It depends on the item type, active category and location, status, quantity, and pending borrowing requests."
+    },
+    {
+      "index": 364,
+      "style": null,
+      "text": "Borrowing and Return Requests."
+    },
+    {
+      "index": 365,
+      "style": null,
+      "text": "Refers to requests submitted through a scanned QR label to borrow an asset or indicate that borrowed equipment is being returned. A Staff member or Administrator approves or declines a borrowing request and confirms a return before the item quantity is restored."
+    },
+    {
+      "index": 366,
+      "style": null,
+      "text": "Computer Laboratory Equipment. "
+    },
+    {
+      "index": 367,
+      "style": null,
+      "text": "Refers to computer units, monitors, keyboards, mice, headsets, networking devices, cables, adapters, and other technological resources used or maintained in the CEIT Department's computer laboratories."
+    },
+    {
+      "index": 368,
+      "style": null,
+      "text": "Condition. "
+    },
+    {
+      "index": 369,
+      "style": null,
+      "text": "Refers to the physical or operational state of a laboratory item recorded in the system. The available condition values are Excellent, Good, Fair, Poor, and For Repair."
+    },
+    {
+      "index": 370,
+      "style": null,
+      "text": "CEIT Department. "
+    },
+    {
+      "index": 371,
+      "style": null,
+      "text": "Refers to the College of Engineering and Information Technology Department of Siena College of Taytay, which serves as the research setting and intended institutional environment for the proposed inventory and asset tracking system."
+    },
+    {
+      "index": 372,
+      "style": null,
+      "text": "Centralized Database. "
+    },
+    {
+      "index": 373,
+      "style": null,
+      "text": "Refers to the organized digital storage of inventory, user, request, location, condition, maintenance, and activity information in the PostgreSQL database used by the system."
+    },
+    {
+      "index": 374,
+      "style": null,
+      "text": "Defective Equipment. "
+    },
+    {
+      "index": 375,
+      "style": null,
+      "text": "Refers to laboratory equipment identified as malfunctioning, damaged, or otherwise unable to perform its intended function and recorded as requiring inspection, repair, replacement, or other appropriate action."
+    },
+    {
+      "index": 376,
+      "style": null,
+      "text": "Equipment Inventory. "
+    },
+    {
+      "index": 377,
+      "style": null,
+      "text": "Refers to the systematic record of computer laboratory equipment maintained by the CEIT Department, including information such as identification, description, quantity, location, condition, status, and other relevant asset details."
+    },
+    {
+      "index": 378,
+      "style": null,
+      "text": "Inventory Record."
+    },
+    {
+      "index": 379,
+      "style": null,
+      "text": "Refers to the stored entry for an asset or supply item. An inventory record can have a quantity greater than one and receives one unique QR code."
+    },
+    {
+      "index": 380,
+      "style": null,
+      "text": "Inventory Management. "
+    },
+    {
+      "index": 381,
+      "style": null,
+      "text": "Refers to the process of recording, organizing, monitoring, updating, and maintaining information about computer laboratory equipment within the CEIT Department."
+    },
+    {
+      "index": 382,
+      "style": null,
+      "text": "Inventory Report. "
+    },
+    {
+      "index": 383,
+      "style": null,
+      "text": "Refers to the system's current inventory overview and manually generated exports. The system can provide an overview PDF and applicable CSV files for inventory, borrowing history, and maintenance service requests."
+    },
+    {
+      "index": 384,
+      "style": null,
+      "text": "Maintenance Record. "
+    },
+    {
+      "index": 385,
+      "style": null,
+      "text": "Refers to a service request recorded for inspection, repair, replacement, or other corrective action. A ticket can be open or resolved and includes priority, assigned Staff member, and resolution notes. Resolving a ticket does not automatically change the inventory item status."
+    },
+    {
+      "index": 386,
+      "style": null,
+      "text": "QR Code. "
+    },
+    {
+      "index": 387,
+      "style": null,
+      "text": "Refers to a two-dimensional machine-readable code assigned to a registered inventory record. When scanned, it opens the corresponding item information in the system."
+    },
+    {
+      "index": 388,
+      "style": null,
+      "text": "QR Code Scanning. "
+    },
+    {
+      "index": 389,
+      "style": null,
+      "text": "Refers to opening a QR label using a camera-enabled device or scanner. A public scan shows limited item information and can accept a borrowing or return request. A signed-in Staff member or Administrator can open the full system record based on their permissions."
+    },
+    {
+      "index": 390,
+      "style": null,
+      "text": "Smart Inventory System. "
+    },
+    {
+      "index": 391,
+      "style": null,
+      "text": "Refers to the digital system that combines centralized equipment and supply management, QR labels, borrowing and return requests, status and condition monitoring, maintenance tickets, activity history, and reporting for CEIT computer laboratory equipment."
+    },
+    {
+      "index": 392,
+      "style": null,
+      "text": "Staff."
+    },
+    {
+      "index": 393,
+      "style": null,
+      "text": "Refers to the system role that can manage inventory records, QR labels, borrowing and return processing, maintenance tickets, and reports. Staff cannot access the Users page or manage other accounts."
+    },
+    {
+      "index": 394,
+      "style": null,
+      "text": "Software Development Life Cycle (SDLC). "
+    },
+    {
+      "index": 395,
+      "style": null,
+      "text": "Refers to the systematic process used in the study for planning, analyzing, designing, developing, testing, deploying, and maintaining the proposed inventory and asset tracking system."
+    },
+    {
+      "index": 396,
+      "style": null,
+      "text": "Status. "
+    },
+    {
+      "index": 397,
+      "style": null,
+      "text": "Refers to the current inventory state of an item as recorded in the system. The available status values are OK, Working, Deployed, Defective, Not Tested, Retired, and Lost. Borrowing availability is determined separately from item type, quantity, status, active category and location, and pending borrowing requests."
+    },
+    {
+      "index": 398,
+      "style": null,
+      "text": "User Accountability. "
+    },
+    {
+      "index": 399,
+      "style": null,
+      "text": "Refers to the system-supported activity history that records the account associated with inventory actions and the borrower details associated with borrowing and return requests."
+    },
+    {
+      "index": 400,
+      "style": null,
+      "text": "Viewer."
+    },
+    {
+      "index": 401,
+      "style": null,
+      "text": "Refers to the system role that can access permitted read-only inventory and report pages and update only their own account settings. A Viewer cannot modify inventory records or access the Users page."
+    },
+    {
+      "index": 402,
+      "style": null,
+      "text": "Waterfall Model. "
+    },
+    {
+      "index": 403,
+      "style": null,
+      "text": "Refers to the sequential software development approach adopted in the study in which requirements analysis, system design, development, testing, deployment, and maintenance are performed as structured development phases."
+    },
+    {
+      "index": 404,
+      "style": null,
+      "text": "CHAPTER 2 "
+    },
+    {
+      "index": 405,
+      "style": null,
+      "text": "Methods"
+    },
+    {
+      "index": 406,
+      "style": null,
+      "text": "Research Study "
+    },
+    {
+      "index": 407,
+      "style": null,
+      "text": "Research Design "
+    },
+    {
+      "index": 408,
+      "style": null,
+      "text": "This study employs a developmental research design because it focuses on the systematic design, development, implementation, and evaluation of a QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. The study is intended to address the identified limitations of the existing manual and spreadsheet-based inventory process by developing a technology-based solution that can improve the management, monitoring, tracking, and accountability of computer laboratory equipment."
+    },
+    {
+      "index": 409,
+      "style": null,
+      "text": "Developmental research design is appropriate for this study because it involves the systematic process of identifying existing problems, determining user and system requirements, designing the proposed solution, developing its functionalities, testing the system, and evaluating its effectiveness. The researchers will first examine the existing inventory practices of the CEIT Department to identify challenges related to equipment identification, inventory record accuracy, borrowing and return monitoring, asset location, equipment condition, maintenance tracking, and accountability."
+    },
+    {
+      "index": 410,
+      "style": null,
+      "text": "The study will use the Software Development Life Cycle (SDLC) through the Waterfall Model as the development approach. The development process will consist of requirements analysis, system design, development, testing, deployment, and maintenance. The system includes equipment and supply registration, QR label generation and scanning, centralized inventory records, borrowing and return requests with staff review, status and condition tracking, maintenance tickets, role-based account access, activity history, and inventory reports."
+    },
+    {
+      "index": 411,
+      "style": null,
+      "text": "After development, the system will be tested and evaluated to determine whether its functionalities operate according to the identified requirements and whether it can improve the existing inventory management process. The evaluation will consider relevant criteria such as functionality, usability, efficiency, reliability, and asset accountability."
+    },
+    {
+      "index": 412,
+      "style": null,
+      "text": "Through this research design, the study seeks not only to develop a functional system but also to determine its suitability in addressing the specific inventory and asset-management needs of the CEIT Department. The developmental approach therefore provides a structured basis for transforming the identified problems in the existing inventory process into a practical and technology-based solution."
+    },
+    {
+      "index": 413,
+      "style": "Heading1",
+      "text": "Research Instruments"
+    },
+    {
+      "index": 414,
+      "style": null,
+      "text": "The researchers will use structured research instruments to gather the necessary data for the design, development, and evaluation of the QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. The instruments will be used to understand the existing inventory management process, identify problems encountered by users, determine system requirements, and evaluate the developed system."
+    },
+    {
+      "index": 415,
+      "style": null,
+      "text": "The primary research instrument will be a structured questionnaire distributed to selected respondents who have direct experience with or interaction with the computer laboratory equipment and inventory process. The respondents may include laboratory personnel, faculty members, and other authorized users of the computer laboratories. The questionnaire will consist primarily of closed-ended questions and rating-scale items designed to gather information regarding the existing inventory process, equipment monitoring, borrowing and return procedures, maintenance tracking, asset accountability, and the perceived usefulness of the proposed system."
+    },
+    {
+      "index": 416,
+      "style": null,
+      "text": "The questionnaire will also include items that assess the developed system based on relevant criteria such as functionality, usability, efficiency, reliability, and asset accountability. This will allow the researchers to determine whether the proposed system meets the identified requirements and improves the existing inventory management process."
+    },
+    {
+      "index": 417,
+      "style": null,
+      "text": "In addition to the questionnaire, structured interviews may be conducted with selected CEIT laboratory personnel or administrators who are directly involved in managing computer laboratory equipment. The interviews will be used to obtain more detailed information about the existing inventory procedures, problems encountered in maintaining equipment records, and specific requirements that may not be fully captured through the questionnaire."
+    },
+    {
+      "index": 418,
+      "style": null,
+      "text": "The researchers will also use documentary observation and existing inventory records as supporting sources of information. Existing spreadsheet-based inventory records, defective equipment records, and related inventory documents will be examined to understand the current data structure, equipment classifications, asset information, and existing monitoring practices. These records will serve as references in identifying the data fields and functionalities required for the proposed system."
+    },
+    {
+      "index": 419,
+      "style": null,
+      "text": "The combination of questionnaires, interviews, observation, and existing inventory records will provide the researchers with sufficient information to identify the current problems, establish system requirements, and evaluate the developed QR code-based inventory and asset tracking system."
+    },
+    {
+      "index": 430,
+      "style": "Heading1",
+      "text": "Data Gathering"
+    },
+    {
+      "index": 431,
+      "style": null,
+      "text": "The data gathering process will be conducted systematically to obtain accurate and relevant information needed for the design, development, and evaluation of the QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department."
+    },
+    {
+      "index": 432,
+      "style": null,
+      "text": "First, the researchers will coordinate with the CEIT Department and identify the appropriate respondents and personnel who are directly involved in the management, monitoring, and use of computer laboratory equipment. The researchers will also identify and examine the existing inventory records and related documents used by the department. These records will provide information about the types of equipment, inventory codes, quantities, conditions, statuses, and other relevant asset information."
+    },
+    {
+      "index": 433,
+      "style": null,
+      "text": "Second, the researchers will conduct observation and interviews with selected laboratory personnel and administrators to understand the existing inventory procedures. The researchers will document how equipment is currently registered, checked, monitored, borrowed, returned, inspected, and recorded. The interviews will also be used to identify problems encountered during the current manual and spreadsheet-based inventory process and to determine the requirements of the proposed system."
+    },
+    {
+      "index": 434,
+      "style": null,
+      "text": "Third, a structured questionnaire will be distributed to the selected respondents. The questionnaire will gather information regarding the existing inventory process, common problems encountered, user needs, and expectations for the proposed system. For the evaluation of the developed system, the questionnaire will also be used to obtain respondents' assessments of the system based on the identified evaluation criteria, such as functionality, usability, efficiency, reliability, and asset accountability."
+    },
+    {
+      "index": 435,
+      "style": null,
+      "text": "Fourth, the researchers will collect, organize, and review the gathered data. Responses from the questionnaires will be tabulated and analyzed, while information obtained from interviews, observations, and existing inventory records will be examined to identify recurring problems, requirements, and necessary system functionalities."
+    },
+    {
+      "index": 436,
+      "style": null,
+      "text": "Finally, the analyzed data will serve as the basis for the requirements analysis and system design of the proposed system. The identified requirements will guide the development of features such as equipment and supply registration, QR label generation and scanning, borrowing and return-request management, status and condition tracking, recorded location changes, maintenance tickets, role-based account access, activity history, and inventory reports. The gathered data will also serve as a basis for evaluating whether the developed system effectively addresses the limitations of the existing inventory management process in the CEIT Department."
+    },
+    {
+      "index": 444,
+      "style": "Heading1",
+      "text": "Research Development"
+    },
+    {
+      "index": 445,
+      "style": "Heading2",
+      "text": "Software Development Methodology"
+    },
+    {
+      "index": 446,
+      "style": null,
+      "text": "This study will utilize the Waterfall Model as the software development methodology for the proposed QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department. The Waterfall Model is a structured and sequential software development approach in which each phase is completed before proceeding to the next phase. It is appropriate for the study because the researchers can identify and document the system requirements before proceeding with the design and development of the proposed system."
+    },
+    {
+      "index": 447,
+      "style": null,
+      "text": "The development process will consist of the following phases:"
+    },
+    {
+      "index": 448,
+      "style": "Heading3",
+      "text": "1. Requirements Analysis"
+    },
+    {
+      "index": 449,
+      "style": null,
+      "text": "In this phase, the researchers will gather, document, and analyze the requirements of the proposed system based on the data obtained from existing inventory records, observations, interviews, and questionnaires. The researchers will identify the problems and limitations of the current manual and spreadsheet-based inventory process and determine the functional and non-functional requirements of the system."
+    },
+    {
+      "index": 450,
+      "style": null,
+      "text": "The requirements will include equipment and supply registration, QR label generation and scanning, inventory management, borrowing and return-request management, status and condition tracking, recorded location information, maintenance-ticket management, role-based account access, activity history, and inventory reports."
+    },
+    {
+      "index": 451,
+      "style": "Heading3",
+      "text": "2. System Design"
+    },
+    {
+      "index": 452,
+      "style": null,
+      "text": "In this phase, the researchers will develop the overall design of the proposed system based on the identified requirements. The system architecture, database structure, user interface, navigation, and data flow will be planned and documented."
+    },
+    {
+      "index": 453,
+      "style": null,
+      "text": "Relevant system models and diagrams, such as the Data Flow Diagram (DFD), Entity-Relationship Diagram (ERD), system architecture diagram, and database design, will be developed to illustrate the relationship between users, system processes, equipment records, transactions, and stored data. The QR code identification and asset-tracking processes will also be incorporated into the system design."
+    },
+    {
+      "index": 454,
+      "style": "Heading3",
+      "text": "3. Implementation and Development"
+    },
+    {
+      "index": 455,
+      "style": null,
+      "text": "In this phase, the researchers will translate the approved system design into a functional software application. The database, user interface, system modules, and required functionalities will be developed and integrated."
+    },
+    {
+      "index": 456,
+      "style": null,
+      "text": "The implementation will include equipment and supply registration, QR label generation and scanning, inventory record management, borrowing and return requests, status and condition monitoring, recorded location changes, maintenance tickets, user management, activity history, and inventory reporting. The developed components will be integrated to ensure that the system operates as one inventory and asset-record management platform."
+    },
+    {
+      "index": 457,
+      "style": "Heading3",
+      "text": "4. Testing"
+    },
+    {
+      "index": 458,
+      "style": null,
+      "text": "In this phase, the developed system will undergo systematic testing to identify errors, bugs, inconsistencies, and functionality issues. The researchers will verify whether each system feature performs according to the identified requirements."
+    },
+    {
+      "index": 459,
+      "style": null,
+      "text": "Testing will include checking the functionality of QR code generation and scanning, equipment registration, inventory updating, borrowing and return-request management, status and condition updates, maintenance records, account access, activity history, and report generation. Identified errors and issues will be corrected and retested to improve the overall reliability and functionality of the system."
+    },
+    {
+      "index": 460,
+      "style": "Heading3",
+      "text": "5. Deployment and Maintenance"
+    },
+    {
+      "index": 461,
+      "style": null,
+      "text": "After the system has successfully completed the testing phase, the developed system will be prepared for implementation within the defined scope of the CEIT Department. The researchers will ensure that the system is properly configured and that the necessary users are provided with appropriate access."
+    },
+    {
+      "index": 462,
+      "style": null,
+      "text": "The maintenance phase will involve monitoring the system for errors or issues discovered after implementation and applying necessary corrections or improvements. Maintenance may also include updating system components, correcting data-related issues, and improving existing functionalities when necessary."
+    },
+    {
+      "index": 463,
+      "style": "Heading3",
+      "text": "Rationale for Using the Waterfall Model"
+    },
+    {
+      "index": 464,
+      "style": null,
+      "text": "The Waterfall Model is selected because it provides a clear, systematic, and well-documented development process that is appropriate for the scope and objectives of the study. The sequential structure allows the researchers to establish the system requirements before proceeding to design, development, testing, and deployment. This approach also supports proper documentation and evaluation of each development phase, which is important in an academic system-development study."
+    },
+    {
+      "index": 465,
+      "style": null,
+      "text": "Through the Waterfall Model, the researchers can systematically transform the identified limitations of the existing CEIT inventory process into a functional QR code-based inventory and asset tracking system designed specifically for the management of computer laboratory equipment."
+    },
+    {
+      "index": 480,
+      "style": "Heading1",
+      "text": "Current System"
+    },
+    {
+      "index": 481,
+      "style": null,
+      "text": "The current inventory management process of the College of Engineering and Information Technology (CEIT) Department is primarily manual and spreadsheet-based. Records of computer laboratory equipment are maintained through documents and spreadsheet files, such as Microsoft Excel. These records contain information including the item name, quantity, classification, condition, status, location, inventory code, and other relevant asset details."
+    },
+    {
+      "index": 482,
+      "style": null,
+      "text": "The monitoring of equipment also involves manual checking and updating of inventory records. When equipment is borrowed, returned, transferred, inspected, or identified as defective, laboratory personnel are required to manually update the corresponding records. This process requires continuous attention and depends on the accuracy and timeliness of personnel when recording information."
+    },
+    {
+      "index": 483,
+      "style": null,
+      "text": "The current process also presents difficulties in monitoring equipment movement, borrowing and return transactions, condition, and maintenance activities. Locating a particular item or determining its current status may require personnel to search through spreadsheet records or physically inspect the laboratory. Similarly, identifying defective equipment and reviewing its maintenance history may require checking separate records."
+    },
+    {
+      "index": 484,
+      "style": null,
+      "text": "Furthermore, the existing process does not provide an integrated mechanism for QR-based equipment identification, centralized asset tracking, automated transaction recording, or systematic report generation. These limitations may result in outdated or inconsistent records, increased manual workload, difficulty in monitoring equipment, and challenges in maintaining asset accountability."
+    },
+    {
+      "index": 486,
+      "style": "Heading1",
+      "text": "Proposed System"
+    },
+    {
+      "index": 487,
+      "style": null,
+      "text": "The proposed QR Code Based Smart Inventory and Asset Tracking System for Computer Laboratory Equipment in the CEIT Department is designed to improve the existing inventory management process by providing a centralized digital platform for recording, identifying, monitoring, and managing computer laboratory equipment."
+    },
+    {
+      "index": 488,
+      "style": null,
+      "text": "Each registered inventory record is assigned a unique QR code that corresponds to its digital record. A person who opens a label can view limited item information and submit a borrowing or return request. A signed-in Administrator or Staff member can use the scanning feature to open and update the full record based on their permissions."
+    },
+    {
+      "index": 489,
+      "style": null,
+      "text": "The proposed system will allow authorized users to perform the following functions:"
+    },
+    {
+      "index": 490,
+      "style": null,
+      "text": "Register and manage equipment and supplies;"
+    },
+    {
+      "index": 492,
+      "style": null,
+      "text": "Generate and print a unique QR label for each registered inventory record;"
+    },
+    {
+      "index": 494,
+      "style": null,
+      "text": "Open QR labels to view limited item information and submit borrowing or return requests;"
+    },
+    {
+      "index": 496,
+      "style": null,
+      "text": "Allow Administrators and Staff to update inventory information, including status, condition, location, quantity, photos, and computer details;"
+    },
+    {
+      "index": 498,
+      "style": null,
+      "text": "Record location changes and item activity history;"
+    },
+    {
+      "index": 500,
+      "style": null,
+      "text": "Review borrowing requests, approve or decline them, and confirm returns;"
+    },
+    {
+      "index": 502,
+      "style": null,
+      "text": "Monitor item status, condition, quantity, and borrowing availability;"
+    },
+    {
+      "index": 504,
+      "style": null,
+      "text": "Create, assign, and resolve maintenance tickets;"
+    },
+    {
+      "index": 506,
+      "style": null,
+      "text": "Allow Administrators to manage user accounts and roles, and allow every signed-in user to update their own account;"
+    },
+    {
+      "index": 508,
+      "style": null,
+      "text": "Search, filter, sort, and import inventory records from CSV or Excel files;"
+    },
+    {
+      "index": 510,
+      "style": null,
+      "text": "View an inventory overview and manually export the available reports as PDF or CSV files; and"
+    },
+    {
+      "index": 512,
+      "style": null,
+      "text": "Maintain organized and centralized equipment and supply records, including computer hardware, software, and license details when applicable."
+    },
+    {
+      "index": 513,
+      "style": null,
+      "text": "Through these functions, the developed system reduces dependence on manual spreadsheet-based inventory management, minimizes recording errors, improves access to inventory information, strengthens equipment accountability, and supports record review, borrowing management, and maintenance of computer laboratory equipment."
+    },
+    {
+      "index": 514,
+      "style": "Heading1",
+      "text": "Functional Requirements"
+    },
+    {
+      "index": 515,
+      "style": null,
+      "text": "The proposed system shall be able to perform the following functions:"
+    },
+    {
+      "index": 516,
+      "style": "Heading2",
+      "text": "1. User Authentication and Access Control"
+    },
+    {
+      "index": 517,
+      "style": null,
+      "text": "The system shall allow authorized users to log in using either a registered email address or username and a password."
+    },
+    {
+      "index": 519,
+      "style": null,
+      "text": "The system shall provide role-based access according to the user's assigned role."
+    },
+    {
+      "index": 521,
+      "style": null,
+      "text": "The system shall support the following user roles: Administrator, Staff, and Viewer."
+    },
+    {
+      "index": 523,
+      "style": null,
+      "text": "The system shall restrict functions according to the assigned role. Administrators can manage accounts, locations, categories, and inventory records. Staff can manage inventory, borrowing, and maintenance. Viewers can view inventory and reports and update only their own account details; they cannot change inventory records or access the Users page."
+    },
+    {
+      "index": 524,
+      "style": "Heading2",
+      "text": "2. Item Registration and Management"
+    },
+    {
+      "index": 525,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to add new inventory items."
+    },
+    {
+      "index": 527,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to edit and update equipment information."
+    },
+    {
+      "index": 529,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to remove records from active inventory by marking them Retired. Only an Administrator may permanently delete a record when it has no linked history that must be preserved."
+    },
+    {
+      "index": 531,
+      "style": null,
+      "text": "The system shall record item name, asset tag, description, item type, category, location, quantity, status, condition, manufacturer, model, serial number, purchase date, optional purchase price, notes, and applicable computer details."
+    },
+    {
+      "index": 532,
+      "style": "Heading2",
+      "text": "3. QR Code Generation"
+    },
+    {
+      "index": 533,
+      "style": null,
+      "text": "The system shall generate a unique QR code for each registered inventory record."
+    },
+    {
+      "index": 535,
+      "style": null,
+      "text": "The system shall associate each QR code with its corresponding equipment record."
+    },
+    {
+      "index": 537,
+      "style": null,
+      "text": "The system shall allow signed-in users to view and print QR labels for equipment identification."
+    },
+    {
+      "index": 538,
+      "style": "Heading2",
+      "text": "4. QR Code Scanning"
+    },
+    {
+      "index": 539,
+      "style": null,
+      "text": "The system shall allow a person to open a QR label using a compatible camera-enabled device. The public scan page shall show limited item information and allow a borrowing or return request. Signed-in Staff or Administrators may use the scan feature to open and update the full record."
+    },
+    {
+      "index": 541,
+      "style": null,
+      "text": "For a signed-in Staff member or Administrator, the system shall open the corresponding inventory record after a successful scan."
+    },
+    {
+      "index": 543,
+      "style": null,
+      "text": "The public scan page shall display only the item name, category, location, asset tag, status, and condition."
+    },
+    {
+      "index": 545,
+      "style": null,
+      "text": "The system shall allow signed-in Administrators and Staff to update applicable equipment information through the retrieved record. Viewers cannot modify inventory records."
+    },
+    {
+      "index": 546,
+      "style": "Heading2",
+      "text": "5. Inventory and Asset Tracking"
+    },
+    {
+      "index": 547,
+      "style": null,
+      "text": "The system shall maintain centralized records for laboratory equipment and supplies, including applicable computer, software, photo, request, maintenance, and activity information."
+    },
+    {
+      "index": 549,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to update the current status of equipment."
+    },
+    {
+      "index": 551,
+      "style": null,
+      "text": "The system shall record assigned equipment location information and location changes. It shall not determine an item's physical location automatically."
+    },
+    {
+      "index": 553,
+      "style": null,
+      "text": "The system shall show borrowing availability from the item type, active category and location, item status, quantity, and pending borrowing requests."
+    },
+    {
+      "index": 555,
+      "style": null,
+      "text": "The system shall maintain activity history for record creation and updates, location changes, scans, imports, borrowing and return workflow updates, maintenance updates, and item-photo changes."
+    },
+    {
+      "index": 556,
+      "style": "Heading2",
+      "text": "6. Borrowing and Return-Request Management"
+    },
+    {
+      "index": 557,
+      "style": null,
+      "text": "The system shall let a person submit a borrowing request from a QR label and let a signed-in Administrator or Staff member approve or decline it."
+    },
+    {
+      "index": 559,
+      "style": null,
+      "text": "The system shall record the borrower name, student number, contact number, purpose, requested quantity, expected return date, request status, and relevant processing information."
+    },
+    {
+      "index": 561,
+      "style": null,
+      "text": "The system shall let a borrower submit a return request from a QR label and let a signed-in Administrator or Staff member confirm the return."
+    },
+    {
+      "index": 563,
+      "style": null,
+      "text": "When a borrowing request is approved, the system shall decrease the item quantity. When a return is confirmed, it shall restore the quantity. A borrowing request has its own status and does not change the item status to Borrowed."
+    },
+    {
+      "index": 565,
+      "style": null,
+      "text": "The system shall maintain a history of borrowing and return requests."
+    },
+    {
+      "index": 566,
+      "style": "Heading2",
+      "text": "7. Equipment Condition and Maintenance Management"
+    },
+    {
+      "index": 567,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to record the current condition of equipment."
+    },
+    {
+      "index": 569,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to identify equipment requiring inspection or maintenance through maintenance tickets."
+    },
+    {
+      "index": 571,
+      "style": null,
+      "text": "The system shall record maintenance, repair, and inspection information as service requests with priority, assigned Staff member, status, and resolution notes."
+    },
+    {
+      "index": 573,
+      "style": null,
+      "text": "The system shall maintain the maintenance service-request history of equipment."
+    },
+    {
+      "index": 575,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to update an item's status separately after maintenance or repair. Resolving a maintenance ticket alone shall not automatically change the item status."
+    },
+    {
+      "index": 576,
+      "style": "Heading2",
+      "text": "8. Search and Filter"
+    },
+    {
+      "index": 577,
+      "style": null,
+      "text": "The system shall allow signed-in users to search for inventory items."
+    },
+    {
+      "index": 579,
+      "style": null,
+      "text": "The system shall allow users to filter equipment by category, item type, status, condition, and location."
+    },
+    {
+      "index": 581,
+      "style": null,
+      "text": "The system shall support search by item name, asset tag, serial number, manufacturer, model, category, and location to help users retrieve equipment information faster."
+    },
+    {
+      "index": 582,
+      "style": "Heading2",
+      "text": "9. Report Generation"
+    },
+    {
+      "index": 583,
+      "style": null,
+      "text": "The system shall provide a live inventory overview with record, status, category, and location summaries and a downloadable overview PDF."
+    },
+    {
+      "index": 585,
+      "style": null,
+      "text": "The system shall allow all signed-in users to export the inventory register as a CSV file."
+    },
+    {
+      "index": 587,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to export borrowing history as a CSV file."
+    },
+    {
+      "index": 589,
+      "style": null,
+      "text": "The system shall allow Administrators and Staff to export maintenance service requests as a CSV file."
+    },
+    {
+      "index": 591,
+      "style": null,
+      "text": "The system shall provide manual PDF or CSV export options for the supported reports. It shall not schedule or automatically send reports."
+    },
+    {
+      "index": 592,
+      "style": "Heading1",
+      "text": "Non-Functional Requirements"
+    },
+    {
+      "index": 593,
+      "style": null,
+      "text": "The proposed system shall satisfy the following quality requirements:"
+    },
+    {
+      "index": 594,
+      "style": "Heading2",
+      "text": "1. Usability"
+    },
+    {
+      "index": 595,
+      "style": null,
+      "text": "The system shall provide a user-friendly and understandable interface."
+    },
+    {
+      "index": 597,
+      "style": null,
+      "text": "The system shall provide clear navigation and instructions."
+    },
+    {
+      "index": 599,
+      "style": null,
+      "text": "The system shall provide appropriate feedback after user actions."
+    },
+    {
+      "index": 601,
+      "style": null,
+      "text": "The system shall be responsive across supported desktop and mobile devices."
+    },
+    {
+      "index": 602,
+      "style": "Heading2",
+      "text": "2. Performance"
+    },
+    {
+      "index": 603,
+      "style": null,
+      "text": "The system shall respond to user requests within an acceptable period under normal operating conditions."
+    },
+    {
+      "index": 605,
+      "style": null,
+      "text": "QR code scanning and retrieval of equipment information shall be performed efficiently."
+    },
+    {
+      "index": 606,
+      "style": null,
+      "text": "The system shall support multiple authorized users without significant performance degradation under the expected operating conditions."
+    },
+    {
+      "index": 607,
+      "style": "Heading2",
+      "text": "3. Reliability"
+    },
+    {
+      "index": 608,
+      "style": null,
+      "text": "The system shall maintain accurate and consistent inventory records."
+    },
+    {
+      "index": 610,
+      "style": null,
+      "text": "The system shall validate important user inputs before storing information."
+    },
+    {
+      "index": 612,
+      "style": null,
+      "text": "The system shall minimize data-entry and transaction errors."
+    },
+    {
+      "index": 614,
+      "style": null,
+      "text": "The system shall provide appropriate error handling when system operations fail."
+    },
+    {
+      "index": 615,
+      "style": "Heading2",
+      "text": "4. Security"
+    },
+    {
+      "index": 616,
+      "style": null,
+      "text": "The system shall protect user accounts through email-or-username sign-in, hashed passwords, secure session cookies, and a temporary lock after repeated failed sign-in attempts."
+    },
+    {
+      "index": 618,
+      "style": null,
+      "text": "The system shall implement role-based access control for Administrator, Staff, and Viewer accounts."
+    },
+    {
+      "index": 620,
+      "style": null,
+      "text": "The system shall restrict full inventory and user-information access to signed-in users. Public QR pages shall show only limited item information and shall validate and rate-limit borrowing and return requests."
+    },
+    {
+      "index": 622,
+      "style": null,
+      "text": "The system shall restrict modifications and permanent deletion of stored data according to the assigned role and record history."
+    },
+    {
+      "index": 623,
+      "style": "Heading2",
+      "text": "5. Scalability"
+    },
+    {
+      "index": 624,
+      "style": null,
+      "text": "The system shall be designed to accommodate additional laboratory equipment and inventory records."
+    },
+    {
+      "index": 626,
+      "style": null,
+      "text": "The system architecture shall allow additional features and functionalities to be incorporated in future system improvements."
+    },
+    {
+      "index": 627,
+      "style": "Heading2",
+      "text": "6. Maintainability"
+    },
+    {
+      "index": 628,
+      "style": null,
+      "text": "The system shall be structured to facilitate troubleshooting, modification, and future enhancement."
+    },
+    {
+      "index": 630,
+      "style": null,
+      "text": "The system source code shall follow consistent coding practices."
+    },
+    {
+      "index": 632,
+      "style": null,
+      "text": "System documentation shall be maintained to support future maintenance and development."
+    },
+    {
+      "index": 633,
+      "style": "Heading2",
+      "text": "7. Compatibility"
+    },
+    {
+      "index": 634,
+      "style": null,
+      "text": "The system shall be accessible through supported desktop and mobile devices."
+    },
+    {
+      "index": 636,
+      "style": null,
+      "text": "The system shall be compatible with commonly used modern web browsers, such as Google Chrome, Mozilla Firefox, Microsoft Edge, and Safari, subject to the technologies used in the final implementation."
+    },
+    {
+      "index": 637,
+      "style": "Heading1",
+      "text": "System Architecture"
+    },
+    {
+      "index": 638,
+      "style": null,
+      "text": "The system uses a web application architecture rather than a strict Model-View-Controller implementation. Users access the system through a web browser or phone browser. The Next.js application provides React-based pages, server actions, and route handlers for authentication, inventory management, QR scanning, borrowing and return requests, maintenance, and reports. Prisma connects the application to a PostgreSQL database. This separation keeps the user interface, application logic, and stored data organized."
+    },
+    {
+      "index": 639,
+      "style": "Heading2",
+      "text": "Data Layer"
+    },
+    {
+      "index": 640,
+      "style": null,
+      "text": "The data layer uses a PostgreSQL database accessed through Prisma. It stores the information needed by the system and keeps related records connected."
+    },
+    {
+      "index": 641,
+      "style": null,
+      "text": "The data layer includes:"
+    },
+    {
+      "index": 642,
+      "style": null,
+      "text": "User accounts, usernames, roles, account status, and sessions;"
+    },
+    {
+      "index": 644,
+      "style": null,
+      "text": "Categories and locations;"
+    },
+    {
+      "index": 646,
+      "style": null,
+      "text": "Inventory items classified as assets or supplies;"
+    },
+    {
+      "index": 648,
+      "style": null,
+      "text": "QR codes, printed labels, and activity history;"
+    },
+    {
+      "index": 650,
+      "style": null,
+      "text": "Computer hardware details, installed software, license details, and item photos;"
+    },
+    {
+      "index": 652,
+      "style": null,
+      "text": "Item quantity, status, condition, location, purchase information, and notes;"
+    },
+    {
+      "index": 654,
+      "style": null,
+      "text": "Borrowing and return requests;"
+    },
+    {
+      "index": 656,
+      "style": null,
+      "text": "Maintenance service requests;"
+    },
+    {
+      "index": 658,
+      "style": null,
+      "text": "Public-request rate-limit records; and"
+    },
+    {
+      "index": 660,
+      "style": null,
+      "text": "Dashboard notes and information used for reports."
+    },
+    {
+      "index": 662,
+      "style": null,
+      "text": "The database stores the information used to prepare the inventory overview and manual exports."
+    },
+    {
+      "index": 663,
+      "style": null,
+      "text": "Prisma provides controlled database operations, while the application validates inputs and permissions before stored information is changed."
+    },
+    {
+      "index": 664,
+      "style": "Heading2",
+      "text": "Presentation Layer"
+    },
+    {
+      "index": 665,
+      "style": null,
+      "text": "The presentation layer consists of React components and Next.js pages. It provides the screens through which public requesters and signed-in users interact with the application."
+    },
+    {
+      "index": 666,
+      "style": null,
+      "text": "The presentation layer provides:"
+    },
+    {
+      "index": 667,
+      "style": null,
+      "text": "Login, account-settings, and dashboard pages;"
+    },
+    {
+      "index": 669,
+      "style": null,
+      "text": "Inventory lists, filters, item records, and item-editing forms;"
+    },
+    {
+      "index": 671,
+      "style": null,
+      "text": "QR-label printing and a phone-camera scanning page;"
+    },
+    {
+      "index": 673,
+      "style": null,
+      "text": "A limited public QR item page with borrowing and return-request forms;"
+    },
+    {
+      "index": 675,
+      "style": null,
+      "text": "Borrowing, maintenance, and activity-history pages for authorized users;"
+    },
+    {
+      "index": 677,
+      "style": null,
+      "text": "Computer hardware, software, license, and photo-record interfaces;"
+    },
+    {
+      "index": 679,
+      "style": null,
+      "text": "Report summaries and manual export controls;"
+    },
+    {
+      "index": 681,
+      "style": null,
+      "text": "Administrator-only user, category, and location management pages; and"
+    },
+    {
+      "index": 683,
+      "style": null,
+      "text": "Feedback messages for completed or unsuccessful actions."
+    },
+    {
+      "index": 685,
+      "style": null,
+      "text": "The interface is designed to work in supported modern desktop and mobile browsers."
+    },
+    {
+      "index": 688,
+      "style": "Heading2",
+      "text": "Application Logic and Access Control"
+    },
+    {
+      "index": 689,
+      "style": null,
+      "text": "The application logic is handled by Next.js server actions and route handlers. It receives requests, validates inputs, checks permissions, applies the required workflow, and reads or updates PostgreSQL data through Prisma."
+    },
+    {
+      "index": 690,
+      "style": null,
+      "text": "The application logic is responsible for:"
+    },
+    {
+      "index": 691,
+      "style": null,
+      "text": "Processing email-or-username sign-in and account updates;"
+    },
+    {
+      "index": 693,
+      "style": null,
+      "text": "Validating user inputs and preventing unauthorized actions;"
+    },
+    {
+      "index": 695,
+      "style": null,
+      "text": "Enforcing Administrator, Staff, and Viewer permissions;"
+    },
+    {
+      "index": 697,
+      "style": null,
+      "text": "Processing inventory registration, updates, retirement, deletion rules, imports, and photos;"
+    },
+    {
+      "index": 699,
+      "style": null,
+      "text": "Generating QR labels and processing signed-in scan activity;"
+    },
+    {
+      "index": 701,
+      "style": null,
+      "text": "Receiving public borrowing and return requests and allowing Staff or Administrators to process them;"
+    },
+    {
+      "index": 703,
+      "style": null,
+      "text": "Recording item status, condition, quantity, and location changes;"
+    },
+    {
+      "index": 705,
+      "style": null,
+      "text": "Creating, assigning, and resolving maintenance service requests;"
+    },
+    {
+      "index": 707,
+      "style": null,
+      "text": "Recording activity history and retrieving inventory information;"
+    },
+    {
+      "index": 709,
+      "style": null,
+      "text": "Processing search, filters, reports, and manual exports;"
+    },
+    {
+      "index": 711,
+      "style": null,
+      "text": "Protecting public requests with validation and rate limits; and"
+    },
+    {
+      "index": 713,
+      "style": null,
+      "text": "Handling errors and feedback for unsuccessful operations."
+    },
+    {
+      "index": 714,
+      "style": null,
+      "text": "Through these layers, the system manages laboratory inventory data, QR labels, public borrowing and return requests, maintenance records, account access, and reports without claiming GPS or real-time physical tracking."
+    },
+    {
+      "index": 727,
+      "style": null,
+      "text": "System Diagrams"
+    },
+    {
+      "index": 729,
+      "style": null,
+      "text": "Use Case Diagram"
+    },
+    {
+      "index": 731,
+      "style": null,
+      "text": "Figure 7. Use Case Diagram of the CEIT Inventory System."
+    },
+    {
+      "index": 732,
+      "style": null,
+      "text": "System Architecture Diagram"
+    },
+    {
+      "index": 737,
+      "style": null,
+      "text": "Figure 8. System Architecture Diagram of the CEIT Inventory System."
+    },
+    {
+      "index": 738,
+      "style": null,
+      "text": "Entity-Relationship Diagram"
+    },
+    {
+      "index": 740,
+      "style": null,
+      "text": "Figure 9. Entity-Relationship Diagram of the CEIT Inventory Database."
+    },
+    {
+      "index": 741,
+      "style": null,
+      "text": "Data Flow Diagram"
+    },
+    {
+      "index": 745,
+      "style": null,
+      "text": "Figure 10. Data Flow Diagram of the CEIT Inventory System."
+    },
+    {
+      "index": 746,
+      "style": "Heading1",
+      "text": "References"
+    },
+    {
+      "index": 747,
+      "style": null,
+      "text": "Davis, F. D. (1989). Perceived usefulness, perceived ease of use, and user acceptance of information technology. MIS Quarterly, 13(3), 319-340. https://doi.org/10.2307/249008"
+    },
+    {
+      "index": 748,
+      "style": null,
+      "text": "Hortizuela, M. R. (2019). Asset Guard: A multi-platform asset management system using QR code and geolocation. DMMMSU Research and Extension Journal, 3, 29-48. https://doi.org/10.62960/dmmmsu.v3i.18"
+    },
+    {
+      "index": 749,
+      "style": null,
+      "text": "Ohno, T. (1988). Toyota production system: Beyond large-scale production. Productivity Press."
+    },
+    {
+      "index": 750,
+      "style": null,
+      "text": "Rabiah, N. N., Lindawati, & Sarjana. (2022). Web-based laboratory inventory application using QR code and RFID in telecommunication engineering laboratories/workshops. Sinkron: Jurnal dan Penelitian Teknik Informatika, 6(4), 2248-2261. https://doi.org/10.33395/sinkron.v7i4.11624"
+    },
+    {
+      "index": 751,
+      "style": null,
+      "text": "Sermonia, C. J. G., & Pabelona, R. M., Jr. (2025). Cloud-based inventory system with Quick Response (QR) tagging for technology workshop. International Journal of Research and Scientific Innovation, 12(1), 803-822. https://doi.org/10.51244/IJRSI.2025.12010071"
+    },
+    {
+      "index": 752,
+      "style": null,
+      "text": "Sulistyo, T., Achmad, K., & Purnama, I. B. I. (2022). The asset management and tracking system for technical and vocational education and training (TVET) institution based on ubiquitous computing. ComTech: Computer, Mathematics and Engineering Applications, 13(1), 23-34. https://doi.org/10.21512/comtech.v13i1.7342"
+    },
+    {
+      "index": 753,
+      "style": null,
+      "text": "von Bertalanffy, L. (1968). General system theory: Foundations, development, applications. George Braziller."
+    }
+  ],
+  "tables": [],
+  "sections": [
+    {
+      "index": 0,
+      "page_size": {
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}h": "16834",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}w": "11909",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}orient": "portrait"
+      },
+      "page_margins": {
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}bottom": "1440",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}top": "1440",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}left": "992.1259842519685",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}right": "1440",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}header": "720",
+        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}footer": "720"
+      }
+    }
+  ],
+  "headers_footers": {
+    "word/header1.xml": [],
+    "word/header2.xml": [],
+    "word/footer1.xml": [],
+    "word/footer2.xml": []
+  },
+  "drawings": [
+    {
+      "paragraph_index": 96,
+      "text": "",
+      "relationship_ids": [
+        "rId6"
+      ],
+      "targets": [
+        "media/image1.png"
+      ]
+    },
+    {
+      "paragraph_index": 130,
+      "text": "",
+      "relationship_ids": [
+        "rId7"
+      ],
+      "targets": [
+        "media/image7.png"
+      ]
+    },
+    {
+      "paragraph_index": 161,
+      "text": "",
+      "relationship_ids": [
+        "rId8"
+      ],
+      "targets": [
+        "media/image2.png"
+      ]
+    },
+    {
+      "paragraph_index": 186,
+      "text": "",
+      "relationship_ids": [
+        "rId9"
+      ],
+      "targets": [
+        "media/image10.png"
+      ]
+    },
+    {
+      "paragraph_index": 259,
+      "text": "",
+      "relationship_ids": [
+        "rId11"
+      ],
+      "targets": [
+        "media/image8.png"
+      ]
+    },
+    {
+      "paragraph_index": 278,
+      "text": "",
+      "relationship_ids": [
+        "rId12"
+      ],
+      "targets": [
+        "media/image11.png"
+      ]
+    },
+    {
+      "paragraph_index": 730,
+      "text": "",
+      "relationship_ids": [
+        "rId13"
+      ],
+      "targets": [
+        "media/image4.png"
+      ]
+    },
+    {
+      "paragraph_index": 735,
+      "text": "",
+      "relationship_ids": [
+        "rId14"
+      ],
+      "targets": [
+        "media/image5.png"
+      ]
+    },
+    {
+      "paragraph_index": 739,
+      "text": "",
+      "relationship_ids": [
+        "rId20"
+      ],
+      "targets": [
+        "media/image12.png"
+      ]
+    },
+    {
+      "paragraph_index": 743,
+      "text": "",
+      "relationship_ids": [
+        "rId15"
+      ],
+      "targets": [
+        "media/image3.png"
+      ]
+    }
+  ]
+}

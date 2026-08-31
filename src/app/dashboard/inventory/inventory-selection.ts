@@ -24,8 +24,13 @@ export function saveSelectedItemIds(selectionKey: string, itemIds: Iterable<stri
   if (typeof window === "undefined") return;
   const saved = uniqueItemIds(itemIds);
   const storageKey = `${selectionStoragePrefix}${selectionKey}`;
-  if (saved.length) window.sessionStorage.setItem(storageKey, JSON.stringify(saved));
-  else window.sessionStorage.removeItem(storageKey);
+  try {
+    if (saved.length) window.sessionStorage.setItem(storageKey, JSON.stringify(saved));
+    else window.sessionStorage.removeItem(storageKey);
+  } catch {
+    // Selection can still work for the visible page when browser storage is
+    // unavailable, such as in a restricted private-browsing session.
+  }
 }
 
 export function syncVisibleItemSelection(itemIds: Iterable<string>) {

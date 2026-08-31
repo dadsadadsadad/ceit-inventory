@@ -5,10 +5,11 @@ import type { IScannerControls } from "@zxing/browser";
 import { ScanLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { inventoryLabelAppOrigin } from "@/lib/inventory-label-url";
 import { inventoryQrCodeFromScan } from "@/lib/qr-code";
 
 function codeFromScan(value: string) {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin : undefined;
+  const configuredOrigin = inventoryLabelAppOrigin(process.env.NEXT_PUBLIC_APP_URL);
   return inventoryQrCodeFromScan(value, window.location.origin, configuredOrigin);
 }
 

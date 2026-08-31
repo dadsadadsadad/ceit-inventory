@@ -15,5 +15,7 @@ describe("inventory QR validation", () => {
   it("rejects malformed and unrelated values", () => {
     expect(isInventoryQrCode("bad code")).toBe(false);
     expect(inventoryQrCodeFromScan("https://inventory.example.edu/dashboard", "https://inventory.example.edu")).toBe("");
+    expect(inventoryQrCodeFromScan("https://inventory.example.edu/scan/%E0%A4%A", "https://inventory.example.edu")).toBe("");
+    expect(inventoryQrCodeFromScan("https://inventory.example.edu/scan/abcD_123-456", "not a URL")).toBe("");
   });
 });

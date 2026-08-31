@@ -8,20 +8,35 @@ import {
   useState,
   useSyncExternalStore,
   type ChangeEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
 type Theme = "dark" | "light";
 type Accent = string | null;
 type HsvColor = { hue: number; saturation: number; value: number };
+type RgbColor = { blue: number; green: number; red: number };
+type AppearanceTokens = {
+  accent: string;
+  accentHover: string;
+  accentOnStrong: string;
+  accentStrong: string;
+  accentStrongHover: string;
+  accentText: string;
+  sidebar: string;
+  sidebarDeep: string;
+};
 
 const themeStorageKey = "ceit-theme";
 const accentStorageKey = "ceit-accent";
 const appearanceChangeEvent = "ceit-appearance-change";
-const defaultPickerColor = "#f97316";
+const contrastDark = "#000000";
+const contrastLight = "#ffffff";
+const minimumTextContrast = 4.7;
+const defaultAccentByTheme: Readonly<Record<Theme, string>> = {
+  dark: "#ff9b50",
+  light: "#963509",
+};
 const accentPresets = [
-  { name: "CEIT orange", color: defaultPickerColor },
   { name: "Cranberry", color: "#e5484d" },
   { name: "Orchid", color: "#a855f7" },
   { name: "Indigo", color: "#6366f1" },
@@ -43,7 +58,9 @@ const customAccentProperties = [
   "--accent-hover",
   "--accent-soft",
   "--accent-strong",
+  "--accent-strong-hover",
   "--accent-text",
+  "--accent-on-strong",
   "--border-strong",
   "--sidebar",
   "--sidebar-deep",
@@ -58,12 +75,82 @@ function sanitizeHexColor(value: string | null | undefined): string | null {
   return match ? `#${match[1].toLowerCase()}` : null;
 }
 
+function defaultAccentColor(theme: Theme) {
+  return defaultAccentByTheme[theme];
+}
+
+function hexToRgb(color: string): RgbColor {
+  const normalized = sanitizeHexColor(color) ?? contrastDark;
+  return {
+    red: Number.parseInt(normalized.slice(1, 3), 16),
+    green: Number.parseInt(normalized.slice(3, 5), 16),
+    blue: Number.parseInt(normalized.slice(5, 7), 16),
+  };
+}
+
+function rgbToHex({ red, green, blue }: RgbColor) {
+  const toHex = (channel: number) => clamp(Math.round(channel), 0, 255).toString(16).padStart(2, "0");
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
+
+function mixHexColors(start: string, end: string, endAmount: number) {
+  const from = hexToRgb(start);
+  const to = hexToRgb(end);
+  const ratio = clamp(endAmount, 0, 1);
+  return rgbToHex({
+    red: from.red + (to.red - from.red) * ratio,
+    green: from.green + (to.green - from.green) * ratio,
+    blue: from.blue + (to.blue - from.blue) * ratio,
+  });
+}
+
+function relativeLuminance(color: string) {
+  const { red, green, blue } = hexToRgb(color);
+  const linearize = (channel: number) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+
+  return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue);
+}
+
+function contrastRatio(first: string, second: string) {
+  const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)].sort((left, right) => right - left);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readableTextColor(background: string) {
+  return contrastRatio(background, contrastDark) >= contrastRatio(background, contrastLight) ? contrastDark : contrastLight;
+}
+
+function ensureContrast(color: string, background: string, direction: string, minimum = minimumTextContrast) {
+  const normalized = sanitizeHexColor(color) ?? defaultAccentByTheme.dark;
+  if (contrastRatio(normalized, background) >= minimum) return normalized;
+
+  let lowerBound = 0;
+  let upperBound = 1;
+  let accessibleColor = direction;
+
+  for (let iteration = 0; iteration < 16; iteration += 1) {
+    const amount = (lowerBound + upperBound) / 2;
+    const candidate = mixHexColors(normalized, direction, amount);
+    if (contrastRatio(candidate, background) >= minimum) {
+      accessibleColor = candidate;
+      upperBound = amount;
+    } else {
+      lowerBound = amount;
+    }
+  }
+
+  return accessibleColor;
+}
+
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
 function hexToHsv(color: string): HsvColor {
-  const normalized = sanitizeHexColor(color) ?? defaultPickerColor;
+  const normalized = sanitizeHexColor(color) ?? defaultAccentByTheme.dark;
   const red = Number.parseInt(normalized.slice(1, 3), 16) / 255;
   const green = Number.parseInt(normalized.slice(3, 5), 16) / 255;
   const blue = Number.parseInt(normalized.slice(5, 7), 16) / 255;
@@ -117,24 +204,50 @@ function hsvToHex({ hue, saturation, value }: HsvColor) {
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 }
 
+function customAppearanceTokens(theme: Theme, color: string): AppearanceTokens {
+  const textSurface = theme === "light" ? "#f0dfce" : "#2a201b";
+  const linkDirection = theme === "light" ? contrastDark : contrastLight;
+  const accent = ensureContrast(color, textSurface, linkDirection);
+  const accentHover = mixHexColors(accent, linkDirection, 0.14);
+  const accentStrong = ensureContrast(color, contrastLight, contrastDark);
+  const sidebar = ensureContrast(color, contrastLight, contrastDark);
+
+  return {
+    accent,
+    accentHover,
+    accentOnStrong: contrastLight,
+    accentStrong,
+    accentStrongHover: mixHexColors(accentStrong, contrastDark, 0.16),
+    accentText: readableTextColor(accent),
+    sidebar,
+    sidebarDeep: mixHexColors(sidebar, contrastDark, 0.38),
+  };
+}
+
 type AccentColorPickerProps = {
   color: string;
   onChange: (color: string) => void;
+  selectedAccent: Accent;
 };
 
-function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
+function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPickerProps) {
   const hsv = hexToHsv(color);
   const hexInputId = useId();
+  const [hexDraft, setHexDraft] = useState(color.slice(1));
+
+  useEffect(() => {
+    setHexDraft(color.slice(1));
+  }, [color]);
 
   function setColorFromPlane(target: HTMLDivElement, clientX: number, clientY: number) {
     const bounds = target.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
     const saturation = clamp(((clientX - bounds.left) / bounds.width) * 100, 0, 100);
     const value = clamp(100 - ((clientY - bounds.top) / bounds.height) * 100, 0, 100);
     onChange(hsvToHex({ hue: hsv.hue, saturation, value }));
   }
 
   function handlePlanePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    event.currentTarget.focus();
     event.currentTarget.setPointerCapture(event.pointerId);
     setColorFromPlane(event.currentTarget, event.clientX, event.clientY);
   }
@@ -145,44 +258,15 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
     }
   }
 
-  function handlePlaneKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    const step = event.shiftKey ? 10 : 2;
-    let nextSaturation = hsv.saturation;
-    let nextValue = hsv.value;
-
-    switch (event.key) {
-      case "ArrowLeft":
-        nextSaturation -= step;
-        break;
-      case "ArrowRight":
-        nextSaturation += step;
-        break;
-      case "ArrowDown":
-        nextValue -= step;
-        break;
-      case "ArrowUp":
-        nextValue += step;
-        break;
-      case "Home":
-        nextSaturation = 0;
-        break;
-      case "End":
-        nextSaturation = 100;
-        break;
-      default:
-        return;
+  function handlePlanePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
-
-    event.preventDefault();
-    onChange(hsvToHex({
-      hue: hsv.hue,
-      saturation: clamp(nextSaturation, 0, 100),
-      value: clamp(nextValue, 0, 100),
-    }));
   }
 
   function handleHexChange(event: ChangeEvent<HTMLInputElement>) {
-    const nextValue = event.currentTarget.value.replace(/^#/, "");
+    const nextValue = event.currentTarget.value.replace(/[^\da-f]/gi, "").slice(0, 6);
+    setHexDraft(nextValue);
     const nextColor = sanitizeHexColor(`#${nextValue}`);
     if (nextColor) {
       onChange(nextColor);
@@ -196,7 +280,7 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
           <span className="accent-color-preview" style={{ backgroundColor: color }} aria-hidden="true" />
           <div className="min-w-0">
             <span className="block text-xs font-semibold text-[var(--foreground)]">Create your accent</span>
-            <span className="block truncate text-[11px] text-[var(--muted)]">Tune the shade to your style</span>
+            <span className="block truncate text-[11px] text-[var(--muted)]">Your hue is tuned automatically for readable text.</span>
           </div>
         </div>
         <span className="accent-color-hue-value" aria-hidden="true">{Math.round(hsv.hue)}°</span>
@@ -204,17 +288,12 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
 
       <div
         className="accent-color-plane"
-        role="slider"
-        tabIndex={0}
-        aria-label="Color saturation and brightness"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(hsv.saturation)}
-        aria-valuetext={`Saturation ${Math.round(hsv.saturation)}%, brightness ${Math.round(hsv.value)}%`}
+        aria-hidden="true"
         style={{ backgroundColor: `hsl(${hsv.hue} 100% 50%)` }}
         onPointerDown={handlePlanePointerDown}
         onPointerMove={handlePlanePointerMove}
-        onKeyDown={handlePlaneKeyDown}
+        onPointerUp={handlePlanePointerUp}
+        onPointerCancel={handlePlanePointerUp}
       >
         <span
           className="accent-color-plane-handle"
@@ -223,21 +302,46 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
         />
       </div>
 
-      <div className="mt-3">
-        <label className="mb-1.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--muted)]" htmlFor={`${hexInputId}-hue`}>
-          Hue
-          <span className="normal-case tracking-normal text-[var(--muted-strong)]">Slide to shift the spectrum</span>
+      <p className="sr-only">Use the following sliders to adjust the color with a keyboard.</p>
+      <div className="accent-color-adjustments">
+        <label className="accent-color-range-label" htmlFor={`${hexInputId}-hue`}>
+          <span>Hue <output>{Math.round(hsv.hue)}°</output></span>
+          <input
+            id={`${hexInputId}-hue`}
+            type="range"
+            min="0"
+            max="359"
+            value={Math.round(hsv.hue)}
+            onChange={(event) => onChange(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))}
+            className="accent-color-range accent-color-hue-range"
+          />
         </label>
-        <input
-          id={`${hexInputId}-hue`}
-          type="range"
-          min="0"
-          max="359"
-          value={Math.round(hsv.hue)}
-          onChange={(event) => onChange(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))}
-          className="accent-color-hue-range"
-          aria-label="Hue"
-        />
+        <label className="accent-color-range-label" htmlFor={`${hexInputId}-saturation`}>
+          <span>Saturation <output>{Math.round(hsv.saturation)}%</output></span>
+          <input
+            id={`${hexInputId}-saturation`}
+            type="range"
+            min="0"
+            max="100"
+            value={Math.round(hsv.saturation)}
+            onChange={(event) => onChange(hsvToHex({ ...hsv, saturation: Number(event.currentTarget.value) }))}
+            className="accent-color-range"
+            style={{ background: `linear-gradient(90deg, hsl(${hsv.hue} 0% ${hsv.value}%), hsl(${hsv.hue} 100% ${hsv.value}%))` }}
+          />
+        </label>
+        <label className="accent-color-range-label" htmlFor={`${hexInputId}-brightness`}>
+          <span>Brightness <output>{Math.round(hsv.value)}%</output></span>
+          <input
+            id={`${hexInputId}-brightness`}
+            type="range"
+            min="0"
+            max="100"
+            value={Math.round(hsv.value)}
+            onChange={(event) => onChange(hsvToHex({ ...hsv, value: Number(event.currentTarget.value) }))}
+            className="accent-color-range"
+            style={{ background: `linear-gradient(90deg, #000000, hsl(${hsv.hue} ${hsv.saturation}% 100%))` }}
+          />
+        </label>
       </div>
 
       <div className="accent-color-picker-footer">
@@ -245,13 +349,12 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
           <span className="sr-only">Hex color</span>
           <span aria-hidden="true">#</span>
           <input
-            key={color}
             id={hexInputId}
-            defaultValue={color.slice(1)}
+            value={hexDraft}
             onChange={handleHexChange}
-            onBlur={(event) => {
-              if (!sanitizeHexColor(`#${event.currentTarget.value}`)) {
-                event.currentTarget.value = color.slice(1);
+            onBlur={() => {
+              if (!sanitizeHexColor(`#${hexDraft}`)) {
+                setHexDraft(color.slice(1));
               }
             }}
             maxLength={6}
@@ -268,13 +371,13 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
               key={preset.color}
               type="button"
               className="accent-color-preset"
-              style={{ backgroundColor: preset.color }}
+              style={{ backgroundColor: preset.color, color: readableTextColor(preset.color) }}
               aria-label={`Use ${preset.name}`}
-              aria-pressed={color === preset.color}
+              aria-pressed={selectedAccent === preset.color}
               title={preset.name}
               onClick={() => onChange(preset.color)}
             >
-              {color === preset.color ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
+              {selectedAccent === preset.color ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
             </button>
           ))}
         </div>
@@ -332,15 +435,6 @@ function colorMix(color: string, percentage: number, mixWith: string) {
   return `color-mix(in srgb, ${color} ${percentage}%, ${mixWith})`;
 }
 
-function accentTextColor(color: string) {
-  const red = Number.parseInt(color.slice(1, 3), 16);
-  const green = Number.parseInt(color.slice(3, 5), 16);
-  const blue = Number.parseInt(color.slice(5, 7), 16);
-  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
-
-  return brightness >= 145 ? "#201006" : "#fffaf3";
-}
-
 function clearCustomAccentProperties(root: HTMLElement) {
   customAccentProperties.forEach((property) => root.style.removeProperty(property));
 }
@@ -357,16 +451,18 @@ function applyAppearance(theme: Theme, accent: Accent) {
     return;
   }
 
-  const isLight = theme === "light";
+  const tokens = customAppearanceTokens(theme, customColor);
   root.dataset.accent = "custom";
-  root.style.setProperty("--accent", customColor);
-  root.style.setProperty("--accent-hover", colorMix(customColor, isLight ? 78 : 64, isLight ? "black" : "white"));
-  root.style.setProperty("--accent-soft", colorMix(customColor, isLight ? 12 : 17, "transparent"));
-  root.style.setProperty("--accent-strong", colorMix(customColor, isLight ? 79 : 74, "black"));
-  root.style.setProperty("--accent-text", accentTextColor(customColor));
-  root.style.setProperty("--border-strong", colorMix(customColor, isLight ? 43 : 53, "transparent"));
-  root.style.setProperty("--sidebar", colorMix(customColor, isLight ? 83 : 76, isLight ? "#5b1a08" : "#2f0c04"));
-  root.style.setProperty("--sidebar-deep", colorMix(customColor, isLight ? 58 : 56, isLight ? "#200704" : "#080405"));
+  root.style.setProperty("--accent", tokens.accent);
+  root.style.setProperty("--accent-hover", tokens.accentHover);
+  root.style.setProperty("--accent-soft", colorMix(tokens.accent, theme === "light" ? 12 : 17, "transparent"));
+  root.style.setProperty("--accent-strong", tokens.accentStrong);
+  root.style.setProperty("--accent-strong-hover", tokens.accentStrongHover);
+  root.style.setProperty("--accent-text", tokens.accentText);
+  root.style.setProperty("--accent-on-strong", tokens.accentOnStrong);
+  root.style.setProperty("--border-strong", colorMix(tokens.accent, theme === "light" ? 46 : 53, "transparent"));
+  root.style.setProperty("--sidebar", tokens.sidebar);
+  root.style.setProperty("--sidebar-deep", tokens.sidebarDeep);
 }
 
 function migrateAccentStorage(accent: Accent) {
@@ -457,8 +553,8 @@ export function ThemeToggle() {
     saveAppearance(theme, null);
   }
 
-  const pickerColor = accent ?? defaultPickerColor;
-  const accentLabel = accent ? `${accent} custom accent` : "CEIT orange accent";
+  const pickerColor = accent ?? defaultAccentColor(theme);
+  const accentLabel = accent ? `${accent} custom accent` : "CEIT orange default accent";
 
   return (
     <div
@@ -519,7 +615,7 @@ export function ThemeToggle() {
           <fieldset className="mt-5 border-0 p-0">
             <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Accent color</legend>
             <div className="appearance-color-picker">
-              <AccentColorPicker color={pickerColor} onChange={(nextAccent) => saveAppearance(theme, nextAccent)} />
+              <AccentColorPicker color={pickerColor} selectedAccent={accent} onChange={(nextAccent) => saveAppearance(theme, nextAccent)} />
               <button
                 type="button"
                 onClick={resetAccent}
@@ -531,7 +627,7 @@ export function ThemeToggle() {
                 }`}
               >
                 {accent === null ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                CEIT orange
+                Use CEIT orange default
               </button>
             </div>
           </fieldset>

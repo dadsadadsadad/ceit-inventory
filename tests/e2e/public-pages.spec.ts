@@ -9,7 +9,7 @@ test("login page is available without a database query", async ({ page }) => {
 
 test("login error state is rendered without leaking credentials", async ({ page }) => {
   await page.goto("/auth/login?error=invalid-credentials");
-  await expect(page.getByText("The email address or password is incorrect.", { exact: true })).toBeVisible();
+  await expect(page.getByText("The email address, username, or password is incorrect.", { exact: true })).toBeVisible();
 });
 
 test("unknown routes receive the application not-found page", async ({ page }) => {

@@ -24,6 +24,7 @@ export function InventoryBulkActions({
   statuses: SelectOption[];
 }) {
   const [action, setAction] = useState<BulkAction>("status");
+  const [removalConfirmation, setRemovalConfirmation] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -81,11 +82,14 @@ export function InventoryBulkActions({
       <div className="bulk-action-toolbar-controls mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(13rem,0.9fr)_minmax(15rem,1fr)_auto] xl:items-end">
         <label>
           <span className="muted text-xs font-bold uppercase tracking-wide">Action</span>
-          <select value={action} onChange={(event) => setAction(event.target.value as BulkAction)} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+          <select value={action} onChange={(event) => {
+            setAction(event.target.value as BulkAction);
+            setRemovalConfirmation("");
+          }} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
             <option value="status">Edit status</option>
             <option value="condition">Edit condition</option>
             <option value="location">Move to location</option>
-            <option value="remove">Remove selected items</option>
+            <option value="remove">Remove from active inventory</option>
           </select>
         </label>
 
@@ -105,14 +109,20 @@ export function InventoryBulkActions({
               {conditions.map((condition) => <option key={condition.value} value={condition.value}>{condition.label}</option>)}
             </select>
           ) : (
-            <p className="bulk-action-remove-note mt-2 rounded-lg px-3 py-2.5 text-sm leading-5">{actionDetails}</p>
+            <div className="mt-2 space-y-3">
+              <p className="bulk-action-remove-note rounded-lg px-3 py-2.5 text-sm leading-5">{actionDetails}</p>
+              <label className="block">
+                <span className="muted text-xs font-bold uppercase tracking-wide">Type RETIRE to confirm</span>
+                <input name="bulkRemovalConfirmation" required value={removalConfirmation} onChange={(event) => setRemovalConfirmation(event.target.value)} maxLength={16} autoComplete="off" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="RETIRE" />
+              </label>
+            </div>
           )}
         </div>
 
         <div className="xl:min-w-40">
           <input type="hidden" name="bulkAction" value={action} />
           <p className="muted mb-2 hidden text-xs leading-5 xl:block">{actionDetails}</p>
-          <SubmitButton pendingLabel="Updating…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold">{action === "remove" ? `Remove ${selectedIds.length}` : `Apply to ${selectedIds.length}`}</SubmitButton>
+          <SubmitButton disabled={action === "remove" && removalConfirmation !== "RETIRE"} pendingLabel="Updating…" className={`${action === "remove" ? "danger-button" : "primary-button"} w-full rounded-lg px-4 py-2.5 text-sm font-semibold`}>{action === "remove" ? `Retire ${selectedIds.length}` : `Apply to ${selectedIds.length}`}</SubmitButton>
         </div>
       </div>
     </section>

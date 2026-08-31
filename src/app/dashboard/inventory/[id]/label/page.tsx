@@ -21,21 +21,28 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
   const item = await prisma.inventoryItem.findUnique({ where: { id }, include: { location: true } });
   if (!item) notFound();
 
-  const scanUrl = `${inventoryLabelAppUrl(process.env.NEXT_PUBLIC_APP_URL, requestHeaders)}/scan/${encodeURIComponent(item.qrCode)}`;
-  const qrDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "M", margin: 1, width: 560 });
+  const appUrl = inventoryLabelAppUrl(process.env.NEXT_PUBLIC_APP_URL, requestHeaders);
+  const scanUrl = appUrl ? `${appUrl}/scan/${encodeURIComponent(item.qrCode)}` : null;
+  const qrDataUrl = scanUrl ? await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "M", margin: 1, width: 560 }) : null;
 
   return (
     <main className="page label-page">
       <div className="page-narrow space-y-6">
-        <div className="no-print flex items-center justify-between gap-4"><Link href={`/dashboard/inventory/${item.id}`} className="accent-link text-sm font-semibold">← Back to item</Link><PrintLabel /></div>
-        <article className="print-label mx-auto max-w-md rounded-lg p-7 text-center">
-          <p className="eyebrow">CEIT inventory</p>
-          <h1 className="mt-3 text-2xl font-bold">{item.name}</h1>
-          <p className="mt-2 text-sm text-slate-600">{item.assetTag ?? "No asset tag"} · {item.location.name}</p>
-          <Image unoptimized className="mx-auto mt-6 h-64 w-64" src={qrDataUrl} alt={`QR code for ${item.name}`} width={280} height={280} />
-          <p className="mt-5 break-all font-mono text-xs text-slate-600">{item.qrCode}</p>
-          <p className="mt-2 text-xs text-slate-600">Students can request to borrow this item. Signed-in staff can also open and update its record.</p>
-        </article>
+        <div className="no-print flex items-center justify-between gap-4"><Link href={`/dashboard/inventory/${item.id}`} className="accent-link text-sm font-semibold">← Back to item</Link>{scanUrl ? <PrintLabel /> : null}</div>
+        {scanUrl && qrDataUrl ? (
+          <article className="print-label mx-auto max-w-md rounded-lg p-7 text-center">
+            <p className="eyebrow">CEIT inventory</p>
+            <h1 className="mt-3 text-2xl font-bold">{item.name}</h1>
+            <p className="mt-2 text-sm text-slate-600">{item.assetTag ?? "No asset tag"} · {item.location.name}</p>
+            <Image unoptimized className="mx-auto mt-6 h-64 w-64" src={qrDataUrl} alt={`QR code for ${item.name}`} width={280} height={280} />
+            <p className="mt-5 break-all font-mono text-xs text-slate-600">{item.qrCode}</p>
+            <p className="mt-2 text-xs text-slate-600">Students can request to borrow this item. Signed-in staff can also open and update its record.</p>
+          </article>
+        ) : (
+          <section className="notice rounded-lg px-5 py-4 text-sm leading-6" role="alert">
+            Set <code>NEXT_PUBLIC_APP_URL</code> to the permanent CEIT public or school-LAN address before printing QR labels. This prevents labels from opening an untrusted deployment or sign-in page.
+          </section>
+        )}
       </div>
     </main>
   );
