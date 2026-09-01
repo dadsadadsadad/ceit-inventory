@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { addSelectionChangeListener, isSelectionChangeForKey, itemSelector, notifySelectionChange, saveSelectedItemIds, selectedItemIds, syncVisibleItemSelection, updateSelectedItem } from "./inventory-selection";
 
-export function BulkSelectionToggle({ allItemIds, selectionKey }: { allItemIds: string[]; selectionKey: string }) {
+export function BulkSelectionToggle({ allItemIds, selectionKey, totalRecords }: { allItemIds: string[]; selectionKey: string; totalRecords: number }) {
   const [selectedCount, setSelectedCount] = useState(0);
 
   useEffect(() => {
@@ -41,7 +41,12 @@ export function BulkSelectionToggle({ allItemIds, selectionKey }: { allItemIds: 
   }
 
   const allSelected = allItemIds.length > 0 && selectedCount === allItemIds.length;
-  const selectionLabel = selectedCount ? `${selectedCount} of ${allItemIds.length} selected` : `${allItemIds.length} matching items`;
+  const hasSelectionLimit = totalRecords > allItemIds.length;
+  const selectionLabel = selectedCount
+    ? `${selectedCount} of ${allItemIds.length} selected`
+    : hasSelectionLimit
+      ? `${allItemIds.length.toLocaleString()} of ${totalRecords.toLocaleString()} selectable`
+      : `${allItemIds.length} matching items`;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 text-xs font-semibold" role="group" aria-label="Inventory selection controls">
@@ -50,6 +55,7 @@ export function BulkSelectionToggle({ allItemIds, selectionKey }: { allItemIds: 
         <button type="button" onClick={() => setAllSelection(true)} disabled={!allItemIds.length || allSelected} className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50" aria-label={`Select all ${allItemIds.length} matching inventory records`}>Select all</button>
         <button type="button" onClick={() => setAllSelection(false)} disabled={!selectedCount} className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50" aria-label={`Deselect all ${selectedCount} selected inventory records`}>Deselect all</button>
       </div>
+      {hasSelectionLimit ? <p className="muted w-full text-right font-medium">Bulk updates are limited to {allItemIds.length.toLocaleString()} records at a time. Refine your filters to select another group.</p> : null}
       <p className="sr-only" aria-live="polite">{`${selectedCount} of ${allItemIds.length} matching inventory records selected.`}</p>
     </div>
   );

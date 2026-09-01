@@ -38,6 +38,11 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
             <p className="mt-5 break-all font-mono text-xs text-slate-600">{item.qrCode}</p>
             <p className="mt-2 text-xs text-slate-600">Students can request to borrow this item. Signed-in staff can also open and update its record.</p>
           </article>
+        ) : (
+          <section className="notice rounded-lg px-5 py-4 text-sm leading-6" role="alert">
+            Set <code>NEXT_PUBLIC_APP_URL</code> to the permanent CEIT public or school-LAN address before printing QR labels. This prevents labels from opening an untrusted deployment or sign-in page.
+          </section>
+        )}
       </div>
     </main>
   );

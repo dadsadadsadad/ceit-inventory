@@ -1390,7 +1390,8 @@ summary:focus-visible {
 
 @media (max-width: 639px) {
   .page {
-    padding: 1rem 1rem 6.25rem;
+    /* Keep the final controls clear of the two floating navigation buttons. */
+    padding: 1rem 1rem 8.5rem;
   }
 
   .page::before {
