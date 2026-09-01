@@ -15,16 +15,17 @@ import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
 
-function CategoryEditor({ category }: { category: { id: string; name: string; description: string | null; isActive: boolean; _count: { items: number } } }) {
+function CategoryEditor({ category }: { category: { id: string; name: string; assetTagCode: string | null; description: string | null; isActive: boolean; _count: { items: number } } }) {
   return (
     <details className="card-muted rounded-lg p-3">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 text-sm">
         <span><strong>{category.name}</strong>{category.description ? <span className="muted"> · {category.description}</span> : null}</span>
         <span className="flex items-center gap-3"><span className="muted">{category._count.items} record{category._count.items === 1 ? "" : "s"}</span>{!category.isActive ? <span className="status-pill rounded-md px-2 py-1 text-xs font-semibold">Inactive</span> : null}</span>
       </summary>
-      <FeedbackForm action={updateCategory} className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_1.5fr_auto] sm:items-end">
+      <FeedbackForm action={updateCategory} className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_5rem_1.5fr_auto] sm:items-end">
         <input type="hidden" name="id" value={category.id} />
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Name</span><input required name="name" defaultValue={category.name} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
+        <label><span className="muted text-xs font-bold uppercase tracking-wide">Tag code</span><input required name="assetTagCode" defaultValue={category.assetTagCode ?? ""} maxLength={3} pattern="[A-Za-z0-9]{3}" title="Use three letters or numbers." className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Description</span><input name="description" defaultValue={category.description ?? ""} maxLength={2_000} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <SubmitButton pendingLabel="Saving…" className="secondary-button rounded-lg px-4 py-2 text-sm font-semibold">Save</SubmitButton>
       </FeedbackForm>
@@ -38,7 +39,7 @@ function CategoryEditor({ category }: { category: { id: string; name: string; de
   );
 }
 
-function LocationEditor({ location }: { location: { id: string; name: string; roomNumber: string | null; description: string | null; isActive: boolean; _count: { items: number } } }) {
+function LocationEditor({ location }: { location: { id: string; name: string; assetTagCode: string | null; roomNumber: string | null; description: string | null; isActive: boolean; _count: { items: number } } }) {
   const hasAssignedItems = location._count.items > 0;
 
   return (
@@ -51,6 +52,7 @@ function LocationEditor({ location }: { location: { id: string; name: string; ro
         <input type="hidden" name="id" value={location.id} />
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Location name</span><input required name="name" defaultValue={location.name} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Room number</span><input name="roomNumber" defaultValue={location.roomNumber ?? ""} maxLength={100} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
+        <label><span className="muted text-xs font-bold uppercase tracking-wide">Tag code</span><input required name="assetTagCode" defaultValue={location.assetTagCode ?? ""} maxLength={2} pattern="[0-9]{2}" title="Use two digits, such as 05." className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label className="sm:col-span-2"><span className="muted text-xs font-bold uppercase tracking-wide">Description</span><input name="description" defaultValue={location.description ?? ""} maxLength={2_000} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <SubmitButton pendingLabel="Saving…" className="secondary-button justify-self-start rounded-lg px-4 py-2 text-sm font-semibold">Save location</SubmitButton>
       </FeedbackForm>
@@ -121,7 +123,7 @@ export default async function SettingsPage() {
             <section>
               <p className="eyebrow">Inventory setup</p>
               <h2 className="mt-2 text-xl font-semibold">Locations and categories</h2>
-              <p className="muted mt-1 max-w-2xl text-sm leading-6">Deactivated entries remain on historical records but cannot be selected for new records.</p>
+              <p className="muted mt-1 max-w-2xl text-sm leading-6">Deactivated entries remain on historical records but cannot be selected for new records. The tag codes control the compatible <code>INV-CAT-ST-ROOM-0001</code> asset tags generated for new equipment.</p>
             </section>
             <div className="grid gap-6 xl:grid-cols-2">
               <section className="card rounded-lg p-5 sm:p-6">
@@ -130,6 +132,7 @@ export default async function SettingsPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label><span className="text-sm font-semibold">Location name *</span><input required name="name" maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Computer Laboratory 1" /></label>
                     <label><span className="text-sm font-semibold">Room number</span><input name="roomNumber" maxLength={100} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="CEIT-201" /></label>
+                    <label><span className="text-sm font-semibold">Asset-tag room code</span><input name="assetTagCode" maxLength={2} pattern="[0-9]{2}" title="Use two digits, such as 05." className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Auto" /><span className="muted mt-1 block text-xs">Leave empty to assign the next available two-digit code.</span></label>
                   </div>
                   <label className="block"><span className="text-sm font-semibold">Description</span><input name="description" maxLength={2_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
                   <SubmitButton pendingLabel="Adding location…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Add location</SubmitButton>
@@ -140,7 +143,7 @@ export default async function SettingsPage() {
               <section className="card rounded-lg p-5 sm:p-6">
                 <h3 className="text-lg font-semibold">Item categories</h3>
                 <FeedbackForm action={createCategory} className="mt-5 space-y-4">
-                  <label className="block"><span className="text-sm font-semibold">Category name *</span><input required name="name" maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Desktop Computers" /></label>
+                  <div className="grid gap-4 sm:grid-cols-[1fr_7rem]"><label><span className="text-sm font-semibold">Category name *</span><input required name="name" maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Desktop Computers" /></label><label><span className="text-sm font-semibold">Tag code</span><input name="assetTagCode" maxLength={3} pattern="[A-Za-z0-9]{3}" title="Use three letters or numbers." className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Auto" /></label></div>
                   <label className="block"><span className="text-sm font-semibold">Description</span><input name="description" maxLength={2_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Optional description" /></label>
                   <SubmitButton pendingLabel="Adding category…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Add category</SubmitButton>
                 </FeedbackForm>

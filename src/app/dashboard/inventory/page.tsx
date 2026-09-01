@@ -4,6 +4,7 @@ import { ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
@@ -49,6 +50,10 @@ function isItemCondition(value?: string): value is ItemCondition {
 
 function enumLabel(value: string) {
   return value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+function lastCheckedLabel(value: Date | null) {
+  return value ? formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" }) : "Not checked";
 }
 
 function safePage(value?: string) {
@@ -228,7 +233,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           <div>
             <p className="eyebrow">Inventory</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Item register</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Track CEIT rooms, equipment, supplies, and the hardware and software assigned to each PC.</p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Track individually tagged CEIT equipment, supplies, inspections, and the hardware and software assigned to each PC or Mac.</p>
           </div>
           {canManage ? (
             <div className="flex flex-wrap gap-3">
@@ -314,7 +319,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <p className="muted">{item.assetTag ?? "No asset tag"}</p>
                       <p className="text-right">{item.location.name}</p>
-                      <p className="muted">{item.quantity}</p>
+                      <p className="muted">{item.quantity} · {lastCheckedLabel(item.lastCheckedAt)}</p>
                       <ItemActions canManage={canManage} itemId={item.id} />
                     </div>
                   </article>
@@ -332,6 +337,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                     <SortableHeader field="location" label="Location" search={search} />
                     <SortableHeader field="stock" label="Stock" search={search} />
                     <SortableHeader field="status" label="Status" search={search} />
+                    <th scope="col" className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]">Last checked</th>
                     <th scope="col" className="px-5 py-4 text-right text-xs font-bold uppercase tracking-[0.16em]">Actions</th>
                   </tr>
                 </thead>
@@ -345,6 +351,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                         <td className="muted px-5 py-4 text-sm">{item.location.name}</td>
                         <td className="muted px-5 py-4 text-sm">{item.quantity}</td>
                         <td className="px-5 py-4"><span className={`${inventoryStatusClass(item.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span></td>
+                        <td className="muted px-5 py-4 text-sm">{lastCheckedLabel(item.lastCheckedAt)}</td>
                         <td className="px-5 py-4"><ItemActions canManage={canManage} itemId={item.id} /></td>
                       </tr>
                     );

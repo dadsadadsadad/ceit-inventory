@@ -71,6 +71,7 @@ enum UserRole {
 model Location {
   id          String          @id @default(uuid()) @db.Uuid
   name        String          @unique
+  assetTagCode String?        @unique @db.VarChar(2)
   roomNumber  String?
   description String?
   isActive    Boolean         @default(true)
@@ -82,6 +83,7 @@ model Location {
 model Category {
   id          String          @id @default(uuid()) @db.Uuid
   name        String          @unique
+  assetTagCode String?        @unique @db.VarChar(3)
   description String?
   isActive    Boolean         @default(true)
   items       InventoryItem[]
@@ -106,6 +108,7 @@ model InventoryItem {
   purchaseDate    DateTime?
   purchasePrice   Decimal?         @db.Decimal(12, 2)
   notes           String?
+  lastCheckedAt   DateTime?
   categoryId      String           @db.Uuid
   locationId      String           @db.Uuid
   category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -121,6 +124,7 @@ model InventoryItem {
   @@index([locationId, status])
   @@index([categoryId])
   @@index([itemType])
+  @@index([lastCheckedAt])
 }
 
 model Computer {
@@ -135,6 +139,8 @@ model Computer {
   graphics        String?
   macAddress      String?            @unique
   ipAddress       String?
+  hardwareDescription String?
+  softwareDescription String?
   lastCheckedAt   DateTime?
   item            InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
   software        ComputerSoftware[]

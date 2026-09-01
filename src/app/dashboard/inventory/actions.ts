@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireAdministrator, requireInventoryAccess, requireWriteAccess } from "@/lib/inventory-auth";
+import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
 import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
 
@@ -67,6 +68,29 @@ function identifier(formData: FormData, key: string) {
   return optionalText(formData, key, 255)?.toUpperCase() ?? null;
 }
 
+function checkedDate(formData: FormData) {
+  return optionalDate(formData, "lastCheckedAt") ?? new Date();
+}
+
+function assertTrackedAssetQuantity(itemType: ItemType, quantity: number, existing?: { itemType: ItemType; quantity: number }) {
+  if (itemType !== ItemType.ASSET || quantity === 1) return;
+  if (existing?.itemType === ItemType.ASSET && existing.quantity === quantity) return;
+  throw new Error("Track each physical equipment asset as one record so it can keep its own asset tag, QR label, room, and inspection history. Use a supply record for quantity-based stock.");
+}
+
+function assertAssetTag(assetTag: string | null, itemType: ItemType) {
+  if (itemType === ItemType.ASSET && assetTag && !isInventoryAssetTag(assetTag)) {
+    throw new Error("Asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.");
+  }
+}
+
+function inventoryWriteError(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    return new Error("That asset tag, serial number, or PC MAC address is already assigned to another record.");
+  }
+  return error;
+}
+
 function enumValue<T extends string>(formData: FormData, key: string, values: readonly T[], fallback: T) {
   const value = optionalText(formData, key, 64);
   if (!value) return fallback;
@@ -113,6 +137,8 @@ function computerData(formData: FormData, includeCheckTime = false) {
     graphics: optionalText(formData, "graphics", 255),
     macAddress: identifier(formData, "macAddress"),
     ipAddress: optionalText(formData, "ipAddress", 255),
+    hardwareDescription: optionalText(formData, "hardwareDescription", 5_000),
+    softwareDescription: optionalText(formData, "softwareDescription", 5_000),
     ...(includeCheckTime ? { lastCheckedAt: new Date() } : {}),
   };
 }
@@ -153,31 +179,46 @@ export async function createInventoryItem(formData: FormData) {
   const itemType = enumValue(formData, "itemType", itemTypes, ItemType.ASSET);
   const quantity = optionalInteger(formData, "quantity") ?? 1;
   const isComputer = formData.get("isComputer") === "on";
+  const status = enumValue(formData, "status", statuses, ItemStatus.OK);
+  const condition = enumValue(formData, "condition", conditions, ItemCondition.GOOD);
+  const suppliedAssetTag = identifier(formData, "assetTag");
+  const lastCheckedAt = checkedDate(formData);
+  assertTrackedAssetQuantity(itemType, quantity);
+  assertAssetTag(suppliedAssetTag, itemType);
   if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) throw new Error("A PC must be a single tracked asset, not a supply record.");
   await assertActiveAssignments(categoryId, locationId);
 
-  const item = await prisma.inventoryItem.create({
-    data: {
-      name: requiredText(formData, "name", 255),
-      assetTag: identifier(formData, "assetTag"),
-      categoryId,
-      locationId,
-      itemType,
-      isComputer,
-      quantity,
-      status: enumValue(formData, "status", statuses, ItemStatus.OK),
-      condition: enumValue(formData, "condition", conditions, ItemCondition.GOOD),
-      description: optionalText(formData, "description", 5_000),
-      manufacturer: optionalText(formData, "manufacturer", 255),
-      model: optionalText(formData, "model", 255),
-      serialNumber: identifier(formData, "serialNumber"),
-      purchaseDate: optionalDate(formData, "purchaseDate"),
-      purchasePrice: optionalPurchasePrice(formData),
-      notes: optionalText(formData, "notes", 5_000),
-      computer: isComputer ? { create: { ...computerData(formData), lastCheckedAt: new Date() } } : undefined,
-      auditEvents: { create: { action: AuditAction.CREATED, summary: "Inventory item created.", actorId: actor.id, actorName: actor.email, metadata: { source: "manual", activityKind: "record-create" } } },
-    },
-  });
+  let item;
+  try {
+    item = await prisma.$transaction(async (transaction) => {
+      const assetTag = itemType === ItemType.ASSET ? suppliedAssetTag ?? await nextInventoryAssetTag(transaction, { categoryId, locationId, status }) : suppliedAssetTag;
+      return transaction.inventoryItem.create({
+        data: {
+          name: requiredText(formData, "name", 255),
+          assetTag,
+          categoryId,
+          locationId,
+          itemType,
+          isComputer,
+          quantity,
+          status,
+          condition,
+          description: optionalText(formData, "description", 5_000),
+          manufacturer: optionalText(formData, "manufacturer", 255),
+          model: optionalText(formData, "model", 255),
+          serialNumber: identifier(formData, "serialNumber"),
+          purchaseDate: optionalDate(formData, "purchaseDate"),
+          purchasePrice: optionalPurchasePrice(formData),
+          notes: optionalText(formData, "notes", 5_000),
+          lastCheckedAt,
+          computer: isComputer ? { create: { ...computerData(formData), lastCheckedAt } } : undefined,
+          auditEvents: { create: { action: AuditAction.CREATED, summary: "Inventory item created.", actorId: actor.id, actorName: actor.email, metadata: { source: "manual", activityKind: "record-create", assetTagGenerated: !suppliedAssetTag } } },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    throw inventoryWriteError(error);
+  }
 
   refreshInventoryViews();
   redirect(`/dashboard/inventory/${item.id}`);
@@ -192,17 +233,22 @@ export async function updateInventoryItem(formData: FormData) {
   const itemType = enumValue(formData, "itemType", itemTypes, existing.itemType);
   const quantity = optionalInteger(formData, "quantity") ?? existing.quantity;
   const isComputer = existing.computer ? true : formData.get("isComputer") === "on";
+  const status = enumValue(formData, "status", statuses, existing.status);
+  const suppliedAssetTag = identifier(formData, "assetTag");
+  const existingAssetTag = itemType === ItemType.ASSET ? existing.assetTag : null;
+  assertTrackedAssetQuantity(itemType, quantity, existing);
+  assertAssetTag(suppliedAssetTag, itemType);
   if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) throw new Error("A PC must be a single tracked asset, not a supply record.");
   await assertActiveAssignments(categoryId, locationId, existing);
 
   const data = {
     name: requiredText(formData, "name", 255),
-    assetTag: identifier(formData, "assetTag"),
+    assetTag: suppliedAssetTag ?? existingAssetTag,
     categoryId,
     locationId,
     itemType,
     isComputer,
-    status: enumValue(formData, "status", statuses, existing.status),
+    status,
     condition: enumValue(formData, "condition", conditions, existing.condition),
     quantity,
     description: optionalText(formData, "description", 5_000),
@@ -212,17 +258,27 @@ export async function updateInventoryItem(formData: FormData) {
     purchaseDate: optionalDate(formData, "purchaseDate"),
     purchasePrice: optionalPurchasePrice(formData),
     notes: optionalText(formData, "notes", 5_000),
+    lastCheckedAt: optionalDate(formData, "lastCheckedAt"),
   };
-  const changes = updatedFields(existing, data);
-  const action = Object.keys(changes).length === 1 && "locationId" in changes ? AuditAction.MOVED : Object.keys(changes).length === 1 && "status" in changes ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED;
-
-  await prisma.inventoryItem.update({
-    where: { id },
-    data: {
-      ...data,
-      auditEvents: { create: { action, summary: Object.keys(changes).length ? `Updated ${Object.keys(changes).join(", ")}.` : "Inventory record saved with no field changes.", actorId: actor.id, actorName: actor.email, metadata: { changes, activityKind: "record-edit" } } },
-    },
-  });
+  try {
+    await prisma.$transaction(async (transaction) => {
+      const resolvedData = {
+        ...data,
+        assetTag: itemType === ItemType.ASSET && !data.assetTag ? await nextInventoryAssetTag(transaction, { categoryId, locationId, status }) : data.assetTag,
+      };
+      const changes = updatedFields(existing, resolvedData);
+      const action = Object.keys(changes).length === 1 && "locationId" in changes ? AuditAction.MOVED : Object.keys(changes).length === 1 && "status" in changes ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED;
+      await transaction.inventoryItem.update({
+        where: { id },
+        data: {
+          ...resolvedData,
+          auditEvents: { create: { action, summary: Object.keys(changes).length ? `Updated ${Object.keys(changes).join(", ")}.` : "Inventory record saved with no field changes.", actorId: actor.id, actorName: actor.email, metadata: { changes, activityKind: "record-edit" } } },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    throw inventoryWriteError(error);
+  }
 
   refreshInventoryViews(id);
   redirect(`/dashboard/inventory/${id}`);
@@ -253,6 +309,76 @@ export async function retireInventoryItem(formData: FormData) {
 
   refreshInventoryViews(id);
   redirect(`/dashboard/inventory/${id}`);
+}
+
+export async function splitGroupedAsset(formData: FormData) {
+  const actor = await requireWriteAccess();
+  const id = requiredId(formData, "id");
+  const confirmation = requiredText(formData, "confirmation", 16);
+  if (confirmation !== "SPLIT") throw new Error("Type SPLIT to create one record per physical unit.");
+
+  const original = await prisma.inventoryItem.findUnique({ where: { id }, select: { itemType: true, quantity: true, isComputer: true } });
+  if (!original || original.itemType !== ItemType.ASSET || original.quantity <= 1) throw new Error("This record is already an individual asset.");
+  if (original.isComputer) throw new Error("PC and Mac records must be corrected individually so their names, hardware profiles, and network identifiers remain accurate.");
+  const borrowingHistoryCount = await prisma.borrowRequest.count({ where: { inventoryItemId: id } });
+  if (borrowingHistoryCount) throw new Error("This grouped asset has borrowing history and cannot be split automatically. Preserve its history, then create individual replacement records for the physical units.");
+
+  try {
+    await prisma.$transaction(async (transaction) => {
+      const item = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
+      if (item.itemType !== ItemType.ASSET || item.quantity <= 1 || item.isComputer) throw new Error("This record changed and can no longer be split. Refresh the page and try again.");
+      const unitCount = item.quantity;
+      await transaction.inventoryItem.update({
+        where: { id },
+        data: {
+          quantity: 1,
+          auditEvents: { create: { action: AuditAction.UPDATED, summary: `Grouped asset split into ${unitCount} individually tracked units.`, actorId: actor.id, actorName: actor.email, metadata: { source: "grouped-asset-split", originalQuantity: unitCount, activityKind: "record-edit" } } },
+        },
+      });
+      for (let unitNumber = 2; unitNumber <= unitCount; unitNumber += 1) {
+        const assetTag = await nextInventoryAssetTag(transaction, { categoryId: item.categoryId, locationId: item.locationId, status: item.status });
+        await transaction.inventoryItem.create({
+          data: {
+            name: `${item.name} (unit ${unitNumber})`,
+            assetTag,
+            categoryId: item.categoryId,
+            locationId: item.locationId,
+            itemType: ItemType.ASSET,
+            quantity: 1,
+            status: item.status,
+            condition: item.condition,
+            description: item.description,
+            manufacturer: item.manufacturer,
+            model: item.model,
+            purchaseDate: item.purchaseDate,
+            purchasePrice: item.purchasePrice,
+            notes: item.notes,
+            lastCheckedAt: item.lastCheckedAt,
+            auditEvents: { create: { action: AuditAction.CREATED, summary: `Individual asset created from grouped record: unit ${unitNumber} of ${unitCount}.`, actorId: actor.id, actorName: actor.email, metadata: { source: "grouped-asset-split", sourceItemId: item.id, unitNumber, unitCount, activityKind: "record-create" } } },
+          },
+        });
+      }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    throw inventoryWriteError(error);
+  }
+
+  refreshInventoryViews(id);
+  redirect(`/dashboard/inventory/${id}`);
+}
+
+export async function markInventoryItemChecked(formData: FormData) {
+  const actor = await requireWriteAccess();
+  const id = requiredId(formData, "id");
+  const checkedAt = new Date();
+
+  await prisma.$transaction([
+    prisma.inventoryItem.update({ where: { id }, data: { lastCheckedAt: checkedAt } }),
+    prisma.computer.updateMany({ where: { itemId: id }, data: { lastCheckedAt: checkedAt } }),
+    prisma.inventoryAudit.create({ data: { itemId: id, action: AuditAction.UPDATED, summary: "Item inspection recorded.", actorId: actor.id, actorName: actor.email, metadata: { source: "inspection", checkedAt: checkedAt.toISOString() } } }),
+  ]);
+
+  refreshInventoryViews(id);
 }
 
 export async function bulkUpdateInventory(formData: FormData) {
@@ -387,6 +513,7 @@ export async function addComputerDetails(formData: FormData) {
 
   await prisma.$transaction([
     prisma.computer.create({ data: { itemId, ...computerData(formData), lastCheckedAt: new Date() } }),
+    prisma.inventoryItem.update({ where: { id: itemId }, data: { lastCheckedAt: new Date() } }),
     prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: "PC hardware record added.", actorId: actor.id, actorName: actor.email, metadata: { source: "manual" } } }),
   ]);
 
@@ -404,6 +531,7 @@ export async function updateComputerDetails(formData: FormData) {
 
   await prisma.$transaction([
     prisma.computer.update({ where: { id: computer.id }, data }),
+    prisma.inventoryItem.update({ where: { id: itemId }, data: { lastCheckedAt: data.lastCheckedAt } }),
     prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: "PC hardware details updated.", actorId: actor.id, actorName: actor.email, metadata: { changes } } }),
   ]);
 

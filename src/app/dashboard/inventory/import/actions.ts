@@ -7,6 +7,7 @@ import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prism
 import { revalidatePath } from "next/cache";
 
 import { requireWriteAccess } from "@/lib/inventory-auth";
+import { isInventoryAssetTag, nextCategoryAssetTagCode, nextInventoryAssetTag, nextLocationAssetTagCode } from "@/lib/asset-tag";
 import { prisma } from "@/prisma";
 
 export type ImportResult = { errors: string[]; imported: number; previewed: boolean; skipped: number };
@@ -39,6 +40,8 @@ const columnAliases: Record<string, string[]> = {
   storageType: ["storagetype", "disktype"],
   macAddress: ["macaddress", "mac"],
   ipAddress: ["ipaddress", "ip"],
+  hardwareDescription: ["hardwaredescription", "hardwarenotes", "pcdescription"],
+  softwareDescription: ["softwaredescription", "softwarenotes", "pcsoftwarenotes"],
   lastCheckedAt: ["lastcheckedat", "lastchecked", "lastdatechecked"],
   status: ["status"],
   condition: ["condition"],
@@ -276,7 +279,8 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
       const locationKey = normalizedValue(safeLocationName);
       const itemType = enumValue(valueAt(row, "itemType"), Object.values(ItemType), ItemType.ASSET);
       const quantity = parseNumber(valueAt(row, "quantity"), 1, "quantity") ?? 1;
-      const hasComputerDetails = isTrue(valueAt(row, "isComputer")) || ["operatingSystem", "processor", "memoryGb", "macAddress"].some((column) => valueAt(row, column) !== "");
+      const hasComputerDetails = isTrue(valueAt(row, "isComputer")) || ["operatingSystem", "processor", "memoryGb", "macAddress", "hardwareDescription", "softwareDescription"].some((column) => valueAt(row, column) !== "");
+      if (itemType === ItemType.ASSET && quantity !== 1) throw new Error("each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR label. Import each unit as a separate row, or use a supply record for stock.");
       if (hasComputerDetails && (itemType !== ItemType.ASSET || quantity !== 1)) throw new Error("a PC must be a single tracked asset, not a supply record.");
       const legacyChecked = valueAt(row, "legacyChecked");
       const legacyState = legacyInspectionState(legacyChecked);
@@ -290,6 +294,17 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
           ? parseDate(legacyAcquisitionDate, "known acquisition date")
           : null;
       const purchasePrice = parsePurchasePrice(valueAt(row, "purchasePrice"));
+      const status = explicitStatus
+        ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK)
+        : legacyState?.status ?? ItemStatus.OK;
+      const condition = explicitCondition
+        ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD)
+        : legacyState?.condition ?? ItemCondition.GOOD;
+      const suppliedAssetTag = optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase() ?? null;
+      if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
+        throw new Error("asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.");
+      }
+      const lastCheckedAt = parseDate(valueAt(row, "lastCheckedAt"), "last checked date") ?? new Date();
       const notes = legacyNotes(valueAt(row, "notes"), [
         ["Original unit", valueAt(row, "legacyUnit")],
         ["Legacy counter", valueAt(row, "legacyCounter")],
@@ -317,7 +332,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
         await prisma.inventoryItem.create({
           data: {
             name: safeName,
-            assetTag: optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase() ?? null,
+            assetTag: itemType === ItemType.ASSET ? suppliedAssetTag ?? await nextInventoryAssetTag(prisma, { categoryId: cachedCategory.id, locationId: cachedLocation.id, status }) : suppliedAssetTag,
             serialNumber: optionalText(valueAt(row, "serialNumber"), "serial number", 255)?.toUpperCase() ?? null,
             description: optionalText(valueAt(row, "description"), "description", 5_000),
             manufacturer: optionalText(valueAt(row, "manufacturer"), "manufacturer", 255),
@@ -328,12 +343,9 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             itemType,
             isComputer: hasComputerDetails,
             quantity,
-            status: explicitStatus
-              ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK)
-              : legacyState?.status ?? ItemStatus.OK,
-            condition: explicitCondition
-              ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD)
-              : legacyState?.condition ?? ItemCondition.GOOD,
+            status,
+            condition,
+            lastCheckedAt,
             categoryId: cachedCategory.id,
             locationId: cachedLocation.id,
             computer: hasComputerDetails
@@ -348,7 +360,9 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
                     graphics: optionalText(valueAt(row, "graphics"), "graphics", 255),
                     macAddress: optionalText(valueAt(row, "macAddress"), "MAC address", 255)?.toUpperCase() ?? null,
                     ipAddress: optionalText(valueAt(row, "ipAddress"), "IP address", 255),
-                    lastCheckedAt: parseDate(valueAt(row, "lastCheckedAt"), "last checked date") ?? new Date(),
+                    hardwareDescription: optionalText(valueAt(row, "hardwareDescription"), "hardware description", 5_000),
+                    softwareDescription: optionalText(valueAt(row, "softwareDescription"), "software description", 5_000),
+                    lastCheckedAt,
                   },
                 }
               : undefined,
@@ -372,7 +386,10 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
         if (!category) {
           const existingCategory = await transaction.category.findFirst({ where: { name: { equals: safeCategoryName, mode: "insensitive" } }, select: { id: true, isActive: true } });
           if (existingCategory) category = existingCategory;
-          else if (allowCreateSetup) category = await transaction.category.create({ data: { name: safeCategoryName }, select: { id: true, isActive: true } });
+          else if (allowCreateSetup) {
+            const categoryCodes = await transaction.category.findMany({ select: { assetTagCode: true } });
+            category = await transaction.category.create({ data: { name: safeCategoryName, assetTagCode: nextCategoryAssetTagCode(safeCategoryName, categoryCodes.map((entry) => entry.assetTagCode)) }, select: { id: true, isActive: true } });
+          }
           else throw new Error(`category “${safeCategoryName}” does not exist. Enable setup creation or add it in Settings first.`);
         }
         if (!category.isActive) throw new Error(`category “${safeCategoryName}” is inactive. Reactivate it in Settings first.`);
@@ -382,7 +399,8 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
           const existingLocation = await transaction.location.findFirst({ where: { name: { equals: safeLocationName, mode: "insensitive" } }, select: { id: true, isActive: true } });
           if (existingLocation) location = existingLocation;
           if (!location && allowCreateSetup) {
-            location = await transaction.location.create({ data: { name: safeLocationName, roomNumber }, select: { id: true, isActive: true } });
+            const locationCodes = await transaction.location.findMany({ select: { assetTagCode: true } });
+            location = await transaction.location.create({ data: { name: safeLocationName, assetTagCode: nextLocationAssetTagCode(locationCodes.map((entry) => entry.assetTagCode)), roomNumber }, select: { id: true, isActive: true } });
           }
           if (!location) throw new Error(`location “${safeLocationName}” does not exist. Enable setup creation or add it in Settings first.`);
         }
@@ -391,7 +409,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
         await transaction.inventoryItem.create({
           data: {
             name: safeName,
-            assetTag: optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase() ?? null,
+            assetTag: itemType === ItemType.ASSET ? suppliedAssetTag ?? await nextInventoryAssetTag(transaction, { categoryId: category.id, locationId: location.id, status }) : suppliedAssetTag,
             serialNumber: optionalText(valueAt(row, "serialNumber"), "serial number", 255)?.toUpperCase() ?? null,
             description: optionalText(valueAt(row, "description"), "description", 5_000),
             manufacturer: optionalText(valueAt(row, "manufacturer"), "manufacturer", 255),
@@ -402,12 +420,9 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
             itemType,
             isComputer: hasComputerDetails,
             quantity,
-            status: explicitStatus
-              ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK)
-              : legacyState?.status ?? ItemStatus.OK,
-            condition: explicitCondition
-              ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD)
-              : legacyState?.condition ?? ItemCondition.GOOD,
+            status,
+            condition,
+            lastCheckedAt,
             categoryId: category.id,
             locationId: location.id,
             computer: hasComputerDetails
@@ -422,7 +437,9 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
                     graphics: optionalText(valueAt(row, "graphics"), "graphics", 255),
                     macAddress: optionalText(valueAt(row, "macAddress"), "MAC address", 255)?.toUpperCase() ?? null,
                     ipAddress: optionalText(valueAt(row, "ipAddress"), "IP address", 255),
-                    lastCheckedAt: parseDate(valueAt(row, "lastCheckedAt"), "last checked date") ?? new Date(),
+                    hardwareDescription: optionalText(valueAt(row, "hardwareDescription"), "hardware description", 5_000),
+                    softwareDescription: optionalText(valueAt(row, "softwareDescription"), "software description", 5_000),
+                    lastCheckedAt,
                   },
                 }
               : undefined,

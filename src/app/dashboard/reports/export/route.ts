@@ -72,12 +72,56 @@ export async function GET(request: Request) {
     const limitResponse = exportLimitReached(items.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["Asset tag", "Item", "Category", "Location", "Type", "Quantity", "Status", "Condition", "Manufacturer", "Model", "Serial number", "Record created", "Purchase date", "PC operating system", "PC last checked"],
-      ...items.map((item) => [item.assetTag, item.name, item.category.name, item.location.name, item.itemType, item.quantity, item.status, item.condition, item.manufacturer, item.model, item.serialNumber, item.createdAt, item.purchaseDate, item.computer?.operatingSystem, item.computer?.lastCheckedAt]),
+      ["Asset tag", "QR code", "Item", "Category", "Location", "Type", "Quantity", "Status", "Condition", "Manufacturer", "Model", "Serial number", "Record created", "Purchase date", "Last checked", "PC operating system", "PC last checked"],
+      ...items.map((item) => [item.assetTag, item.qrCode, item.name, item.category.name, item.location.name, item.itemType, item.quantity, item.status, item.condition, item.manufacturer, item.model, item.serialNumber, item.createdAt, item.purchaseDate, item.lastCheckedAt, item.computer?.operatingSystem, item.computer?.lastCheckedAt]),
     ]), filename("ceit-inventory", date, hasFilters));
   }
 
   if (!canManageInventory(user.role)) return new Response("Forbidden", { status: 403 });
+
+  if (kind === "pcs") {
+    const where: Prisma.InventoryItemWhereInput = {
+      isComputer: true,
+      ...(appliedDateFilter ? { createdAt: appliedDateFilter } : {}),
+      ...(filters.inventoryStatus ? { status: filters.inventoryStatus } : {}),
+    };
+    const items = await prisma.inventoryItem.findMany({
+      where,
+      include: { category: true, location: true, computer: { include: { software: { orderBy: { name: "asc" } } } }, },
+      orderBy: [{ location: { name: "asc" } }, { name: "asc" }, { assetTag: "asc" }],
+      take: maximumExportRecords + 1,
+    });
+    const limitResponse = exportLimitReached(items.length);
+    if (limitResponse) return limitResponse;
+    return download(csv([
+      ["Asset tag", "QR code", "PC / Mac name", "Category", "Room / location", "Status", "Condition", "Last checked", "Manufacturer", "Model", "Serial number", "Operating system", "OS version", "Processor", "Graphics", "Memory (GB)", "Storage (GB)", "Storage type", "MAC address", "IP address", "Hardware description", "Software description", "Installed software"],
+      ...items.map((item) => [
+        item.assetTag,
+        item.qrCode,
+        item.name,
+        item.category.name,
+        item.location.name,
+        item.status,
+        item.condition,
+        item.lastCheckedAt,
+        item.manufacturer,
+        item.model,
+        item.serialNumber,
+        item.computer?.operatingSystem,
+        item.computer?.osVersion,
+        item.computer?.processor,
+        item.computer?.graphics,
+        item.computer?.memoryGb,
+        item.computer?.storageGb,
+        item.computer?.storageType,
+        item.computer?.macAddress,
+        item.computer?.ipAddress,
+        item.computer?.hardwareDescription,
+        item.computer?.softwareDescription,
+        item.computer?.software.map((software) => [software.name, software.version].filter(Boolean).join(" ")).join("; "),
+      ]),
+    ]), filename("ceit-pc-register", date, hasFilters));
+  }
 
   if (kind === "borrowings") {
     const where: Prisma.BorrowRequestWhereInput = {

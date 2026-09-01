@@ -5,13 +5,16 @@ Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled as
 ## What is included
 
 - Room and location management
-- Item categories, tracked assets, and quantity-based supply records
-- PC hardware details and installed-software records
+- Item categories, individually tracked assets, and quantity-based supply records
+- Per-PC/Mac hardware and software descriptions, structured technical details, and installed-software records
+- Automatic asset tags in the existing `INV-CAT-ST-ROOM-0001` format and a unique QR code for every new equipment record
+- Item-wide last-checked dates, including a one-click inspection record
 - Item status, condition, and location updates with an audit history
 - Printable QR labels that open a mobile-friendly item screen
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Search, filters, sorting, and page navigation for status, room, identifiers, category, type, and condition
 - CSV/XLSX import with flexible column headings and row-level feedback
+- Filterable inventory, PC/Mac register, borrowing, service, and audit CSV exports, plus printable overview and PC/Mac-register PDFs
 - Public borrowing requests from QR labels, with staff approval, return, and history tracking
 - Shared dashboard notes and a paginated activity history that records the responsible user
 - Administrator account management, account deactivation, and password reset
@@ -42,7 +45,7 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
-Then open **Settings** to add rooms and categories, create inventory records, and use **Print QR label** for each tracked PC or asset.
+Then open **Settings** to add rooms and categories. Each setting receives a tag code; future equipment can leave the asset-tag field blank to generate the next compatible `INV-CAT-ST-ROOM-0001` tag and a unique QR code. Create one tracked-asset record per physical PC, TV, or other equipment unit; use a supply record only for shared quantity-based stock. Use **Print QR label** for each individual asset.
 
 ## QR labels in production
 

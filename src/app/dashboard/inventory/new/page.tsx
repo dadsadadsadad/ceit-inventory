@@ -8,16 +8,18 @@ export const dynamic = "force-dynamic";
 
 export default async function NewInventoryItemPage() {
   await requireInventoryManagementPageAccess();
-  const [categories, locations] = await Promise.all([
+  const [categories, locations, pcCounts] = await Promise.all([
     prisma.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.location.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.inventoryItem.groupBy({ by: ["locationId"], where: { isComputer: true }, _count: { _all: true } }),
   ]);
   const ready = categories.length > 0 && locations.length > 0;
+  const pcCountsByLocation = new Map(pcCounts.map((entry) => [entry.locationId, entry._count._all]));
 
   return (
     <div className="page new-item-page"><div className="page-narrow space-y-6">
-      <header><Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add inventory item</h1><p className="muted mt-2 text-sm leading-6">Create a tracked asset, supply record, or PC with complete technical and lifecycle details.</p></header>
-      {!ready ? <div className="notice rounded-lg px-5 py-4 text-sm">Add at least one active category and location in Settings before creating inventory records.</div> : <NewInventoryForm categories={categories} locations={locations} />}
+      <header><Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add inventory item</h1><p className="muted mt-2 text-sm leading-6">Create one individually tracked equipment asset, a supply record, or a PC/Mac with complete technical and lifecycle details.</p></header>
+      {!ready ? <div className="notice rounded-lg px-5 py-4 text-sm">Add at least one active category and location in Settings before creating inventory records.</div> : <NewInventoryForm categories={categories} locations={locations.map((location) => ({ ...location, nextPcNumber: (pcCountsByLocation.get(location.id) ?? 0) + 1 }))} />}
     </div></div>
   );
 }
