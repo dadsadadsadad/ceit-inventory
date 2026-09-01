@@ -31,6 +31,7 @@ type SortDirection = "asc" | "desc";
 type SortField = "assetTag" | "item" | "location" | "stock" | "status";
 
 const pageSize = 25;
+const maximumBulkSelection = 10_000;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sortableFields: SortField[] = ["assetTag", "item", "location", "stock", "status"];
 
@@ -196,7 +197,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       prisma.location.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
       prisma.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
       prisma.inventoryItem.count({ where }),
-      canManage ? prisma.inventoryItem.findMany({ where, select: { id: true } }) : Promise.resolve([]),
+      canManage ? prisma.inventoryItem.findMany({ where, orderBy: { id: "asc" }, select: { id: true }, take: maximumBulkSelection }) : Promise.resolve([]),
     ]);
     locations = availableLocations;
     categories = availableCategories;
@@ -296,7 +297,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
             <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
               <p className="muted text-sm">{totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>
-              {canManage ? <BulkSelectionToggle allItemIds={allMatchingItemIds} selectionKey={persistentSelectionKey} /> : null}
+              {canManage ? <BulkSelectionToggle allItemIds={allMatchingItemIds} selectionKey={persistentSelectionKey} totalRecords={totalRecords} /> : null}
             </div>
 
             <div className="divide-y md:hidden">

@@ -233,11 +233,8 @@ type AccentColorPickerProps = {
 function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPickerProps) {
   const hsv = hexToHsv(color);
   const hexInputId = useId();
-  const [hexDraft, setHexDraft] = useState(color.slice(1));
-
-  useEffect(() => {
-    setHexDraft(color.slice(1));
-  }, [color]);
+  const [hexDraft, setHexDraft] = useState("");
+  const [isEditingHex, setIsEditingHex] = useState(false);
 
   function setColorFromPlane(target: HTMLDivElement, clientX: number, clientY: number) {
     const bounds = target.getBoundingClientRect();
@@ -350,12 +347,17 @@ function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPicke
           <span aria-hidden="true">#</span>
           <input
             id={hexInputId}
-            value={hexDraft}
+            value={isEditingHex ? hexDraft : color.slice(1)}
+            onFocus={() => {
+              setHexDraft(color.slice(1));
+              setIsEditingHex(true);
+            }}
             onChange={handleHexChange}
             onBlur={() => {
               if (!sanitizeHexColor(`#${hexDraft}`)) {
                 setHexDraft(color.slice(1));
               }
+              setIsEditingHex(false);
             }}
             maxLength={6}
             inputMode="text"
