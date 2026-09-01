@@ -3,7 +3,7 @@ import { MaintenanceStatus, Prisma } from "@prisma/client";
 import { auditCategory, auditTrailWhere, parseAuditTrailFilters } from "@/lib/audit-trail";
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { manilaCalendarDate } from "@/lib/manila-date";
-import { parseReportExportFilters, reportDateWhere } from "@/lib/report-export-filters";
+import { borrowingReportStatusFilter, parseReportExportFilters, reportDateWhere } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,19 @@ function filename(stem: string, date: string, hasFilters: boolean) {
   return `${stem}${hasFilters ? "-filtered" : ""}-${date}.csv`;
 }
 
+function borrowingFilenameStem(state: ReturnType<typeof parseReportExportFilters>["borrowingState"]) {
+  if (state === "currently-borrowed") return "ceit-borrowed-items";
+  if (state === "returned") return "ceit-returned-items";
+  return "ceit-borrowing-history";
+}
+
+function borrowingDateWhere(filters: ReturnType<typeof parseReportExportFilters>, range: ReturnType<typeof dateFilter>): Prisma.BorrowRequestWhereInput {
+  if (!range) return {};
+  if (filters.borrowingState === "currently-borrowed") return { processedAt: range };
+  if (filters.borrowingState === "returned") return { returnedAt: range };
+  return { requestedAt: range };
+}
+
 export async function GET(request: Request) {
   const user = await requireInventoryAccess();
   const parameters = new URL(request.url).searchParams;
@@ -60,7 +73,7 @@ export async function GET(request: Request) {
   }
 
   const appliedDateFilter = dateFilter(filters.dateRange);
-  const hasFilters = Boolean(appliedDateFilter || filters.inventoryStatus || filters.pcOnly || filters.borrowingStatus);
+  const hasFilters = Boolean(appliedDateFilter || filters.inventoryStatus || filters.pcOnly || filters.borrowingStatus || filters.borrowingState !== "all");
 
   if (kind === "inventory") {
     const where: Prisma.InventoryItemWhereInput = {
@@ -124,17 +137,18 @@ export async function GET(request: Request) {
   }
 
   if (kind === "borrowings") {
+    const borrowingStatus = borrowingReportStatusFilter(filters);
     const where: Prisma.BorrowRequestWhereInput = {
-      ...(appliedDateFilter ? { requestedAt: appliedDateFilter } : {}),
-      ...(filters.borrowingStatus ? { status: filters.borrowingStatus } : {}),
+      ...borrowingDateWhere(filters, appliedDateFilter),
+      ...(borrowingStatus ? { status: borrowingStatus } : {}),
     };
     const requests = await prisma.borrowRequest.findMany({ where, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { requestedAt: "desc" }, take: maximumExportRecords + 1 });
     const limitResponse = exportLimitReached(requests.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"],
+      ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Checked out / staff processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"],
       ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes]),
-    ]), filename("ceit-borrowing-history", date, hasFilters));
+    ]), filename(borrowingFilenameStem(filters.borrowingState), date, hasFilters));
   }
 
   if (kind === "maintenance") {

@@ -5,15 +5,17 @@ import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { startOfManilaDay } from "@/lib/manila-date";
-import { exportPeriods } from "@/lib/report-export-filters";
+import { borrowingReportStates, exportPeriods } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
+  borrowingState?: string | string[];
   borrowingStatus?: string | string[];
   from?: string | string[];
   inventoryStatus?: string | string[];
+  kind?: string | string[];
   pcOnly?: string | string[];
   period?: string | string[];
   to?: string | string[];
@@ -45,8 +47,15 @@ function periodLabel(period: (typeof exportPeriods)[number]) {
   return labels[period];
 }
 
-function borrowStatusLabel(status: BorrowStatus) {
-  return status.toLowerCase().replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
+function borrowingStateLabel(state: (typeof borrowingReportStates)[number]) {
+  const labels: Record<(typeof borrowingReportStates)[number], string> = {
+    all: "All lending activity",
+    "currently-borrowed": "Currently borrowed (includes return requests)",
+    returned: "Returned items",
+    requested: "Pending requests",
+    declined: "Declined requests",
+  };
+  return labels[state];
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -67,9 +76,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const statusMap = new Map(statusCounts.map((entry) => [entry.status, entry._count._all]));
   const populatedCategories = categoryCounts.filter((category) => category._count.items > 0).sort((left, right) => right._count.items - left._count.items).slice(0, 8);
   const populatedLocations = locationCounts.filter((location) => location._count.items > 0).sort((left, right) => right._count.items - left._count.items).slice(0, 8);
+  const availableReportKinds = ["inventory", ...(canManage ? ["pcs", "borrowings", "maintenance"] : []), ...(canAdmin ? ["activity"] : [])] as const;
+  const selectedKind = validValue(first(search.kind), availableReportKinds) || "inventory";
   const selectedPeriod = validValue(first(search.period), exportPeriods) || "all";
   const selectedInventoryStatus = validValue(first(search.inventoryStatus), Object.values(ItemStatus));
-  const selectedBorrowingStatus = validValue(first(search.borrowingStatus), Object.values(BorrowStatus));
+  const selectedBorrowingState = validValue(first(search.borrowingState), borrowingReportStates) || "all";
   const selectedFrom = first(search.from)?.slice(0, 10) ?? "";
   const selectedTo = first(search.to)?.slice(0, 10) ?? "";
   const pcOnly = first(search.pcOnly) === "1";
@@ -83,7 +94,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory overview</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Use the live summaries and filtered exports for planning, accountability, and department reporting.</p>
           </div>
-          <div className="flex flex-wrap gap-3"><a href="/dashboard/reports/export/pdf" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Download overview PDF</a>{canManage ? <a href="/dashboard/reports/export/pdf?kind=pcs" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">PC register PDF</a> : null}</div>
+          <div className="flex flex-wrap gap-3"><a href="/dashboard/reports/export/pdf" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Download overview PDF</a>{canManage ? <><a href="/dashboard/reports/export/pdf?kind=pcs" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">PC register PDF</a><Link href="/dashboard/reports?kind=borrowings" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Lending reports</Link></> : null}</div>
         </header>
 
         <section className={`grid gap-4 sm:grid-cols-2 ${canManage ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
@@ -104,12 +115,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </div>
             {canAdmin ? <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">Open audit trail</Link> : null}
           </div>
-          <form action="/dashboard/reports/export" method="get" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
+          <form action="/dashboard/reports/export" method="get" className="reports-export-form mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Export data</span>
-              <select name="kind" defaultValue="inventory" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+              <select name="kind" defaultValue={selectedKind} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
                 <option value="inventory">Inventory records</option>
-                {canManage ? <><option value="pcs">PC / Mac register</option><option value="borrowings">Borrowing history</option><option value="maintenance">Service requests</option></> : null}
+                {canManage ? <><option value="pcs">PC / Mac register</option><option value="borrowings">Borrowed &amp; returned items</option><option value="maintenance">Service requests</option></> : null}
                 {canAdmin ? <option value="activity">Audit trail</option> : null}
               </select>
             </label>
@@ -135,10 +146,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               </select>
             </label>
             {canManage ? <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">Borrowing status</span>
-              <select name="borrowingStatus" defaultValue={selectedBorrowingStatus} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
-                <option value="">All requests</option>
-                {Object.values(BorrowStatus).map((status) => <option key={status} value={status}>{borrowStatusLabel(status)}</option>)}
+              <span className="muted text-xs font-bold uppercase tracking-wide">Lending report view</span>
+              <select name="borrowingState" defaultValue={selectedBorrowingState} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+                {borrowingReportStates.map((state) => <option key={state} value={state}>{borrowingStateLabel(state)}</option>)}
               </select>
             </label> : null}
             <label className="flex min-h-11 items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2.5 text-sm font-semibold">
@@ -151,7 +161,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               <Link href="/dashboard/reports" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Clear</Link>
             </div>
           </form>
-          <p className="muted mt-4 text-xs leading-5">Dates apply to every export. Inventory status applies to inventory and PC/Mac exports; PCs-only applies to inventory records; borrowing status applies to borrowing history. PC/Mac PDFs use one readable profile per device rather than cramming QR and configuration text into a narrow table.</p>
+          {canManage ? <div className="reports-lending-shortcuts mt-5" aria-label="Lending report shortcuts">
+            <div><p className="text-sm font-semibold">Lending-ready exports</p><p className="muted mt-1 text-xs leading-5">Open the report form with a preselected borrowed or returned view, then set any timeframe or custom date range before downloading CSV or PDF.</p></div>
+            <div className="flex flex-wrap gap-2"><Link href="/dashboard/reports?kind=borrowings&borrowingState=currently-borrowed" className="reports-shortcut rounded-lg px-3 py-2 text-sm font-semibold">Currently borrowed</Link><Link href="/dashboard/reports?kind=borrowings&borrowingState=returned" className="reports-shortcut rounded-lg px-3 py-2 text-sm font-semibold">Returned items</Link></div>
+          </div> : null}
+          <p className="muted mt-4 text-xs leading-5">Dates apply to every export. Inventory status applies to inventory and PC/Mac exports; PCs-only applies to inventory records; the lending view applies to borrowed and returned items. Borrowed reports use checkout dates, returned reports use completed return dates, and currently borrowed includes requests awaiting a return confirmation. PC/Mac PDFs use one readable profile per device rather than cramming QR and configuration text into a narrow table.</p>
         </section>
 
         <section className="card rounded-lg p-5 sm:p-6">

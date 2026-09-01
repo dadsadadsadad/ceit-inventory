@@ -1444,6 +1444,62 @@ summary:focus-visible {
   }
 }
 
+/* Reports deliberately use the shared form primitives, with just enough
+   structure to make the many filter choices scan as one calm workflow. */
+.reports-export-form {
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  padding-top: 1.25rem;
+}
+
+.reports-lending-shortcuts {
+  align-items: center;
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--accent-soft) 64%, transparent), transparent 58%),
+    var(--surface-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.reports-shortcut {
+  background: color-mix(in srgb, var(--surface) 78%, var(--accent-soft));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  color: var(--foreground);
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.reports-shortcut:hover,
+.reports-shortcut:focus-visible {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  filter: grayscale(0.24);
+  opacity: 0.58;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .reports-lending-shortcuts {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 @media print {
   .page::before,
   .page-inner > header:not(.card)::before,

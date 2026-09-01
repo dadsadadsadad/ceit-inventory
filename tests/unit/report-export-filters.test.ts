@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseReportExportFilters } from "@/lib/report-export-filters";
+import { borrowingReportStatusFilter, parseReportExportFilters } from "@/lib/report-export-filters";
 
 describe("report export filters", () => {
   const now = new Date("2026-09-01T05:30:00.000Z");
@@ -25,6 +25,20 @@ describe("report export filters", () => {
     expect(filters.inventoryStatus).toBe("DEFECTIVE");
     expect(filters.pcOnly).toBe(true);
     expect(filters.borrowingStatus).toBe("RETURNED");
+  });
+
+  it("groups currently borrowed reports with pending return confirmations", () => {
+    const filters = parseReportExportFilters(new URLSearchParams({ borrowingState: "currently-borrowed" }), now);
+
+    expect(filters.borrowingState).toBe("currently-borrowed");
+    expect(borrowingReportStatusFilter(filters)).toEqual({ in: ["BORROWED", "RETURN_REQUESTED"] });
+  });
+
+  it("supports a returned-items report view and rejects invalid views", () => {
+    const filters = parseReportExportFilters(new URLSearchParams({ borrowingState: "returned" }), now);
+
+    expect(borrowingReportStatusFilter(filters)).toBe("RETURNED");
+    expect(() => parseReportExportFilters(new URLSearchParams({ borrowingState: "checked-out" }), now)).toThrow("Invalid lending report view.");
   });
 
   it("rejects invalid and reversed ranges", () => {

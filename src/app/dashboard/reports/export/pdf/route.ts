@@ -5,7 +5,7 @@ import { auditActionLabel, auditActorLabel, auditCategory, auditChangedFields, a
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate, manilaCalendarDate, startOfManilaDay } from "@/lib/manila-date";
-import { parseReportExportFilters, reportDateWhere, type ReportExportFilters } from "@/lib/report-export-filters";
+import { borrowingReportStateLabel, borrowingReportStatusFilter, parseReportExportFilters, reportDateWhere, type ReportExportFilters } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -259,7 +259,14 @@ function dateWhere(range: ReportExportFilters["dateRange"]) {
   return Object.keys(where).length ? where : undefined;
 }
 
-function filterSummary(filters: ReportExportFilters, options: { audit?: boolean; borrowingStatus?: boolean; inventoryStatus?: boolean; pcOnly?: boolean } = {}) {
+function borrowingDateWhere(filters: ReportExportFilters, range: ReturnType<typeof dateWhere>): Prisma.BorrowRequestWhereInput {
+  if (!range) return {};
+  if (filters.borrowingState === "currently-borrowed") return { processedAt: range };
+  if (filters.borrowingState === "returned") return { returnedAt: range };
+  return { requestedAt: range };
+}
+
+function filterSummary(filters: ReportExportFilters, options: { audit?: boolean; borrowingState?: boolean; borrowingStatus?: boolean; inventoryStatus?: boolean; pcOnly?: boolean } = {}) {
   const segments: string[] = [];
   if (filters.dateRange.from || filters.dateRange.toExclusive) {
     const from = filters.dateRange.from ? reportDate(filters.dateRange.from) : "the beginning";
@@ -269,6 +276,7 @@ function filterSummary(filters: ReportExportFilters, options: { audit?: boolean;
     segments.push("Date range: all time");
   }
   if (options.inventoryStatus && filters.inventoryStatus) segments.push(`Inventory status: ${inventoryStatusLabel(filters.inventoryStatus)}`);
+  if (options.borrowingState && filters.borrowingState !== "all") segments.push(`Lending view: ${borrowingReportStateLabel(filters.borrowingState)}`);
   if (options.borrowingStatus && filters.borrowingStatus) segments.push(`Borrowing status: ${humanize(filters.borrowingStatus)}`);
   if (options.pcOnly && filters.pcOnly) segments.push("PC / Mac only");
   if (options.audit) segments.push("Audit event timestamp basis");
@@ -280,6 +288,7 @@ function hasReportFilters(filters: ReportExportFilters, options: { borrowing?: b
     filters.dateRange.from
     || filters.dateRange.toExclusive
     || (options.inventory && filters.inventoryStatus)
+    || (options.borrowing && filters.borrowingState !== "all")
     || (options.borrowing && filters.borrowingStatus)
     || (options.pcOnly && filters.pcOnly),
   );
@@ -441,10 +450,11 @@ async function createInventoryPdf(filters: ReportExportFilters, calendarDate: st
 
 async function createBorrowingsPdf(filters: ReportExportFilters, calendarDate: string) {
   const appliedDateFilter = dateWhere(filters.dateRange);
+  const borrowingStatus = borrowingReportStatusFilter(filters);
   const requests = await prisma.borrowRequest.findMany({
     where: {
-      ...(appliedDateFilter ? { requestedAt: appliedDateFilter } : {}),
-      ...(filters.borrowingStatus ? { status: filters.borrowingStatus } : {}),
+      ...borrowingDateWhere(filters, appliedDateFilter),
+      ...(borrowingStatus ? { status: borrowingStatus } : {}),
     },
     include: { inventoryItem: { select: { assetTag: true, name: true } } },
     orderBy: { requestedAt: "desc" },
@@ -453,14 +463,17 @@ async function createBorrowingsPdf(filters: ReportExportFilters, calendarDate: s
   if (requests.length > maximumPdfRecords) return new Response(`This export exceeds ${maximumPdfRecords.toLocaleString()} records. Narrow the data before exporting.`, { status: 413 });
   const today = startOfManilaDay();
   const active = requests.filter((request) => request.status === BorrowStatus.BORROWED || request.status === BorrowStatus.RETURN_REQUESTED);
+  const returned = requests.filter((request) => request.status === BorrowStatus.RETURNED);
+  const reportTitle = filters.borrowingState === "currently-borrowed" ? "Borrowed items" : filters.borrowingState === "returned" ? "Returned items" : "Borrowing history";
+  const filenameStem = filters.borrowingState === "currently-borrowed" ? "ceit-borrowed-items" : filters.borrowingState === "returned" ? "ceit-returned-items" : "ceit-borrowing-history";
 
-  const { document, writer } = await reportDocument("Borrowing history", "Filtered equipment borrowing history");
-  writer.addBody("A filtered history of borrowing requests, handoffs, return activity, and expected return dates.", 10, mutedColor);
-  writer.addBody(filterSummary(filters, { borrowingStatus: true }), 8.5, mutedColor);
+  const { document, writer } = await reportDocument(reportTitle, "Filtered equipment lending register");
+  writer.addBody("A filtered history of borrowing requests, handoffs, return activity, and expected return dates. Currently borrowed includes return requests awaiting staff confirmation; date filters use checkout dates for borrowed items and completion dates for returned items.", 10, mutedColor);
+  writer.addBody(filterSummary(filters, { borrowingState: true, borrowingStatus: true }), 8.5, mutedColor);
   writer.addHeading("Borrowing snapshot");
   writer.addMetricRow([
     { label: "Matching requests", value: requests.length.toLocaleString() },
-    { label: "Currently out", value: active.length.toLocaleString() },
+    { label: filters.borrowingState === "returned" ? "Returned" : "Currently out", value: (filters.borrowingState === "returned" ? returned.length : active.length).toLocaleString() },
     { label: "Overdue", value: active.filter((request) => request.expectedReturnDate < today).length.toLocaleString() },
   ]);
   writer.addHeading("Borrowing records");
@@ -476,7 +489,7 @@ async function createBorrowingsPdf(filters: ReportExportFilters, calendarDate: s
     { fontSize: 8, maxCellCharacters: 150, widths: [1.1, 1.1, 1.34, 0.84, 1.35] },
   );
   writer.finish();
-  return documentResponse(document, `ceit-borrowing-history${hasReportFilters(filters, { borrowing: true }) ? "-filtered" : ""}-${calendarDate}.pdf`);
+  return documentResponse(document, `${filenameStem}${hasReportFilters(filters, { borrowing: true }) ? "-filtered" : ""}-${calendarDate}.pdf`);
 }
 
 async function createMaintenancePdf(filters: ReportExportFilters, calendarDate: string) {
@@ -536,7 +549,7 @@ async function createAuditPdf(parameters: URLSearchParams, calendarDate: string)
   const { document, writer } = await reportDocument("Audit trail", "Filtered inventory audit trail");
   writer.addBody("A detailed, time-stamped operational record of inventory changes, scans, borrowing activity, maintenance operations, imports, and label printing.", 10, mutedColor);
   writer.addBody([
-    filterSummary({ borrowingStatus: undefined, dateRange: filters.dateRange, inventoryStatus: undefined, pcOnly: false, period: filters.period }, { audit: true }),
+    filterSummary({ borrowingState: "all", borrowingStatus: undefined, dateRange: filters.dateRange, inventoryStatus: undefined, pcOnly: false, period: filters.period }, { audit: true }),
     filters.action ? `Action: ${auditActionLabel(filters.action)}` : null,
     filters.actor ? `User: ${filters.actor}` : null,
     filters.query ? `Search: ${filters.query}` : null,
