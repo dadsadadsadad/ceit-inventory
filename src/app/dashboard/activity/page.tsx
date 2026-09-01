@@ -132,6 +132,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
   const exportParameters = auditTrailSearchParameters(filters);
   exportParameters.set("kind", "activity");
   const exportHref = `/dashboard/reports/export?${exportParameters.toString()}`;
+  const pdfExportHref = `/dashboard/reports/export/pdf?${exportParameters.toString()}`;
 
   return (
     <div className="page activity-page">
@@ -143,7 +144,8 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
             <p className="muted mt-2 max-w-3xl text-sm leading-6">Search the complete, time-stamped history of inventory records, borrowing operations, maintenance activity, QR scans, imports, and label printing.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <a href={exportHref} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Export current results</a>
+            <a href={exportHref} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Export CSV</a>
+            <a href={pdfExportHref} className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Export PDF</a>
             <Link href="/dashboard" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Back to dashboard</Link>
           </div>
         </header>

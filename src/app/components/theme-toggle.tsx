@@ -570,7 +570,7 @@ export function ThemeToggle() {
           role="dialog"
           aria-modal="false"
           aria-labelledby={headingId}
-          className="appearance-popover absolute bottom-14 right-0 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-[var(--shadow)]"
+          className="appearance-popover absolute bottom-14 right-0 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-[var(--shadow)]"
         >
           <div className="mb-4 flex items-start gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">

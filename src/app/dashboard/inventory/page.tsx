@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
-import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
@@ -291,6 +291,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         </form>
 
         {search.bulk === "updated" ? <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">The selected inventory records were updated.</div> : null}
+        {search.bulk === "deleted" ? <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">The selected inventory records were permanently deleted.</div> : null}
 
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">Inventory could not be loaded. Confirm the database connection and try again.</div>
@@ -298,7 +299,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           <div className="notice rounded-lg px-5 py-4 text-sm">No records match these filters. {canManage ? "Add an item or import an existing file to get started." : "Try clearing a filter."}</div>
         ) : (
           <InventoryFormContainer canManage={canManage}>
-            {canManage ? <InventoryBulkActions allItemIds={allMatchingItemIds} clearSelectionOnLoad={search.bulk === "updated"} locations={locations.map((location) => ({ label: location.name, value: location.id }))} selectionKey={persistentSelectionKey} statuses={Object.values(ItemStatus).map((status) => ({ label: inventoryStatusLabel(status), value: status }))} conditions={Object.values(ItemCondition).map((condition) => ({ label: enumLabel(condition), value: condition }))} /> : null}
+            {canManage ? <InventoryBulkActions allItemIds={allMatchingItemIds} canPermanentlyDelete={canManageAdministration(user.role)} clearSelectionOnLoad={search.bulk === "updated" || search.bulk === "deleted"} locations={locations.map((location) => ({ label: location.name, value: location.id }))} selectionKey={persistentSelectionKey} statuses={Object.values(ItemStatus).filter((status) => status !== ItemStatus.RETIRED).map((status) => ({ label: inventoryStatusLabel(status), value: status }))} conditions={Object.values(ItemCondition).map((condition) => ({ label: enumLabel(condition), value: condition }))} /> : null}
           <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
             <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
               <p className="muted text-sm">{totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>

@@ -4,6 +4,7 @@ import type { BorrowStatus, Prisma } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
+import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowStatus, borrowStatuses } from "@/lib/borrow-status";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 import { formatManilaDate } from "@/lib/manila-date";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = { page?: string | string[]; q?: string | string[]; status?: string | string[] };
 type BorrowingRecord = Prisma.BorrowRequestGetPayload<{
-  include: { inventoryItem: { select: { assetTag: true; id: true; name: true; quantity: true } } };
+  include: { inventoryItem: { select: { assetTag: true; id: true; name: true; quantity: true; status: true } } };
 }>;
 
 const pageSize = 25;
@@ -106,6 +107,12 @@ function formatDateTime(value: Date) {
   return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+function inventoryAvailabilityLabel(item: BorrowingRecord["inventoryItem"]) {
+  if (item.status === "DEPLOYED") return "Checked out";
+  if (!canBorrowInventoryStatus(item.status)) return item.status.toLowerCase().replaceAll("_", " ");
+  return `${item.quantity} available`;
+}
+
 function BorrowingActions({ request }: { request: BorrowingRecord }) {
   if (request.status === borrowStatus.REQUESTED) {
     return (
@@ -166,7 +173,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
     currentPage = Math.min(requestedPage, totalPages);
     requests = await prisma.borrowRequest.findMany({
       where,
-      include: { inventoryItem: { select: { assetTag: true, id: true, name: true, quantity: true } } },
+      include: { inventoryItem: { select: { assetTag: true, id: true, name: true, quantity: true, status: true } } },
       orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
@@ -227,7 +234,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
                   </div>
                   <BorrowerDetails request={request} />
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><p className="muted text-xs font-bold uppercase tracking-wide">Quantity</p><p className="mt-1">{request.requestedQuantity} requested · {request.inventoryItem.quantity} available</p></div>
+                    <div><p className="muted text-xs font-bold uppercase tracking-wide">Quantity</p><p className="mt-1">{request.requestedQuantity} requested · {inventoryAvailabilityLabel(request.inventoryItem)}</p></div>
                     <div><p className="muted text-xs font-bold uppercase tracking-wide">Return by</p><time className="mt-1 block" dateTime={request.expectedReturnDate.toISOString()}>{formatDate(request.expectedReturnDate)}</time></div>
                   </div>
                   <div><p className="muted text-xs font-bold uppercase tracking-wide">Purpose</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.purpose}</p></div>
@@ -254,7 +261,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
                 <tbody>
                   {requests.map((request) => (
                     <tr key={request.id} className="table-row border-b align-top last:border-0">
-                      <td className="px-5 py-4 text-sm"><Link href={`/dashboard/inventory/${request.inventoryItem.id}`} className="accent-link font-semibold">{request.inventoryItem.name}</Link><p className="muted mt-1 text-xs">{request.inventoryItem.assetTag ?? "No asset tag"} · {request.inventoryItem.quantity} available</p></td>
+                      <td className="px-5 py-4 text-sm"><Link href={`/dashboard/inventory/${request.inventoryItem.id}`} className="accent-link font-semibold">{request.inventoryItem.name}</Link><p className="muted mt-1 text-xs">{request.inventoryItem.assetTag ?? "No asset tag"} · {inventoryAvailabilityLabel(request.inventoryItem)}</p></td>
                       <td className="px-5 py-4"><BorrowerDetails request={request} /></td>
                       <td className="px-5 py-4 text-sm"><p>{request.requestedQuantity} requested</p><p className="muted mt-1">Return by {formatDate(request.expectedReturnDate)}</p><p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">{request.purpose}</p>{request.staffNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Staff: {request.staffNotes}</p> : null}{request.returnRequestNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Borrower return note: {request.returnRequestNotes}</p> : null}</td>
                       <td className="px-5 py-4"><span className={`${borrowStatusClass(request.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{borrowStatusLabel(request.status)}</span><p className="muted mt-3 max-w-48 text-xs leading-5">Requested {formatDateTime(request.requestedAt)}</p>{request.returnRequestedAt ? <p className="muted mt-2 max-w-48 text-xs leading-5">Return requested {formatDateTime(request.returnRequestedAt)}</p> : null}{request.processedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Processed by {request.processedByName}{request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}</p> : null}{request.returnedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Returned by {request.returnedByName}{request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}</p> : null}</td>
