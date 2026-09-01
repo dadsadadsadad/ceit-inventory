@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
 
-import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { startOfManilaDay } from "@/lib/manila-date";
 import { exportPeriods } from "@/lib/report-export-filters";
@@ -52,6 +52,7 @@ function borrowStatusLabel(status: BorrowStatus) {
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const [user, search] = await Promise.all([requireInventoryAccess(), searchParams]);
   const canManage = canManageInventory(user.role);
+  const canAdmin = canManageAdministration(user.role);
   const today = startOfManilaDay();
   const [itemCount, statusCounts, categoryCounts, locationCounts, openTicketCount, activeBorrowCount, overdueBorrowCount, acquisitionSummary] = await Promise.all([
     prisma.inventoryItem.count(),
@@ -101,14 +102,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               <h2 id="filtered-export-heading" className="mt-1 text-lg font-semibold">Create a focused operational export</h2>
               <p className="muted mt-1 max-w-3xl text-sm leading-6">Use a timeframe or custom dates. Inventory dates use record creation, borrowing dates use request submission, and audit dates use the recorded event time.</p>
             </div>
-            {canManage ? <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">View activity history</Link> : null}
+            {canAdmin ? <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">Open audit trail</Link> : null}
           </div>
           <form action="/dashboard/reports/export" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Export data</span>
               <select name="kind" defaultValue="inventory" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
                 <option value="inventory">Inventory records</option>
-                {canManage ? <><option value="borrowings">Borrowing history</option><option value="maintenance">Service requests</option><option value="activity">Audit trail</option></> : null}
+                {canManage ? <><option value="borrowings">Borrowing history</option><option value="maintenance">Service requests</option></> : null}
+                {canAdmin ? <option value="activity">Audit trail</option> : null}
               </select>
             </label>
             <label>

@@ -1,6 +1,7 @@
 import { MaintenanceStatus, Prisma } from "@prisma/client";
 
-import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { auditCategory, auditTrailWhere, parseAuditTrailFilters } from "@/lib/audit-trail";
+import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { manilaCalendarDate } from "@/lib/manila-date";
 import { parseReportExportFilters, reportDateWhere } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
@@ -104,7 +105,15 @@ export async function GET(request: Request) {
   }
 
   if (kind === "activity") {
-    const where: Prisma.InventoryAuditWhereInput = appliedDateFilter ? { createdAt: appliedDateFilter } : {};
+    if (!canManageAdministration(user.role)) return new Response("Forbidden", { status: 403 });
+    let auditFilters: ReturnType<typeof parseAuditTrailFilters>;
+    try {
+      auditFilters = parseAuditTrailFilters(parameters);
+    } catch (error) {
+      return new Response(error instanceof Error ? error.message : "Invalid audit filters.", { status: 400 });
+    }
+    const where = auditTrailWhere(auditFilters);
+    const hasAuditFilters = Boolean(auditFilters.dateRange.from || auditFilters.dateRange.toExclusive || auditFilters.action || auditFilters.actor || auditFilters.query);
     const activity = await prisma.inventoryAudit.findMany({
       where,
       include: { item: { select: { assetTag: true, name: true } } },
@@ -114,9 +123,9 @@ export async function GET(request: Request) {
     const limitResponse = exportLimitReached(activity.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["When", "Action", "Item", "Asset tag", "User", "Summary"],
-      ...activity.map((event) => [event.createdAt, event.action, event.item.name, event.item.assetTag, event.actorName ?? (event.actorId ? "Former user" : "System"), event.summary]),
-    ]), filename("ceit-audit-trail", date, hasFilters));
+      ["Audit ID", "When", "Category", "Action", "Item", "Asset tag", "User", "Summary", "Metadata"],
+      ...activity.map((event) => [event.id, event.createdAt, auditCategory(event), event.action, event.item.name, event.item.assetTag, event.actorName ?? (event.actorId ? "Former user" : "System / public"), event.summary, event.metadata ? JSON.stringify(event.metadata) : ""]),
+    ]), filename("ceit-audit-trail", date, hasAuditFilters));
   }
 
   return new Response("Unknown export", { status: 400 });
