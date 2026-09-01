@@ -1,9 +1,10 @@
-import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
+import { BorrowStatus, ItemStatus, MaintenanceStatus, Prisma } from "@prisma/client";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate, manilaCalendarDate, startOfManilaDay } from "@/lib/manila-date";
+import { parseReportExportFilters, reportDateWhere } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ const pageSize: [number, number] = [595.28, 841.89];
 const pageMargin = 44;
 const pageBottom = 48;
 const pageWidth = pageSize[0] - pageMargin * 2;
+const maximumPcExportRecords = 10_000;
 const textColor = rgb(0.12, 0.1, 0.08);
 const mutedColor = rgb(0.36, 0.33, 0.3);
 const accentColor = rgb(0.78, 0.24, 0.04);
@@ -149,9 +151,96 @@ function createReportWriter(document: PDFDocument, regular: PDFFont, bold: PDFFo
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await requireInventoryAccess();
   const canManage = canManageInventory(user.role);
+  const parameters = new URL(request.url).searchParams;
+  const kind = parameters.get("kind");
+
+  if (kind === "pcs") {
+    if (!canManage) return new Response("Forbidden", { status: 403 });
+    let filters: ReturnType<typeof parseReportExportFilters>;
+    try {
+      filters = parseReportExportFilters(parameters);
+    } catch (error) {
+      return new Response(error instanceof Error ? error.message : "Invalid export filters.", { status: 400 });
+    }
+    const dateWhere = reportDateWhere(filters.dateRange);
+    const where: Prisma.InventoryItemWhereInput = {
+      isComputer: true,
+      ...(Object.keys(dateWhere).length ? { createdAt: dateWhere } : {}),
+      ...(filters.inventoryStatus ? { status: filters.inventoryStatus } : {}),
+    };
+    const pcs = await prisma.inventoryItem.findMany({
+      where,
+      include: { category: true, location: true, computer: { include: { software: { orderBy: { name: "asc" } } } } },
+      orderBy: [{ location: { name: "asc" } }, { name: "asc" }, { assetTag: "asc" }],
+      take: maximumPcExportRecords + 1,
+    });
+    if (pcs.length > maximumPcExportRecords) {
+      return new Response(`This export exceeds ${maximumPcExportRecords.toLocaleString()} records. Narrow the data before exporting.`, { status: 413 });
+    }
+
+    const document = await PDFDocument.create();
+    document.setTitle("CEIT PC and Mac Register");
+    document.setAuthor("CEIT Inventory");
+    document.setSubject("Individually tracked PC and Mac register");
+    const regular = await document.embedFont(StandardFonts.Helvetica);
+    const bold = await document.embedFont(StandardFonts.HelveticaBold);
+    const firstPage = document.addPage(pageSize);
+    const writer = createReportWriter(document, regular, bold, firstPage, firstPage.getHeight() - 150);
+    const calendarDate = manilaCalendarDate();
+
+    firstPage.drawText("CEIT INVENTORY", { x: pageMargin, y: firstPage.getHeight() - 70, size: 11, font: bold, color: accentColor });
+    firstPage.drawText("PC and Mac register", { x: pageMargin, y: firstPage.getHeight() - 104, size: 25, font: bold, color: textColor });
+    firstPage.drawText(`Generated ${reportDate(new Date())}`, { x: pageMargin, y: firstPage.getHeight() - 124, size: 10, font: regular, color: mutedColor });
+    writer.addBody("One row per individually tracked PC or Mac, including its asset tag, QR identifier, room, technical configuration, installed software, and latest inspection date.", 10, mutedColor);
+    writer.addHeading("Register snapshot");
+    writer.addMetricRow([
+      { label: "PC / Mac records", value: pcs.length.toLocaleString() },
+      { label: "Checked records", value: pcs.filter((item) => item.lastCheckedAt).length.toLocaleString() },
+      { label: "Needs attention", value: pcs.filter((item) => item.status === ItemStatus.DEFECTIVE || item.status === ItemStatus.NOT_TESTED).length.toLocaleString() },
+    ]);
+    writer.addHeading("Tracked PC and Mac records");
+    writer.addTable(
+      ["Asset tag", "PC / Mac", "Room", "Last checked", "Configuration"],
+      pcs.map((item) => {
+        const computer = item.computer;
+        const hardware = [
+          computer?.processor,
+          computer?.memoryGb === null || computer?.memoryGb === undefined ? null : `${computer.memoryGb} GB RAM`,
+          computer?.storageGb === null || computer?.storageGb === undefined ? null : `${computer.storageGb} GB ${computer.storageType ?? "storage"}`,
+          computer?.graphics,
+          computer?.hardwareDescription,
+        ].filter(Boolean).join(" · ");
+        const software = [
+          [computer?.operatingSystem, computer?.osVersion].filter(Boolean).join(" "),
+          computer?.softwareDescription,
+          computer?.software.map((entry) => [entry.name, entry.version].filter(Boolean).join(" ")).join(", "),
+        ].filter(Boolean).join(" · ");
+        return [
+          item.assetTag ?? "Not assigned",
+          `${item.name}\nQR: ${item.qrCode}\n${inventoryStatusLabel(item.status)}`,
+          item.location.name,
+          reportDate(item.lastCheckedAt ?? computer?.lastCheckedAt ?? item.createdAt),
+          [hardware && `Hardware: ${hardware}`, software && `Software: ${software}`].filter(Boolean).join("\n"),
+        ];
+      }),
+    );
+    writer.finish();
+    const bytes = await document.save();
+    const body = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(body).set(bytes);
+    return new Response(body, {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": `attachment; filename="ceit-pc-register-${calendarDate}.pdf"`,
+        "Content-Type": "application/pdf",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
   const today = startOfManilaDay();
   const calendarDate = manilaCalendarDate();
   const [itemCount, statusCounts, categoryCounts, locationCounts, openTicketCount, activeBorrowCount, overdueBorrowCount] = await Promise.all([

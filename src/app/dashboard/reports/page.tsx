@@ -83,7 +83,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory overview</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Use the live summaries and filtered exports for planning, accountability, and department reporting.</p>
           </div>
-          <a href="/dashboard/reports/export/pdf" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Download overview PDF</a>
+          <div className="flex flex-wrap gap-3"><a href="/dashboard/reports/export/pdf" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Download overview PDF</a>{canManage ? <a href="/dashboard/reports/export/pdf?kind=pcs" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">PC register PDF</a> : null}</div>
         </header>
 
         <section className={`grid gap-4 sm:grid-cols-2 ${canManage ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
@@ -109,7 +109,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               <span className="muted text-xs font-bold uppercase tracking-wide">Export data</span>
               <select name="kind" defaultValue="inventory" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
                 <option value="inventory">Inventory records</option>
-                {canManage ? <><option value="borrowings">Borrowing history</option><option value="maintenance">Service requests</option></> : null}
+                {canManage ? <><option value="pcs">PC / Mac register</option><option value="borrowings">Borrowing history</option><option value="maintenance">Service requests</option></> : null}
                 {canAdmin ? <option value="activity">Audit trail</option> : null}
               </select>
             </label>
@@ -150,7 +150,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               <Link href="/dashboard/reports" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Clear</Link>
             </div>
           </form>
-          <p className="muted mt-4 text-xs leading-5">Dates apply to every export. Inventory status and PCs-only apply to inventory records; borrowing status applies to borrowing history.</p>
+          <p className="muted mt-4 text-xs leading-5">Dates apply to every export. Inventory status applies to inventory and PC/Mac exports; PCs-only applies to inventory records; borrowing status applies to borrowing history. PC/Mac registers include one row per tracked computer, its tag, QR code, technical profile, installed software, and latest inspection date.</p>
         </section>
 
         <section className="card rounded-lg p-5 sm:p-6">

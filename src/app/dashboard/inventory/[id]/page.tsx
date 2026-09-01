@@ -8,8 +8,10 @@ import {
   addComputerSoftware,
   deleteInventoryItemPhoto,
   deleteInventoryItem,
+  markInventoryItemChecked,
   removeComputerSoftware,
   retireInventoryItem,
+  splitGroupedAsset,
   updateComputerDetails,
   updateComputerSoftware,
   updateInventoryItem,
@@ -36,6 +38,8 @@ type ComputerInfo = {
   storageType: string | null;
   macAddress: string | null;
   ipAddress: string | null;
+  hardwareDescription: string | null;
+  softwareDescription: string | null;
   lastCheckedAt: Date | null;
 };
 
@@ -116,16 +120,22 @@ function Detail({ label: detailLabel, children }: { label: string; children: Rea
 
 function ComputerFields({ computer }: { computer?: ComputerInfo | null }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <TextField name="operatingSystem" label="Operating system" value={computer?.operatingSystem} placeholder="Windows 11 Pro" maxLength={255} />
-      <TextField name="osVersion" label="OS version" value={computer?.osVersion} placeholder="24H2" maxLength={255} />
-      <TextField name="processor" label="Processor" value={computer?.processor} maxLength={255} />
-      <TextField name="graphics" label="Graphics" value={computer?.graphics} maxLength={255} />
-      <TextField name="memoryGb" label="Memory (GB)" type="number" value={computer?.memoryGb} min={0} />
-      <TextField name="storageGb" label="Storage (GB)" type="number" value={computer?.storageGb} min={0} />
-      <TextField name="storageType" label="Storage type" value={computer?.storageType} placeholder="NVMe SSD" maxLength={255} />
-      <TextField name="macAddress" label="MAC address" value={computer?.macAddress} maxLength={255} />
-      <TextField name="ipAddress" label="IP address" value={computer?.ipAddress} maxLength={255} />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextField name="operatingSystem" label="Operating system" value={computer?.operatingSystem} placeholder="Windows 11 Pro" maxLength={255} />
+        <TextField name="osVersion" label="OS version" value={computer?.osVersion} placeholder="24H2" maxLength={255} />
+        <TextField name="processor" label="Processor" value={computer?.processor} maxLength={255} />
+        <TextField name="graphics" label="Graphics" value={computer?.graphics} maxLength={255} />
+        <TextField name="memoryGb" label="Memory (GB)" type="number" value={computer?.memoryGb} min={0} />
+        <TextField name="storageGb" label="Storage (GB)" type="number" value={computer?.storageGb} min={0} />
+        <TextField name="storageType" label="Storage type" value={computer?.storageType} placeholder="NVMe SSD" maxLength={255} />
+        <TextField name="macAddress" label="MAC address" value={computer?.macAddress} maxLength={255} />
+        <TextField name="ipAddress" label="IP address" value={computer?.ipAddress} maxLength={255} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label><span className="text-sm font-semibold">Hardware description</span><textarea name="hardwareDescription" rows={4} defaultValue={computer?.hardwareDescription ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Installed components, display, and attached hardware." /></label>
+        <label><span className="text-sm font-semibold">Software description</span><textarea name="softwareDescription" rows={4} defaultValue={computer?.softwareDescription ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Special applications, configuration, and license notes." /></label>
+      </div>
     </div>
   );
 }
@@ -141,6 +151,8 @@ function ComputerSummary({ computer }: { computer: ComputerInfo }) {
       <Detail label="MAC address">{computer.macAddress ?? "Not recorded"}</Detail>
       <Detail label="IP address">{computer.ipAddress ?? "Not recorded"}</Detail>
       <Detail label="Last checked">{displayDate(computer.lastCheckedAt)}</Detail>
+      {computer.hardwareDescription ? <Detail label="Hardware description">{computer.hardwareDescription}</Detail> : null}
+      {computer.softwareDescription ? <Detail label="Software description">{computer.softwareDescription}</Detail> : null}
     </dl>
   );
 }
@@ -210,12 +222,14 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   <Detail label="Manufacturer / model">{[item.manufacturer, item.model].filter(Boolean).join(" ") || "Not recorded"}</Detail>
                   <Detail label="Serial number">{item.serialNumber ?? "Not recorded"}</Detail>
                   <Detail label="Purchased">{displayDate(item.purchaseDate)}</Detail>
+                  <Detail label="Last checked">{displayDate(item.lastCheckedAt)}</Detail>
                   {item.purchasePrice !== null ? <Detail label="Acquisition value">{displayPurchasePrice(item.purchasePrice)}</Detail> : null}
                   <Detail label="Record type">{item.itemType === ItemType.ASSET ? "Tracked asset" : "Supply / stock"}</Detail>
                 </dl>
               </div>
               {item.description ? <p className="divider mt-5 border-t pt-5 text-sm leading-6">{item.description}</p> : null}
               {item.notes ? <p className="muted mt-3 whitespace-pre-line text-sm leading-6">Notes: {item.notes}</p> : null}
+              {item.itemType === ItemType.ASSET && item.quantity > 1 ? <p className="notice mt-5 rounded-lg px-4 py-3 text-sm leading-6">Legacy grouped asset: this record represents {item.quantity} units but has one current tag and QR label. New equipment is always created as one physical unit per record, so give each existing unit its own record before moving it to a different room.</p> : null}
             </article>
 
             {computer ? (
@@ -351,6 +365,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 <TextField name="model" label="Model" value={item.model} maxLength={255} />
                 <TextField name="serialNumber" label="Serial number" value={item.serialNumber} maxLength={255} />
                 <TextField name="purchaseDate" label="Purchase date" value={dateValue(item.purchaseDate)} type="date" />
+                <TextField name="lastCheckedAt" label="Last checked" value={dateValue(item.lastCheckedAt)} type="date" />
                 <div>
                   <TextField name="purchasePrice" label="Purchase price (PHP)" value={item.purchasePrice?.toString()} type="number" min={0} max={99_999_999.99} step={0.01} />
                   <p className="muted mt-1 text-xs leading-5">Optional total paid for this record. It stays off the inventory list and is included in the acquisition report.</p>
@@ -359,6 +374,27 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 <label className="block"><span className="text-sm font-semibold">Notes</span><textarea name="notes" rows={3} defaultValue={item.notes ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
                 <SubmitButton pendingLabel="Saving update…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold">Save update</SubmitButton>
               </FeedbackForm>
+
+              <section className="divider mt-6 border-t pt-5" aria-labelledby="inspection-heading">
+                <h3 id="inspection-heading" className="text-sm font-semibold">Inspection</h3>
+                <p className="muted mt-2 text-xs leading-5">Last checked: {displayDate(item.lastCheckedAt)}. This records a dated inspection for every item and updates the PC profile when one exists.</p>
+                <FeedbackForm action={markInventoryItemChecked} successMessage="Inspection recorded." className="mt-3">
+                  <input type="hidden" name="id" value={item.id} />
+                  <SubmitButton pendingLabel="Recording…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Mark checked today</SubmitButton>
+                </FeedbackForm>
+              </section>
+
+              {item.itemType === ItemType.ASSET && item.quantity > 1 && !item.isComputer ? (
+                <section className="divider mt-6 border-t pt-5" aria-labelledby="individualize-heading">
+                  <h3 id="individualize-heading" className="text-sm font-semibold">Create individual asset records</h3>
+                  <p className="muted mt-2 text-xs leading-5">This converts the current record into unit 1 and creates {item.quantity - 1} new records in the same room. Every new unit gets the next compatible asset tag and a unique QR code; move the units to their actual rooms afterward. This is unavailable once a borrowing history exists.</p>
+                  <FeedbackForm action={splitGroupedAsset} className="mt-3 space-y-3">
+                    <input type="hidden" name="id" value={item.id} />
+                    <input required name="confirmation" maxLength={16} className="field w-full rounded-lg px-3 py-2 text-sm" placeholder="Type SPLIT" aria-label="Type SPLIT to create individual asset records" />
+                    <SubmitButton pendingLabel="Creating individual records…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Split into {item.quantity} individual assets</SubmitButton>
+                  </FeedbackForm>
+                </section>
+              ) : null}
 
               <section className="divider mt-6 border-t pt-5" aria-labelledby="item-photos-heading">
                 <h3 id="item-photos-heading" className="text-sm font-semibold">Item photos</h3>
