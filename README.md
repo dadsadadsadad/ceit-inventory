@@ -50,7 +50,7 @@ Set `NEXT_PUBLIC_APP_URL` in the production environment to the permanent public 
 
 The public `/scan/[qrCode]` page must be reachable without Vercel Deployment Protection or Vercel Authentication. If Vercel shows its own sign-in page after scanning, make the production deployment public in Vercel and reprint the affected labels; a printed QR code permanently retains its embedded URL. Vercel documents its permanent production-domain variable and Deployment Protection behavior in its [system environment-variable documentation](https://vercel.com/docs/environment-variables/system-environment-variables) and [Deployment Protection guide](https://vercel.com/docs/deployment-protection).
 
-Every label print and QR opening is recorded in the in-app activity history. Administrators and staff can also download a filtered audit-trail CSV from Reports.
+Every label print and QR opening is recorded in the administrator-only Audit trail. Administrators can search, filter, inspect event metadata, and download the current filtered audit-trail CSV.
 
 ### Development account
 

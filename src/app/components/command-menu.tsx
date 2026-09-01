@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, Clock3, Command, HandHelping, LayoutDashboard, Package, PackagePlus, ScanLine, Search, Settings2, Users, Wrench, X } from "lucide-react";
+import { BarChart3, Command, HandHelping, LayoutDashboard, Package, PackagePlus, ScanLine, ScrollText, Search, Settings2, Users, Wrench, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -20,7 +20,7 @@ const commands: CommandItem[] = [
   { label: "Add inventory", description: "Register an asset or supply", href: "/dashboard/inventory/new", Icon: PackagePlus, requires: "inventory-manager" },
   { label: "Open borrowing", description: "Review equipment lending requests", href: "/dashboard/borrowing", Icon: HandHelping, requires: "inventory-manager" },
   { label: "Open maintenance", description: "Report and resolve service requests", href: "/dashboard/maintenance", Icon: Wrench, requires: "inventory-manager" },
-  { label: "View activity", description: "Review recent edits and scans", href: "/dashboard/activity", Icon: Clock3 },
+  { label: "Open audit trail", description: "Search the complete inventory activity history", href: "/dashboard/activity", Icon: ScrollText, requires: "administrator" },
   { label: "Open reports", description: "Review current inventory trends", href: "/dashboard/reports", Icon: BarChart3 },
   { label: "Manage users", description: "Create and update CEIT inventory accounts", href: "/dashboard/users", Icon: Users, requires: "administrator" },
   { label: "Open settings", description: "Update your account and preferences", href: "/dashboard/settings", Icon: Settings2 },

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Boxes, HandHelping, LayoutDashboard, Package, ScanLine, Settings, Users, Wrench } from "lucide-react";
+import { BarChart3, Boxes, HandHelping, LayoutDashboard, Package, ScanLine, ScrollText, Settings, Users, Wrench } from "lucide-react";
 
 import { signOut } from "@/app/auth/actions";
 
@@ -16,6 +16,7 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
     ...(canManageInventory ? [{ label: "Borrowing", href: "/dashboard/borrowing", Icon: HandHelping }] : []),
     ...(canManageInventory ? [{ label: "Maintenance", href: "/dashboard/maintenance", Icon: Wrench }] : []),
     { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
+    ...(canManageAdministration ? [{ label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText }] : []),
     { label: "Scan QR", href: "/scan", Icon: ScanLine },
     ...(canManageAdministration ? [{ label: "Users", href: "/dashboard/users", Icon: Users }] : []),
     { label: "Settings", href: "/dashboard/settings", Icon: Settings },

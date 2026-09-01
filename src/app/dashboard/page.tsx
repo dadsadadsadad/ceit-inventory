@@ -5,18 +5,18 @@ import { ArrowRight, ArrowUpRight, BarChart3, ClipboardCheck, FileUp, MapPin, Pa
 
 import { DashboardNoteForm } from "./dashboard-note-form";
 
-import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
 
-async function getDashboardData() {
+async function getDashboardData(includeAuditTrail: boolean) {
   const [itemCount, locationCount, attentionCount, recentActivity, dashboardNote, openTicketCount, pendingBorrowCount, checkedOutCount] = await Promise.all([
     prisma.inventoryItem.count(),
     prisma.location.count({ where: { isActive: true } }),
     prisma.inventoryItem.count({ where: { status: ItemStatus.DEFECTIVE } }),
-    prisma.inventoryAudit.findMany({ include: { item: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
+    includeAuditTrail ? prisma.inventoryAudit.findMany({ include: { item: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" }, take: 5 }) : Promise.resolve([]),
     prisma.dashboardNote.findUnique({ where: { scope: "shared-dashboard" } }),
     prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
     prisma.borrowRequest.count({ where: { status: BorrowStatus.REQUESTED } }),
@@ -27,11 +27,12 @@ async function getDashboardData() {
 
 export default async function DashboardPage() {
   const user = await requireInventoryAccess();
+  const canAdmin = canManageAdministration(user.role);
   const canManage = canManageInventory(user.role);
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
 
   try {
-    dashboard = await getDashboardData();
+    dashboard = await getDashboardData(canAdmin);
   } catch (error) {
     console.error("Unable to load dashboard", error);
   }
@@ -116,8 +117,8 @@ export default async function DashboardPage() {
               ) : null}
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
-              <article className="card rounded-lg">
+            <section className={`grid gap-5 ${canAdmin ? "xl:grid-cols-[1.35fr_1fr]" : ""}`}>
+              {canAdmin ? <article className="card rounded-lg">
                 <div className="divider flex items-center justify-between border-b px-6 py-4"><h2 className="text-base font-semibold">Recent activity</h2><Link href="/dashboard/activity" className="accent-link text-sm font-semibold">See all</Link></div>
                 {dashboard.recentActivity.length ? (
                   <ol className="divide-y">
@@ -129,7 +130,7 @@ export default async function DashboardPage() {
                     ))}
                   </ol>
                 ) : <p className="muted px-6 py-8 text-sm">Activity will appear here after your first item is added or imported.</p>}
-              </article>
+              </article> : null}
 
               <aside className="card dashboard-note-card flex min-h-[27rem] flex-col rounded-lg p-6">
                 <h2 className="text-base font-semibold">Notes</h2>

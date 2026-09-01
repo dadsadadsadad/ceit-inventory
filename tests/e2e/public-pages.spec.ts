@@ -17,6 +17,12 @@ test("unknown routes receive the application not-found page", async ({ page }) =
   await expect(page.getByRole("heading", { name: "That inventory record is not available" })).toBeVisible();
 });
 
+test("audit trail is not available without an authenticated administrator", async ({ page }) => {
+  await page.goto("/dashboard/activity");
+  await expect(page).toHaveURL(/\/auth\/login/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
 test("appearance choices persist after a reload", async ({ page }) => {
   await page.goto("/auth/login");
 
