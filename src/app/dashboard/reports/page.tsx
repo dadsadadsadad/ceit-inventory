@@ -98,13 +98,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         <section className="card rounded-lg p-5 sm:p-6" aria-labelledby="filtered-export-heading">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow">Filtered CSV exports</p>
+              <p className="eyebrow">Filtered exports</p>
               <h2 id="filtered-export-heading" className="mt-1 text-lg font-semibold">Create a focused operational export</h2>
-              <p className="muted mt-1 max-w-3xl text-sm leading-6">Use a timeframe or custom dates. Inventory dates use record creation, borrowing dates use request submission, and audit dates use the recorded event time.</p>
+              <p className="muted mt-1 max-w-3xl text-sm leading-6">Use a timeframe or custom dates, then download the same filtered result as CSV or a presentation-ready PDF. Inventory dates use record creation, borrowing dates use request submission, and audit dates use the recorded event time.</p>
             </div>
             {canAdmin ? <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">Open audit trail</Link> : null}
           </div>
-          <form action="/dashboard/reports/export" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
+          <form action="/dashboard/reports/export" method="get" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Export data</span>
               <select name="kind" defaultValue="inventory" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
@@ -146,11 +146,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               PCs only
             </label>
             <div className="flex flex-wrap gap-3">
-              <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Download filtered CSV</button>
+              <button type="submit" formAction="/dashboard/reports/export" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Download CSV</button>
+              <button type="submit" formAction="/dashboard/reports/export/pdf" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Download PDF</button>
               <Link href="/dashboard/reports" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Clear</Link>
             </div>
           </form>
-          <p className="muted mt-4 text-xs leading-5">Dates apply to every export. Inventory status applies to inventory and PC/Mac exports; PCs-only applies to inventory records; borrowing status applies to borrowing history. PC/Mac registers include one row per tracked computer, its tag, QR code, technical profile, installed software, and latest inspection date.</p>
+          <p className="muted mt-4 text-xs leading-5">Dates apply to every export. Inventory status applies to inventory and PC/Mac exports; PCs-only applies to inventory records; borrowing status applies to borrowing history. PC/Mac PDFs use one readable profile per device rather than cramming QR and configuration text into a narrow table.</p>
         </section>
 
         <section className="card rounded-lg p-5 sm:p-6">

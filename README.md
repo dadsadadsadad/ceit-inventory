@@ -14,8 +14,10 @@ Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled as
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Search, filters, sorting, and page navigation for status, room, identifiers, category, type, and condition
 - CSV/XLSX import with flexible column headings and row-level feedback
-- Filterable inventory, PC/Mac register, borrowing, service, and audit CSV exports, plus printable overview and PC/Mac-register PDFs
+- Filterable inventory, PC/Mac register, borrowing, service, and audit exports in CSV or PDF, plus a detailed operational overview PDF
 - Public borrowing requests from QR labels, with staff approval, return, and history tracking
+- One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
+- Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history
 - Shared dashboard notes and a paginated activity history that records the responsible user
 - Administrator account management, account deactivation, and password reset
 
@@ -53,7 +55,7 @@ Set `NEXT_PUBLIC_APP_URL` in the production environment to the permanent public 
 
 The public `/scan/[qrCode]` page must be reachable without Vercel Deployment Protection or Vercel Authentication. If Vercel shows its own sign-in page after scanning, make the production deployment public in Vercel and reprint the affected labels; a printed QR code permanently retains its embedded URL. Vercel documents its permanent production-domain variable and Deployment Protection behavior in its [system environment-variable documentation](https://vercel.com/docs/environment-variables/system-environment-variables) and [Deployment Protection guide](https://vercel.com/docs/deployment-protection).
 
-Every label print and QR opening is recorded in the administrator-only Audit trail. Administrators can search, filter, inspect event metadata, and download the current filtered audit-trail CSV.
+Every label print and QR opening is recorded in the administrator-only Audit trail. Administrators can search, filter, inspect event metadata, and download the current filtered audit-trail CSV or PDF.
 
 ### Development account
 

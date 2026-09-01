@@ -14,6 +14,7 @@ type BorrowRequestFormProps = {
 
 export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowRequestFormProps) {
   const clientMaximumQuantity = Math.min(Math.max(Math.trunc(maximumQuantity) || 1, 1), 1_000);
+  const isIndividuallyTrackedAsset = clientMaximumQuantity === 1;
 
   return (
     <FeedbackForm action={submitBorrowRequest} className="card rounded-lg p-5 sm:p-7">
@@ -42,11 +43,19 @@ export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowR
           <span className="text-sm font-semibold">Contact number *</span>
           <input name="contact" required type="tel" autoComplete="tel" maxLength={32} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="09XX XXX XXXX" />
         </label>
-        <label>
-          <span className="text-sm font-semibold">Quantity *</span>
-          <input name="requestedQuantity" required type="number" inputMode="numeric" min="1" max={clientMaximumQuantity} defaultValue="1" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />
-          <span className="muted mt-1 block text-xs">Choose how many units you need.</span>
-        </label>
+        {isIndividuallyTrackedAsset ? (
+          <div>
+            <input type="hidden" name="requestedQuantity" value="1" />
+            <span className="text-sm font-semibold">Requested unit</span>
+            <p className="muted mt-2 text-sm leading-6">This request is for this one uniquely tagged piece of equipment.</p>
+          </div>
+        ) : (
+          <label>
+            <span className="text-sm font-semibold">Quantity *</span>
+            <input name="requestedQuantity" required type="number" inputMode="numeric" min="1" max={clientMaximumQuantity} defaultValue="1" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />
+            <span className="muted mt-1 block text-xs">Choose how many units you need.</span>
+          </label>
+        )}
         <label>
           <span className="text-sm font-semibold">Expected return *</span>
           <input name="expectedReturnDate" required type="date" min={nextManilaCalendarDate()} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />

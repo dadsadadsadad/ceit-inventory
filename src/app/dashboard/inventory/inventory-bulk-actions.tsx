@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import { SubmitButton } from "@/app/components/submit-button";
 import { addSelectionChangeListener, isSelectionChangeForKey, notifySelectionChange, saveSelectedItemIds, selectedItemIds, syncVisibleItemSelection } from "./inventory-selection";
 
-type BulkAction = "condition" | "location" | "remove" | "status";
+type BulkAction = "condition" | "delete" | "location" | "remove" | "status";
 type SelectOption = { label: string; value: string };
 
 export function InventoryBulkActions({
   allItemIds,
+  canPermanentlyDelete,
   clearSelectionOnLoad = false,
   conditions,
   locations,
@@ -17,6 +18,7 @@ export function InventoryBulkActions({
   statuses,
 }: {
   allItemIds: string[];
+  canPermanentlyDelete: boolean;
   clearSelectionOnLoad?: boolean;
   conditions: SelectOption[];
   locations: SelectOption[];
@@ -56,13 +58,16 @@ export function InventoryBulkActions({
   if (!selectedIds.length) return null;
 
   const countLabel = `${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"} selected`;
+  const confirmationWord = action === "delete" ? "DELETE" : "RETIRE";
   const actionDetails = action === "location"
     ? "Move every selected item to one active location."
     : action === "status"
       ? "Apply one status to every selected item."
       : action === "condition"
-        ? "Apply one condition to every selected item."
-        : "Remove selected items from active inventory while preserving their history.";
+      ? "Apply one condition to every selected item."
+        : action === "delete"
+          ? "Permanently erase selected records that have no borrowing or maintenance history. This also erases their tags, QR labels, technical details, photos, and record-level activity."
+          : "Retire selected items from active inventory while keeping their asset tags, QR labels, and complete history.";
 
   return (
     <section className="bulk-action-toolbar card rounded-xl p-4 sm:p-5" aria-label="Bulk actions for selected inventory items">
@@ -89,12 +94,13 @@ export function InventoryBulkActions({
             <option value="status">Edit status</option>
             <option value="condition">Edit condition</option>
             <option value="location">Move to location</option>
-            <option value="remove">Remove from active inventory</option>
+            <option value="remove">Retire (keep record and history)</option>
+            {canPermanentlyDelete ? <option value="delete">Permanently delete (administrator)</option> : null}
           </select>
         </label>
 
         <div>
-          <span className="muted text-xs font-bold uppercase tracking-wide">{action === "remove" ? "What this does" : "New value"}</span>
+          <span className="muted text-xs font-bold uppercase tracking-wide">{action === "remove" || action === "delete" ? "What this does" : "New value"}</span>
           {action === "location" ? (
             <select required name="bulkLocationId" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" aria-label="New location">
               <option value="" disabled>Choose an active location</option>
@@ -112,8 +118,8 @@ export function InventoryBulkActions({
             <div className="mt-2 space-y-3">
               <p className="bulk-action-remove-note rounded-lg px-3 py-2.5 text-sm leading-5">{actionDetails}</p>
               <label className="block">
-                <span className="muted text-xs font-bold uppercase tracking-wide">Type RETIRE to confirm</span>
-                <input name="bulkRemovalConfirmation" required value={removalConfirmation} onChange={(event) => setRemovalConfirmation(event.target.value)} maxLength={16} autoComplete="off" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="RETIRE" />
+                <span className="muted text-xs font-bold uppercase tracking-wide">Type {confirmationWord} to confirm</span>
+                <input name="bulkRemovalConfirmation" required value={removalConfirmation} onChange={(event) => setRemovalConfirmation(event.target.value)} maxLength={16} autoComplete="off" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder={confirmationWord} />
               </label>
             </div>
           )}
@@ -122,7 +128,7 @@ export function InventoryBulkActions({
         <div className="xl:min-w-40">
           <input type="hidden" name="bulkAction" value={action} />
           <p className="muted mb-2 hidden text-xs leading-5 xl:block">{actionDetails}</p>
-          <SubmitButton disabled={action === "remove" && removalConfirmation !== "RETIRE"} pendingLabel="Updating…" className={`${action === "remove" ? "danger-button" : "primary-button"} w-full rounded-lg px-4 py-2.5 text-sm font-semibold`}>{action === "remove" ? `Retire ${selectedIds.length}` : `Apply to ${selectedIds.length}`}</SubmitButton>
+          <SubmitButton disabled={(action === "remove" || action === "delete") && removalConfirmation !== confirmationWord} pendingLabel={action === "delete" ? "Deleting…" : "Updating…"} className={`${action === "remove" || action === "delete" ? "danger-button" : "primary-button"} w-full rounded-lg px-4 py-2.5 text-sm font-semibold`}>{action === "delete" ? `Delete ${selectedIds.length}` : action === "remove" ? `Retire ${selectedIds.length}` : `Apply to ${selectedIds.length}`}</SubmitButton>
         </div>
       </div>
     </section>

@@ -4,11 +4,11 @@ import { AuditAction, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { borrowStatus } from "@/lib/borrow-status";
+import { borrowableInventoryStatuses, canBorrowInventoryStatus, usesIndividualAssetCheckout } from "@/lib/borrow-availability";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const borrowableStatuses = [ItemStatus.OK, ItemStatus.WORKING] as const;
 const maximumStaffNoteLength = 2_000;
 
 function requestId(formData: FormData) {
@@ -64,20 +64,23 @@ export async function markBorrowed(formData: FormData) {
     if (request.inventoryItem.itemType !== ItemType.ASSET) {
       throw new Error("Only individually tracked equipment can be borrowed.");
     }
-    if (!borrowableStatuses.includes(request.inventoryItem.status as (typeof borrowableStatuses)[number])) {
+    if (!canBorrowInventoryStatus(request.inventoryItem.status)) {
       throw new Error("This item is not available for borrowing in its current status.");
     }
     if (request.inventoryItem.quantity < request.requestedQuantity) {
       throw new Error(`Only ${request.inventoryItem.quantity} ${unitLabel(request.inventoryItem.quantity)} of this item are currently available.`);
     }
 
+    const individualAssetCheckout = usesIndividualAssetCheckout(request.inventoryItem, request.requestedQuantity);
     const inventoryUpdate = await transaction.inventoryItem.updateMany({
       where: {
         id: request.inventoryItemId,
         quantity: { gte: request.requestedQuantity },
-        status: { in: [...borrowableStatuses] },
+        status: { in: [...borrowableInventoryStatuses] },
       },
-      data: { quantity: { decrement: request.requestedQuantity } },
+      data: individualAssetCheckout
+        ? { status: ItemStatus.DEPLOYED }
+        : { quantity: { decrement: request.requestedQuantity } },
     });
     if (inventoryUpdate.count !== 1) throw new Error("This item is no longer available in the requested quantity.");
 
@@ -89,16 +92,25 @@ export async function markBorrowed(formData: FormData) {
         ...(notes ? { staffNotes: notes } : {}),
         processedAt,
         processedByName: actor.email,
+        checkedOutItemStatus: individualAssetCheckout ? request.inventoryItem.status : null,
       },
     });
     await transaction.inventoryAudit.create({
       data: {
         itemId: request.inventoryItemId,
         action: AuditAction.UPDATED,
-        summary: `Borrow request approved: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} checked out.`,
+        summary: individualAssetCheckout
+          ? "Borrow request approved: individual tagged asset checked out."
+          : `Borrow request approved: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} checked out.`,
         actorId: actor.id,
         actorName: actor.email,
-        metadata: { borrowRequestId: request.id, transition: borrowStatus.BORROWED, quantity: request.requestedQuantity },
+        metadata: {
+          borrowRequestId: request.id,
+          transition: borrowStatus.BORROWED,
+          quantity: request.requestedQuantity,
+          checkoutMode: individualAssetCheckout ? "asset-status" : "quantity",
+          previousItemStatus: individualAssetCheckout ? request.inventoryItem.status : null,
+        },
       },
     });
 
@@ -150,14 +162,28 @@ export async function returnBorrowRequest(formData: FormData) {
   const notes = staffNotes(formData);
 
   const itemId = await withSerializableRetry(() => prisma.$transaction(async (transaction) => {
-    const request = await transaction.borrowRequest.findUnique({ where: { id }, select: { id: true, inventoryItemId: true, requestedQuantity: true, status: true } });
+    const request = await transaction.borrowRequest.findUnique({ where: { id }, select: { checkedOutItemStatus: true, id: true, inventoryItemId: true, requestedQuantity: true, status: true } });
     if (!request) throw new Error("This borrowing request no longer exists.");
     if (request.status !== borrowStatus.BORROWED && request.status !== borrowStatus.RETURN_REQUESTED) throw new Error("Only checked-out requests can be marked as returned.");
 
-    await transaction.inventoryItem.update({
-      where: { id: request.inventoryItemId },
-      data: { quantity: { increment: request.requestedQuantity } },
-    });
+    let restoredIndividualStatus = false;
+    if (request.checkedOutItemStatus) {
+      // Do not overwrite a staff member's later defect/retirement decision.
+      // In that case the return is still recorded, but the current status is
+      // intentionally retained for follow-up.
+      const statusRestore = await transaction.inventoryItem.updateMany({
+        where: { id: request.inventoryItemId, status: ItemStatus.DEPLOYED },
+        data: { status: request.checkedOutItemStatus },
+      });
+      restoredIndividualStatus = statusRestore.count === 1;
+    } else {
+      // Requests created before one-record-per-asset tracking used stock
+      // quantities. Preserve that historical return behavior.
+      await transaction.inventoryItem.update({
+        where: { id: request.inventoryItemId },
+        data: { quantity: { increment: request.requestedQuantity } },
+      });
+    }
     await transaction.borrowRequest.update({
       where: { id: request.id },
       data: {
@@ -171,10 +197,20 @@ export async function returnBorrowRequest(formData: FormData) {
       data: {
         itemId: request.inventoryItemId,
         action: AuditAction.UPDATED,
-        summary: `Borrowed item returned: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} restored.`,
+        summary: request.checkedOutItemStatus
+          ? restoredIndividualStatus
+            ? "Borrowed individual tagged asset returned and made available."
+            : "Borrowed individual tagged asset returned; its staff-updated status was preserved."
+          : `Borrowed item returned: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} restored.`,
         actorId: actor.id,
         actorName: actor.email,
-        metadata: { borrowRequestId: request.id, transition: borrowStatus.RETURNED, quantity: request.requestedQuantity },
+        metadata: {
+          borrowRequestId: request.id,
+          transition: borrowStatus.RETURNED,
+          quantity: request.requestedQuantity,
+          checkoutMode: request.checkedOutItemStatus ? "asset-status" : "quantity",
+          restoredItemStatus: restoredIndividualStatus ? request.checkedOutItemStatus : null,
+        },
       },
     });
 

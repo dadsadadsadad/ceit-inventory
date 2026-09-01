@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
+import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { isInventoryQrCode } from "@/lib/qr-code";
 import { prisma } from "@/prisma";
 
@@ -20,7 +21,7 @@ function isBorrowableItem(item: { category: { isActive: boolean }; itemType: Ite
     && item.quantity > 0
     && item.category.isActive
     && item.location.isActive
-    && (item.status === ItemStatus.OK || item.status === ItemStatus.WORKING);
+    && canBorrowInventoryStatus(item.status);
 }
 
 export default async function ScannedItemPage({

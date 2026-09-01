@@ -1,10 +1,10 @@
 "use server";
 
-import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
+import { AuditAction, BorrowStatus, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdministrator, requireInventoryAccess, requireWriteAccess } from "@/lib/inventory-auth";
+import { canManageAdministration, requireAdministrator, requireInventoryAccess, requireWriteAccess } from "@/lib/inventory-auth";
 import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
 import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
@@ -14,6 +14,7 @@ const conditions = Object.values(ItemCondition);
 const itemTypes = Object.values(ItemType);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const maximumBulkSelection = 10_000;
+const activeBorrowRequestStatuses = [BorrowStatus.REQUESTED, BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED];
 
 export async function recordInventoryLabelPrinted(itemId: string) {
   const actor = await requireInventoryAccess();
@@ -262,6 +263,14 @@ export async function updateInventoryItem(formData: FormData) {
   };
   try {
     await prisma.$transaction(async (transaction) => {
+      if (status === ItemStatus.RETIRED && existing.status !== ItemStatus.RETIRED) {
+        const activeBorrowingCount = await transaction.borrowRequest.count({
+          where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } },
+        });
+        if (activeBorrowingCount) {
+          throw new Error(`Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still references this item. Resolve the request first.`);
+        }
+      }
       const resolvedData = {
         ...data,
         assetTag: itemType === ItemType.ASSET && !data.assetTag ? await nextInventoryAssetTag(transaction, { categoryId, locationId, status }) : data.assetTag,
@@ -287,25 +296,34 @@ export async function updateInventoryItem(formData: FormData) {
 export async function retireInventoryItem(formData: FormData) {
   const actor = await requireWriteAccess();
   const id = requiredId(formData, "id");
-  const item = await prisma.inventoryItem.findUniqueOrThrow({ where: { id }, select: { status: true } });
+  await prisma.$transaction(async (transaction) => {
+    const [item, activeBorrowingCount] = await Promise.all([
+      transaction.inventoryItem.findUnique({ where: { id }, select: { status: true } }),
+      transaction.borrowRequest.count({ where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } } }),
+    ]);
+    if (!item) throw new Error("This item no longer exists.");
+    if (activeBorrowingCount) {
+      throw new Error("This item has an active borrowing request. Resolve that request before retiring the record.");
+    }
 
-  if (item.status !== ItemStatus.RETIRED) {
-    await prisma.inventoryItem.update({
-      where: { id },
-      data: {
-        status: ItemStatus.RETIRED,
-        auditEvents: {
-          create: {
-            action: AuditAction.STATUS_CHANGED,
-            summary: "Inventory item removed from active inventory.",
-            actorId: actor.id,
-            actorName: actor.email,
-            metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
+    if (item.status !== ItemStatus.RETIRED) {
+      await transaction.inventoryItem.update({
+        where: { id },
+        data: {
+          status: ItemStatus.RETIRED,
+          auditEvents: {
+            create: {
+              action: AuditAction.STATUS_CHANGED,
+              summary: "Inventory item removed from active inventory.",
+              actorId: actor.id,
+              actorName: actor.email,
+              metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
+            },
           },
         },
-      },
-    });
-  }
+      });
+    }
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   refreshInventoryViews(id);
   redirect(`/dashboard/inventory/${id}`);
@@ -385,24 +403,58 @@ export async function bulkUpdateInventory(formData: FormData) {
   const actor = await requireWriteAccess();
   const ids = selectedIds(formData);
   const action = requiredText(formData, "bulkAction", 64);
+
+  if (action === "delete") {
+    if (!canManageAdministration(actor.role)) throw new Error("Only administrators can permanently delete inventory records.");
+    const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
+    if (confirmation !== "DELETE") throw new Error("Type DELETE to permanently remove the selected records.");
+
+    try {
+      await prisma.$transaction(async (transaction) => {
+        const [selectedCount, borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
+          transaction.inventoryItem.count({ where: { id: { in: ids } } }),
+          transaction.borrowRequest.count({ where: { inventoryItemId: { in: ids } } }),
+          transaction.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
+        ]);
+        if (selectedCount !== ids.length) throw new Error("One or more selected records no longer exist. Refresh the inventory list and try again.");
+        if (borrowingHistoryCount || maintenanceHistoryCount) {
+          throw new Error(`Permanent deletion is blocked because the selection has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire those items instead to preserve their history.`);
+        }
+
+        const deleted = await transaction.inventoryItem.deleteMany({ where: { id: { in: ids } } });
+        if (deleted.count !== ids.length) throw new Error("One or more selected records changed before deletion. Refresh the inventory list and try again.");
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+        throw new Error("One or more selected records gained borrowing or maintenance history. Retire those items instead to preserve that history.");
+      }
+      throw error;
+    }
+
+    refreshInventoryViews();
+    redirect("/dashboard/inventory?bulk=deleted");
+  }
+
   let data: Prisma.InventoryItemUncheckedUpdateManyInput;
   let summary: string;
+  let targetLocationId: string | null = null;
+  const isRetirement = action === "remove" || action === "retire";
 
   if (action === "location") {
     const locationId = requiredId(formData, "bulkLocationId");
-    const location = await prisma.location.findFirst({ where: { id: locationId, isActive: true }, select: { name: true } });
-    if (!location) throw new Error("Choose an active location.");
+    targetLocationId = locationId;
     data = { locationId };
-    summary = `Bulk update: moved to ${location.name}.`;
+    summary = "Bulk update: moved to a selected location.";
   } else if (action === "status") {
     const status = enumValue(formData, "bulkStatus", statuses, ItemStatus.OK);
+    if (status === ItemStatus.RETIRED) throw new Error("Use the Retire bulk action to remove records from active inventory.");
     data = { status };
     summary = `Bulk update: status changed to ${status}.`;
   } else if (action === "condition") {
     const condition = enumValue(formData, "bulkCondition", conditions, ItemCondition.GOOD);
     data = { condition };
     summary = `Bulk update: condition changed to ${condition}.`;
-  } else if (action === "remove" || action === "retire") {
+  } else if (isRetirement) {
     const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
     if (confirmation !== "RETIRE") throw new Error("Type RETIRE to remove selected records from active inventory.");
     data = { status: ItemStatus.RETIRED };
@@ -411,19 +463,37 @@ export async function bulkUpdateInventory(formData: FormData) {
     throw new Error("Choose a valid bulk action.");
   }
 
-  await prisma.$transaction([
-    prisma.inventoryItem.updateMany({ where: { id: { in: ids } }, data }),
-    prisma.inventoryAudit.createMany({
+  await prisma.$transaction(async (transaction) => {
+    const selectedCount = await transaction.inventoryItem.count({ where: { id: { in: ids } } });
+    if (selectedCount !== ids.length) throw new Error("One or more selected records no longer exist. Refresh the inventory list and try again.");
+
+    if (targetLocationId) {
+      const location = await transaction.location.findFirst({ where: { id: targetLocationId, isActive: true }, select: { name: true } });
+      if (!location) throw new Error("Choose an active location.");
+      summary = `Bulk update: moved to ${location.name}.`;
+    }
+
+    if (isRetirement) {
+      const activeBorrowingCount = await transaction.borrowRequest.count({
+        where: { inventoryItemId: { in: ids }, status: { in: activeBorrowRequestStatuses } },
+      });
+      if (activeBorrowingCount) {
+        throw new Error(`Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still reference the selection. Resolve those requests first.`);
+      }
+    }
+
+    await transaction.inventoryItem.updateMany({ where: { id: { in: ids } }, data });
+    await transaction.inventoryAudit.createMany({
       data: ids.map((itemId) => ({
         itemId,
-        action: action === "location" ? AuditAction.MOVED : action === "status" || action === "remove" || action === "retire" ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
+        action: action === "location" ? AuditAction.MOVED : action === "status" || isRetirement ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
         summary,
         actorId: actor.id,
         actorName: actor.email,
         metadata: { bulkAction: action, itemCount: ids.length },
       })),
-    }),
-  ]);
+    });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   refreshInventoryViews();
   redirect("/dashboard/inventory?bulk=updated");
 }
@@ -434,17 +504,21 @@ export async function deleteInventoryItem(formData: FormData) {
   const confirmation = requiredText(formData, "confirmation", 16);
   if (confirmation !== "DELETE") throw new Error("Type DELETE to permanently remove this item.");
 
-  const borrowingHistoryCount = await prisma.borrowRequest.count({ where: { inventoryItemId: id } });
-  if (borrowingHistoryCount) {
-    throw new Error(`This item has ${borrowingHistoryCount} borrowing request${borrowingHistoryCount === 1 ? "" : "s"}. Remove it from active inventory instead to preserve the borrowing history.`);
+  const [borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
+    prisma.borrowRequest.count({ where: { inventoryItemId: id } }),
+    prisma.maintenanceTicket.count({ where: { inventoryItemId: id } }),
+  ]);
+  if (borrowingHistoryCount || maintenanceHistoryCount) {
+    throw new Error(`This item has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Remove it from active inventory instead to preserve its history.`);
   }
 
   try {
     await prisma.inventoryItem.delete({ where: { id } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-      throw new Error("This item now has borrowing history. Remove it from active inventory instead to preserve that history.");
+      throw new Error("This item now has borrowing or maintenance history. Remove it from active inventory instead to preserve that history.");
     }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new Error("This item no longer exists.");
     throw error;
   }
   refreshInventoryViews(id);

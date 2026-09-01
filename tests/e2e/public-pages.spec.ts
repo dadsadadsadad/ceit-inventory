@@ -38,3 +38,33 @@ test("appearance choices persist after a reload", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute("data-accent", "custom");
 });
+
+test("appearance popover stays within a compact viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto("/auth/login");
+  await page.getByRole("button", { name: "Open appearance settings" }).click();
+
+  const layout = await page.getByRole("dialog", { name: "Appearance" }).evaluate((popover) => {
+    const picker = popover.querySelector<HTMLElement>(".appearance-color-picker");
+    const bounds = popover.getBoundingClientRect();
+
+    return {
+      bottom: bounds.bottom,
+      left: bounds.left,
+      right: bounds.right,
+      scrollWidth: popover.scrollWidth,
+      top: bounds.top,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+      pickerScrollWidth: picker?.scrollWidth ?? 0,
+      pickerWidth: picker?.getBoundingClientRect().width ?? 0,
+    };
+  });
+
+  expect(layout.left).toBeGreaterThanOrEqual(0);
+  expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.top).toBeGreaterThanOrEqual(0);
+  expect(layout.bottom).toBeLessThanOrEqual(layout.viewportHeight);
+  expect(layout.scrollWidth).toBeLessThanOrEqual(Math.ceil(layout.right - layout.left));
+  expect(layout.pickerScrollWidth).toBeLessThanOrEqual(Math.ceil(layout.pickerWidth));
+});

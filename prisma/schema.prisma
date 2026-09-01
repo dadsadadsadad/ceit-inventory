@@ -195,6 +195,7 @@ model BorrowRequest {
   returnedByName     String?
   returnRequestedAt  DateTime?
   returnRequestNotes String?
+  checkedOutItemStatus ItemStatus?
   personalDataExpiresAt DateTime
   inventoryItem      InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
   createdAt          DateTime     @default(now())

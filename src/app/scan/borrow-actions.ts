@@ -1,10 +1,11 @@
 "use server";
 
-import { AuditAction, ItemStatus, ItemType, Prisma, PublicRequestKind } from "@prisma/client";
+import { AuditAction, ItemType, Prisma, PublicRequestKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { borrowStatus } from "@/lib/borrow-status";
+import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
 import { manilaCalendarDate } from "@/lib/manila-date";
 import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
@@ -77,12 +78,15 @@ function itemUnavailable(): never {
   throw new Error("This item is not currently available for a borrowing request.");
 }
 
-function canBeBorrowed(status: ItemStatus) {
-  return status === ItemStatus.OK || status === ItemStatus.WORKING;
-}
-
 function isSerializationFailure(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+}
+
+function publicBorrowError(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return error;
+  if (error.code === "P2002") return new Error("A matching borrowing request is already being processed. Please refresh the item page before trying again.");
+  if (error.code === "P2003" || error.code === "P2025") return new Error("This item changed while the request was being submitted. Refresh the QR page and try again.");
+  return new Error("The borrowing request could not be saved. Please try again or contact CEIT staff.");
 }
 
 type BorrowRequestInput = {
@@ -111,7 +115,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
           },
         });
         if (!item) itemUnavailable();
-        if (item.itemType !== ItemType.ASSET || !item.category.isActive || !item.location.isActive || !canBeBorrowed(item.status) || item.quantity < 1) {
+        if (item.itemType !== ItemType.ASSET || !item.category.isActive || !item.location.isActive || !canBorrowInventoryStatus(item.status) || item.quantity < 1) {
           itemUnavailable();
         }
 
@@ -152,14 +156,13 @@ async function createBorrowRequest(input: BorrowRequestInput) {
       return;
     } catch (error) {
       if (attempt === 0 && isSerializationFailure(error)) continue;
-      throw error;
+      throw publicBorrowError(error);
     }
   }
 }
 
 export async function submitBorrowRequest(formData: FormData) {
   if (readText(formData, "website", 255)) throw new Error("Unable to submit this request. Please try again.");
-  await enforcePublicRequestRateLimit(PublicRequestKind.BORROW);
 
   const qrCode = readQrCode(formData);
   const input: BorrowRequestInput = {
@@ -172,6 +175,10 @@ export async function submitBorrowRequest(formData: FormData) {
     expectedReturnDate: readExpectedReturnDate(formData),
   };
 
+  // Validate the form first. Correcting an ordinary typo must not consume the
+  // public request quota, while valid submissions remain rate limited before
+  // they can write to the database.
+  await enforcePublicRequestRateLimit(PublicRequestKind.BORROW);
   await createBorrowRequest(input);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/borrowing");
@@ -180,37 +187,48 @@ export async function submitBorrowRequest(formData: FormData) {
 
 export async function submitReturnRequest(formData: FormData) {
   if (readText(formData, "website", 255)) throw new Error("Unable to submit this request. Please try again.");
-  await enforcePublicRequestRateLimit(PublicRequestKind.RETURN);
 
   const qrCode = readQrCode(formData);
   const studentNumber = readStudentNumber(formData);
   const contact = readContact(formData);
   const returnRequestNotes = readText(formData, "returnRequestNotes", 1_000);
 
-  await prisma.$transaction(async (transaction) => {
-    const request = await transaction.borrowRequest.findFirst({
-      where: {
-        studentNumber,
-        contact,
-        status: borrowStatus.BORROWED,
-        inventoryItem: { is: { qrCode } },
-      },
-      select: { id: true, inventoryItemId: true },
-    });
-    if (!request) return;
-    await transaction.borrowRequest.update({
-      where: { id: request.id },
-      data: { status: borrowStatus.RETURN_REQUESTED, returnRequestedAt: new Date(), returnRequestNotes: returnRequestNotes || null },
-    });
-    await transaction.inventoryAudit.create({
-      data: {
-        itemId: request.inventoryItemId,
-        action: AuditAction.UPDATED,
-        summary: "Borrower submitted a QR return request.",
-        metadata: { borrowRequestId: request.id, transition: borrowStatus.RETURN_REQUESTED, source: "public-qr" },
-      },
-    });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  // Like borrowing, only valid forms enter the public request quota.
+  await enforcePublicRequestRateLimit(PublicRequestKind.RETURN);
+
+  try {
+    await prisma.$transaction(async (transaction) => {
+      const request = await transaction.borrowRequest.findFirst({
+        where: {
+          studentNumber,
+          contact,
+          status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
+          inventoryItem: { is: { qrCode } },
+        },
+        select: { id: true, inventoryItemId: true, status: true },
+      });
+      if (!request) {
+        throw new Error("No active borrowing record matches these details. Check the student and contact numbers, or ask CEIT staff for help.");
+      }
+      if (request.status === borrowStatus.RETURN_REQUESTED) {
+        throw new Error("A return request for this item is already waiting for staff confirmation.");
+      }
+      await transaction.borrowRequest.update({
+        where: { id: request.id },
+        data: { status: borrowStatus.RETURN_REQUESTED, returnRequestedAt: new Date(), returnRequestNotes: returnRequestNotes || null },
+      });
+      await transaction.inventoryAudit.create({
+        data: {
+          itemId: request.inventoryItemId,
+          action: AuditAction.UPDATED,
+          summary: "Borrower submitted a QR return request.",
+          metadata: { borrowRequestId: request.id, transition: borrowStatus.RETURN_REQUESTED, source: "public-qr" },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    throw publicBorrowError(error);
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/borrowing");

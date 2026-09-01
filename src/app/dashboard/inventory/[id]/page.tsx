@@ -355,7 +355,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   </>
                 )}
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                  <label><span className="text-sm font-semibold">Status</span><select name="status" defaultValue={item.status} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">{Object.values(ItemStatus).map((value) => <option key={value} value={value}>{inventoryStatusLabel(value)}</option>)}</select></label>
+                  <label><span className="text-sm font-semibold">Status</span><select name="status" defaultValue={item.status} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">{Object.values(ItemStatus).filter((value) => value !== ItemStatus.RETIRED || item.status === ItemStatus.RETIRED).map((value) => <option key={value} value={value}>{inventoryStatusLabel(value)}</option>)}</select></label>
                   <label><span className="text-sm font-semibold">Condition</span><select name="condition" defaultValue={item.condition} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">{Object.values(ItemCondition).map((value) => <option key={value} value={value}>{label(value)}</option>)}</select></label>
                 </div>
                 <div className="grid gap-4">
