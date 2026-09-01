@@ -47,12 +47,22 @@ function localRequestOrigin(requestHeaders: Headers) {
   return null;
 }
 
+function vercelProductionUrl(value: string | undefined) {
+  const hostname = value?.trim();
+  if (!hostname) return null;
+
+  const url = normalizePublicUrl(hostname.includes("://") ? hostname : `https://${hostname}`);
+  if (!url) return null;
+  const parsedUrl = new URL(url);
+  return parsedUrl.pathname === "/" ? parsedUrl.origin : null;
+}
+
 /**
  * Returns the trusted origin used by the in-app scanner when it reads a full
  * QR URL. Invalid configuration is ignored instead of breaking the scanner.
  */
-export function inventoryLabelAppOrigin(configuredUrl: string | undefined) {
-  const url = normalizePublicUrl(configuredUrl);
+export function inventoryLabelAppOrigin(configuredUrl: string | undefined, platformProductionUrl?: string) {
+  const url = normalizePublicUrl(configuredUrl) ?? vercelProductionUrl(platformProductionUrl);
   return url ? new URL(url).origin : undefined;
 }
 
@@ -63,6 +73,6 @@ export function inventoryLabelAppOrigin(configuredUrl: string | undefined) {
  * controlled by proxies (or point to a protected preview deployment), so they
  * are only used as a convenience for localhost and private-LAN development.
  */
-export function inventoryLabelAppUrl(configuredUrl: string | undefined, requestHeaders: Headers) {
-  return normalizePublicUrl(configuredUrl) ?? localRequestOrigin(requestHeaders);
+export function inventoryLabelAppUrl(configuredUrl: string | undefined, requestHeaders: Headers, platformProductionUrl?: string) {
+  return normalizePublicUrl(configuredUrl) ?? vercelProductionUrl(platformProductionUrl) ?? localRequestOrigin(requestHeaders);
 }

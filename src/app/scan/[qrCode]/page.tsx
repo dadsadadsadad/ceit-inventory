@@ -57,7 +57,7 @@ export default async function ScannedItemPage({
 
   return (
     <main className="page scan-item-page">
-      {canManage ? <ScanAuditLogger itemId={item.id} /> : null}
+      <ScanAuditLogger itemId={item.id} />
       <div className="page-narrow space-y-6">
         <header>
           <div className="flex items-center justify-between gap-4">
