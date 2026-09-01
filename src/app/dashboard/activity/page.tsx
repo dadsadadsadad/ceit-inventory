@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = { page?: string | string[] };
 type ActivityEvent = Prisma.InventoryAuditGetPayload<{ include: { item: { select: { id: true; name: true } } } }>;
-type ActivityCategory = "record-edit" | "record-created" | "import" | "scan" | "borrowing" | "maintenance" | "attachment" | "other";
+type ActivityCategory = "record-edit" | "record-created" | "import" | "scan" | "label" | "borrowing" | "maintenance" | "attachment" | "other";
 
 const pageSize = 25;
 const recentEditCandidateLimit = 50;
@@ -88,6 +88,7 @@ function activityCategory(event: ActivityEvent): ActivityCategory {
   const activityKind = metadataText(metadata, "activityKind");
   const source = metadataText(metadata, "source");
 
+  if (activityKind === "label-print" || source === "qr-label") return "label";
   if (event.action === AuditAction.SCANNED || activityKind === "scan" || source === "qr") return "scan";
   if (source === "import" || activityKind === "record-import") return "import";
   if (hasMetadataValue(metadata, "borrowRequestId")) return "borrowing";
@@ -106,6 +107,7 @@ function categoryLabel(category: ActivityCategory) {
     "record-created": "Record added",
     import: "Import",
     scan: "Scan",
+    label: "QR label",
     borrowing: "Borrowing",
     maintenance: "Maintenance",
     attachment: "Item media",
@@ -134,7 +136,9 @@ function eventDetail(event: ActivityEvent) {
     case "import":
       return "Created from an inventory file.";
     case "scan":
-      return "QR label opened by staff.";
+      return metadataText(metadata, "scanType") === "public" ? "QR label opened from a public device." : "QR label opened by staff.";
+    case "label":
+      return "QR label printed for physical use.";
     case "borrowing":
       return "Borrowing workflow updated this item.";
     case "maintenance":

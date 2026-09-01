@@ -44,6 +44,14 @@ npm run dev
 
 Then open **Settings** to add rooms and categories, create inventory records, and use **Print QR label** for each tracked PC or asset.
 
+## QR labels in production
+
+Set `NEXT_PUBLIC_APP_URL` in the production environment to the permanent public or school-LAN address before printing labels. This is always the preferred QR destination. On Vercel, the app also falls back to Vercel's permanent production-domain variable when it is exposed, so labels created from a preview do not point at that preview deployment.
+
+The public `/scan/[qrCode]` page must be reachable without Vercel Deployment Protection or Vercel Authentication. If Vercel shows its own sign-in page after scanning, make the production deployment public in Vercel and reprint the affected labels; a printed QR code permanently retains its embedded URL. Vercel documents its permanent production-domain variable and Deployment Protection behavior in its [system environment-variable documentation](https://vercel.com/docs/environment-variables/system-environment-variables) and [Deployment Protection guide](https://vercel.com/docs/deployment-protection).
+
+Every label print and QR opening is recorded in the in-app activity history. Administrators and staff can also download a filtered audit-trail CSV from Reports.
+
 ### Development account
 
 The current development database contains an administrator account created for testing. Its credentials are intentionally not stored in this repository. Change its password or deactivate it from **Users** before sharing the app beyond development.

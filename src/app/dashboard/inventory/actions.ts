@@ -4,7 +4,7 @@ import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prism
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdministrator, requireWriteAccess } from "@/lib/inventory-auth";
+import { requireAdministrator, requireInventoryAccess, requireWriteAccess } from "@/lib/inventory-auth";
 import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
 
@@ -13,6 +13,25 @@ const conditions = Object.values(ItemCondition);
 const itemTypes = Object.values(ItemType);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const maximumBulkSelection = 10_000;
+
+export async function recordInventoryLabelPrinted(itemId: string) {
+  const actor = await requireInventoryAccess();
+  if (!uuidPattern.test(itemId)) return;
+
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } });
+  if (!item) return;
+
+  await prisma.inventoryAudit.create({
+    data: {
+      itemId: item.id,
+      action: AuditAction.UPDATED,
+      summary: "QR label printed.",
+      actorId: actor.id,
+      actorName: actor.email,
+      metadata: { activityKind: "label-print", source: "qr-label" },
+    },
+  });
+}
 
 function fieldLabel(key: string) {
   return key.replace(/Id$/, "").replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());

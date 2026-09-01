@@ -9,7 +9,7 @@ import { inventoryLabelAppOrigin } from "@/lib/inventory-label-url";
 import { inventoryQrCodeFromScan } from "@/lib/qr-code";
 
 function codeFromScan(value: string) {
-  const configuredOrigin = inventoryLabelAppOrigin(process.env.NEXT_PUBLIC_APP_URL);
+  const configuredOrigin = inventoryLabelAppOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL);
   return inventoryQrCodeFromScan(value, window.location.origin, configuredOrigin);
 }
 

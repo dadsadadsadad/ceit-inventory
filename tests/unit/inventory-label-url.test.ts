@@ -23,6 +23,11 @@ describe("inventory label URLs", () => {
     expect(inventoryLabelAppUrl("not a URL", new Headers({ host: "inventory.example.edu" }))).toBeNull();
   });
 
+  it("uses Vercel's permanent production domain instead of a preview request host", () => {
+    expect(inventoryLabelAppUrl(undefined, new Headers({ host: "ceit-inventory-git-main-team.vercel.app" }), "inventory.example.edu")).toBe("https://inventory.example.edu");
+    expect(inventoryLabelAppOrigin(undefined, "inventory.example.edu")).toBe("https://inventory.example.edu");
+  });
+
   it("ignores an invalid forwarded host in favor of a local direct host", () => {
     expect(inventoryLabelAppUrl(undefined, new Headers({
       host: "localhost:3000",

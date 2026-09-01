@@ -1,7 +1,8 @@
-import { MaintenanceStatus } from "@prisma/client";
+import { MaintenanceStatus, Prisma } from "@prisma/client";
 
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { manilaCalendarDate } from "@/lib/manila-date";
+import { parseReportExportFilters, reportDateWhere } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,14 @@ function csv(rows: unknown[][]) {
 }
 
 function download(content: string, filename: string) {
-  return new Response(content, { headers: { "Content-Disposition": `attachment; filename=\"${filename}\"`, "Content-Type": "text/csv; charset=utf-8", "X-Content-Type-Options": "nosniff" } });
+  return new Response(content, {
+    headers: {
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Type": "text/csv; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
 function exportLimitReached(recordCount: number) {
@@ -28,32 +36,87 @@ function exportLimitReached(recordCount: number) {
     : null;
 }
 
+function dateFilter(range: ReturnType<typeof parseReportExportFilters>["dateRange"]) {
+  const where = reportDateWhere(range);
+  return Object.keys(where).length ? where : undefined;
+}
+
+function filename(stem: string, date: string, hasFilters: boolean) {
+  return `${stem}${hasFilters ? "-filtered" : ""}-${date}.csv`;
+}
+
 export async function GET(request: Request) {
   const user = await requireInventoryAccess();
-  const kind = new URL(request.url).searchParams.get("kind");
+  const parameters = new URL(request.url).searchParams;
+  const kind = parameters.get("kind");
   const date = manilaCalendarDate();
+  let filters: ReturnType<typeof parseReportExportFilters>;
+
+  try {
+    filters = parseReportExportFilters(parameters);
+  } catch (error) {
+    return new Response(error instanceof Error ? error.message : "Invalid export filters.", { status: 400 });
+  }
+
+  const appliedDateFilter = dateFilter(filters.dateRange);
+  const hasFilters = Boolean(appliedDateFilter || filters.inventoryStatus || filters.pcOnly || filters.borrowingStatus);
 
   if (kind === "inventory") {
-    const items = await prisma.inventoryItem.findMany({ include: { category: true, location: true, computer: true }, orderBy: [{ name: "asc" }, { assetTag: "asc" }], take: maximumExportRecords + 1 });
+    const where: Prisma.InventoryItemWhereInput = {
+      ...(appliedDateFilter ? { createdAt: appliedDateFilter } : {}),
+      ...(filters.inventoryStatus ? { status: filters.inventoryStatus } : {}),
+      ...(filters.pcOnly ? { isComputer: true } : {}),
+    };
+    const items = await prisma.inventoryItem.findMany({ where, include: { category: true, location: true, computer: true }, orderBy: [{ name: "asc" }, { assetTag: "asc" }], take: maximumExportRecords + 1 });
     const limitResponse = exportLimitReached(items.length);
     if (limitResponse) return limitResponse;
-    return download(csv([["Asset tag", "Item", "Category", "Location", "Type", "Quantity", "Status", "Condition", "Manufacturer", "Model", "Serial number", "Purchase date", "PC operating system", "PC last checked"], ...items.map((item) => [item.assetTag, item.name, item.category.name, item.location.name, item.itemType, item.quantity, item.status, item.condition, item.manufacturer, item.model, item.serialNumber, item.purchaseDate, item.computer?.operatingSystem, item.computer?.lastCheckedAt])]), `ceit-inventory-${date}.csv`);
+    return download(csv([
+      ["Asset tag", "Item", "Category", "Location", "Type", "Quantity", "Status", "Condition", "Manufacturer", "Model", "Serial number", "Record created", "Purchase date", "PC operating system", "PC last checked"],
+      ...items.map((item) => [item.assetTag, item.name, item.category.name, item.location.name, item.itemType, item.quantity, item.status, item.condition, item.manufacturer, item.model, item.serialNumber, item.createdAt, item.purchaseDate, item.computer?.operatingSystem, item.computer?.lastCheckedAt]),
+    ]), filename("ceit-inventory", date, hasFilters));
   }
 
   if (!canManageInventory(user.role)) return new Response("Forbidden", { status: 403 });
 
   if (kind === "borrowings") {
-    const requests = await prisma.borrowRequest.findMany({ include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { requestedAt: "desc" }, take: maximumExportRecords + 1 });
+    const where: Prisma.BorrowRequestWhereInput = {
+      ...(appliedDateFilter ? { requestedAt: appliedDateFilter } : {}),
+      ...(filters.borrowingStatus ? { status: filters.borrowingStatus } : {}),
+    };
+    const requests = await prisma.borrowRequest.findMany({ where, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { requestedAt: "desc" }, take: maximumExportRecords + 1 });
     const limitResponse = exportLimitReached(requests.length);
     if (limitResponse) return limitResponse;
-    return download(csv([["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"], ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes])]), `ceit-borrowing-history-${date}.csv`);
+    return download(csv([
+      ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"],
+      ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes]),
+    ]), filename("ceit-borrowing-history", date, hasFilters));
   }
 
   if (kind === "maintenance") {
-    const tickets = await prisma.maintenanceTicket.findMany({ include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { openedAt: "desc" }, take: maximumExportRecords + 1 });
+    const where: Prisma.MaintenanceTicketWhereInput = appliedDateFilter ? { openedAt: appliedDateFilter } : {};
+    const tickets = await prisma.maintenanceTicket.findMany({ where, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { openedAt: "desc" }, take: maximumExportRecords + 1 });
     const limitResponse = exportLimitReached(tickets.length);
     if (limitResponse) return limitResponse;
-    return download(csv([["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Assigned to", "Reported at", "Resolved at", "Resolution notes"], ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.assignedToName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes])]), `ceit-service-requests-${date}.csv`);
+    return download(csv([
+      ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Assigned to", "Reported at", "Resolved at", "Resolution notes"],
+      ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.assignedToName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes]),
+    ]), filename("ceit-service-requests", date, hasFilters));
+  }
+
+  if (kind === "activity") {
+    const where: Prisma.InventoryAuditWhereInput = appliedDateFilter ? { createdAt: appliedDateFilter } : {};
+    const activity = await prisma.inventoryAudit.findMany({
+      where,
+      include: { item: { select: { assetTag: true, name: true } } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: maximumExportRecords + 1,
+    });
+    const limitResponse = exportLimitReached(activity.length);
+    if (limitResponse) return limitResponse;
+    return download(csv([
+      ["When", "Action", "Item", "Asset tag", "User", "Summary"],
+      ...activity.map((event) => [event.createdAt, event.action, event.item.name, event.item.assetTag, event.actorName ?? (event.actorId ? "Former user" : "System"), event.summary]),
+    ]), filename("ceit-audit-trail", date, hasFilters));
   }
 
   return new Response("Unknown export", { status: 400 });
