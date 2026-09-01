@@ -3,10 +3,13 @@ import { BorrowStatus, ItemStatus } from "@prisma/client";
 import { manilaCalendarDate } from "@/lib/manila-date";
 
 export const exportPeriods = ["all", "today", "last-7-days", "last-30-days", "this-month", "this-year"] as const;
+export const borrowingReportStates = ["all", "currently-borrowed", "returned", "requested", "declined"] as const;
 
 export type ExportPeriod = (typeof exportPeriods)[number];
+export type BorrowingReportState = (typeof borrowingReportStates)[number];
 export type ExportDateRange = { from?: Date; toExclusive?: Date };
 export type ReportExportFilters = {
+  borrowingState: BorrowingReportState;
   borrowingStatus?: BorrowStatus;
   dateRange: ExportDateRange;
   inventoryStatus?: ItemStatus;
@@ -18,6 +21,10 @@ type QueryParameters = Pick<URLSearchParams, "get">;
 
 function isExportPeriod(value: string): value is ExportPeriod {
   return exportPeriods.includes(value as ExportPeriod);
+}
+
+function isBorrowingReportState(value: string): value is BorrowingReportState {
+  return borrowingReportStates.includes(value as BorrowingReportState);
 }
 
 function calendarDate(value: string | null, label: string) {
@@ -68,6 +75,12 @@ function optionalBorrowStatus(value: string | null) {
   return value as BorrowStatus;
 }
 
+function borrowingReportState(value: string | null) {
+  if (!value) return "all" as const;
+  if (!isBorrowingReportState(value)) throw new Error("Invalid lending report view.");
+  return value;
+}
+
 export function parseReportExportFilters(parameters: QueryParameters, now = new Date()): ReportExportFilters {
   const requestedPeriod = parameters.get("period") ?? "all";
   if (!isExportPeriod(requestedPeriod)) throw new Error("Invalid export period.");
@@ -77,12 +90,48 @@ export function parseReportExportFilters(parameters: QueryParameters, now = new 
   const hasCustomRange = Boolean(from || to);
 
   return {
+    borrowingState: borrowingReportState(parameters.get("borrowingState")),
     borrowingStatus: optionalBorrowStatus(parameters.get("borrowingStatus")),
     dateRange: hasCustomRange ? dateRange(from, to) : periodRange(requestedPeriod, now),
     inventoryStatus: optionalItemStatus(parameters.get("inventoryStatus")),
     pcOnly: parameters.get("pcOnly") === "1",
     period: requestedPeriod,
   };
+}
+
+/**
+ * Converts the friendly lending report views into the actual request states
+ * used in storage. A return-requested item is still out with the borrower, so
+ * it belongs in the currently borrowed view.
+ */
+export function borrowingReportStatusFilter(filters: Pick<ReportExportFilters, "borrowingState" | "borrowingStatus">) {
+  switch (filters.borrowingState) {
+    case "currently-borrowed":
+      return { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] };
+    case "returned":
+      return BorrowStatus.RETURNED;
+    case "requested":
+      return BorrowStatus.REQUESTED;
+    case "declined":
+      return BorrowStatus.DECLINED;
+    case "all":
+      return filters.borrowingStatus;
+  }
+}
+
+export function borrowingReportStateLabel(state: BorrowingReportState) {
+  switch (state) {
+    case "currently-borrowed":
+      return "Currently borrowed";
+    case "returned":
+      return "Returned items";
+    case "requested":
+      return "Pending requests";
+    case "declined":
+      return "Declined requests";
+    case "all":
+      return "All lending activity";
+  }
 }
 
 export function reportDateWhere(range: ExportDateRange) {

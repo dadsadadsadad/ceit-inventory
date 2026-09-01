@@ -194,7 +194,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
             <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing history</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests, confirm QR return requests, and keep a complete equipment lending history.</p>
           </div>
-          <Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link>
+          <div className="flex flex-wrap gap-3"><Link href="/dashboard/reports?kind=borrowings" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Borrowed &amp; returned reports</Link><Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link></div>
         </header>
 
         <form className="card grid gap-3 rounded-lg p-4 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-end" aria-label="Borrowing request filters">
