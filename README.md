@@ -14,7 +14,7 @@ Inventory management for CEIT rooms, equipment, PCs, supplies, and assets with Q
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Search, filters, sorting, and page navigation for status, room, identifiers, category, type, and condition
 - CSV/XLSX import with flexible column headings and row-level feedback
-- Filterable inventory, PC/Mac register, borrowing, service, and audit exports in CSV or PDF, plus a detailed operational overview PDF
+- Filterable inventory, PC/Mac register, borrowing, maintenance, and audit exports in CSV or PDF, plus a detailed operational overview PDF
 - Public borrowing requests from QR codes, with staff approval, return, and history tracking
 - One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
 - Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history

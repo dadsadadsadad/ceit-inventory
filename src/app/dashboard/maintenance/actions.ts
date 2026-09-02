@@ -1,6 +1,6 @@
 "use server";
 
-import { ItemStatus, MaintenancePriority, MaintenanceStatus, UserRole } from "@prisma/client";
+import { ItemStatus, MaintenancePriority, MaintenanceStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -38,35 +38,19 @@ function revalidate(itemId?: string) {
   if (itemId) revalidatePath(`/dashboard/inventory/${itemId}`);
 }
 
-async function activeStaffAssignee(value: string | null) {
-  if (!value) return null;
-
-  const user = await prisma.user.findFirst({
-    where: {
-      email: { equals: value, mode: "insensitive" },
-      isActive: true,
-      role: { in: [UserRole.ADMINISTRATOR, UserRole.STAFF] },
-    },
-    select: { email: true },
-  });
-  if (!user) throw new Error("Choose an active staff member to assign this service request.");
-  return user.email;
-}
-
 export async function createMaintenanceTicket(formData: FormData) {
   const actor = await requireWriteAccess();
   const itemId = id(formData, "itemId");
   const title = text(formData, "title", 255, true);
   const description = text(formData, "description", 5_000, true);
   const priority = enumValue(formData, "priority", Object.values(MaintenancePriority), MaintenancePriority.NORMAL);
-  const assignedToName = await activeStaffAssignee(text(formData, "assignedToName", 255));
   const markDefective = formData.get("markDefective") === "on";
 
   await prisma.$transaction(async (transaction) => {
     const item = await transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true, status: true } });
     if (!item || item.status === ItemStatus.RETIRED) throw new Error("Choose an active inventory item.");
     const ticket = await transaction.maintenanceTicket.create({
-      data: { inventoryItemId: itemId, title: title ?? "", description: description ?? "", priority, assignedToName, reportedByName: actor.email },
+      data: { inventoryItemId: itemId, title: title ?? "", description: description ?? "", priority, reportedByName: actor.email },
     });
     if (markDefective && item.status !== ItemStatus.DEFECTIVE) {
       await transaction.inventoryItem.update({ where: { id: itemId }, data: { status: ItemStatus.DEFECTIVE } });
@@ -77,7 +61,7 @@ export async function createMaintenanceTicket(formData: FormData) {
         actor,
         entity: { id: ticket.id, itemId, label: title, type: "maintenance-ticket" },
         metadata: { markDefective, priority, source: "maintenance" },
-        summary: `Service request reported: ${title}.`,
+        summary: `Maintenance request reported: ${title}.`,
       }),
     });
   });
@@ -90,16 +74,15 @@ export async function updateMaintenanceTicket(formData: FormData) {
   const actor = await requireWriteAccess();
   const ticketId = id(formData, "ticketId");
   const status = enumValue(formData, "status", Object.values(MaintenanceStatus), MaintenanceStatus.OPEN);
-  const assignedToName = await activeStaffAssignee(text(formData, "assignedToName", 255));
   const resolutionNotes = text(formData, "resolutionNotes", 5_000);
 
   const ticket = await prisma.$transaction(async (transaction) => {
     const existing = await transaction.maintenanceTicket.findUnique({ where: { id: ticketId }, select: { id: true, inventoryItemId: true, status: true, title: true } });
-    if (!existing) throw new Error("This service request no longer exists.");
+    if (!existing) throw new Error("This maintenance request no longer exists.");
     const resolvedAt = status === MaintenanceStatus.RESOLVED ? new Date() : null;
     await transaction.maintenanceTicket.update({
       where: { id: ticketId },
-      data: { status, assignedToName, resolutionNotes, resolvedAt },
+      data: { status, resolutionNotes, resolvedAt },
     });
     await transaction.inventoryAudit.create({
       data: auditEventData({
@@ -107,7 +90,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
         actor,
         entity: { id: existing.id, itemId: existing.inventoryItemId, label: existing.title, type: "maintenance-ticket" },
         metadata: { maintenanceTicketId: existing.id, previousStatus: existing.status, status },
-        summary: `Service request updated: ${existing.title} (${status}).`,
+        summary: `Maintenance request updated: ${existing.title} (${status}).`,
       }),
     });
     return existing;

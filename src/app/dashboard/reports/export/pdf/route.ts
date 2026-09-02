@@ -522,10 +522,10 @@ async function createMaintenancePdf(filters: ReportExportFilters, calendarDate: 
   if (tickets.length > maximumPdfRecords) return new Response(`This export exceeds ${maximumPdfRecords.toLocaleString()} records. Narrow the data before exporting.`, { status: 413 });
   const open = tickets.filter((ticket) => ticket.status === MaintenanceStatus.OPEN);
 
-  const { document, writer } = await reportDocument("Service requests", "Filtered maintenance and service request register");
-  writer.addBody("A filtered register of reported maintenance work, ownership, priority, resolution state, and supporting notes.", 10, mutedColor);
+  const { document, writer } = await reportDocument("Maintenance requests", "Filtered maintenance request register");
+  writer.addBody("A filtered register of reported maintenance work, priority, resolution state, and supporting notes.", 10, mutedColor);
   writer.addBody(filterSummary(filters), 8.5, mutedColor);
-  writer.addHeading("Service snapshot");
+  writer.addHeading("Maintenance snapshot");
   writer.addMetricRow([
     { label: "Matching requests", value: tickets.length.toLocaleString() },
     { label: "Open requests", value: open.length.toLocaleString() },
@@ -533,18 +533,18 @@ async function createMaintenancePdf(filters: ReportExportFilters, calendarDate: 
   ]);
   writer.addHeading("Maintenance records");
   writer.addTable(
-    ["Item and request", "Priority / status", "People", "Timeline", "Description / resolution"],
+    ["Item and request", "Priority / status", "Reported by", "Timeline", "Description / resolution"],
     tickets.map((ticket) => [
       [ticket.inventoryItem.name, ticket.inventoryItem.assetTag ?? "No asset tag", ticket.title].join("\n"),
       `${humanize(ticket.priority)}\n${ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved"}`,
-      [`Reported by: ${ticket.reportedByName ?? "Not recorded"}`, `Assigned to: ${ticket.assignedToName ?? "Unassigned"}`].join("\n"),
+      ticket.reportedByName ?? "Not recorded",
       [`Opened: ${reportDateTime(ticket.openedAt)}`, ticket.resolvedAt ? `Resolved: ${reportDateTime(ticket.resolvedAt)}` : "Not resolved"].join("\n"),
       [ticket.description, ticket.resolutionNotes && `Resolution: ${ticket.resolutionNotes}`].filter(Boolean).join("\n"),
     ]),
     { fontSize: 8, maxCellCharacters: 190, widths: [1.18, 0.9, 1.03, 1.13, 1.49] },
   );
   writer.finish();
-  return documentResponse(document, `ceit-service-requests${hasReportFilters(filters) ? "-filtered" : ""}-${calendarDate}.pdf`);
+  return documentResponse(document, `ceit-maintenance-requests${hasReportFilters(filters) ? "-filtered" : ""}-${calendarDate}.pdf`);
 }
 
 async function createAuditPdf(parameters: URLSearchParams, calendarDate: string) {
@@ -647,16 +647,16 @@ async function createOverviewPdf(canManage: boolean, calendarDate: string) {
   if (canManage) {
     writer.addHeading("Operational workload");
     writer.addMetricRow([
-      { label: "Open service requests", value: openTicketCount.toLocaleString() },
+      { label: "Open maintenance requests", value: openTicketCount.toLocaleString() },
       { label: "High / urgent", value: urgentTicketCount.toLocaleString() },
       { label: "Currently borrowed", value: activeBorrowCount.toLocaleString() },
       { label: "Overdue borrowing", value: overdueBorrowCount.toLocaleString() },
     ]);
   }
   writer.addHeading("Status distribution");
-  writer.addTable(["Status", "Records", "Operational reading"], Object.values(ItemStatus).map((status) => [inventoryStatusLabel(status), (statusMap.get(status) ?? 0).toLocaleString(), status === ItemStatus.DEFECTIVE ? "Requires maintenance or replacement review" : status === ItemStatus.NOT_TESTED ? "Inspection still required" : status === ItemStatus.LOST ? "Investigate location and accountability" : status === ItemStatus.RETIRED ? "Removed from active service" : "Available or in service"]), { widths: [1, 0.8, 2.4] });
+  writer.addTable(["Status", "Records", "Operational reading"], Object.values(ItemStatus).map((status) => [inventoryStatusLabel(status), (statusMap.get(status) ?? 0).toLocaleString(), status === ItemStatus.DEFECTIVE ? "Requires maintenance or replacement review" : status === ItemStatus.NOT_TESTED ? "Inspection still required" : status === ItemStatus.LOST ? "Investigate location and accountability" : status === ItemStatus.RETIRED ? "Removed from active inventory" : "Available for use"]), { widths: [1, 0.8, 2.4] });
   writer.addHeading("Condition distribution");
-  writer.addTable(["Condition", "Records", "Operational reading"], Object.values(ItemCondition).map((condition) => [humanize(condition), (conditionMap.get(condition) ?? 0).toLocaleString(), condition === ItemCondition.FOR_REPAIR ? "Repair work is required" : condition === ItemCondition.POOR ? "Review for repair or retirement" : "Serviceable condition"]), { widths: [1, 0.8, 2.4] });
+  writer.addTable(["Condition", "Records", "Operational reading"], Object.values(ItemCondition).map((condition) => [humanize(condition), (conditionMap.get(condition) ?? 0).toLocaleString(), condition === ItemCondition.FOR_REPAIR ? "Repair work is required" : condition === ItemCondition.POOR ? "Review for repair or retirement" : "Usable condition"]), { widths: [1, 0.8, 2.4] });
   writer.addHeading(attentionCount > attentionItems.length ? `Items requiring attention (first ${attentionItems.length})` : "Items requiring attention");
   writer.addTable(["Item", "Category / location", "Status / condition", "Last checked"], attentionItems.map((item) => [[item.name, item.assetTag ?? "No asset tag"].join("\n"), `${item.category.name}\n${item.location.name}`, `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}`, reportDateTime(item.lastCheckedAt)]), { maxCellCharacters: 150, widths: [1.4, 1.3, 1.05, 1.15] });
   writer.addHeading("Coverage by category");
@@ -664,8 +664,8 @@ async function createOverviewPdf(canManage: boolean, calendarDate: string) {
   writer.addHeading("Coverage by location");
   writer.addTable(["Location", "Records"], topLocations.map((location) => [location.name, location._count.items.toLocaleString()]), { widths: [3, 1] });
   if (canManage) {
-    writer.addHeading("Open service requests");
-    writer.addTable(["Item", "Priority", "Assigned to", "Opened"], openTickets.map((ticket) => [[ticket.inventoryItem.name, ticket.inventoryItem.assetTag ?? "No asset tag", ticket.title].join("\n"), humanize(ticket.priority), ticket.assignedToName ?? "Unassigned", reportDateTime(ticket.openedAt)]), { widths: [1.8, 0.8, 1, 1.15] });
+    writer.addHeading("Open maintenance requests");
+    writer.addTable(["Item", "Priority", "Opened"], openTickets.map((ticket) => [[ticket.inventoryItem.name, ticket.inventoryItem.assetTag ?? "No asset tag", ticket.title].join("\n"), humanize(ticket.priority), reportDateTime(ticket.openedAt)]), { widths: [1.9, 0.85, 1.25] });
     writer.addHeading("Overdue borrowing");
     writer.addTable(["Item", "Borrower", "Expected return", "Status"], overdueBorrows.map((request) => [[request.inventoryItem.name, request.inventoryItem.assetTag ?? "No asset tag"].join("\n"), request.borrowerName, reportDate(request.expectedReturnDate), humanize(request.status)]), { widths: [1.6, 1.25, 1.1, 0.8] });
   }

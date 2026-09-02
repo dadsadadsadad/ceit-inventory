@@ -19,7 +19,7 @@ const commands: CommandItem[] = [
   { label: "Scan a QR code", description: "Open the camera scanner", href: "/scan", Icon: ScanLine },
   { label: "Add inventory", description: "Register an asset or supply", href: "/dashboard/inventory/new", Icon: PackagePlus, requires: "inventory-manager" },
   { label: "Open borrowing", description: "Review equipment lending requests", href: "/dashboard/borrowing", Icon: HandHelping, requires: "inventory-manager" },
-  { label: "Open maintenance", description: "Report and resolve service requests", href: "/dashboard/maintenance", Icon: Wrench, requires: "inventory-manager" },
+  { label: "Open maintenance", description: "Report and resolve maintenance requests", href: "/dashboard/maintenance", Icon: Wrench, requires: "inventory-manager" },
   { label: "Open audit trail", description: "Search the complete inventory activity history", href: "/dashboard/activity", Icon: ScrollText, requires: "administrator" },
   { label: "Open reports", description: "Review current inventory trends", href: "/dashboard/reports", Icon: BarChart3 },
   { label: "Manage users", description: "Create and update CEIT inventory accounts", href: "/dashboard/users", Icon: Users, requires: "administrator" },

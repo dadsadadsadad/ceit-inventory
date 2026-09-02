@@ -171,9 +171,9 @@ export async function GET(request: Request) {
     const limitResponse = exportLimitReached(tickets.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Assigned to", "Reported at", "Resolved at", "Resolution notes"],
-      ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.assignedToName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes]),
-    ]), filename("ceit-service-requests", date, hasFilters), user, kind);
+      ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Reported at", "Resolved at", "Resolution notes"],
+      ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes]),
+    ]), filename("ceit-maintenance-requests", date, hasFilters), user, kind);
   }
 
   if (kind === "activity") {
