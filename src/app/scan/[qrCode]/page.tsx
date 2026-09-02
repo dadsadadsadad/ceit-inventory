@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
 import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
+import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { isInventoryQrCode } from "@/lib/qr-code";
 import { prisma } from "@/prisma";
 
@@ -11,10 +12,6 @@ import { BorrowReturnChooser } from "../borrow-return-chooser";
 import { ScanAuditLogger } from "../scan-audit-logger";
 
 export const dynamic = "force-dynamic";
-
-function readableStatus(status: ItemStatus) {
-  return status.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
-}
 
 function isBorrowableItem(item: { category: { isActive: boolean }; itemType: ItemType; location: { isActive: boolean }; quantity: number; status: ItemStatus }) {
   return item.itemType === ItemType.ASSET
@@ -85,9 +82,9 @@ export default async function ScannedItemPage({
 
         <article className="card rounded-lg p-5 sm:p-7">
           <dl className="grid gap-5 sm:grid-cols-2">
-            <div><dt className="muted text-xs font-bold uppercase tracking-wide">Asset tag</dt><dd className="mt-1 text-sm font-semibold">{item.assetTag ?? "Not assigned"}</dd></div>
-            <div><dt className="muted text-xs font-bold uppercase tracking-wide">Status</dt><dd className="mt-1 text-sm font-semibold">{readableStatus(item.status)}</dd></div>
-            <div><dt className="muted text-xs font-bold uppercase tracking-wide">Condition</dt><dd className="mt-1 text-sm font-semibold">{item.condition.replaceAll("_", " ")}</dd></div>
+            <div><dt className="muted text-xs font-bold uppercase tracking-wide">Asset tag</dt><dd className="mt-1 font-mono text-sm font-semibold">{item.assetTag ?? "Not assigned"}</dd></div>
+            <div><dt className="muted text-xs font-bold uppercase tracking-wide">Status</dt><dd className="mt-1 text-sm font-semibold">{inventoryStatusLabel(item.status)}</dd></div>
+            <div><dt className="muted text-xs font-bold uppercase tracking-wide">Condition</dt><dd className="mt-1 text-sm font-semibold">{inventoryStatusLabel(item.condition)}</dd></div>
             <div><dt className="muted text-xs font-bold uppercase tracking-wide">Location</dt><dd className="mt-1 text-sm font-semibold">{item.location.name}</dd></div>
           </dl>
         </article>

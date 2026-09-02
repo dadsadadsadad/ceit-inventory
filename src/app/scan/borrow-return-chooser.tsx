@@ -45,11 +45,11 @@ export function BorrowReturnChooser({ borrowable, itemName, maximumQuantity, qrC
       <h2 id="equipment-request-heading" className="mt-2 text-xl font-semibold">What would you like to do?</h2>
       <p className="muted mt-2 text-sm leading-6">Choose the request that matches this scanned item. CEIT staff will review and confirm every request.</p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <button type="button" onClick={() => setMode("borrow")} disabled={!borrowable} className="primary-button min-h-24 rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
+        <button type="button" onClick={() => setMode("borrow")} disabled={!borrowable} className="primary-button min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
           <span className="block text-base font-semibold">Borrow equipment</span>
           <span className="mt-1 block text-sm font-normal opacity-90">Request this item for temporary use.</span>
         </button>
-        <button type="button" onClick={() => setMode("return")} className="secondary-button min-h-24 rounded-lg px-5 py-4 text-left">
+        <button type="button" onClick={() => setMode("return")} className="secondary-button min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left">
           <span className="block text-base font-semibold">Return equipment</span>
           <span className="mt-1 block text-sm font-normal opacity-90">Tell staff that you are returning a borrowed item.</span>
         </button>
