@@ -87,7 +87,6 @@ export async function GET(request: Request) {
   }
 
   const appliedDateFilter = dateFilter(filters.dateRange);
-  const hasFilters = Boolean(appliedDateFilter || filters.inventoryStatus || filters.pcOnly || filters.borrowingStatus || filters.borrowingState !== "all");
 
   if (kind === "inventory") {
     const where: Prisma.InventoryItemWhereInput = {
@@ -101,7 +100,7 @@ export async function GET(request: Request) {
     return download(csv([
       ["Asset tag", "QR code", "Item", "Category", "Location", "Type", "Quantity", "Status", "Condition", "Manufacturer", "Model", "Serial number", "Record created", "Purchase date", "Last checked", "PC operating system", "PC last checked"],
       ...items.map((item) => [item.assetTag, item.qrCode, item.name, item.category.name, item.location.name, item.itemType, item.quantity, item.status, item.condition, item.manufacturer, item.model, item.serialNumber, item.createdAt, item.purchaseDate, item.lastCheckedAt, item.computer?.operatingSystem, item.computer?.lastCheckedAt]),
-    ]), filename("ceit-inventory", date, hasFilters), user, kind);
+    ]), filename("ceit-inventory", date, Boolean(appliedDateFilter || filters.inventoryStatus || filters.pcOnly)), user, kind);
   }
 
   if (!canManageInventory(user.role)) return new Response("Forbidden", { status: 403 });
@@ -147,7 +146,7 @@ export async function GET(request: Request) {
         item.computer?.softwareDescription,
         item.computer?.software.map((software) => [software.name, software.version].filter(Boolean).join(" ")).join("; "),
       ]),
-    ]), filename("ceit-pc-register", date, hasFilters), user, kind);
+    ]), filename("ceit-pc-register", date, Boolean(appliedDateFilter || filters.inventoryStatus)), user, kind);
   }
 
   if (kind === "borrowings") {
@@ -162,7 +161,7 @@ export async function GET(request: Request) {
     return download(csv([
       ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Checked out / staff processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"],
       ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes]),
-    ]), filename(borrowingFilenameStem(filters.borrowingState), date, hasFilters), user, kind);
+    ]), filename(borrowingFilenameStem(filters.borrowingState), date, Boolean(appliedDateFilter || filters.borrowingStatus || filters.borrowingState !== "all")), user, kind);
   }
 
   if (kind === "maintenance") {
@@ -173,7 +172,7 @@ export async function GET(request: Request) {
     return download(csv([
       ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Reported at", "Resolved at", "Resolution notes"],
       ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes]),
-    ]), filename("ceit-maintenance-requests", date, hasFilters), user, kind);
+    ]), filename("ceit-maintenance-requests", date, Boolean(appliedDateFilter)), user, kind);
   }
 
   if (kind === "activity") {

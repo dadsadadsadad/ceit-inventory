@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireInventoryAccess } from "@/lib/inventory-auth";
+import { inventoryLabelAppOrigin } from "@/lib/inventory-label-url";
 
 import { QrScanner } from "./qr-scanner";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ScanPage() {
   await requireInventoryAccess();
+  const trustedQrOrigin = inventoryLabelAppOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL);
 
   return (
     <main className="page scan-page">
@@ -18,7 +20,7 @@ export default async function ScanPage() {
           <h1 className="title mt-3 text-3xl">Scan a QR code</h1>
           <p className="muted mt-2 text-sm leading-6">Use your phone camera to open the exact CEIT asset record, then review or update its room, status, stock, and PC details.</p>
         </header>
-        <QrScanner />
+        <QrScanner trustedQrOrigin={trustedQrOrigin} />
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 import { ItemStatus, ItemType } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { borrowableInventoryStatuses, canBorrowInventoryStatus, usesIndividualAssetCheckout } from "@/lib/borrow-availability";
+import { availableBorrowQuantity, borrowableInventoryStatuses, canBorrowInventoryStatus, usesIndividualAssetCheckout } from "@/lib/borrow-availability";
 
 describe("borrowing availability", () => {
   it("only allows safe inventory statuses to be borrowed", () => {
@@ -17,5 +17,11 @@ describe("borrowing availability", () => {
     expect(usesIndividualAssetCheckout({ itemType: ItemType.ASSET, quantity: 2 }, 1)).toBe(false);
     expect(usesIndividualAssetCheckout({ itemType: ItemType.ASSET, quantity: 1 }, 2)).toBe(false);
     expect(usesIndividualAssetCheckout({ itemType: ItemType.SUPPLY, quantity: 1 }, 1)).toBe(false);
+  });
+
+  it("does not advertise stock already reserved by pending requests", () => {
+    expect(availableBorrowQuantity(1, 1)).toBe(0);
+    expect(availableBorrowQuantity(5, 2)).toBe(3);
+    expect(availableBorrowQuantity(2, 5)).toBe(0);
   });
 });

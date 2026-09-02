@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
-import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
+import { availableBorrowQuantity, canBorrowInventoryStatus } from "@/lib/borrow-availability";
+import { borrowStatus } from "@/lib/borrow-status";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { isInventoryQrCode } from "@/lib/qr-code";
 import { prisma } from "@/prisma";
@@ -13,9 +14,9 @@ import { ScanAuditLogger } from "../scan-audit-logger";
 
 export const dynamic = "force-dynamic";
 
-function isBorrowableItem(item: { category: { isActive: boolean }; itemType: ItemType; location: { isActive: boolean }; quantity: number; status: ItemStatus }) {
+function isBorrowableItem(item: { category: { isActive: boolean }; itemType: ItemType; location: { isActive: boolean }; status: ItemStatus }, availableQuantity: number) {
   return item.itemType === ItemType.ASSET
-    && item.quantity > 0
+    && availableQuantity > 0
     && item.category.isActive
     && item.location.isActive
     && canBorrowInventoryStatus(item.status);
@@ -51,7 +52,12 @@ export default async function ScannedItemPage({
   const canManage = Boolean(user && canManageInventory(user.role));
   const requestSent = (Array.isArray(search.request) ? search.request[0] : search.request) === "sent";
   const returnSent = (Array.isArray(search.return) ? search.return[0] : search.return) === "sent";
-  const borrowable = isBorrowableItem(item);
+  const pendingRequests = await prisma.borrowRequest.aggregate({
+    where: { inventoryItemId: item.id, status: borrowStatus.REQUESTED },
+    _sum: { requestedQuantity: true },
+  });
+  const availableQuantity = availableBorrowQuantity(item.quantity, pendingRequests._sum.requestedQuantity ?? 0);
+  const borrowable = isBorrowableItem(item, availableQuantity);
 
   return (
     <main className="page scan-item-page">
@@ -89,7 +95,7 @@ export default async function ScannedItemPage({
           </dl>
         </article>
 
-        {item.itemType === ItemType.ASSET ? <BorrowReturnChooser qrCode={item.qrCode} itemName={item.name} maximumQuantity={item.quantity} borrowable={borrowable} /> : <div className="notice rounded-lg px-5 py-4 text-sm" role="status">This supply item cannot be borrowed or returned through QR code requests. Please contact CEIT staff if you need assistance.</div>}
+        {item.itemType === ItemType.ASSET ? <BorrowReturnChooser qrCode={item.qrCode} itemName={item.name} maximumQuantity={availableQuantity} borrowable={borrowable} /> : <div className="notice rounded-lg px-5 py-4 text-sm" role="status">This supply item cannot be borrowed or returned through QR code requests. Please contact CEIT staff if you need assistance.</div>}
 
         {canManage ? (
           <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="staff-tools-heading">
