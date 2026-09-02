@@ -59,7 +59,7 @@ function vercelProductionUrl(value: string | undefined) {
 
 /**
  * Returns the trusted origin used by the in-app scanner when it reads a full
- * QR URL. Invalid configuration is ignored instead of breaking the scanner.
+ * QR code URL. Invalid configuration is ignored instead of breaking the scanner.
  */
 export function inventoryLabelAppOrigin(configuredUrl: string | undefined, platformProductionUrl?: string) {
   const url = normalizePublicUrl(configuredUrl) ?? vercelProductionUrl(platformProductionUrl);
@@ -67,7 +67,7 @@ export function inventoryLabelAppOrigin(configuredUrl: string | undefined, platf
 }
 
 /**
- * Returns the public base URL embedded in inventory QR labels.
+ * Returns the public base URL embedded in inventory QR codes.
  *
  * A configured URL is required for public deployments. Request headers can be
  * controlled by proxies (or point to a protected preview deployment), so they

@@ -10,5 +10,5 @@ export function PrintLabel({ itemId }: { itemId: string }) {
     window.print();
   }
 
-  return <button type="button" onClick={printLabel} className="primary-button no-print rounded-lg px-4 py-2.5 text-sm font-semibold">Print this label</button>;
+  return <button type="button" onClick={printLabel} className="primary-button no-print rounded-lg px-4 py-2.5 text-sm font-semibold">Print this QR code</button>;
 }

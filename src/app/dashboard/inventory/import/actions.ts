@@ -283,7 +283,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
       const itemType = enumValue(valueAt(row, "itemType"), Object.values(ItemType), ItemType.ASSET, "type");
       const quantity = parseNumber(valueAt(row, "quantity"), 1, "quantity") ?? 1;
       const hasComputerDetails = isTrue(valueAt(row, "isComputer")) || ["operatingSystem", "processor", "memoryGb", "macAddress", "hardwareDescription", "softwareDescription"].some((column) => valueAt(row, column) !== "");
-      if (itemType === ItemType.ASSET && quantity !== 1) throw new Error("each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR label. Import each unit as a separate row, or use a supply record for stock.");
+      if (itemType === ItemType.ASSET && quantity !== 1) throw new Error("each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR code. Import each unit as a separate row, or use a supply record for stock.");
       if (hasComputerDetails && (itemType !== ItemType.ASSET || quantity !== 1)) throw new Error("a PC must be a single tracked asset, not a supply record.");
       const legacyChecked = valueAt(row, "legacyChecked");
       const legacyState = legacyInspectionState(legacyChecked);

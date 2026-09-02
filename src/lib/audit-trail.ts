@@ -146,8 +146,8 @@ export function auditCategory(event: AuditTrailEvent) {
   if (event.entityType === "borrow-request") return "Borrowing";
   if (event.entityType === "maintenance-ticket") return "Maintenance";
 
-  if (activityKind === "label-print" || source === "qr-label") return "QR label";
-  if (event.action === AuditAction.SCANNED || activityKind === "scan" || source === "qr") return "QR scan";
+  if (activityKind === "qr-code-print" || activityKind === "label-print" || source === "qr-code" || source === "qr-label") return "QR code";
+  if (event.action === AuditAction.SCANNED || activityKind === "scan" || source === "qr") return "QR code scan";
   if (source === "import" || activityKind === "record-import") return "Import";
   if (hasMetadataValue(metadata, "borrowRequestId")) return "Borrowing";
   if (hasMetadataValue(metadata, "maintenanceTicketId") || source === "maintenance") return "Maintenance";
@@ -190,8 +190,8 @@ export function auditEventDetail(event: AuditTrailEvent) {
 
   const bulkAction = metadataText(metadata, "bulkAction");
   if (bulkAction) return `Bulk ${auditFieldLabel(bulkAction).toLowerCase()} update.`;
-  if (auditCategory(event) === "QR scan") return metadataText(metadata, "scanType") === "public" ? "QR label opened from a public device." : "QR label opened by signed-in staff.";
-  if (auditCategory(event) === "QR label") return "QR label printed for physical use.";
+  if (auditCategory(event) === "QR code scan") return metadataText(metadata, "scanType") === "public" ? "QR code opened from a public device." : "QR code opened by signed-in staff.";
+  if (auditCategory(event) === "QR code") return "QR code printed for physical use.";
   return null;
 }
 

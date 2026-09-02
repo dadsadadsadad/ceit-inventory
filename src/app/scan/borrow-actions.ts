@@ -86,7 +86,7 @@ function isSerializationFailure(error: unknown) {
 function publicBorrowError(error: unknown) {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return error;
   if (error.code === "P2002") return new Error("A matching borrowing request is already being processed. Please refresh the item page before trying again.");
-  if (error.code === "P2003" || error.code === "P2025") return new Error("This item changed while the request was being submitted. Refresh the QR page and try again.");
+  if (error.code === "P2003" || error.code === "P2025") return new Error("This item changed while the request was being submitted. Refresh the QR code page and try again.");
   return new Error("The borrowing request could not be saved. Please try again or contact CEIT staff.");
 }
 
@@ -158,7 +158,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
             action: "REQUESTED",
             entity: { id: request.id, itemId: item.id, label: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`, type: "borrow-request" },
             metadata: { expectedReturnDate: input.expectedReturnDate.toISOString(), quantity: input.requestedQuantity, source: "public-qr", transition: borrowStatus.REQUESTED },
-            summary: "Borrowing request submitted from a QR label.",
+            summary: "Borrowing request submitted from a QR code.",
           }),
         });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -231,7 +231,7 @@ export async function submitReturnRequest(formData: FormData) {
           action: "REQUESTED",
           entity: { id: request.id, itemId: request.inventoryItemId, label: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`, type: "borrow-request" },
           metadata: { borrowRequestId: request.id, source: "public-qr", transition: borrowStatus.RETURN_REQUESTED },
-          summary: "Borrower submitted a QR return request.",
+          summary: "Borrower submitted a return request from a QR code.",
         }),
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

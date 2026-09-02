@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     { label: "Needs attention", value: dashboard.attentionCount.toLocaleString(), detail: "Defective items", href: "/dashboard/inventory?status=DEFECTIVE", Icon: TriangleAlert },
   ] : [];
   const quickActions = [
-    { label: "Scan an item", detail: "Open a label with your camera", href: "/scan", Icon: ScanLine },
+    { label: "Scan an item", detail: "Open a QR code with your camera", href: "/scan", Icon: ScanLine },
     { label: "View reports", detail: "See the current inventory reports", href: "/dashboard/reports", Icon: BarChart3 },
     ...(canManage ? [
       { label: "Add a record", detail: "Register equipment", href: "/dashboard/inventory/new", Icon: PackagePlus },

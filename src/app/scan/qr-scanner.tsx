@@ -48,7 +48,7 @@ export function QrScanner() {
   function openRecord(value: string) {
     const code = codeFromScan(value);
     if (!code) {
-      setMessage("This is not a CEIT inventory QR label. Enter the code printed under the QR image instead.");
+      setMessage("This is not a CEIT inventory QR code. Enter the code printed under the QR image instead.");
       return;
     }
     stopCamera();
@@ -84,7 +84,7 @@ export function QrScanner() {
         return;
       }
       controlsRef.current = controls;
-      setMessage("Point the camera at a CEIT inventory QR label.");
+      setMessage("Point the camera at a CEIT inventory QR code.");
       setIsScanning(true);
     } catch {
       if (attempt === attemptRef.current && mountedRef.current) {
@@ -104,9 +104,9 @@ export function QrScanner() {
   return (
     <section className="card rounded-lg p-5 sm:p-7">
       <div className="scanner-preview relative overflow-hidden rounded-lg bg-black">
-        <video ref={videoRef} muted playsInline aria-label="QR scanner camera preview" className="aspect-[4/5] w-full object-cover sm:aspect-[3/4]" />
+        <video ref={videoRef} muted playsInline aria-label="QR code scanner camera preview" className="aspect-[4/5] w-full object-cover sm:aspect-[3/4]" />
         <div className="scanner-corners pointer-events-none absolute inset-7 rounded-2xl" aria-hidden="true" />
-        {!isScanning && !isStarting ? <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center"><div className="scanner-empty-state"><ScanLine className="mx-auto h-7 w-7" aria-hidden="true" /><p className="mt-3 text-sm font-semibold">Camera preview</p><p className="mt-1 text-xs leading-5">Tap Use camera to scan a CEIT QR label.</p></div></div> : null}
+        {!isScanning && !isStarting ? <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center"><div className="scanner-empty-state"><ScanLine className="mx-auto h-7 w-7" aria-hidden="true" /><p className="mt-3 text-sm font-semibold">Camera preview</p><p className="mt-1 text-xs leading-5">Tap Use camera to scan a CEIT QR code.</p></div></div> : null}
       </div>
       <p className="muted mt-4 text-sm leading-6" aria-live="polite">{message}</p>
       <div className="mt-5 flex flex-wrap gap-3">

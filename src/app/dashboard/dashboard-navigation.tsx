@@ -18,7 +18,7 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
     ...(canManageInventory ? [{ label: "Maintenance", href: "/dashboard/maintenance", Icon: Wrench }] : []),
     { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
     ...(canManageAdministration ? [{ label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText }] : []),
-    { label: "Scan QR", href: "/scan", Icon: ScanLine },
+    { label: "Scan QR code", href: "/scan", Icon: ScanLine },
     ...(canManageAdministration ? [{ label: "Users", href: "/dashboard/users", Icon: Users }] : []),
     { label: "Settings", href: "/dashboard/settings", Icon: Settings },
   ];

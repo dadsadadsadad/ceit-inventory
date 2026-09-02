@@ -389,7 +389,7 @@ async function createPcRegisterPdf(filters: ReportExportFilters, calendarDate: s
   if (pcs.length > maximumPcProfileRecords) return new Response(`This profile-based PDF exceeds ${maximumPcProfileRecords.toLocaleString()} PC or Mac records. Narrow the data before exporting, or use the CSV export for the complete register.`, { status: 413 });
 
   const { document, writer } = await reportDocument("PC and Mac register", "Individually tracked PC and Mac technical register");
-  writer.addBody("A readable technical profile for every matching tracked PC or Mac. Each device is shown in its own full-width record so its QR identifier, hardware details, and software records remain legible.", 10, mutedColor);
+  writer.addBody("A readable technical profile for every matching tracked PC or Mac. Each device is shown in its own full-width record so its QR code, hardware details, and software records remain legible.", 10, mutedColor);
   writer.addBody(filterSummary(filters, { inventoryStatus: true }), 8.5, mutedColor);
   writer.addHeading("Register snapshot");
   writer.addMetricRow([
@@ -408,7 +408,7 @@ async function createPcRegisterPdf(filters: ReportExportFilters, calendarDate: s
       { label: "Room / location", value: item.location.name },
       { label: "Status and condition", value: `${inventoryStatusLabel(item.status)} | ${humanize(item.condition)}` },
       { label: "Last checked", value: reportDateTime(pcLastChecked(item)) },
-      { label: "QR identifier", value: item.qrCode, wide: true },
+      { label: "QR code", value: item.qrCode, wide: true },
       { label: "Manufacturer / model", value: [item.manufacturer, item.model].filter(Boolean).join(" | ") || "Not recorded" },
       { label: "Serial number", value: item.serialNumber ?? "Not recorded" },
       { label: "Hardware configuration", value: pcHardware(item), wide: true },
@@ -577,7 +577,7 @@ async function createAuditPdf(parameters: URLSearchParams, calendarDate: string)
   writer.addMetricRow([
     { label: "Matching events", value: activity.length.toLocaleString() },
     { label: "Record updates", value: ((actionCounts.get("UPDATED") ?? 0) + (actionCounts.get("MOVED") ?? 0) + (actionCounts.get("STATUS_CHANGED") ?? 0)).toLocaleString() },
-    { label: "QR scans", value: (actionCounts.get("SCANNED") ?? 0).toLocaleString() },
+    { label: "QR code scans", value: (actionCounts.get("SCANNED") ?? 0).toLocaleString() },
   ]);
   writer.addHeading("Recorded events");
   writer.addTable(
