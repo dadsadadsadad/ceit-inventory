@@ -73,7 +73,6 @@ enum PublicRequestKind {
 enum UserRole {
   ADMINISTRATOR
   STAFF
-  VIEWER
 }
 
 model Location {
@@ -269,7 +268,7 @@ model User {
   email                String        @unique
   username             String        @unique
   passwordHash         String
-  role                 UserRole      @default(VIEWER)
+  role                 UserRole      @default(STAFF)
   isActive             Boolean       @default(true)
   failedSignInCount    Int           @default(0)
   firstFailedSignInAt  DateTime?

@@ -49,6 +49,14 @@ npm run dev
 
 Then open **Settings** to add rooms and categories. Each setting receives a tag code; future equipment can leave the asset-tag field blank to generate the next compatible `INV-CAT-ST-ROOM-0001` tag and a unique QR code. Create one tracked-asset record per physical PC, TV, or other equipment unit; use a supply record only for shared quantity-based stock. Use **Print QR label** for each individual asset.
 
+### Import rules
+
+The importer accepts CSV and `.xlsx` files with flexible header aliases: spaces, underscores, capitalization, and legacy headings such as `inventory code`, `product info`, and `last date checked` are recognized. It needs a name, category, and either a location/room column or a chosen default location. Use **Validate before importing** first; it writes nothing and reports row-level problems.
+
+For individually tracked equipment, each physical unit must be a separate `asset` row with `quantity` set to `1`. This lets the system generate or validate one unique asset tag and one unique QR code per row. A row such as `TV, asset, quantity 4` is deliberately skipped rather than silently creating four ambiguous labels: add four rows, including each unit's room, serial number, and any supplied tag when those differ. PCs and Macs always follow this one-row-per-device rule.
+
+For shared stock, use `type` `supply`; one row may have `quantity` `4`, but it is one stock record with one QR code, not four individually tagged items. Invalid rows, duplicate asset tags/serial numbers/MAC addresses, inactive setup records, and unsupported values are skipped with a row number while valid rows in the same file continue to import. Missing categories and locations can be created during import when that option is enabled.
+
 ## QR labels in production
 
 Set `NEXT_PUBLIC_APP_URL` in the production environment to the permanent public or school-LAN address before printing labels. This is always the preferred QR destination. On Vercel, the app also falls back to Vercel's permanent production-domain variable when it is exposed, so labels created from a preview do not point at that preview deployment.
@@ -82,7 +90,7 @@ See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, b
 
 ## Production access control
 
-The dashboard and QR scan flow use application accounts stored in PostgreSQL. Every inventory-changing server action rechecks the signed-in role, so a QR label identifies an item but does not grant permission to edit it. `ADMINISTRATOR` and `STAFF` accounts can make changes; `VIEWER` accounts are read-only.
+The dashboard and QR scan flow use application accounts stored in PostgreSQL. There are only two account roles: `ADMINISTRATOR` and `STAFF`. Every inventory-changing server action rechecks the signed-in role, so a QR label identifies an item but does not grant permission to edit it. Administrators manage accounts, Settings, permanent deletion, and the audit trail; staff manage daily inventory, borrowing, maintenance, and reports. The Users page is administrator-only.
 
 Before any public deployment, replace or remove every temporary development account and verify that only school-approved administrators remain active.
 
