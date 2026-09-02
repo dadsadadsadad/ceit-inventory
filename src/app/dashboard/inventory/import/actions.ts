@@ -121,9 +121,11 @@ function parseDate(value: string, field: string) {
   return parsed;
 }
 
-function enumValue<T extends string>(value: string, values: readonly T[], fallback: T) {
+function enumValue<T extends string>(value: string, values: readonly T[], fallback: T, field: string) {
+  if (!value.trim()) return fallback;
   const normalized = value.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
-  return values.includes(normalized as T) ? (normalized as T) : fallback;
+  if (values.includes(normalized as T)) return normalized as T;
+  throw new Error(`${field} must be one of: ${values.map((entry) => entry.replaceAll("_", " ")).join(", ")}.`);
 }
 
 function legacyInspectionState(value: string) {
@@ -278,7 +280,7 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
         : optionalText(valueAt(row, "roomNumber") || defaultRoomNumber || "", "room number", 80);
       const categoryKey = normalizedValue(safeCategoryName);
       const locationKey = normalizedValue(safeLocationName);
-      const itemType = enumValue(valueAt(row, "itemType"), Object.values(ItemType), ItemType.ASSET);
+      const itemType = enumValue(valueAt(row, "itemType"), Object.values(ItemType), ItemType.ASSET, "type");
       const quantity = parseNumber(valueAt(row, "quantity"), 1, "quantity") ?? 1;
       const hasComputerDetails = isTrue(valueAt(row, "isComputer")) || ["operatingSystem", "processor", "memoryGb", "macAddress", "hardwareDescription", "softwareDescription"].some((column) => valueAt(row, column) !== "");
       if (itemType === ItemType.ASSET && quantity !== 1) throw new Error("each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR label. Import each unit as a separate row, or use a supply record for stock.");
@@ -296,10 +298,10 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
           : null;
       const purchasePrice = parsePurchasePrice(valueAt(row, "purchasePrice"));
       const status = explicitStatus
-        ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK)
+        ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK, "status")
         : legacyState?.status ?? ItemStatus.OK;
       const condition = explicitCondition
-        ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD)
+        ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD, "condition")
         : legacyState?.condition ?? ItemCondition.GOOD;
       const suppliedAssetTag = optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase() ?? null;
       if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
