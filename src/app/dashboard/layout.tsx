@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <>
     <div className="dashboard-shell">
-      <DashboardNavigation email={user.email} canManageAdministration={canManageAdministration(user.role)} canManageInventory={canManageInventory(user.role)} />
+      <DashboardNavigation email={user.email} username={user.username} canManageAdministration={canManageAdministration(user.role)} canManageInventory={canManageInventory(user.role)} />
       <main className="min-w-0 flex-1">{children}</main>
     </div>
       <CommandMenu canManageAdministration={canManageAdministration(user.role)} canManageInventory={canManageInventory(user.role)} />

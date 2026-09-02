@@ -4,6 +4,7 @@ import { Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { auditEventData } from "@/lib/audit-event";
 import { hashPassword, passwordValidationMessage, requireAdministrator } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
@@ -58,18 +59,27 @@ function knownWriteError(error: unknown) {
 }
 
 export async function createUser(formData: FormData) {
-  await requireAdministrator();
+  const administrator = await requireAdministrator();
   const password = passwordFrom(formData, true);
   if (!password) throw new Error("A password is required for a new account.");
+  const email = emailFrom(formData);
+  const username = usernameFrom(formData);
+  const role = roleFrom(formData);
 
   try {
-    await prisma.user.create({
-      data: {
-        email: emailFrom(formData),
-        username: usernameFrom(formData),
-        passwordHash: await hashPassword(password),
-        role: roleFrom(formData),
-      },
+    await prisma.$transaction(async (transaction) => {
+      const account = await transaction.user.create({
+        data: { email, username, passwordHash: await hashPassword(password), role },
+      });
+      await transaction.inventoryAudit.create({
+        data: auditEventData({
+          action: "CREATED",
+          actor: administrator,
+          entity: { id: account.id, label: `${account.username} | ${account.email}`, type: "account" },
+          metadata: { activityKind: "account", role: account.role, isActive: account.isActive },
+          summary: "Account created.",
+        }),
+      });
     });
   } catch (error) {
     if (knownWriteError(error)) throw new Error("That email address or username is already assigned to an account.");
@@ -106,11 +116,24 @@ export async function updateUser(formData: FormData) {
           if (activeAdministratorCount <= 1) throw new Error("Keep at least one active administrator account.");
         }
 
-        await transaction.user.update({
+        const account = await transaction.user.update({
           where: { id },
           data: { email, username, role, isActive, ...(passwordHash ? { passwordHash } : {}) },
         });
         if (passwordHash || !isActive) await transaction.userSession.deleteMany({ where: { userId: id } });
+        await transaction.inventoryAudit.create({
+          data: auditEventData({
+            action: "UPDATED",
+            actor: administrator,
+            entity: { id: account.id, label: `${account.username} | ${account.email}`, type: "account" },
+            metadata: {
+              activityKind: "account",
+              changes: { email: target.email !== email ? email : undefined, isActive: target.isActive !== isActive ? isActive : undefined, passwordReset: Boolean(passwordHash), role: target.role !== role ? role : undefined, username: target.username !== username ? username : undefined },
+              sessionsRevoked: Boolean(passwordHash || !isActive),
+            },
+            summary: "Account updated.",
+          }),
+        });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       revalidatePath("/dashboard/users");
       redirect("/dashboard/users");

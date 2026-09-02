@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { auditEventData } from "@/lib/audit-event";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
@@ -24,10 +25,22 @@ export async function saveDashboardNote(formData: FormData) {
   const actor = await requireWriteAccess();
   const content = dashboardNoteContent(formData);
 
-  await prisma.dashboardNote.upsert({
-    where: { scope: sharedDashboardNoteScope },
-    create: { scope: sharedDashboardNoteScope, content, updatedByName: actor.email },
-    update: { content, updatedByName: actor.email },
+  await prisma.$transaction(async (transaction) => {
+    const existing = await transaction.dashboardNote.findUnique({ where: { scope: sharedDashboardNoteScope }, select: { id: true } });
+    await transaction.dashboardNote.upsert({
+      where: { scope: sharedDashboardNoteScope },
+      create: { scope: sharedDashboardNoteScope, content, updatedByName: actor.email },
+      update: { content, updatedByName: actor.email },
+    });
+    await transaction.inventoryAudit.create({
+      data: auditEventData({
+        action: existing ? "UPDATED" : "CREATED",
+        actor,
+        entity: { id: sharedDashboardNoteScope, label: "Shared dashboard note", type: "dashboard-note" },
+        metadata: { activityKind: "dashboard-note", contentLength: content.length },
+        summary: existing ? "Shared dashboard note updated." : "Shared dashboard note created.",
+      }),
+    });
   });
 
   revalidatePath("/dashboard");

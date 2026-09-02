@@ -8,6 +8,9 @@ export type AuditTrailEvent = {
   action: AuditAction;
   actorId: string | null;
   actorName: string | null;
+  entityId?: string | null;
+  entityLabel?: string | null;
+  entityType?: string | null;
   metadata: Prisma.JsonValue | null;
 };
 
@@ -69,6 +72,7 @@ export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAud
       OR: [
         { summary: { contains: filters.query, mode: "insensitive" } },
         { actorName: { contains: filters.query, mode: "insensitive" } },
+        { entityLabel: { contains: filters.query, mode: "insensitive" } },
         { item: { is: { name: { contains: filters.query, mode: "insensitive" } } } },
         { item: { is: { assetTag: { contains: filters.query, mode: "insensitive" } } } },
       ],
@@ -97,6 +101,14 @@ export function auditActionLabel(action: AuditAction) {
     [AuditAction.MOVED]: "Moved",
     [AuditAction.SCANNED]: "Scanned",
     [AuditAction.STATUS_CHANGED]: "Status changed",
+    [AuditAction.DELETED]: "Deleted",
+    [AuditAction.REQUESTED]: "Requested",
+    [AuditAction.BORROWED]: "Borrowed",
+    [AuditAction.RETURNED]: "Returned",
+    [AuditAction.DECLINED]: "Declined",
+    [AuditAction.SIGNED_IN]: "Signed in",
+    [AuditAction.SIGNED_OUT]: "Signed out",
+    [AuditAction.EXPORTED]: "Exported",
   };
   return labels[action];
 }
@@ -125,6 +137,14 @@ export function auditCategory(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
   const activityKind = metadataText(metadata, "activityKind");
   const source = metadataText(metadata, "source");
+
+  if (event.entityType === "account" || activityKind === "account") return "Accounts";
+  if (event.entityType === "dashboard-note" || activityKind === "dashboard-note") return "Dashboard notes";
+  if (event.entityType === "category" || event.entityType === "location" || activityKind === "configuration") return "Configuration";
+  if (event.entityType === "report-export" || activityKind === "report-export") return "Report export";
+  if (event.entityType === "session" || activityKind === "session") return "Access";
+  if (event.entityType === "borrow-request") return "Borrowing";
+  if (event.entityType === "maintenance-ticket") return "Maintenance";
 
   if (activityKind === "label-print" || source === "qr-label") return "QR label";
   if (event.action === AuditAction.SCANNED || activityKind === "scan" || source === "qr") return "QR scan";
