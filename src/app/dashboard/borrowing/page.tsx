@@ -192,7 +192,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
           <div>
             <p className="eyebrow">Equipment lending</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing history</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests, confirm QR return requests, and keep a complete equipment lending history.</p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests, confirm return requests from QR codes, and keep a complete equipment lending history.</p>
           </div>
           <div className="flex flex-wrap gap-3"><Link href="/dashboard/reports?kind=borrowings" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Borrowed &amp; returned reports</Link><Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link></div>
         </header>
@@ -218,7 +218,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">Borrowing requests could not be loaded. Confirm the database connection and try again.</div>
         ) : requests.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">No borrowing requests match these filters. Students can submit a request from an item&apos;s QR page.</div>
+          <div className="notice rounded-lg px-5 py-4 text-sm">No borrowing requests match these filters. Students can submit a request from an item&apos;s QR code page.</div>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Borrowing requests">
             <div className="divider border-b px-5 py-3">

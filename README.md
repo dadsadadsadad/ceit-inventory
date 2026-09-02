@@ -1,6 +1,6 @@
 # CEIT Inventory
 
-Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled assets. During development, the application uses Supabase PostgreSQL. When the school launches it, the same code can move to the school's own PostgreSQL server without an application rewrite.
+Inventory management for CEIT rooms, equipment, PCs, supplies, and assets with QR codes. During development, the application uses Supabase PostgreSQL. When the school launches it, the same code can move to the school's own PostgreSQL server without an application rewrite.
 
 ## What is included
 
@@ -10,12 +10,12 @@ Inventory management for CEIT rooms, equipment, PCs, supplies, and QR-labeled as
 - Automatic asset tags in the existing `INV-CAT-ST-ROOM-0001` format and a unique QR code for every new equipment record
 - Item-wide last-checked dates, including a one-click inspection record
 - Item status, condition, and location updates with an audit history
-- Printable QR labels that open a mobile-friendly item screen
+- Printable QR codes that open a mobile-friendly item screen
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Search, filters, sorting, and page navigation for status, room, identifiers, category, type, and condition
 - CSV/XLSX import with flexible column headings and row-level feedback
 - Filterable inventory, PC/Mac register, borrowing, service, and audit exports in CSV or PDF, plus a detailed operational overview PDF
-- Public borrowing requests from QR labels, with staff approval, return, and history tracking
+- Public borrowing requests from QR codes, with staff approval, return, and history tracking
 - One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
 - Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history
 - Shared dashboard notes and a paginated activity history that records the responsible user
@@ -47,23 +47,23 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
-Then open **Settings** to add rooms and categories. Each setting receives a tag code; future equipment can leave the asset-tag field blank to generate the next compatible `INV-CAT-ST-ROOM-0001` tag and a unique QR code. Create one tracked-asset record per physical PC, TV, or other equipment unit; use a supply record only for shared quantity-based stock. Use **Print QR label** for each individual asset.
+Then open **Settings** to add rooms and categories. Each setting receives a tag code; future equipment can leave the asset-tag field blank to generate the next compatible `INV-CAT-ST-ROOM-0001` tag and a unique QR code. Create one tracked-asset record per physical PC, TV, or other equipment unit; use a supply record only for shared quantity-based stock. Use **Print QR code** for each individual asset.
 
 ### Import rules
 
 The importer accepts CSV and `.xlsx` files with flexible header aliases: spaces, underscores, capitalization, and legacy headings such as `inventory code`, `product info`, and `last date checked` are recognized. It needs a name, category, and either a location/room column or a chosen default location. Use **Validate before importing** first; it writes nothing and reports row-level problems.
 
-For individually tracked equipment, each physical unit must be a separate `asset` row with `quantity` set to `1`. This lets the system generate or validate one unique asset tag and one unique QR code per row. A row such as `TV, asset, quantity 4` is deliberately skipped rather than silently creating four ambiguous labels: add four rows, including each unit's room, serial number, and any supplied tag when those differ. PCs and Macs always follow this one-row-per-device rule.
+For individually tracked equipment, each physical unit must be a separate `asset` row with `quantity` set to `1`. This lets the system generate or validate one unique asset tag and one unique QR code per row. A row such as `TV, asset, quantity 4` is deliberately skipped rather than silently creating four ambiguous QR codes: add four rows, including each unit's room, serial number, and any supplied tag when those differ. PCs and Macs always follow this one-row-per-device rule.
 
 For shared stock, use `type` `supply`; one row may have `quantity` `4`, but it is one stock record with one QR code, not four individually tagged items. Invalid rows, duplicate asset tags/serial numbers/MAC addresses, inactive setup records, and unsupported values are skipped with a row number while valid rows in the same file continue to import. Missing categories and locations can be created during import when that option is enabled.
 
-## QR labels in production
+## QR codes in production
 
-Set `NEXT_PUBLIC_APP_URL` in the production environment to the permanent public or school-LAN address before printing labels. This is always the preferred QR destination. On Vercel, the app also falls back to Vercel's permanent production-domain variable when it is exposed, so labels created from a preview do not point at that preview deployment.
+Set `NEXT_PUBLIC_APP_URL` in the production environment to the permanent public or school-LAN address before printing QR codes. This is always the preferred QR code destination. On Vercel, the app also falls back to Vercel's permanent production-domain variable when it is exposed, so QR codes created from a preview do not point at that preview deployment.
 
-The public `/scan/[qrCode]` page must be reachable without Vercel Deployment Protection or Vercel Authentication. If Vercel shows its own sign-in page after scanning, make the production deployment public in Vercel and reprint the affected labels; a printed QR code permanently retains its embedded URL. Vercel documents its permanent production-domain variable and Deployment Protection behavior in its [system environment-variable documentation](https://vercel.com/docs/environment-variables/system-environment-variables) and [Deployment Protection guide](https://vercel.com/docs/deployment-protection).
+The public `/scan/[qrCode]` page must be reachable without Vercel Deployment Protection or Vercel Authentication. If Vercel shows its own sign-in page after scanning, make the production deployment public in Vercel and reprint the affected QR codes; a printed QR code permanently retains its embedded URL. Vercel documents its permanent production-domain variable and Deployment Protection behavior in its [system environment-variable documentation](https://vercel.com/docs/environment-variables/system-environment-variables) and [Deployment Protection guide](https://vercel.com/docs/deployment-protection).
 
-Every label print and QR opening is recorded in the administrator-only Audit trail. Administrators can search, filter, inspect event metadata, and download the current filtered audit-trail CSV or PDF.
+Every printed QR code and QR code opening is recorded in the administrator-only Audit trail. Administrators can search, filter, inspect event metadata, and download the current filtered audit-trail CSV or PDF.
 
 ### Development account
 
@@ -81,7 +81,7 @@ The application does not use Supabase Storage or Supabase Auth. Prisma connects 
 2. Have the school DBA create the `ceit_inventory_migrator` and `ceit_inventory_app` roles before the first migration. The migration role owns database objects; the app role receives only runtime table and sequence access through the final migration.
 3. Copy `.env.example` to `.env.local` on the school deployment server. Set `SCHOOL_DATABASE_URL` to the `ceit_inventory_app` connection, `DIRECT_URL` to the temporary `ceit_inventory_migrator` connection, and `REQUEST_RATE_LIMIT_SECRET` to a random value of at least 32 characters.
 4. Run `npm run db:migrate:deploy` once, then remove `DIRECT_URL` from the application service environment. The migration config reads both `.env.local` and `.env`.
-5. Create the first `ADMINISTRATOR` through the school's secured database-administration process, set `NEXT_PUBLIC_APP_URL` to the school-managed public URL (use HTTPS when available; trusted LAN deployments may use HTTP), and print QR labels only after that.
+5. Create the first `ADMINISTRATOR` through the school's secured database-administration process, set `NEXT_PUBLIC_APP_URL` to the school-managed public URL (use HTTPS when available; trusted LAN deployments may use HTTP), and print QR codes only after that.
 6. Deploy the application where it can privately reach the school database. A hosted application service needs a secured network path to an on-campus database; otherwise host the application on the school's server or private network too.
 
 See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, backups, and restoration checks.
@@ -90,7 +90,7 @@ See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, b
 
 ## Production access control
 
-The dashboard and QR scan flow use application accounts stored in PostgreSQL. There are only two account roles: `ADMINISTRATOR` and `STAFF`. Every inventory-changing server action rechecks the signed-in role, so a QR label identifies an item but does not grant permission to edit it. Administrators manage accounts, Settings, permanent deletion, and the audit trail; staff manage daily inventory, borrowing, maintenance, and reports. The Users page is administrator-only.
+The dashboard and QR code scan flow use application accounts stored in PostgreSQL. There are only two account roles: `ADMINISTRATOR` and `STAFF`. Every inventory-changing server action rechecks the signed-in role, so a QR code identifies an item but does not grant permission to edit it. Administrators manage accounts, Settings, permanent deletion, and the audit trail; staff manage daily inventory, borrowing, maintenance, and reports. The Users page is administrator-only.
 
 Before any public deployment, replace or remove every temporary development account and verify that only school-approved administrators remain active.
 

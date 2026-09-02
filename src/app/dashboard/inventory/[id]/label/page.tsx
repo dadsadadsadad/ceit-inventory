@@ -40,7 +40,7 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
           </article>
         ) : (
           <section className="notice rounded-lg px-5 py-4 text-sm leading-6" role="alert">
-            Set <code>NEXT_PUBLIC_APP_URL</code> to the permanent CEIT public or school-LAN address before printing QR labels. On Vercel, expose the permanent production-domain variable as a fallback. This prevents labels from opening a preview deployment or Vercel sign-in page.
+            Set <code>NEXT_PUBLIC_APP_URL</code> to the permanent CEIT public or school-LAN address before printing QR codes. On Vercel, expose the permanent production-domain variable as a fallback. This prevents QR codes from opening a preview deployment or Vercel sign-in page.
           </section>
         )}
       </div>

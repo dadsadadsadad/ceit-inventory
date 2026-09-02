@@ -146,7 +146,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
           <div>
             <p className="eyebrow">Administration</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Audit trail</h1>
-            <p className="muted mt-2 max-w-3xl text-sm leading-6">Search the complete, time-stamped history of accounts, notes, settings, inventory, media, borrowing, maintenance, QR activity, and exports.</p>
+            <p className="muted mt-2 max-w-3xl text-sm leading-6">Search the complete, time-stamped history of accounts, notes, settings, inventory, media, borrowing, maintenance, QR code activity, and exports.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <a href={exportHref} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Export CSV</a>
@@ -204,7 +204,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Audit trail summary">
             <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Matching events</p><p className="mt-3 text-3xl font-semibold">{totalRecords.toLocaleString()}</p><p className="muted mt-2 text-sm">Across the selected filters</p></article>
             <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Updates</p><p className="mt-3 text-3xl font-semibold">{updateCount.toLocaleString()}</p><p className="muted mt-2 text-sm">Updated, moved, or status changed</p></article>
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">QR scans</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.SCANNED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Staff and public label opens</p></article>
+            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">QR code scans</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.SCANNED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Staff and public QR code openings</p></article>
             <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Created events</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.CREATED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Records, accounts, notes, and setup</p></article>
           </section>
         ) : null}

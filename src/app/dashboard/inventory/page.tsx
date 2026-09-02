@@ -169,7 +169,7 @@ function paginationEntries(totalPages: number, currentPage: number) {
 function ItemActions({ canManage, itemId }: { canManage: boolean; itemId: string }) {
   return (
     <div className="flex items-center justify-end gap-3 text-sm font-semibold">
-      <Link href={`/dashboard/inventory/${itemId}/label`} className="accent-link">Label</Link>
+      <Link href={`/dashboard/inventory/${itemId}/label`} className="accent-link">QR code</Link>
       {canManage ? <Link href={`/dashboard/inventory/${itemId}#edit-record`} className="accent-link">Edit</Link> : null}
     </div>
   );

@@ -45,7 +45,7 @@ describe("audit trail filters", () => {
       metadata: { changes: { assetTag: "CEIT-100", quantity: 4 } },
     };
 
-    expect(auditCategory(event)).toBe("QR scan");
+    expect(auditCategory(event)).toBe("QR code scan");
     expect(auditChangedFields(changedEvent)).toEqual([
       { label: "Asset tag", value: "CEIT-100" },
       { label: "Quantity", value: "4" },

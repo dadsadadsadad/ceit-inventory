@@ -89,7 +89,7 @@ export default async function ScannedItemPage({
           </dl>
         </article>
 
-        {item.itemType === ItemType.ASSET ? <BorrowReturnChooser qrCode={item.qrCode} itemName={item.name} maximumQuantity={item.quantity} borrowable={borrowable} /> : <div className="notice rounded-lg px-5 py-4 text-sm" role="status">This supply item cannot be borrowed or returned through QR requests. Please contact CEIT staff if you need assistance.</div>}
+        {item.itemType === ItemType.ASSET ? <BorrowReturnChooser qrCode={item.qrCode} itemName={item.name} maximumQuantity={item.quantity} borrowable={borrowable} /> : <div className="notice rounded-lg px-5 py-4 text-sm" role="status">This supply item cannot be borrowed or returned through QR code requests. Please contact CEIT staff if you need assistance.</div>}
 
         {canManage ? (
           <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="staff-tools-heading">

@@ -197,7 +197,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
           <div className="flex flex-wrap gap-3">
             {canManage ? <Link href="#edit-record" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Edit record</Link> : null}
             {canManage ? <Link href={`/dashboard/maintenance?item=${item.id}`} className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Report an issue</Link> : null}
-            <Link href={`/dashboard/inventory/${item.id}/label`} className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Print QR label</Link>
+            <Link href={`/dashboard/inventory/${item.id}/label`} className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Print QR code</Link>
           </div>
         </header>
 
@@ -229,7 +229,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               </div>
               {item.description ? <p className="divider mt-5 border-t pt-5 text-sm leading-6">{item.description}</p> : null}
               {item.notes ? <p className="muted mt-3 whitespace-pre-line text-sm leading-6">Notes: {item.notes}</p> : null}
-              {item.itemType === ItemType.ASSET && item.quantity > 1 ? <p className="notice mt-5 rounded-lg px-4 py-3 text-sm leading-6">Legacy grouped asset: this record represents {item.quantity} units but has one current tag and QR label. New equipment is always created as one physical unit per record, so give each existing unit its own record before moving it to a different room.</p> : null}
+              {item.itemType === ItemType.ASSET && item.quantity > 1 ? <p className="notice mt-5 rounded-lg px-4 py-3 text-sm leading-6">Legacy grouped asset: this record represents {item.quantity} units but has one current tag and QR code. New equipment is always created as one physical unit per record, so give each existing unit its own record before moving it to a different room.</p> : null}
             </article>
 
             {computer ? (
@@ -322,7 +322,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
           {canManage ? (
             <aside id="edit-record" className="card order-1 h-fit scroll-mt-6 rounded-lg p-5 sm:p-6 xl:sticky xl:top-6 xl:order-2">
               <h2 className="text-lg font-semibold">Update record</h2>
-              <p className="muted mt-2 text-sm leading-6">Visible first on smaller screens so a room check or QR scan can be updated without hunting through the record.</p>
+              <p className="muted mt-2 text-sm leading-6">Visible first on smaller screens so a room check or QR code scan can be updated without hunting through the record.</p>
               <FeedbackForm action={updateInventoryItem} className="mt-5 space-y-4">
                 <input type="hidden" name="id" value={item.id} />
                 <TextField name="name" label="Name" value={item.name} required maxLength={255} />

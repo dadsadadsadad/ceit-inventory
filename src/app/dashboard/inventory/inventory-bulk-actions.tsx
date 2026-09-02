@@ -66,8 +66,8 @@ export function InventoryBulkActions({
       : action === "condition"
       ? "Apply one condition to every selected item."
         : action === "delete"
-          ? "Permanently erase selected records that have no borrowing or maintenance history. This also erases their tags, QR labels, technical details, photos, and record-level activity."
-          : "Retire selected items from active inventory while keeping their asset tags, QR labels, and complete history.";
+          ? "Permanently erase selected records that have no borrowing or maintenance history. This also erases their tags, QR codes, technical details, photos, and record-level activity."
+          : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
 
   return (
     <section className="bulk-action-toolbar card rounded-xl p-4 sm:p-5" aria-label="Bulk actions for selected inventory items">

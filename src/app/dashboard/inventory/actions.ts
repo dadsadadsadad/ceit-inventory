@@ -28,10 +28,10 @@ export async function recordInventoryLabelPrinted(itemId: string) {
     data: {
       itemId: item.id,
       action: AuditAction.UPDATED,
-      summary: "QR label printed.",
+      summary: "QR code printed.",
       actorId: actor.id,
       actorName: actor.email,
-      metadata: { activityKind: "label-print", source: "qr-label" },
+      metadata: { activityKind: "qr-code-print", source: "qr-code" },
     },
   });
 }
@@ -77,7 +77,7 @@ function checkedDate(formData: FormData) {
 function assertTrackedAssetQuantity(itemType: ItemType, quantity: number, existing?: { itemType: ItemType; quantity: number }) {
   if (itemType !== ItemType.ASSET || quantity === 1) return;
   if (existing?.itemType === ItemType.ASSET && existing.quantity === quantity) return;
-  throw new Error("Track each physical equipment asset as one record so it can keep its own asset tag, QR label, room, and inspection history. Use a supply record for quantity-based stock.");
+  throw new Error("Track each physical equipment asset as one record so it can keep its own asset tag, QR code, room, and inspection history. Use a supply record for quantity-based stock.");
 }
 
 function assertAssetTag(assetTag: string | null, itemType: ItemType) {
