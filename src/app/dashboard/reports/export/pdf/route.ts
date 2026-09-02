@@ -1,8 +1,10 @@
 import { BorrowStatus, ItemCondition, ItemStatus, MaintenancePriority, MaintenanceStatus, Prisma } from "@prisma/client";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
+import { auditEventData } from "@/lib/audit-event";
 import { auditActionLabel, auditActorLabel, auditCategory, auditChangedFields, auditEventDetail, auditTrailWhere, parseAuditTrailFilters, type AuditTrailEvent } from "@/lib/audit-trail";
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import type { InventoryUser } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate, manilaCalendarDate, startOfManilaDay } from "@/lib/manila-date";
 import { borrowingReportStateLabel, borrowingReportStatusFilter, parseReportExportFilters, reportDateWhere, type ReportExportFilters } from "@/lib/report-export-filters";
@@ -26,6 +28,23 @@ const accentColor = rgb(0.78, 0.24, 0.04);
 const lineColor = rgb(0.84, 0.81, 0.76);
 const surfaceColor = rgb(0.99, 0.98, 0.96);
 const alternatingRowColor = rgb(0.97, 0.95, 0.92);
+
+async function auditedPdfResponse(user: InventoryUser, kind: string, response: Response) {
+  try {
+    await prisma.inventoryAudit.create({
+      data: auditEventData({
+        action: "EXPORTED",
+        actor: user,
+        entity: { id: `pdf:${kind}`, label: `${kind} PDF report`, type: "report-export" },
+        metadata: { activityKind: "report-export", format: "PDF", kind },
+        summary: `${kind} report exported as PDF.`,
+      }),
+    });
+  } catch (error) {
+    console.error("Unable to record PDF export audit event", error);
+  }
+  return response;
+}
 
 type PdfColor = ReturnType<typeof rgb>;
 type Detail = { label: string; value: string; wide?: boolean };
@@ -546,8 +565,8 @@ async function createAuditPdf(parameters: URLSearchParams, calendarDate: string)
   activity.forEach((event) => actionCounts.set(event.action, (actionCounts.get(event.action) ?? 0) + 1));
   const hasAuditFilters = Boolean(filters.dateRange.from || filters.dateRange.toExclusive || filters.action || filters.actor || filters.query);
 
-  const { document, writer } = await reportDocument("Audit trail", "Filtered inventory audit trail");
-  writer.addBody("A detailed, time-stamped operational record of inventory changes, scans, borrowing activity, maintenance operations, imports, and label printing.", 10, mutedColor);
+  const { document, writer } = await reportDocument("Audit trail", "Filtered operational audit trail");
+  writer.addBody("A detailed, time-stamped operational record of accounts, notes, settings, inventory changes, scans, borrowing, maintenance, imports, media, and exports.", 10, mutedColor);
   writer.addBody([
     filterSummary({ borrowingState: "all", borrowingStatus: undefined, dateRange: filters.dateRange, inventoryStatus: undefined, pcOnly: false, period: filters.period }, { audit: true }),
     filters.action ? `Action: ${auditActionLabel(filters.action)}` : null,
@@ -562,11 +581,11 @@ async function createAuditPdf(parameters: URLSearchParams, calendarDate: string)
   ]);
   writer.addHeading("Recorded events");
   writer.addTable(
-    ["Reference and time", "Event", "Inventory record", "Recorded by"],
+    ["Reference and time", "Event", "Subject", "Recorded by"],
     activity.map((event) => [
       [`AUD-${event.id.slice(0, 8).toUpperCase()}`, reportDateTime(event.createdAt)].join("\n"),
       [auditCategory(event as AuditTrailEvent), auditActionLabel(event.action), event.summary, auditPdfDetail(event as AuditTrailEvent)].join("\n"),
-      [event.item.name, event.item.assetTag ?? "No asset tag"].join("\n"),
+      [event.item?.name ?? event.entityLabel ?? "System operation", event.item?.assetTag ?? event.entityId ?? "No linked record"].join("\n"),
       auditActorLabel(event as AuditTrailEvent),
     ]),
     { fontSize: 8.1, maxCellCharacters: 180, widths: [1.08, 2.2, 1.32, 1.05] },
@@ -661,11 +680,11 @@ export async function GET(request: Request) {
   const calendarDate = manilaCalendarDate();
   const canManage = canManageInventory(user.role);
 
-  if (!kind || kind === "overview") return createOverviewPdf(canManage, calendarDate);
+  if (!kind || kind === "overview") return auditedPdfResponse(user, "overview", await createOverviewPdf(canManage, calendarDate));
 
   if (kind === "activity") {
     if (!canManageAdministration(user.role)) return new Response("Forbidden", { status: 403 });
-    return createAuditPdf(parameters, calendarDate);
+    return auditedPdfResponse(user, "activity", await createAuditPdf(parameters, calendarDate));
   }
 
   let filters: ReportExportFilters;
@@ -675,10 +694,10 @@ export async function GET(request: Request) {
     return new Response(error instanceof Error ? error.message : "Invalid export filters.", { status: 400 });
   }
 
-  if (kind === "inventory") return createInventoryPdf(filters, calendarDate);
+  if (kind === "inventory") return auditedPdfResponse(user, "inventory", await createInventoryPdf(filters, calendarDate));
   if (!canManage) return new Response("Forbidden", { status: 403 });
-  if (kind === "pcs") return createPcRegisterPdf(filters, calendarDate);
-  if (kind === "borrowings") return createBorrowingsPdf(filters, calendarDate);
-  if (kind === "maintenance") return createMaintenancePdf(filters, calendarDate);
+  if (kind === "pcs") return auditedPdfResponse(user, "pcs", await createPcRegisterPdf(filters, calendarDate));
+  if (kind === "borrowings") return auditedPdfResponse(user, "borrowings", await createBorrowingsPdf(filters, calendarDate));
+  if (kind === "maintenance") return auditedPdfResponse(user, "maintenance", await createMaintenancePdf(filters, calendarDate));
   return new Response("Unknown export", { status: 400 });
 }

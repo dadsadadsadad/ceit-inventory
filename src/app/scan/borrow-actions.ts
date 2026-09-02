@@ -1,9 +1,10 @@
 "use server";
 
-import { AuditAction, ItemType, Prisma, PublicRequestKind } from "@prisma/client";
+import { ItemType, Prisma, PublicRequestKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { auditEventData } from "@/lib/audit-event";
 import { borrowStatus } from "@/lib/borrow-status";
 import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
@@ -139,7 +140,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
           throw new Error("The requested quantity is no longer available.");
         }
 
-        await transaction.borrowRequest.create({
+        const request = await transaction.borrowRequest.create({
           data: {
             inventoryItemId: item.id,
             borrowerName: input.borrowerName,
@@ -151,6 +152,14 @@ async function createBorrowRequest(input: BorrowRequestInput) {
             personalDataExpiresAt: borrowerDataExpiresAt(),
             status: borrowStatus.REQUESTED,
           },
+        });
+        await transaction.inventoryAudit.create({
+          data: auditEventData({
+            action: "REQUESTED",
+            entity: { id: request.id, itemId: item.id, label: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`, type: "borrow-request" },
+            metadata: { expectedReturnDate: input.expectedReturnDate.toISOString(), quantity: input.requestedQuantity, source: "public-qr", transition: borrowStatus.REQUESTED },
+            summary: "Borrowing request submitted from a QR label.",
+          }),
         });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       return;
@@ -218,12 +227,12 @@ export async function submitReturnRequest(formData: FormData) {
         data: { status: borrowStatus.RETURN_REQUESTED, returnRequestedAt: new Date(), returnRequestNotes: returnRequestNotes || null },
       });
       await transaction.inventoryAudit.create({
-        data: {
-          itemId: request.inventoryItemId,
-          action: AuditAction.UPDATED,
+        data: auditEventData({
+          action: "REQUESTED",
+          entity: { id: request.id, itemId: request.inventoryItemId, label: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`, type: "borrow-request" },
+          metadata: { borrowRequestId: request.id, source: "public-qr", transition: borrowStatus.RETURN_REQUESTED },
           summary: "Borrower submitted a QR return request.",
-          metadata: { borrowRequestId: request.id, transition: borrowStatus.RETURN_REQUESTED, source: "public-qr" },
-        },
+        }),
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {

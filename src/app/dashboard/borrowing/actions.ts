@@ -98,12 +98,15 @@ export async function markBorrowed(formData: FormData) {
     await transaction.inventoryAudit.create({
       data: {
         itemId: request.inventoryItemId,
-        action: AuditAction.UPDATED,
+        action: AuditAction.BORROWED,
         summary: individualAssetCheckout
           ? "Borrow request approved: individual tagged asset checked out."
           : `Borrow request approved: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} checked out.`,
         actorId: actor.id,
         actorName: actor.email,
+        entityId: request.id,
+        entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
+        entityType: "borrow-request",
         metadata: {
           borrowRequestId: request.id,
           transition: borrowStatus.BORROWED,
@@ -142,10 +145,13 @@ export async function declineBorrowRequest(formData: FormData) {
     await transaction.inventoryAudit.create({
       data: {
         itemId: request.inventoryItemId,
-        action: AuditAction.UPDATED,
+        action: AuditAction.DECLINED,
         summary: `Borrow request declined for ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)}.`,
         actorId: actor.id,
         actorName: actor.email,
+        entityId: request.id,
+        entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
+        entityType: "borrow-request",
         metadata: { borrowRequestId: request.id, transition: borrowStatus.DECLINED, quantity: request.requestedQuantity },
       },
     });
@@ -196,7 +202,7 @@ export async function returnBorrowRequest(formData: FormData) {
     await transaction.inventoryAudit.create({
       data: {
         itemId: request.inventoryItemId,
-        action: AuditAction.UPDATED,
+        action: AuditAction.RETURNED,
         summary: request.checkedOutItemStatus
           ? restoredIndividualStatus
             ? "Borrowed individual tagged asset returned and made available."
@@ -204,6 +210,9 @@ export async function returnBorrowRequest(formData: FormData) {
           : `Borrowed item returned: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} restored.`,
         actorId: actor.id,
         actorName: actor.email,
+        entityId: request.id,
+        entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
+        entityType: "borrow-request",
         metadata: {
           borrowRequestId: request.id,
           transition: borrowStatus.RETURNED,

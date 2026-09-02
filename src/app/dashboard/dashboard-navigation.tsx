@@ -6,10 +6,11 @@ import { BarChart3, Boxes, HandHelping, LayoutDashboard, Package, ScanLine, Scro
 
 import { signOut } from "@/app/auth/actions";
 
-type DashboardNavigationProps = { canManageAdministration: boolean; canManageInventory: boolean; email: string };
+type DashboardNavigationProps = { canManageAdministration: boolean; canManageInventory: boolean; email?: string | null; username?: string | null };
 
-export function DashboardNavigation({ canManageAdministration, canManageInventory, email }: DashboardNavigationProps) {
+export function DashboardNavigation({ canManageAdministration, canManageInventory, email, username }: DashboardNavigationProps) {
   const pathname = usePathname();
+  const accountLabel = username && email ? `${username} | ${email}` : username || email || "Signed-in account";
   const navItems = [
     { label: "Dashboard", href: "/dashboard", Icon: LayoutDashboard },
     { label: "Inventory", href: "/dashboard/inventory", Icon: Package },
@@ -32,7 +33,7 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
       </div>
 
       <p className="sidebar-section-label hidden lg:block">Workspace</p>
-      <nav className="px-3 pb-4 lg:flex-1 lg:px-4" aria-label="Dashboard navigation">
+      <nav className="px-3 pb-4 lg:px-4" aria-label="Dashboard navigation">
         <ul className="dashboard-nav-list lg:space-y-1">
           {navItems.map(({ label, href, Icon }) => {
             const active = href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -48,8 +49,8 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
         </ul>
       </nav>
 
-      <div className="border-t border-white/10 px-5 py-4 lg:hidden"><div className="flex items-center justify-between gap-4 text-xs text-white/80"><span className="truncate">{email}</span><form action={signOut}><button className="font-semibold underline hover:text-white">Sign out</button></form></div></div>
-      <div className="hidden border-t border-white/10 px-5 py-5 lg:block"><div className="rounded-lg bg-white/10 p-4"><div className="text-sm font-semibold text-white">Signed in</div><div className="mt-1 truncate text-xs leading-5 text-white/70">{email}</div><form action={signOut} className="mt-3"><button className="text-xs font-semibold text-white/90 underline hover:text-white">Sign out</button></form></div></div>
+      <div className="border-t border-white/10 px-5 py-4 lg:hidden"><div className="flex items-center justify-between gap-4 text-xs text-white/80"><span className="truncate">{accountLabel}</span><form action={signOut}><button className="font-semibold underline hover:text-white">Sign out</button></form></div></div>
+      <div className="hidden border-t border-white/10 px-5 pb-6 pt-2 lg:block"><div className="rounded-lg bg-white/10 p-4"><div className="text-sm font-semibold text-white">Signed in</div><div className="mt-1 truncate text-xs leading-5 text-white/70">{accountLabel}</div><form action={signOut} className="mt-3"><button className="text-xs font-semibold text-white/90 underline hover:text-white">Sign out</button></form></div></div>
     </aside>
   );
 }

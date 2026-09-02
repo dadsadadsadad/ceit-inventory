@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 
-import { clearSession, createSession, verifyPassword } from "@/lib/inventory-auth";
+import { auditEventData } from "@/lib/audit-event";
+import { clearSession, createSession, getCurrentInventoryUser, verifyPassword } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const maxIdentifierLength = 254;
@@ -37,15 +38,42 @@ export async function signIn(formData: FormData) {
     redirect(`/auth/login?error=${lockedUntil ? "temporarily-locked" : "invalid-credentials"}`);
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { failedSignInCount: 0, firstFailedSignInAt: null, lockedUntil: null },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { failedSignInCount: 0, firstFailedSignInAt: null, lockedUntil: null },
+    }),
+    prisma.inventoryAudit.create({
+      data: auditEventData({
+        action: "SIGNED_IN",
+        actor: user,
+        entity: { id: user.id, label: `${user.username} | ${user.email}`, type: "session" },
+        metadata: { activityKind: "session" },
+        summary: "Account signed in.",
+      }),
+    }),
+  ]);
   await createSession(user.id);
   redirect("/dashboard");
 }
 
 export async function signOut() {
+  try {
+    const actor = await getCurrentInventoryUser();
+    if (actor) {
+      await prisma.inventoryAudit.create({
+        data: auditEventData({
+          action: "SIGNED_OUT",
+          actor,
+          entity: { id: actor.id, label: `${actor.username} | ${actor.email}`, type: "session" },
+          metadata: { activityKind: "session" },
+          summary: "Account signed out.",
+        }),
+      });
+    }
+  } catch (error) {
+    console.error("Unable to record sign-out audit event", error);
+  }
   await clearSession();
   redirect("/auth/login");
 }

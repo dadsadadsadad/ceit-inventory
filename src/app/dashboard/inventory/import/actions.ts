@@ -6,6 +6,7 @@ import * as yauzl from "yauzl";
 import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
+import { auditEventData } from "@/lib/audit-event";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { isInventoryAssetTag, nextCategoryAssetTagCode, nextInventoryAssetTag, nextLocationAssetTagCode } from "@/lib/asset-tag";
 import { prisma } from "@/prisma";
@@ -388,7 +389,9 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
           if (existingCategory) category = existingCategory;
           else if (allowCreateSetup) {
             const categoryCodes = await transaction.category.findMany({ select: { assetTagCode: true } });
-            category = await transaction.category.create({ data: { name: safeCategoryName, assetTagCode: nextCategoryAssetTagCode(safeCategoryName, categoryCodes.map((entry) => entry.assetTagCode)) }, select: { id: true, isActive: true } });
+            const createdCategory = await transaction.category.create({ data: { name: safeCategoryName, assetTagCode: nextCategoryAssetTagCode(safeCategoryName, categoryCodes.map((entry) => entry.assetTagCode)) }, select: { id: true, isActive: true } });
+            await transaction.inventoryAudit.create({ data: auditEventData({ action: "CREATED", actor, entity: { id: createdCategory.id, label: safeCategoryName, type: "category" }, metadata: { activityKind: "configuration", source: "import" }, summary: "Category created while importing inventory." }) });
+            category = createdCategory;
           }
           else throw new Error(`category “${safeCategoryName}” does not exist. Enable setup creation or add it in Settings first.`);
         }
@@ -400,7 +403,9 @@ export async function importInventory(_previousState: ImportResult, formData: Fo
           if (existingLocation) location = existingLocation;
           if (!location && allowCreateSetup) {
             const locationCodes = await transaction.location.findMany({ select: { assetTagCode: true } });
-            location = await transaction.location.create({ data: { name: safeLocationName, assetTagCode: nextLocationAssetTagCode(locationCodes.map((entry) => entry.assetTagCode)), roomNumber }, select: { id: true, isActive: true } });
+            const createdLocation = await transaction.location.create({ data: { name: safeLocationName, assetTagCode: nextLocationAssetTagCode(locationCodes.map((entry) => entry.assetTagCode)), roomNumber }, select: { id: true, isActive: true } });
+            await transaction.inventoryAudit.create({ data: auditEventData({ action: "CREATED", actor, entity: { id: createdLocation.id, label: safeLocationName, type: "location" }, metadata: { activityKind: "configuration", source: "import" }, summary: "Location created while importing inventory." }) });
+            location = createdLocation;
           }
           if (!location) throw new Error(`location “${safeLocationName}” does not exist. Enable setup creation or add it in Settings first.`);
         }

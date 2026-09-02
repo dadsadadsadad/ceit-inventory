@@ -1,9 +1,10 @@
 "use server";
 
-import { AuditAction, ItemStatus, MaintenancePriority, MaintenanceStatus, UserRole } from "@prisma/client";
+import { ItemStatus, MaintenancePriority, MaintenanceStatus, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { auditEventData } from "@/lib/audit-event";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
@@ -64,21 +65,20 @@ export async function createMaintenanceTicket(formData: FormData) {
   await prisma.$transaction(async (transaction) => {
     const item = await transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true, status: true } });
     if (!item || item.status === ItemStatus.RETIRED) throw new Error("Choose an active inventory item.");
-    await transaction.maintenanceTicket.create({
+    const ticket = await transaction.maintenanceTicket.create({
       data: { inventoryItemId: itemId, title: title ?? "", description: description ?? "", priority, assignedToName, reportedByName: actor.email },
     });
     if (markDefective && item.status !== ItemStatus.DEFECTIVE) {
       await transaction.inventoryItem.update({ where: { id: itemId }, data: { status: ItemStatus.DEFECTIVE } });
     }
     await transaction.inventoryAudit.create({
-      data: {
-        itemId,
-        action: markDefective ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
+      data: auditEventData({
+        action: "CREATED",
+        actor,
+        entity: { id: ticket.id, itemId, label: title, type: "maintenance-ticket" },
+        metadata: { markDefective, priority, source: "maintenance" },
         summary: `Service request reported: ${title}.`,
-        actorId: actor.id,
-        actorName: actor.email,
-        metadata: { priority, markDefective, source: "maintenance" },
-      },
+      }),
     });
   });
 
@@ -102,14 +102,13 @@ export async function updateMaintenanceTicket(formData: FormData) {
       data: { status, assignedToName, resolutionNotes, resolvedAt },
     });
     await transaction.inventoryAudit.create({
-      data: {
-        itemId: existing.inventoryItemId,
-        action: AuditAction.UPDATED,
-        summary: `Service request updated: ${existing.title} (${status}).`,
-        actorId: actor.id,
-        actorName: actor.email,
+      data: auditEventData({
+        action: "UPDATED",
+        actor,
+        entity: { id: existing.id, itemId: existing.inventoryItemId, label: existing.title, type: "maintenance-ticket" },
         metadata: { maintenanceTicketId: existing.id, previousStatus: existing.status, status },
-      },
+        summary: `Service request updated: ${existing.title} (${status}).`,
+      }),
     });
     return existing;
   });

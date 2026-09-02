@@ -35,6 +35,14 @@ enum AuditAction {
   MOVED
   STATUS_CHANGED
   SCANNED
+  DELETED
+  REQUESTED
+  BORROWED
+  RETURNED
+  DECLINED
+  SIGNED_IN
+  SIGNED_OUT
+  EXPORTED
 }
 
 enum BorrowStatus {
@@ -164,17 +172,21 @@ model ComputerSoftware {
 }
 
 model InventoryAudit {
-  id        String        @id @default(uuid()) @db.Uuid
-  itemId    String        @db.Uuid
-  action    AuditAction
-  summary   String
-  actorId   String?
-  actorName String?
-  metadata  Json?
-  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  createdAt DateTime      @default(now())
+  id          String         @id @default(uuid()) @db.Uuid
+  itemId      String?        @db.Uuid
+  entityType  String?
+  entityId    String?
+  entityLabel String?
+  action      AuditAction
+  summary     String
+  actorId     String?
+  actorName   String?
+  metadata    Json?
+  item        InventoryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
 
   @@index([itemId, createdAt])
+  @@index([entityType, entityId, createdAt])
 }
 
 model BorrowRequest {

@@ -1,6 +1,7 @@
 import { AuditAction } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
+import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { auditCategory, auditChangedFields, auditTrailWhere, parseAuditTrailFilters } from "@/lib/audit-trail";
 
 describe("audit trail filters", () => {
@@ -49,5 +50,27 @@ describe("audit trail filters", () => {
       { label: "Asset tag", value: "CEIT-100" },
       { label: "Quantity", value: "4" },
     ]);
+  });
+
+  it("keeps non-inventory operations searchable and identifies their subject", () => {
+    const accountEvent = auditEventData({
+      action: AuditAction.CREATED,
+      actor: { id: "admin-id", username: "ceit.admin", email: "admin@example.edu" },
+      entity: { id: "account-id", label: "ceit.staff | staff@example.edu", type: "account" },
+      metadata: { activityKind: "account", role: "STAFF" },
+      summary: "Account created.",
+    });
+
+    expect(auditActorName({ id: "staff-id", username: "ceit.staff", email: "staff@example.edu" })).toBe("ceit.staff | staff@example.edu");
+    expect(accountEvent.entityLabel).toBe("ceit.staff | staff@example.edu");
+    expect(auditCategory({
+      action: accountEvent.action,
+      actorId: accountEvent.actorId ?? null,
+      actorName: accountEvent.actorName ?? null,
+      entityId: accountEvent.entityId ?? null,
+      entityLabel: accountEvent.entityLabel ?? null,
+      entityType: accountEvent.entityType ?? null,
+      metadata: { activityKind: "account", role: "STAFF" },
+    })).toBe("Accounts");
   });
 });

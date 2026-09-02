@@ -4,6 +4,7 @@ import { AuditAction, BorrowStatus, ItemCondition, ItemStatus, ItemType, Prisma 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { auditEventData } from "@/lib/audit-event";
 import { canManageAdministration, requireAdministrator, requireInventoryAccess, requireWriteAccess } from "@/lib/inventory-auth";
 import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
 import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
@@ -411,16 +412,29 @@ export async function bulkUpdateInventory(formData: FormData) {
 
     try {
       await prisma.$transaction(async (transaction) => {
-        const [selectedCount, borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
-          transaction.inventoryItem.count({ where: { id: { in: ids } } }),
+        const [items, borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
+          transaction.inventoryItem.findMany({ where: { id: { in: ids } }, select: { assetTag: true, id: true, name: true } }),
           transaction.borrowRequest.count({ where: { inventoryItemId: { in: ids } } }),
           transaction.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
         ]);
-        if (selectedCount !== ids.length) throw new Error("One or more selected records no longer exist. Refresh the inventory list and try again.");
+        if (items.length !== ids.length) throw new Error("One or more selected records no longer exist. Refresh the inventory list and try again.");
         if (borrowingHistoryCount || maintenanceHistoryCount) {
           throw new Error(`Permanent deletion is blocked because the selection has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire those items instead to preserve their history.`);
         }
 
+        await Promise.all(items.map((item) => transaction.inventoryAudit.updateMany({
+          where: { itemId: item.id },
+          data: { entityId: item.id, entityLabel: item.assetTag ?? item.name, entityType: "inventory-item" },
+        })));
+        await transaction.inventoryAudit.createMany({
+          data: items.map((item) => auditEventData({
+            action: "DELETED",
+            actor,
+            entity: { id: item.id, itemId: item.id, label: item.assetTag ?? item.name, type: "inventory-item" },
+            metadata: { activityKind: "record-delete", bulkAction: "delete" },
+            summary: "Inventory record permanently deleted through a bulk action.",
+          })),
+        });
         const deleted = await transaction.inventoryItem.deleteMany({ where: { id: { in: ids } } });
         if (deleted.count !== ids.length) throw new Error("One or more selected records changed before deletion. Refresh the inventory list and try again.");
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -499,7 +513,7 @@ export async function bulkUpdateInventory(formData: FormData) {
 }
 
 export async function deleteInventoryItem(formData: FormData) {
-  await requireAdministrator();
+  const actor = await requireAdministrator();
   const id = requiredId(formData, "id");
   const confirmation = requiredText(formData, "confirmation", 16);
   if (confirmation !== "DELETE") throw new Error("Type DELETE to permanently remove this item.");
@@ -513,7 +527,22 @@ export async function deleteInventoryItem(formData: FormData) {
   }
 
   try {
-    await prisma.inventoryItem.delete({ where: { id } });
+    await prisma.$transaction(async (transaction) => {
+      const item = await transaction.inventoryItem.findUnique({ where: { id }, select: { assetTag: true, id: true, name: true } });
+      if (!item) throw new Error("This item no longer exists.");
+      const itemLabel = item.assetTag ?? item.name;
+      await transaction.inventoryAudit.updateMany({ where: { itemId: item.id }, data: { entityId: item.id, entityLabel: itemLabel, entityType: "inventory-item" } });
+      await transaction.inventoryAudit.create({
+        data: auditEventData({
+          action: "DELETED",
+          actor,
+          entity: { id: item.id, itemId: item.id, label: itemLabel, type: "inventory-item" },
+          metadata: { activityKind: "record-delete", assetTag: item.assetTag ?? "" },
+          summary: "Inventory record permanently deleted.",
+        }),
+      });
+      await transaction.inventoryItem.delete({ where: { id } });
+    });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       throw new Error("This item now has borrowing or maintenance history. Remove it from active inventory instead to preserve that history.");

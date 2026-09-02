@@ -1,5 +1,6 @@
 import { MaintenanceStatus, Prisma } from "@prisma/client";
 
+import { auditEventData } from "@/lib/audit-event";
 import { auditCategory, auditTrailWhere, parseAuditTrailFilters } from "@/lib/audit-trail";
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { manilaCalendarDate } from "@/lib/manila-date";
@@ -20,7 +21,20 @@ function csv(rows: unknown[][]) {
   return rows.map((row) => row.map(csvValue).join(",")).join("\r\n");
 }
 
-function download(content: string, filename: string) {
+async function download(content: string, filename: string, user: Awaited<ReturnType<typeof requireInventoryAccess>>, kind: string) {
+  try {
+    await prisma.inventoryAudit.create({
+      data: auditEventData({
+        action: "EXPORTED",
+        actor: user,
+        entity: { id: `csv:${kind}`, label: `${kind} CSV report`, type: "report-export" },
+        metadata: { activityKind: "report-export", format: "CSV", kind },
+        summary: `${kind} report exported as CSV.`,
+      }),
+    });
+  } catch (error) {
+    console.error("Unable to record CSV export audit event", error);
+  }
   return new Response(content, {
     headers: {
       "Cache-Control": "private, no-store",
@@ -87,7 +101,7 @@ export async function GET(request: Request) {
     return download(csv([
       ["Asset tag", "QR code", "Item", "Category", "Location", "Type", "Quantity", "Status", "Condition", "Manufacturer", "Model", "Serial number", "Record created", "Purchase date", "Last checked", "PC operating system", "PC last checked"],
       ...items.map((item) => [item.assetTag, item.qrCode, item.name, item.category.name, item.location.name, item.itemType, item.quantity, item.status, item.condition, item.manufacturer, item.model, item.serialNumber, item.createdAt, item.purchaseDate, item.lastCheckedAt, item.computer?.operatingSystem, item.computer?.lastCheckedAt]),
-    ]), filename("ceit-inventory", date, hasFilters));
+    ]), filename("ceit-inventory", date, hasFilters), user, kind);
   }
 
   if (!canManageInventory(user.role)) return new Response("Forbidden", { status: 403 });
@@ -133,7 +147,7 @@ export async function GET(request: Request) {
         item.computer?.softwareDescription,
         item.computer?.software.map((software) => [software.name, software.version].filter(Boolean).join(" ")).join("; "),
       ]),
-    ]), filename("ceit-pc-register", date, hasFilters));
+    ]), filename("ceit-pc-register", date, hasFilters), user, kind);
   }
 
   if (kind === "borrowings") {
@@ -148,7 +162,7 @@ export async function GET(request: Request) {
     return download(csv([
       ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Checked out / staff processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"],
       ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes]),
-    ]), filename(borrowingFilenameStem(filters.borrowingState), date, hasFilters));
+    ]), filename(borrowingFilenameStem(filters.borrowingState), date, hasFilters), user, kind);
   }
 
   if (kind === "maintenance") {
@@ -159,7 +173,7 @@ export async function GET(request: Request) {
     return download(csv([
       ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Assigned to", "Reported at", "Resolved at", "Resolution notes"],
       ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.assignedToName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes]),
-    ]), filename("ceit-service-requests", date, hasFilters));
+    ]), filename("ceit-service-requests", date, hasFilters), user, kind);
   }
 
   if (kind === "activity") {
@@ -181,9 +195,9 @@ export async function GET(request: Request) {
     const limitResponse = exportLimitReached(activity.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["Audit ID", "When", "Category", "Action", "Item", "Asset tag", "User", "Summary", "Metadata"],
-      ...activity.map((event) => [event.id, event.createdAt, auditCategory(event), event.action, event.item.name, event.item.assetTag, event.actorName ?? (event.actorId ? "Former user" : "System / public"), event.summary, event.metadata ? JSON.stringify(event.metadata) : ""]),
-    ]), filename("ceit-audit-trail", date, hasAuditFilters));
+      ["Audit ID", "When", "Category", "Action", "Subject", "Asset tag / subject ID", "User", "Summary", "Metadata"],
+      ...activity.map((event) => [event.id, event.createdAt, auditCategory(event), event.action, event.item?.name ?? event.entityLabel ?? "System operation", event.item?.assetTag ?? event.entityId ?? "", event.actorName ?? (event.actorId ? "Former user" : "System / public"), event.summary, event.metadata ? JSON.stringify(event.metadata) : ""]),
+    ]), filename("ceit-audit-trail", date, hasAuditFilters), user, kind);
   }
 
   return new Response("Unknown export", { status: 400 });

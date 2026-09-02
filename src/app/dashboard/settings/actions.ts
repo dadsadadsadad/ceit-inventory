@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/prisma";
+import { auditEventData } from "@/lib/audit-event";
 import { nextCategoryAssetTagCode, nextLocationAssetTagCode, normalizeAssetTagCode } from "@/lib/asset-tag";
 import { clearSession, hashPassword, passwordValidationMessage, requireAdministrator, requireInventoryAccess, verifyPassword } from "@/lib/inventory-auth";
 
@@ -116,11 +117,20 @@ export async function updateOwnAccount(formData: FormData) {
 
   try {
     await prisma.$transaction(async (transaction) => {
-      await transaction.user.update({
+      const updatedAccount = await transaction.user.update({
         where: { id: actor.id },
         data: { email, username, ...(password ? { passwordHash: await hashPassword(password) } : {}) },
       });
       if (password) await transaction.userSession.deleteMany({ where: { userId: actor.id } });
+      await transaction.inventoryAudit.create({
+        data: auditEventData({
+          action: "UPDATED",
+          actor,
+          entity: { id: updatedAccount.id, label: `${updatedAccount.username} | ${updatedAccount.email}`, type: "account" },
+          metadata: { activityKind: "account", changes: { email: account.email !== email ? email : undefined, passwordUpdated: Boolean(password), username: account.username !== username ? username : undefined }, sessionsRevoked: Boolean(password) },
+          summary: "Own account settings updated.",
+        }),
+      });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     throw accountWriteError(error);
@@ -150,10 +160,11 @@ function setupWriteError(error: unknown, label: string) {
 }
 
 export async function createCategory(formData: FormData) {
-  await requireAdministrator();
+  const actor = await requireAdministrator();
   const name = requiredText(formData, "name");
   try {
-    await prisma.category.create({ data: { name, assetTagCode: await categoryAssetTagCode(formData, name), description: optionalText(formData, "description", 2_000) } });
+    const category = await prisma.category.create({ data: { name, assetTagCode: await categoryAssetTagCode(formData, name), description: optionalText(formData, "description", 2_000) } });
+    await prisma.inventoryAudit.create({ data: auditEventData({ action: "CREATED", actor, entity: { id: category.id, label: category.name, type: "category" }, metadata: { activityKind: "configuration", assetTagCode: category.assetTagCode }, summary: "Category created." }) });
   } catch (error) {
     throw setupWriteError(error, "category");
   }
@@ -161,11 +172,12 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function updateCategory(formData: FormData) {
-  await requireAdministrator();
+  const actor = await requireAdministrator();
   const id = requiredId(formData);
   const name = requiredText(formData, "name");
   try {
-    await prisma.category.update({ where: { id }, data: { name, assetTagCode: await categoryAssetTagCode(formData, name, id), description: optionalText(formData, "description", 2_000) } });
+    const category = await prisma.category.update({ where: { id }, data: { name, assetTagCode: await categoryAssetTagCode(formData, name, id), description: optionalText(formData, "description", 2_000) } });
+    await prisma.inventoryAudit.create({ data: auditEventData({ action: "UPDATED", actor, entity: { id: category.id, label: category.name, type: "category" }, metadata: { activityKind: "configuration", assetTagCode: category.assetTagCode }, summary: "Category updated." }) });
   } catch (error) {
     throw setupWriteError(error, "category");
   }
@@ -173,9 +185,9 @@ export async function updateCategory(formData: FormData) {
 }
 
 export async function createLocation(formData: FormData) {
-  await requireAdministrator();
+  const actor = await requireAdministrator();
   try {
-    await prisma.location.create({
+    const location = await prisma.location.create({
       data: {
         name: requiredText(formData, "name"),
         assetTagCode: await locationAssetTagCode(formData),
@@ -183,6 +195,7 @@ export async function createLocation(formData: FormData) {
         description: optionalText(formData, "description", 2_000),
       },
     });
+    await prisma.inventoryAudit.create({ data: auditEventData({ action: "CREATED", actor, entity: { id: location.id, label: location.name, type: "location" }, metadata: { activityKind: "configuration", assetTagCode: location.assetTagCode, roomNumber: location.roomNumber ?? "" }, summary: "Location created." }) });
   } catch (error) {
     throw setupWriteError(error, "location");
   }
@@ -190,10 +203,10 @@ export async function createLocation(formData: FormData) {
 }
 
 export async function updateLocation(formData: FormData) {
-  await requireAdministrator();
+  const actor = await requireAdministrator();
   const id = requiredId(formData);
   try {
-    await prisma.location.update({
+    const location = await prisma.location.update({
       where: { id },
       data: {
         name: requiredText(formData, "name"),
@@ -202,6 +215,7 @@ export async function updateLocation(formData: FormData) {
         description: optionalText(formData, "description", 2_000),
       },
     });
+    await prisma.inventoryAudit.create({ data: auditEventData({ action: "UPDATED", actor, entity: { id: location.id, label: location.name, type: "location" }, metadata: { activityKind: "configuration", assetTagCode: location.assetTagCode, roomNumber: location.roomNumber ?? "" }, summary: "Location updated." }) });
   } catch (error) {
     throw setupWriteError(error, "location");
   }
@@ -209,19 +223,23 @@ export async function updateLocation(formData: FormData) {
 }
 
 export async function setCategoryActive(formData: FormData) {
-  await requireAdministrator();
-  await prisma.category.update({ where: { id: requiredId(formData) }, data: { isActive: String(formData.get("isActive")) === "true" } });
+  const actor = await requireAdministrator();
+  const isActive = String(formData.get("isActive")) === "true";
+  const category = await prisma.category.update({ where: { id: requiredId(formData) }, data: { isActive } });
+  await prisma.inventoryAudit.create({ data: auditEventData({ action: "UPDATED", actor, entity: { id: category.id, label: category.name, type: "category" }, metadata: { activityKind: "configuration", isActive }, summary: `Category ${isActive ? "activated" : "deactivated"}.` }) });
   refreshSetupPages();
 }
 
 export async function setLocationActive(formData: FormData) {
-  await requireAdministrator();
-  await prisma.location.update({ where: { id: requiredId(formData) }, data: { isActive: String(formData.get("isActive")) === "true" } });
+  const actor = await requireAdministrator();
+  const isActive = String(formData.get("isActive")) === "true";
+  const location = await prisma.location.update({ where: { id: requiredId(formData) }, data: { isActive } });
+  await prisma.inventoryAudit.create({ data: auditEventData({ action: "UPDATED", actor, entity: { id: location.id, label: location.name, type: "location" }, metadata: { activityKind: "configuration", isActive }, summary: `Location ${isActive ? "activated" : "deactivated"}.` }) });
   refreshSetupPages();
 }
 
 export async function deleteLocation(formData: FormData) {
-  await requireAdministrator();
+  const actor = await requireAdministrator();
   const id = requiredId(formData);
   const confirmation = requiredText(formData, "confirmation", 16);
   if (confirmation !== "DELETE") throw new Error("Type DELETE to permanently remove this location.");
@@ -231,7 +249,7 @@ export async function deleteLocation(formData: FormData) {
       await prisma.$transaction(async (transaction) => {
         const location = await transaction.location.findUnique({
           where: { id },
-          select: { _count: { select: { items: true } } },
+          select: { _count: { select: { items: true } }, id: true, name: true },
         });
 
         if (!location) throw new Error("This location no longer exists.");
@@ -239,6 +257,7 @@ export async function deleteLocation(formData: FormData) {
           throw new Error(`Move or remove the ${location._count.items} inventory record${location._count.items === 1 ? "" : "s"} assigned to this location before deleting it.`);
         }
 
+        await transaction.inventoryAudit.create({ data: auditEventData({ action: "DELETED", actor, entity: { id: location.id, label: location.name, type: "location" }, metadata: { activityKind: "configuration" }, summary: "Location permanently deleted." }) });
         await transaction.location.delete({ where: { id } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       refreshSetupPages();

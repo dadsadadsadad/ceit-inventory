@@ -85,6 +85,11 @@ function eventReference(event: ActivityEvent) {
   return `AUD-${event.id.slice(0, 8).toUpperCase()}`;
 }
 
+function subjectTypeLabel(event: ActivityEvent) {
+  if (event.item) return "Inventory record";
+  return event.entityType?.replaceAll("-", " ") ?? "System activity";
+}
+
 export default async function AuditTrailPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireAdministrationPageAccess();
   const search = await searchParams;
@@ -141,7 +146,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
           <div>
             <p className="eyebrow">Administration</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Audit trail</h1>
-            <p className="muted mt-2 max-w-3xl text-sm leading-6">Search the complete, time-stamped history of inventory records, borrowing operations, maintenance activity, QR scans, imports, and label printing.</p>
+            <p className="muted mt-2 max-w-3xl text-sm leading-6">Search the complete, time-stamped history of accounts, notes, settings, inventory, media, borrowing, maintenance, QR activity, and exports.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <a href={exportHref} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Export CSV</a>
@@ -155,7 +160,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
             <div>
               <p className="eyebrow">Find an event</p>
               <h2 id="audit-filters-heading" className="mt-1 text-lg font-semibold">Filter the audit history</h2>
-              <p className="muted mt-1 text-sm leading-6">Custom dates override the selected timeframe. Search covers the event description, user, item name, and asset tag.</p>
+              <p className="muted mt-1 text-sm leading-6">Custom dates override the selected timeframe. Search covers the event description, user, subject, item name, and asset tag.</p>
             </div>
             <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">Clear filters</Link>
           </div>
@@ -198,9 +203,9 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
         {!databaseError ? (
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Audit trail summary">
             <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Matching events</p><p className="mt-3 text-3xl font-semibold">{totalRecords.toLocaleString()}</p><p className="muted mt-2 text-sm">Across the selected filters</p></article>
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Record updates</p><p className="mt-3 text-3xl font-semibold">{updateCount.toLocaleString()}</p><p className="muted mt-2 text-sm">Updated, moved, or status changed</p></article>
+            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Updates</p><p className="mt-3 text-3xl font-semibold">{updateCount.toLocaleString()}</p><p className="muted mt-2 text-sm">Updated, moved, or status changed</p></article>
             <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">QR scans</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.SCANNED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Staff and public label opens</p></article>
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Items added</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.CREATED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Manual and imported records</p></article>
+            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Created events</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.CREATED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Records, accounts, notes, and setup</p></article>
           </section>
         ) : null}
 
@@ -230,9 +235,9 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
                         {metadata !== "{}" ? <details className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2"><summary className="cursor-pointer text-sm font-semibold">View event metadata</summary><pre className="muted mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs leading-5">{metadata}</pre></details> : null}
                       </div>
                       <div className="text-sm">
-                        <p className="muted text-xs font-bold uppercase tracking-wide">Inventory record</p>
-                        <Link href={`/dashboard/inventory/${event.item.id}`} className="accent-link mt-1 inline-block break-words font-semibold">{event.item.name}</Link>
-                        <p className="muted mt-1 break-all text-xs">{event.item.assetTag ?? "No asset tag"}</p>
+                        <p className="muted text-xs font-bold uppercase tracking-wide">{subjectTypeLabel(event)}</p>
+                        {event.item ? <Link href={`/dashboard/inventory/${event.item.id}`} className="accent-link mt-1 inline-block break-words font-semibold">{event.item.name}</Link> : <p className="mt-1 break-words font-semibold">{event.entityLabel ?? "System operation"}</p>}
+                        <p className="muted mt-1 break-all text-xs">{event.item?.assetTag ?? event.entityId ?? "No linked record"}</p>
                       </div>
                       <div className="text-sm xl:text-right">
                         <p className="muted text-xs font-bold uppercase tracking-wide">Recorded by</p>
