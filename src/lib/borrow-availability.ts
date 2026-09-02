@@ -7,6 +7,14 @@ export function canBorrowInventoryStatus(status: ItemStatus) {
 }
 
 /**
+ * Public QR pages reserve pending requests before equipment is issued. Show
+ * only the quantity that can still be requested, never the raw stock count.
+ */
+export function availableBorrowQuantity(quantity: number, pendingQuantity: number) {
+  return Math.max(0, quantity - pendingQuantity);
+}
+
+/**
  * New equipment is stored one physical unit per asset record. Checking out one
  * of those records must not reduce its physical quantity to zero: the record
  * remains the one tagged unit and is temporarily marked DEPLOYED instead.

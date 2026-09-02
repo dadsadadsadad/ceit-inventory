@@ -2486,8 +2486,7 @@ select.field {
     height: 100dvh;
     max-height: 100dvh;
     min-height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     position: sticky;
     top: 0;
   }
@@ -2495,9 +2494,12 @@ select.field {
   .dashboard-sidebar > nav {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .dashboard-sidebar > div:last-child {
+    flex: 0 0 auto;
     margin-top: auto;
   }
 }

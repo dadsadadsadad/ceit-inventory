@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="mb-7">
             <p className="eyebrow">Welcome</p>
             <h1 className="title mt-3 text-3xl">Sign in</h1>
-            <p className="muted mt-2 text-sm leading-6">Enter your CEIT inventory account details.</p>
+            <p className="muted mt-2 text-sm leading-6">Enter your account details.</p>
           </div>
           {error && messages[error] ? <div className="notice mb-5 rounded-lg px-4 py-3 text-sm" role="alert">{messages[error]}</div> : null}
           {notice && notices[notice] ? <div className="notice notice-success mb-5 rounded-lg px-4 py-3 text-sm" role="status">{notices[notice]}</div> : null}

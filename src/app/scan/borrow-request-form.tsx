@@ -13,7 +13,7 @@ type BorrowRequestFormProps = {
 };
 
 export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowRequestFormProps) {
-  const clientMaximumQuantity = Math.min(Math.max(Math.trunc(maximumQuantity) || 1, 1), 1_000);
+  const clientMaximumQuantity = Math.min(Math.max(Math.trunc(maximumQuantity), 0), 1_000);
   const isIndividuallyTrackedAsset = clientMaximumQuantity === 1;
 
   return (

@@ -30,6 +30,9 @@ const surfaceColor = rgb(0.99, 0.98, 0.96);
 const alternatingRowColor = rgb(0.97, 0.95, 0.92);
 
 async function auditedPdfResponse(user: InventoryUser, kind: string, response: Response) {
+  const isPdfDownload = response.ok && response.headers.get("Content-Type")?.startsWith("application/pdf");
+  if (!isPdfDownload) return response;
+
   try {
     await prisma.inventoryAudit.create({
       data: auditEventData({

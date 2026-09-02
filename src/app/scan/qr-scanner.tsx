@@ -5,15 +5,13 @@ import type { IScannerControls } from "@zxing/browser";
 import { ScanLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { inventoryLabelAppOrigin } from "@/lib/inventory-label-url";
 import { inventoryQrCodeFromScan } from "@/lib/qr-code";
 
-function codeFromScan(value: string) {
-  const configuredOrigin = inventoryLabelAppOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL);
-  return inventoryQrCodeFromScan(value, window.location.origin, configuredOrigin);
+export function codeFromScan(value: string, trustedQrOrigin?: string) {
+  return inventoryQrCodeFromScan(value, window.location.origin, trustedQrOrigin);
 }
 
-export function QrScanner() {
+export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -46,7 +44,7 @@ export function QrScanner() {
   }, []);
 
   function openRecord(value: string) {
-    const code = codeFromScan(value);
+    const code = codeFromScan(value, trustedQrOrigin);
     if (!code) {
       setMessage("This is not a CEIT inventory QR code. Enter the code printed under the QR image instead.");
       return;

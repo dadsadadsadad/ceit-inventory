@@ -89,8 +89,8 @@ export default async function DashboardPage() {
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="eyebrow">Start here</p>
-                    <h2 className="mt-2 text-xl font-semibold">Keep the register moving</h2>
-                    <p className="muted mt-2 max-w-xl text-sm leading-6">Jump straight into the tasks your team performs most often.</p>
+                    <h2 className="mt-2 text-xl font-semibold">Shortcuts</h2>
+                    <p className="muted mt-2 max-w-xl text-sm leading-6">Jump straight into these tasks.</p>
                   </div>
                   <ClipboardCheck className="dashboard-command-icon h-11 w-11" aria-hidden="true" />
                 </div>
@@ -107,10 +107,9 @@ export default async function DashboardPage() {
 
               {canManage ? (
                 <aside className="card dashboard-pulse-card rounded-lg p-5 sm:p-6">
-                  <div className="flex items-start justify-between gap-4"><div><p className="eyebrow">Operations pulse</p><h2 className="mt-2 text-xl font-semibold">Today&apos;s attention</h2></div><span className="dashboard-pulse-signal" aria-label="Live database data" /></div>
                   <div className="mt-6 space-y-3">
-                    <Link href="/dashboard/maintenance" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Wrench className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Open service requests</span><strong>{dashboard.openTicketCount}</strong></Link>
-                    <Link href="/dashboard/borrowing?status=REQUESTED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><ClipboardCheck className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Borrowing requests to review</span><strong>{dashboard.pendingBorrowCount}</strong></Link>
+                    <Link href="/dashboard/maintenance" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Wrench className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Maintenance requests</span><strong>{dashboard.openTicketCount}</strong></Link>
+                    <Link href="/dashboard/borrowing?status=REQUESTED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><ClipboardCheck className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Borrowing requests</span><strong>{dashboard.pendingBorrowCount}</strong></Link>
                     <Link href="/dashboard/borrowing?status=BORROWED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Package className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Items currently checked out</span><strong>{dashboard.checkedOutCount}</strong></Link>
                   </div>
                 </aside>
