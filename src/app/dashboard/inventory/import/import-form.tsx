@@ -67,7 +67,13 @@ export function ImportForm() {
       </label>
 
       <div className="card-muted rounded-lg p-4 text-sm leading-6">
-        <p>
+        <p className="font-semibold">How quantity, asset tags, and QR labels work</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li><strong>Tracked equipment assets</strong> (including every PC or Mac) must use <code>quantity</code> <code>1</code> on one row per physical unit. Leave <code>asset tag</code> blank to generate the next compatible tag and a unique QR code for that row.</li>
+          <li><strong>Supplies / shared stock</strong> can use a quantity such as <code>4</code>, but are stored as one stock record with one QR code—not four separately labeled items.</li>
+        </ul>
+        <p className="muted mt-2">An equipment row with quantity greater than 1 is skipped with a row-level explanation. Duplicate asset tags, serial numbers, or PC MAC addresses are also skipped; valid rows in the same file can still import.</p>
+        <p className="mt-4">
           Required data: <code>name</code>/<code>item name</code>, <code>category</code>/<code>classification</code>, and a location
           column or the default location above.
         </p>
