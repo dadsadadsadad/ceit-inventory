@@ -18,6 +18,7 @@ import {
   uploadInventoryItemPhoto,
 } from "../actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
+import { ItemPhotoGallery } from "@/app/components/item-photo-gallery";
 import { SubmitButton } from "@/app/components/submit-button";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
@@ -209,11 +210,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 <span className={`${inventoryStatusClass(item.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{inventoryStatusLabel(item.status)}</span>
               </div>
               <div className="mt-5 flex flex-col gap-5 sm:flex-row">
-                {item.photos.length ? (
-                  <div className="grid grid-cols-2 gap-2 sm:w-44">
-                    {item.photos.slice(0, 4).map((photo) => <img key={photo.id} src={`/dashboard/inventory/${item.id}/photos/${photo.id}`} alt={`Photo of ${item.name}`} className="h-20 w-full rounded-lg object-cover" loading="lazy" />)}
-                  </div>
-                ) : null}
+                {item.photos.length ? <ItemPhotoGallery itemId={item.id} itemName={item.name} photos={item.photos.map((photo) => ({ id: photo.id, fileName: photo.fileName }))} /> : null}
                 <dl className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <Detail label="Category">{item.category.name}</Detail>
                   <Detail label="Location">{item.location.name}</Detail>

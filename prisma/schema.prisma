@@ -251,7 +251,6 @@ model MaintenanceTicket {
   priority        MaintenancePriority @default(NORMAL)
   status          MaintenanceStatus   @default(OPEN)
   reportedByName  String?
-  assignedToName  String?
   resolutionNotes String?
   openedAt        DateTime            @default(now())
   resolvedAt      DateTime?

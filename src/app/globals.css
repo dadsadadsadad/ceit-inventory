@@ -1011,14 +1011,8 @@ summary:focus-visible {
 
 @media (min-width: 1024px) {
   .dashboard-shell {
-    align-items: stretch;
+    align-items: flex-start;
     display: flex;
-  }
-
-  .dashboard-sidebar {
-    align-self: stretch;
-    min-height: 100%;
-    position: relative;
   }
 
   .dashboard-nav-list {
@@ -2480,5 +2474,30 @@ select.field {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Keep account controls reachable on desktop, independent of page height. */
+@media (min-width: 1024px) {
+  .dashboard-sidebar {
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+  }
+
+  .dashboard-sidebar > nav {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .dashboard-sidebar > div:last-child {
+    margin-top: auto;
   }
 }

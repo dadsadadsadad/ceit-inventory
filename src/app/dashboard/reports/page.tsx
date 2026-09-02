@@ -120,7 +120,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               <span className="muted text-xs font-bold uppercase tracking-wide">Export data</span>
               <select name="kind" defaultValue={selectedKind} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
                 <option value="inventory">Inventory records</option>
-                {canManage ? <><option value="pcs">PC / Mac register</option><option value="borrowings">Borrowed &amp; returned items</option><option value="maintenance">Service requests</option></> : null}
+                {canManage ? <><option value="pcs">PC / Mac register</option><option value="borrowings">Borrowed &amp; returned items</option><option value="maintenance">Maintenance requests</option></> : null}
                 {canAdmin ? <option value="activity">Audit trail</option> : null}
               </select>
             </label>
