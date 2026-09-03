@@ -2477,29 +2477,33 @@ select.field {
   }
 }
 
-/* Keep account controls reachable on desktop, independent of page height. */
+/* Let the sidebar cover the complete page while its account controls track the viewport. */
 @media (min-width: 1024px) {
+  .dashboard-shell {
+    align-items: stretch;
+  }
+
   .dashboard-sidebar {
-    align-self: flex-start;
+    align-self: stretch;
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    max-height: 100dvh;
     min-height: 100dvh;
     overflow: hidden;
-    position: sticky;
-    top: 0;
+    position: relative;
   }
 
   .dashboard-sidebar > nav {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    flex: 0 0 auto;
+    padding-bottom: 9rem;
   }
 
-  .dashboard-sidebar > div:last-child {
-    flex: 0 0 auto;
-    margin-top: auto;
+  .dashboard-sidebar .sidebar-account {
+    background: linear-gradient(156deg, color-mix(in srgb, var(--sidebar) 72%, white 28%) 0%, var(--sidebar) 43%, var(--sidebar-deep) 100%);
+    bottom: 0;
+    box-shadow: 0 -12px 28px rgba(31, 8, 3, 0.16);
+    left: 0;
+    position: fixed;
+    width: 18rem;
+    z-index: 20;
   }
 }
