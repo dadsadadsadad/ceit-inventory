@@ -232,8 +232,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Inventory</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Item register</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Track individually tagged CEIT equipment, supplies, inspections, and the hardware and software assigned to each PC or Mac.</p>
+            <h1 className="title mt-3 text-3xl sm:text-4xl">Item inventory</h1>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Track CEIT equipment, supplies, inspections, and the hardware and software assigned to each PC or Mac.</p>
           </div>
           {canManage ? (
             <div className="flex flex-wrap gap-3">
