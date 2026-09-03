@@ -192,7 +192,7 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
           <div>
             <p className="eyebrow">Equipment lending</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing history</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests, confirm return requests from QR codes, and keep a complete equipment lending history.</p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests, confirm return requests from QR codes, and keep a complete equipment borrowing history.</p>
           </div>
           <div className="flex flex-wrap gap-3"><Link href="/dashboard/reports?kind=borrowings" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Borrowed &amp; returned reports</Link><Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link></div>
         </header>
