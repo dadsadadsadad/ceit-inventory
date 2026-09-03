@@ -50,7 +50,7 @@ export function DashboardNavigation({ canManageAdministration, canManageInventor
       </nav>
 
       <div className="border-t border-white/10 px-5 py-4 lg:hidden"><div className="flex items-center justify-between gap-4 text-xs text-white/80"><span className="truncate">{accountLabel}</span><form action={signOut}><button className="font-semibold underline hover:text-white">Sign out</button></form></div></div>
-      <div className="hidden border-t border-white/10 px-5 pb-6 pt-2 lg:block"><div className="rounded-lg bg-white/10 p-4"><div className="text-sm font-semibold text-white">Signed in</div><div className="mt-1 truncate text-xs leading-5 text-white/70">{accountLabel}</div><form action={signOut} className="mt-3"><button className="text-xs font-semibold text-white/90 underline hover:text-white">Sign out</button></form></div></div>
+      <div className="sidebar-account hidden border-t border-white/10 px-5 pb-6 pt-2 lg:block"><div className="rounded-lg bg-white/10 p-4"><div className="text-sm font-semibold text-white">Signed in</div><div className="mt-1 truncate text-xs leading-5 text-white/70">{accountLabel}</div><form action={signOut} className="mt-3"><button className="text-xs font-semibold text-white/90 underline hover:text-white">Sign out</button></form></div></div>
     </aside>
   );
 }
