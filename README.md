@@ -10,12 +10,14 @@ Inventory management for CEIT rooms, equipment, PCs, supplies, and assets with Q
 - Automatic asset tags in the existing `INV-CAT-ST-ROOM-0001` format and a unique QR code for every new equipment record
 - Item-wide last-checked dates, including a one-click inspection record
 - Item status, condition, and location updates with an audit history
-- Printable QR codes that open a mobile-friendly item screen
+- Individual QR labels and A4 label sheets for selected items or a room (24 compact or 8 large labels per sheet)
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Search, filters, sorting, and page navigation for status, room, identifiers, category, type, and condition
 - CSV/XLSX import with flexible column headings and row-level feedback
 - Filterable inventory, PC/Mac register, borrowing, maintenance, and audit exports in CSV or PDF, plus a detailed operational overview PDF
-- Public borrowing requests from QR codes, with staff approval, return, and history tracking
+- Public borrowing requests from QR codes, including future reservations in the same borrow form, staff approval, checkout, cancellation, and return tracking
+- QR issue reports routed to Maintenance, with a source filter, staff inspection, item history, and CSV/PDF exports
+- Reservation pickup and return times in Philippine time, overlap protection, and report views for pending, reserved, borrowed, returned, and cancelled requests
 - One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
 - Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history
 - Shared dashboard notes and a paginated activity history that records the responsible user
@@ -81,7 +83,7 @@ The application does not use Supabase Storage or Supabase Auth. Prisma connects 
 2. Have the school DBA create the `ceit_inventory_migrator` and `ceit_inventory_app` roles before the first migration. The migration role owns database objects; the app role receives only runtime table and sequence access through the final migration.
 3. Copy `.env.example` to `.env.local` on the school deployment server. Set `SCHOOL_DATABASE_URL` to the `ceit_inventory_app` connection, `DIRECT_URL` to the temporary `ceit_inventory_migrator` connection, and `REQUEST_RATE_LIMIT_SECRET` to a random value of at least 32 characters.
 4. Run `npm run db:migrate:deploy` once, then remove `DIRECT_URL` from the application service environment. The migration config reads both `.env.local` and `.env`.
-5. Create the first `ADMINISTRATOR` through the school's secured database-administration process, set `NEXT_PUBLIC_APP_URL` to the school-managed public URL (use HTTPS when available; trusted LAN deployments may use HTTP), and print QR codes only after that.
+5. Create the first `ADMINISTRATOR` through the school's secured database-administration process. Serve production over HTTPS, including school-LAN deployments: sign-in cookies require a secure connection, and phone camera access requires a secure browser context. Set `NEXT_PUBLIC_APP_URL` to that permanent HTTPS address and print QR codes only after that.
 6. Deploy the application where it can privately reach the school database. A hosted application service needs a secured network path to an on-campus database; otherwise host the application on the school's server or private network too.
 
 See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, backups, and restoration checks.
@@ -90,12 +92,16 @@ See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, b
 
 ## Production access control
 
-The dashboard and QR code scan flow use application accounts stored in PostgreSQL. There are only two account roles: `ADMINISTRATOR` and `STAFF`. Every inventory-changing server action rechecks the signed-in role, so a QR code identifies an item but does not grant permission to edit it. Administrators manage accounts, Settings, permanent deletion, and the audit trail; staff manage daily inventory, borrowing, maintenance, and reports. The Users page is administrator-only.
+The dashboard uses application accounts stored in PostgreSQL. Public QR pages allow students to request equipment, arrange returns, and report problems without an account. There are two staff roles: `ADMINISTRATOR` and `STAFF`. Every inventory-changing staff action rechecks the signed-in role. Administrators manage accounts, inventory setup, permanent deletion, and the audit trail; staff manage daily inventory, borrowing, maintenance, and reports. Both roles can open Settings to change their own password.
 
 Before any public deployment, replace or remove every temporary development account and verify that only school-approved administrators remain active.
 
 ## Safety and verification
 
-Public borrowing and return requests are rate-limited using a hashed request fingerprint. Completed or declined requests retain operational history while the borrower's name, student number, contact number, and notes are redacted after `BORROWER_DATA_RETENTION_DAYS` (365 days by default). Schedule `npm run db:purge-borrower-data` daily on the school server.
+Public borrowing, return, and issue reports are rate-limited using a hashed request fingerprint. Completed, declined, and cancelled requests retain operational history while the borrower's name, student number, contact number, and notes are redacted after their retention deadline. New requests set that deadline to the expected return time plus `BORROWER_DATA_RETENTION_DAYS` (365 days by default). Schedule `npm run db:purge-borrower-data` daily on the school server.
 
 Run `npm run test:unit` for fast logic tests, `npm run test:e2e` for public browser checks, `npm run test:db` against a configured database, and `npm run verify` before deployment. GitHub Actions runs the unit, browser, lint, type, and production-build checks on every push and pull request.
+
+For authenticated workflow checks, run `npm run test:launch:setup`, then `npm run test:launch`. Setup applies every migration to a new `ceit_test_launch_*` schema and seeds temporary accounts and equipment. The suite only resets data inside that schema; it refuses to run against the normal inventory schema. It starts and stops a production server on port 3101. Temporary credentials stay in the ignored `.env.e2e.local`; screenshots and sample reports are in the ignored `test-results` directory. Use a development database with schema-creation permission. Do not run setup against the school production database.
+
+See [the launch checklist and workflow notes](docs/launch-checklist.md) for rollout, reservation rules, print settings, and database pool sizing.

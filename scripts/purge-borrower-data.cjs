@@ -19,7 +19,7 @@ async function main() {
      WHERE status = ANY($4::"BorrowStatus"[])
        AND "personalDataExpiresAt" <= NOW()
        AND "studentNumber" <> $2`,
-    ["Archived borrower", "REDACTED", "Archived borrowing history", ["RETURNED", "DECLINED"]],
+    ["Archived borrower", "REDACTED", "Archived borrowing history", ["RETURNED", "DECLINED", "CANCELLED"]],
   );
   console.log(JSON.stringify({ redacted: result.rowCount ?? 0 }));
 }

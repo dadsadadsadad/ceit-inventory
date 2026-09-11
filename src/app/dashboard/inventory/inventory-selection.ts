@@ -1,6 +1,7 @@
 export const itemSelector = 'input[data-bulk-selection-item="true"]';
 const selectionChangeEvent = "inventory-bulk-selection-change";
 const selectionStoragePrefix = "ceit-inventory-selection:";
+const memorySelection = new Map<string, string[]>();
 
 function uniqueItemIds(itemIds: Iterable<string>) {
   return [...new Set([...itemIds].filter(Boolean))];
@@ -16,13 +17,14 @@ export function selectedItemIds(selectionKey: string) {
     const saved = JSON.parse(window.sessionStorage.getItem(`${selectionStoragePrefix}${selectionKey}`) ?? "[]");
     return Array.isArray(saved) ? uniqueItemIds(saved.filter((value): value is string => typeof value === "string")) : [];
   } catch {
-    return [];
+    return memorySelection.get(selectionKey) ?? [];
   }
 }
 
 export function saveSelectedItemIds(selectionKey: string, itemIds: Iterable<string>) {
   if (typeof window === "undefined") return;
   const saved = uniqueItemIds(itemIds);
+  memorySelection.set(selectionKey, saved);
   const storageKey = `${selectionStoragePrefix}${selectionKey}`;
   try {
     if (saved.length) window.sessionStorage.setItem(storageKey, JSON.stringify(saved));

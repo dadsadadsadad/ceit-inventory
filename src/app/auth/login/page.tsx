@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div><div className="text-base font-semibold tracking-tight">CEIT Inventory</div><div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Inventory management</div></div>
         </div>
         <div className="max-w-xl">
-          <h1 className="mt-4 text-4xl font-bold tracking-tight">Track CEIT resources efficiently.</h1>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight">Equipment, rooms, and the people who use them.</h1>
         </div>
       </section>
 

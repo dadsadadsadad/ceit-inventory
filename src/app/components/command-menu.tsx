@@ -14,13 +14,16 @@ type CommandItem = {
 };
 
 const commands: CommandItem[] = [
-  { label: "Open dashboard", description: "See the live CEIT overview", href: "/dashboard", Icon: LayoutDashboard },
+  { label: "Open dashboard", description: "Equipment and requests at a glance", href: "/dashboard", Icon: LayoutDashboard },
   { label: "Browse inventory", description: "Search equipment and supplies", href: "/dashboard/inventory", Icon: Package },
+  { label: "Print QR labels", description: "Print labels for a room or selected items", href: "/dashboard/inventory/labels", Icon: Package },
+  { label: "View reservations", description: "Approved equipment bookings", href: "/dashboard/borrowing?status=RESERVED", Icon: HandHelping, requires: "inventory-manager" },
+  { label: "Review QR issues", description: "Problems reported through equipment labels", href: "/dashboard/maintenance?source=QR", Icon: Wrench, requires: "inventory-manager" },
   { label: "Scan a QR code", description: "Open the camera scanner", href: "/scan", Icon: ScanLine },
   { label: "Add inventory", description: "Register an asset or supply", href: "/dashboard/inventory/new", Icon: PackagePlus, requires: "inventory-manager" },
   { label: "Open borrowing", description: "Review equipment lending requests", href: "/dashboard/borrowing", Icon: HandHelping, requires: "inventory-manager" },
   { label: "Open maintenance", description: "Report and resolve maintenance requests", href: "/dashboard/maintenance", Icon: Wrench, requires: "inventory-manager" },
-  { label: "Open audit trail", description: "Search the complete inventory activity history", href: "/dashboard/activity", Icon: ScrollText, requires: "administrator" },
+  { label: "Open audit trail", description: "Find changes by item, user, or date", href: "/dashboard/activity", Icon: ScrollText, requires: "administrator" },
   { label: "Open reports", description: "Review current inventory trends", href: "/dashboard/reports", Icon: BarChart3 },
   { label: "Manage users", description: "Create and update CEIT inventory accounts", href: "/dashboard/users", Icon: Users, requires: "administrator" },
   { label: "Open settings", description: "Update your account and preferences", href: "/dashboard/settings", Icon: Settings2 },

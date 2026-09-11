@@ -12,7 +12,7 @@ import { prisma } from "@/prisma";
 export const dynamic = "force-dynamic";
 
 async function getDashboardData(includeAuditTrail: boolean) {
-  const [itemCount, locationCount, attentionCount, recentActivity, dashboardNote, openTicketCount, pendingBorrowCount, checkedOutCount] = await Promise.all([
+  const [itemCount, locationCount, attentionCount, recentActivity, dashboardNote, openTicketCount, pendingBorrowCount, checkedOutCount, reservationCount, qrIssueCount, returnCount] = await Promise.all([
     prisma.inventoryItem.count(),
     prisma.location.count({ where: { isActive: true } }),
     prisma.inventoryItem.count({ where: { status: ItemStatus.DEFECTIVE } }),
@@ -21,8 +21,11 @@ async function getDashboardData(includeAuditTrail: boolean) {
     prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
     prisma.borrowRequest.count({ where: { status: BorrowStatus.REQUESTED } }),
     prisma.borrowRequest.count({ where: { status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] } } }),
+    prisma.borrowRequest.count({ where: { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: new Date() } } }),
+    prisma.maintenanceTicket.count({ where: { source: "QR", status: MaintenanceStatus.OPEN } }),
+    prisma.borrowRequest.count({ where: { status: BorrowStatus.RETURN_REQUESTED } }),
   ]);
-  return { attentionCount, checkedOutCount, dashboardNote, itemCount, locationCount, openTicketCount, pendingBorrowCount, recentActivity };
+  return { attentionCount, checkedOutCount, dashboardNote, itemCount, locationCount, openTicketCount, pendingBorrowCount, recentActivity, reservationCount, qrIssueCount, returnCount };
 }
 
 export default async function DashboardPage() {
@@ -54,23 +57,18 @@ export default async function DashboardPage() {
   return (
     <div className="page dashboard-overview-page">
       <div className="page-inner space-y-6">
-        <header className="card dashboard-hero rounded-lg px-6 py-7 sm:px-8">
+        <header className="dashboard-hero">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="dashboard-hero-kicker"><span className="dashboard-kicker-dot" aria-hidden="true" />Live workspace</div>
-              <p className="eyebrow mt-4">Overview</p>
               <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory dashboard</h1>
-              <p className="muted mt-3 max-w-2xl text-sm leading-6">A live overview of CEIT equipment, supplies, rooms, and records.</p>
-            </div>
-            <div className={`connection-status ${dashboard ? "connection-status-online" : "connection-status-offline"} rounded-lg px-4 py-3 text-sm font-medium`} role="status">
-              {dashboard ? "Database connected" : "Database unavailable"}
+              <p className="muted mt-3 max-w-2xl text-sm leading-6">Check equipment, review requests, and keep track of repairs.</p>
             </div>
           </div>
         </header>
 
         {dashboard ? (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Inventory overview">
+            <section className="dashboard-stats grid grid-cols-3 gap-3 sm:gap-4" aria-label="Inventory overview">
               {cards.map((stat) => (
                 <Link key={stat.label} href={stat.href} className="card card-link dashboard-stat-card rounded-lg p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-4">
@@ -88,11 +86,8 @@ export default async function DashboardPage() {
               <article className="card dashboard-command-card rounded-lg p-5 sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
-                    <p className="eyebrow">Start here</p>
-                    <h2 className="mt-2 text-xl font-semibold">Shortcuts</h2>
-                    <p className="muted mt-2 max-w-xl text-sm leading-6">Jump straight into these tasks.</p>
+                    <h2 className="text-lg font-semibold">Shortcuts</h2>
                   </div>
-                  <ClipboardCheck className="dashboard-command-icon h-11 w-11" aria-hidden="true" />
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   {quickActions.map((action) => (
@@ -107,7 +102,11 @@ export default async function DashboardPage() {
 
               {canManage ? (
                 <aside className="card dashboard-pulse-card rounded-lg p-5 sm:p-6">
+                  <h2 className="mb-4 font-semibold">Requests and returns</h2>
                   <div className="mt-6 space-y-3">
+                    <Link href="/dashboard/borrowing?status=RESERVED" className="dashboard-pulse-row"><span className="flex-1 text-sm font-medium">Upcoming reservations</span><strong>{dashboard.reservationCount}</strong></Link>
+                    <Link href="/dashboard/borrowing?status=RETURN_REQUESTED" className="dashboard-pulse-row"><span className="flex-1 text-sm font-medium">Returns to confirm</span><strong>{dashboard.returnCount}</strong></Link>
+                    <Link href="/dashboard/maintenance?source=QR&status=OPEN" className="dashboard-pulse-row"><span className="flex-1 text-sm font-medium">QR issue reports</span><strong>{dashboard.qrIssueCount}</strong></Link>
                     <Link href="/dashboard/maintenance" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Wrench className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Maintenance requests</span><strong>{dashboard.openTicketCount}</strong></Link>
                     <Link href="/dashboard/borrowing?status=REQUESTED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><ClipboardCheck className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Borrowing requests</span><strong>{dashboard.pendingBorrowCount}</strong></Link>
                     <Link href="/dashboard/borrowing?status=BORROWED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Package className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Items currently checked out</span><strong>{dashboard.checkedOutCount}</strong></Link>

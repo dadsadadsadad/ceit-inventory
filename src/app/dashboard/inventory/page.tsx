@@ -232,13 +232,14 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Inventory</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Item inventory</h1>
+            <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Track CEIT equipment, supplies, inspections, and the hardware and software assigned to each PC or Mac.</p>
           </div>
           {canManage ? (
             <div className="flex flex-wrap gap-3">
+              <Link href="/dashboard/inventory/labels" className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Print QR labels</Link>
               <Link href="/dashboard/inventory/import" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Import file</Link>
-              <Link href="/dashboard/inventory/new" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Add inventory item</Link>
+              <Link href="/dashboard/inventory/new" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Add item</Link>
             </div>
           ) : null}
         </header>

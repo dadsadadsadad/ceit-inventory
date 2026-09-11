@@ -13,6 +13,8 @@
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "test:launch:setup": "node scripts/setup-launch-test.mjs",
+    "test:launch": "node scripts/build-launch-test.mjs && playwright test --config playwright.launch.config.ts",
     "test:db": "npm run db:check && prisma migrate status",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
@@ -27,7 +29,7 @@
     "@zxing/browser": "^0.2.1",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.23.0",
-    "next": "^16.3.0",
+    "next": "^16.3.4",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
     "qrcode": "^1.5.4",
@@ -44,13 +46,14 @@
     "@types/yauzl": "^3.4.0",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.0",
-    "prisma": "^7.9.1",
+    "eslint-config-next": "^16.3.4",
+    "prisma": "7.9.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"
   },
   "overrides": {
+    "mysql2": "3.24.4",
     "archiver-utils": {
       "glob": {
         "minimatch": {
@@ -72,7 +75,7 @@
       }
     },
     "@eslint/eslintrc": {
-      "js-yaml": "4.3.1"
+      "js-yaml": "4.3.2"
     },
     "deepmerge-ts": "8.0.0",
     "nanoid": "3.3.18"

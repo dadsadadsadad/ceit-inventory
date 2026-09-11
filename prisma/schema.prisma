@@ -47,10 +47,12 @@ enum AuditAction {
 
 enum BorrowStatus {
   REQUESTED
+  RESERVED
   BORROWED
   RETURN_REQUESTED
   RETURNED
   DECLINED
+  CANCELLED
 }
 
 enum MaintenancePriority {
@@ -68,6 +70,7 @@ enum MaintenanceStatus {
 enum PublicRequestKind {
   BORROW
   RETURN
+  ISSUE
 }
 
 enum UserRole {
@@ -197,6 +200,11 @@ model BorrowRequest {
   purpose            String
   requestedQuantity  Int          @default(1)
   expectedReturnDate DateTime
+  startsAt           DateTime     @default(now())
+  isReservation      Boolean      @default(false)
+  approvedAt         DateTime?
+  approvedByName     String?
+  cancelledAt        DateTime?
   status             BorrowStatus @default(REQUESTED)
   staffNotes         String?
   requestedAt        DateTime     @default(now())
@@ -216,6 +224,7 @@ model BorrowRequest {
   @@index([status, requestedAt])
   @@index([status, returnRequestedAt])
   @@index([personalDataExpiresAt])
+  @@index([inventoryItemId, status, startsAt, expectedReturnDate])
 }
 
 model PublicRequestAttempt {
@@ -251,6 +260,7 @@ model MaintenanceTicket {
   priority        MaintenancePriority @default(NORMAL)
   status          MaintenanceStatus   @default(OPEN)
   reportedByName  String?
+  source          String              @default("STAFF") @db.VarChar(16)
   resolutionNotes String?
   openedAt        DateTime            @default(now())
   resolvedAt      DateTime?

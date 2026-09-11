@@ -45,4 +45,18 @@ describe("report export filters", () => {
     expect(() => parseReportExportFilters(new URLSearchParams({ from: "2026-09-12", to: "2026-09-01" }), now)).toThrow("Start date must be on or before end date.");
     expect(() => parseReportExportFilters(new URLSearchParams({ inventoryStatus: "BROKEN" }), now)).toThrow("Invalid inventory status.");
   });
+
+  it("exports reservations and cancellations with their distinct states", () => {
+    for (const [borrowingState, status] of [["reserved", "RESERVED"], ["cancelled", "CANCELLED"]]) {
+      const filters = parseReportExportFilters(new URLSearchParams({ borrowingState }), now);
+      expect(borrowingReportStatusFilter(filters)).toBe(status);
+    }
+  });
+
+  it("accepts known maintenance sources and rejects unrecognized sources", () => {
+    for (const source of ["QR", "STAFF"] as const) {
+      expect(parseReportExportFilters(new URLSearchParams({ maintenanceSource: source }), now).maintenanceSource).toBe(source);
+    }
+    expect(() => parseReportExportFilters(new URLSearchParams({ maintenanceSource: "unknown" }), now)).toThrow("Invalid maintenance source.");
+  });
 });

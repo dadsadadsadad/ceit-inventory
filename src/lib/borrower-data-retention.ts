@@ -12,7 +12,7 @@ export function borrowerDataExpiresAt(now = new Date()) {
 export async function purgeExpiredBorrowerData(now = new Date()) {
   return prisma.borrowRequest.updateMany({
     where: {
-      status: { in: [BorrowStatus.RETURNED, BorrowStatus.DECLINED] },
+      status: { in: [BorrowStatus.RETURNED, BorrowStatus.DECLINED, BorrowStatus.CANCELLED] },
       personalDataExpiresAt: { lte: now },
       studentNumber: { not: "REDACTED" },
     },

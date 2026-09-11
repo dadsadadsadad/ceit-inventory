@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 
 import { auditEventData } from "@/lib/audit-event";
 import { clearSession, createSession, getCurrentInventoryUser, verifyPassword } from "@/lib/inventory-auth";
@@ -11,6 +12,31 @@ const maxPasswordLength = 256;
 const failedSignInWindowMs = 15 * 60 * 1000;
 const lockDurationMs = 15 * 60 * 1000;
 const maximumAttempts = 5;
+
+async function recordFailedSignIn(userId: string) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await prisma.$transaction(async (transaction) => {
+        const current = await transaction.user.findUnique({ where: { id: userId } });
+        if (!current) return false;
+        const now = new Date();
+        if (current.lockedUntil && current.lockedUntil > now) return true;
+        const isNewWindow = !current.firstFailedSignInAt || now.getTime() - current.firstFailedSignInAt.getTime() > failedSignInWindowMs;
+        const failedSignInCount = isNewWindow ? 1 : current.failedSignInCount + 1;
+        const lockedUntil = failedSignInCount >= maximumAttempts ? new Date(now.getTime() + lockDurationMs) : null;
+        await transaction.user.update({
+          where: { id: userId },
+          data: { failedSignInCount, firstFailedSignInAt: isNewWindow ? now : current.firstFailedSignInAt, lockedUntil },
+        });
+        return Boolean(lockedUntil);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 4) continue;
+      throw error;
+    }
+  }
+  return true;
+}
 
 export async function signIn(formData: FormData) {
   const identifier = String(formData.get("identifier") ?? "").trim().toLowerCase();
@@ -27,15 +53,8 @@ export async function signIn(formData: FormData) {
   if (user.lockedUntil && user.lockedUntil > now) redirect("/auth/login?error=temporarily-locked");
 
   if (!(await verifyPassword(password, user.passwordHash))) {
-    const isNewWindow = !user.firstFailedSignInAt || now.getTime() - user.firstFailedSignInAt.getTime() > failedSignInWindowMs;
-    const failedSignInCount = isNewWindow ? 1 : user.failedSignInCount + 1;
-    const lockedUntil = failedSignInCount >= maximumAttempts ? new Date(now.getTime() + lockDurationMs) : null;
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { failedSignInCount, firstFailedSignInAt: isNewWindow ? now : user.firstFailedSignInAt, lockedUntil },
-    });
-    redirect(`/auth/login?error=${lockedUntil ? "temporarily-locked" : "invalid-credentials"}`);
+    const locked = await recordFailedSignIn(user.id);
+    redirect(`/auth/login?error=${locked ? "temporarily-locked" : "invalid-credentials"}`);
   }
 
   await prisma.$transaction([

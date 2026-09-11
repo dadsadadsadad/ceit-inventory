@@ -15,6 +15,7 @@ const statusOptions = ["OK", "WORKING", "DEPLOYED", "DEFECTIVE", "NOT_TESTED", "
 const conditionOptions = ["EXCELLENT", "GOOD", "FAIR", "POOR", "FOR_REPAIR"];
 
 function readable(value: string) {
+  if (value === "OK") return "OK";
   return value.toLowerCase().split("_").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
 }
 
@@ -55,7 +56,7 @@ export function NewInventoryForm({ categories, locations }: { categories: SetupO
         <div><p className="eyebrow">Identity</p><h2 className="mt-2 text-lg font-semibold">What are you adding?</h2></div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label><span className="text-sm font-semibold">Item name *</span><input required name="name" value={itemName} onChange={(event) => setItemName(event.target.value)} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder={isComputer ? "Select a room to suggest Room-PC-01" : "Dell OptiPlex 7010"} /></label>
-          <div><InputField name="assetTag" label="Asset tag" placeholder="Leave blank to generate" /><p className="muted mt-1 text-xs leading-5">Tracked equipment automatically receives the next compatible <code>INV-CAT-ST-ROOM-0001</code> tag and a unique QR code.</p></div>
+          <div><InputField name="assetTag" label="Asset tag" placeholder="Leave blank to generate" /><p className="muted mt-1 text-xs leading-5">Equipment receives an <code>INV-CAT-ST-ROOM-0001</code> tag and a unique QR code.</p></div>
           <label>
             <span className="text-sm font-semibold">Category *</span>
             <select required name="categoryId" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"><option value="">Choose a category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
@@ -84,7 +85,7 @@ export function NewInventoryForm({ categories, locations }: { categories: SetupO
 
       <section className="divider border-t pt-6">
         <p className="eyebrow">Details</p>
-        <h2 className="mt-2 text-lg font-semibold">Manufacturer and lifecycle</h2>
+        <h2 className="mt-2 text-lg font-semibold">Purchase and manufacturer</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <InputField name="manufacturer" label="Manufacturer" />
           <InputField name="model" label="Model" />

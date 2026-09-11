@@ -38,9 +38,9 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
     }
   }
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    stopCamera(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; stopCamera(false); };
   }, []);
 
   function openRecord(value: string) {
@@ -50,6 +50,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
       return;
     }
     stopCamera();
+    setMessage("Item found. Opening…");
     router.push(`/scan/${encodeURIComponent(code)}`);
   }
 
@@ -101,14 +102,14 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
 
   return (
     <section className="card rounded-lg p-5 sm:p-7">
-      <div className="scanner-preview relative overflow-hidden rounded-lg bg-black">
+      <div data-scanning={isScanning} className="scanner-preview relative overflow-hidden rounded-lg bg-black">
         <video ref={videoRef} muted playsInline aria-label="QR code scanner camera preview" className="aspect-[4/5] w-full object-cover sm:aspect-[3/4]" />
         <div className="scanner-corners pointer-events-none absolute inset-7 rounded-2xl" aria-hidden="true" />
         {!isScanning && !isStarting ? <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center"><div className="scanner-empty-state"><ScanLine className="mx-auto h-7 w-7" aria-hidden="true" /><p className="mt-3 text-sm font-semibold">Camera preview</p><p className="mt-1 text-xs leading-5">Tap Use camera to scan a CEIT QR code.</p></div></div> : null}
       </div>
       <p className="muted mt-4 text-sm leading-6" aria-live="polite">{message}</p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <button type="button" onClick={isScanning ? () => stopCamera() : startCamera} disabled={isStarting} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
+        <button type="button" onClick={isScanning ? () => { stopCamera(); setMessage("Camera is off."); } : startCamera} disabled={isStarting} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
           {isStarting ? "Starting camera…" : isScanning ? "Stop camera" : "Use camera"}
         </button>
       </div>
@@ -116,7 +117,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
         <h2 className="text-sm font-semibold">Manual lookup</h2>
         <form onSubmit={submitManualCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
           <label className="sr-only" htmlFor="manual-qr-code">QR code</label>
-          <input id="manual-qr-code" value={manualCode} onChange={(event) => setManualCode(event.target.value)} maxLength={128} className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm" placeholder="Paste or type QR code" />
+          <input id="manual-qr-code" value={manualCode} onChange={(event) => setManualCode(event.target.value)} required maxLength={2048} className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm" placeholder="Paste or type QR code" />
           <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Open item</button>
         </form>
       </div>

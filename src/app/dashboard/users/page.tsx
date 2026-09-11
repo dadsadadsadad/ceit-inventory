@@ -21,8 +21,8 @@ export default async function UsersPage() {
       <div className="page-inner space-y-6">
         <header>
           <p className="eyebrow">Users</p>
-          <h1 className="title mt-3 text-3xl sm:text-4xl">Account directory</h1>
-          <p className="muted mt-2 max-w-2xl text-sm leading-6">Create CEIT inventory accounts, manage sign-in details and roles, reset a password, or deactivate access without losing the audit trail.</p>
+          <h1 className="title mt-3 text-3xl sm:text-4xl">Users</h1>
+          <p className="muted mt-2 max-w-2xl text-sm leading-6">Add staff accounts, change access, or reset passwords.</p>
         </header>
 
         <section className="card rounded-lg p-5 sm:p-6">

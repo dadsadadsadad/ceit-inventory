@@ -13,7 +13,7 @@ const maximumExportRecords = 10_000;
 
 function csvValue(value: unknown) {
   const text = value instanceof Date ? value.toISOString() : String(value ?? "");
-  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  const safeText = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? `'${text}` : text;
   return `"${safeText.replaceAll("\"", "\"\"")}"`;
 }
 
@@ -35,7 +35,7 @@ async function download(content: string, filename: string, user: Awaited<ReturnT
   } catch (error) {
     console.error("Unable to record CSV export audit event", error);
   }
-  return new Response(content, {
+  return new Response("\uFEFF" + content, {
     headers: {
       "Cache-Control": "private, no-store",
       "Content-Disposition": `attachment; filename="${filename}"`,
@@ -70,6 +70,8 @@ function borrowingDateWhere(filters: ReturnType<typeof parseReportExportFilters>
   if (!range) return {};
   if (filters.borrowingState === "currently-borrowed") return { processedAt: range };
   if (filters.borrowingState === "returned") return { returnedAt: range };
+  if (filters.borrowingState === "reserved") return { startsAt: range };
+  if (filters.borrowingState === "cancelled") return { cancelledAt: range };
   return { requestedAt: range };
 }
 
@@ -159,20 +161,20 @@ export async function GET(request: Request) {
     const limitResponse = exportLimitReached(requests.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Checked out / staff processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes"],
-      ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes]),
+      ["Item", "Asset tag", "Borrower", "Student number", "Contact", "Purpose", "Quantity", "Expected return", "Status", "Requested at", "Checked out / staff processed at", "Returned at", "Return requested at", "Staff notes", "Return request notes", "Request type", "Pickup at", "Approved at", "Approved by", "Cancelled at"],
+      ...requests.map((entry) => [entry.inventoryItem.name, entry.inventoryItem.assetTag, entry.borrowerName, entry.studentNumber, entry.contact, entry.purpose, entry.requestedQuantity, entry.expectedReturnDate, entry.status, entry.requestedAt, entry.processedAt, entry.returnedAt, entry.returnRequestedAt, entry.staffNotes, entry.returnRequestNotes, entry.isReservation ? "Reservation" : "Borrow now", entry.startsAt, entry.approvedAt, entry.approvedByName, entry.cancelledAt]),
     ]), filename(borrowingFilenameStem(filters.borrowingState), date, Boolean(appliedDateFilter || filters.borrowingStatus || filters.borrowingState !== "all")), user, kind);
   }
 
   if (kind === "maintenance") {
-    const where: Prisma.MaintenanceTicketWhereInput = appliedDateFilter ? { openedAt: appliedDateFilter } : {};
+    const where: Prisma.MaintenanceTicketWhereInput = { ...(appliedDateFilter ? { openedAt: appliedDateFilter } : {}), ...(filters.maintenanceSource ? { source: filters.maintenanceSource } : {}) };
     const tickets = await prisma.maintenanceTicket.findMany({ where, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { openedAt: "desc" }, take: maximumExportRecords + 1 });
     const limitResponse = exportLimitReached(tickets.length);
     if (limitResponse) return limitResponse;
     return download(csv([
-      ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Reported at", "Resolved at", "Resolution notes"],
-      ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes]),
-    ]), filename("ceit-maintenance-requests", date, Boolean(appliedDateFilter)), user, kind);
+      ["Item", "Asset tag", "Title", "Priority", "Status", "Description", "Reported by", "Reported at", "Resolved at", "Resolution notes", "Source"],
+      ...tickets.map((ticket) => [ticket.inventoryItem.name, ticket.inventoryItem.assetTag, ticket.title, ticket.priority, ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved", ticket.description, ticket.reportedByName, ticket.openedAt, ticket.resolvedAt, ticket.resolutionNotes, ticket.source === "QR" ? "QR issue report" : "Staff"]),
+    ]), filename("ceit-maintenance-requests", date, Boolean(appliedDateFilter || filters.maintenanceSource)), user, kind);
   }
 
   if (kind === "activity") {
