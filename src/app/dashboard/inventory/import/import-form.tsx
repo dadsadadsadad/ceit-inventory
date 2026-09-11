@@ -1,16 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 
 import { importInventory, type ImportResult } from "./actions";
 
 const initialImportResult: ImportResult = { errors: [], imported: 0, previewed: false, skipped: 0 };
 
 export function ImportForm() {
-  const [result, action, pending] = useActionState(importInventory, initialImportResult);
+  const preserveFields = useRef(false);
+  const [result, action, pending] = useActionState(async (previous: ImportResult, data: FormData) => {
+    const next = await importInventory(previous, data);
+    preserveFields.current = next.previewed || next.imported === 0;
+    return next;
+  }, initialImportResult);
 
   return (
-    <form action={action} className="card space-y-5 rounded-lg p-5 sm:p-7">
+    <form action={action} onReset={(event) => { if (preserveFields.current) event.preventDefault(); }} className="card space-y-5 rounded-lg p-5 sm:p-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Choose a spreadsheet</h2>
@@ -35,8 +40,7 @@ export function ImportForm() {
       <fieldset className="card-muted space-y-3 rounded-lg p-4">
         <legend className="text-sm font-semibold">Default location for files without a location column</legend>
         <p className="muted text-xs leading-5">
-          Leave this blank only when every row already has a <code>location</code> or <code>room</code>. Your CEIT PROPERTY workbook
-          needs a value here because it does not list rooms per item.
+          Use this room for rows that do not include a <code>location</code> or <code>room</code>.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { Prisma, PublicRequestKind } from "@prisma/client";
 
 import { prisma } from "@/prisma";
+import { FormError } from "./form-action";
 
 const maximumAttempts = 8;
 const windowMs = 15 * 60 * 1000;
@@ -51,7 +52,7 @@ export async function enforcePublicRequestRateLimit(kind: PublicRequestKind) {
         }
 
         if (existing.attempts >= maximumAttempts) {
-          throw new Error("Too many requests were sent from this device. Please wait 15 minutes and try again.");
+          throw new FormError("Too many requests were sent from this device. Please wait 15 minutes and try again.");
         }
 
         await transaction.publicRequestAttempt.update({ where: { fingerprint_kind: { fingerprint: requestFingerprint, kind } }, data: { attempts: { increment: 1 } } });

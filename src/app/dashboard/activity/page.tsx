@@ -146,7 +146,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
           <div>
             <p className="eyebrow">Administration</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Audit trail</h1>
-            <p className="muted mt-2 max-w-3xl text-sm leading-6">Search the complete, time-stamped history of accounts, notes, settings, inventory, media, borrowing, maintenance, QR code activity, and exports.</p>
+            <p className="muted mt-2 max-w-3xl text-sm leading-6">See who changed what and when. Search by item, user, or activity.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <a href={exportHref} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Export CSV</a>

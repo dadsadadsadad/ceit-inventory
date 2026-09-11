@@ -6,9 +6,10 @@ import { auditActionLabel, auditActorLabel, auditCategory, auditChangedFields, a
 import { canManageAdministration, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import type { InventoryUser } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
-import { formatManilaDate, manilaCalendarDate, startOfManilaDay } from "@/lib/manila-date";
+import { formatManilaDate, manilaCalendarDate } from "@/lib/manila-date";
 import { borrowingReportStateLabel, borrowingReportStatusFilter, parseReportExportFilters, reportDateWhere, type ReportExportFilters } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
+import { borrowStatusLabel } from "@/lib/borrow-status";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -76,9 +77,14 @@ function humanize(value: string) {
 
 function pdfText(value: unknown, maximum = 900) {
   const normalized = String(value ?? "")
-    .normalize("NFKD")
-    .replaceAll(/[\u0300-\u036f]/g, "")
-    .replaceAll(/[^\x20-\x7E\n]/g, "?")
+    .normalize("NFKC")
+    .replaceAll(/[\u2010-\u2015]/g, "-")
+    .replaceAll(/[\u2018\u2019]/g, "'")
+    .replaceAll(/[\u201c\u201d]/g, '"')
+    .replaceAll("\u2026", "...")
+    .replaceAll("\u20b1", "PHP ")
+    .replaceAll("\u00b7", " | ")
+    .replaceAll(/[^\x20-\x7E\xA0-\xFF\n]/g, "?")
     .replaceAll(/[\t\r]+/g, " ")
     .replaceAll(/ +/g, " ")
     .trim();
@@ -178,7 +184,7 @@ function createReportWriter(document: PDFDocument, regular: PDFFont, bold: PDFFo
   };
 
   const addHeading = (text: string) => {
-    ensureSpace(38);
+    ensureSpace(82);
     cursor -= 10;
     page.drawText(clampText(text, 84), { x: pageMargin, y: cursor - 15, size: 15, font: bold, color: accentColor });
     cursor -= 26;
@@ -202,7 +208,9 @@ function createReportWriter(document: PDFDocument, regular: PDFFont, bold: PDFFo
       const x = pageMargin + index * (width + gap);
       page.drawRectangle({ x, y: cursor - height, width, height, borderColor: lineColor, borderWidth: 0.8, color: surfaceColor });
       page.drawText(clampText(metric.label, 34), { x: x + 10, y: cursor - 18, size: 8, font: bold, color: mutedColor });
-      page.drawText(clampText(metric.value, 20), { x: x + 10, y: cursor - 42, size: 18, font: bold, color: textColor });
+      const value = clampText(metric.value, 24);
+      const valueSize = Math.max(9, Math.min(18, 18 * (width - 20) / Math.max(1, bold.widthOfTextAtSize(value, 18))));
+      page.drawText(value, { x: x + 10, y: cursor - 42, size: valueSize, font: bold, color: textColor });
     });
     cursor -= height + 12;
   };
@@ -285,6 +293,8 @@ function borrowingDateWhere(filters: ReportExportFilters, range: ReturnType<type
   if (!range) return {};
   if (filters.borrowingState === "currently-borrowed") return { processedAt: range };
   if (filters.borrowingState === "returned") return { returnedAt: range };
+  if (filters.borrowingState === "reserved") return { startsAt: range };
+  if (filters.borrowingState === "cancelled") return { cancelledAt: range };
   return { requestedAt: range };
 }
 
@@ -299,7 +309,7 @@ function filterSummary(filters: ReportExportFilters, options: { audit?: boolean;
   }
   if (options.inventoryStatus && filters.inventoryStatus) segments.push(`Inventory status: ${inventoryStatusLabel(filters.inventoryStatus)}`);
   if (options.borrowingState && filters.borrowingState !== "all") segments.push(`Lending view: ${borrowingReportStateLabel(filters.borrowingState)}`);
-  if (options.borrowingStatus && filters.borrowingStatus) segments.push(`Borrowing status: ${humanize(filters.borrowingStatus)}`);
+  if (options.borrowingStatus && filters.borrowingStatus) segments.push(`Borrowing status: ${borrowStatusLabel(filters.borrowingStatus)}`);
   if (options.pcOnly && filters.pcOnly) segments.push("PC / Mac only");
   if (options.audit) segments.push("Audit event timestamp basis");
   return segments.join(" | ");
@@ -483,16 +493,16 @@ async function createBorrowingsPdf(filters: ReportExportFilters, calendarDate: s
     take: maximumPdfRecords + 1,
   });
   if (requests.length > maximumPdfRecords) return new Response(`This export exceeds ${maximumPdfRecords.toLocaleString()} records. Narrow the data before exporting.`, { status: 413 });
-  const today = startOfManilaDay();
+  const today = new Date();
   const active = requests.filter((request) => request.status === BorrowStatus.BORROWED || request.status === BorrowStatus.RETURN_REQUESTED);
   const returned = requests.filter((request) => request.status === BorrowStatus.RETURNED);
   const reportTitle = filters.borrowingState === "currently-borrowed" ? "Borrowed items" : filters.borrowingState === "returned" ? "Returned items" : "Borrowing history";
   const filenameStem = filters.borrowingState === "currently-borrowed" ? "ceit-borrowed-items" : filters.borrowingState === "returned" ? "ceit-returned-items" : "ceit-borrowing-history";
 
   const { document, writer } = await reportDocument(reportTitle, "Filtered equipment lending register");
-  writer.addBody("A filtered history of borrowing requests, handoffs, return activity, and expected return dates. Currently borrowed includes return requests awaiting staff confirmation; date filters use checkout dates for borrowed items and completion dates for returned items.", 10, mutedColor);
+  writer.addBody("Borrowing and reservation history, including pickup times, approvals, cancellations, and returns. Date filters use checkout dates for borrowed items, completion dates for returns, pickup dates for reservations, and cancellation dates for cancelled reservations.", 10, mutedColor);
   writer.addBody(filterSummary(filters, { borrowingState: true, borrowingStatus: true }), 8.5, mutedColor);
-  writer.addHeading("Borrowing snapshot");
+  writer.addHeading("Borrowing summary");
   writer.addMetricRow([
     { label: "Matching requests", value: requests.length.toLocaleString() },
     { label: filters.borrowingState === "returned" ? "Returned" : "Currently out", value: (filters.borrowingState === "returned" ? returned.length : active.length).toLocaleString() },
@@ -504,11 +514,11 @@ async function createBorrowingsPdf(filters: ReportExportFilters, calendarDate: s
     requests.map((request) => [
       [request.inventoryItem.name, request.inventoryItem.assetTag ?? "No asset tag"].join("\n"),
       [request.borrowerName, request.studentNumber, request.contact].filter(Boolean).join("\n"),
-      [`Requested: ${reportDateTime(request.requestedAt)}`, `Expected: ${reportDate(request.expectedReturnDate)}`, request.returnedAt ? `Returned: ${reportDateTime(request.returnedAt)}` : request.returnRequestedAt ? `Return requested: ${reportDateTime(request.returnRequestedAt)}` : "Not returned"].join("\n"),
-      `${humanize(request.status)}\n${request.requestedQuantity} unit${request.requestedQuantity === 1 ? "" : "s"}`,
-      [request.purpose, request.staffNotes && `Staff: ${request.staffNotes}`, request.returnRequestNotes && `Return: ${request.returnRequestNotes}`].filter(Boolean).join("\n"),
+      [`Requested: ${reportDateTime(request.requestedAt)}`, `Pickup: ${reportDateTime(request.startsAt)}`, `Return by: ${reportDateTime(request.expectedReturnDate)}`, ...(request.processedAt && request.status !== BorrowStatus.DECLINED ? [`Checked out: ${reportDateTime(request.processedAt)}`] : []), request.returnedAt ? `Returned: ${reportDateTime(request.returnedAt)}` : request.returnRequestedAt ? `Return requested: ${reportDateTime(request.returnRequestedAt)}` : "Not returned"].join("\n"),
+      `${request.isReservation ? "Reservation" : "Borrow now"}\n${borrowStatusLabel(request.status)}\n${request.requestedQuantity} unit${request.requestedQuantity === 1 ? "" : "s"}`,
+      [request.approvedAt && `Approved: ${reportDateTime(request.approvedAt)}${request.approvedByName ? ` by ${request.approvedByName}` : ""}`, request.cancelledAt && `Cancelled: ${reportDateTime(request.cancelledAt)}`, request.purpose, request.staffNotes && `Staff: ${request.staffNotes}`, request.returnRequestNotes && `Return: ${request.returnRequestNotes}`].filter(Boolean).join("\n"),
     ]),
-    { fontSize: 8, maxCellCharacters: 150, widths: [1.1, 1.1, 1.34, 0.84, 1.35] },
+    { fontSize: 8, maxCellCharacters: 420, widths: [1.1, 1.1, 1.55, 0.95, 1.35] },
   );
   writer.finish();
   return documentResponse(document, `${filenameStem}${hasReportFilters(filters, { borrowing: true }) ? "-filtered" : ""}-${calendarDate}.pdf`);
@@ -517,7 +527,7 @@ async function createBorrowingsPdf(filters: ReportExportFilters, calendarDate: s
 async function createMaintenancePdf(filters: ReportExportFilters, calendarDate: string) {
   const appliedDateFilter = dateWhere(filters.dateRange);
   const tickets = await prisma.maintenanceTicket.findMany({
-    where: appliedDateFilter ? { openedAt: appliedDateFilter } : {},
+    where: { ...(appliedDateFilter ? { openedAt: appliedDateFilter } : {}), ...(filters.maintenanceSource ? { source: filters.maintenanceSource } : {}) },
     include: { inventoryItem: { select: { assetTag: true, name: true } } },
     orderBy: { openedAt: "desc" },
     take: maximumPdfRecords + 1,
@@ -526,8 +536,8 @@ async function createMaintenancePdf(filters: ReportExportFilters, calendarDate: 
   const open = tickets.filter((ticket) => ticket.status === MaintenanceStatus.OPEN);
 
   const { document, writer } = await reportDocument("Maintenance requests", "Filtered maintenance request register");
-  writer.addBody("A filtered register of reported maintenance work, priority, resolution state, and supporting notes.", 10, mutedColor);
-  writer.addBody(filterSummary(filters), 8.5, mutedColor);
+  writer.addBody("Maintenance reports, priorities, staff notes, and resolutions.", 10, mutedColor);
+  writer.addBody(filterSummary(filters) + (filters.maintenanceSource ? " · Source: " + (filters.maintenanceSource === "QR" ? "QR issue reports" : "Staff") : ""), 8.5, mutedColor);
   writer.addHeading("Maintenance snapshot");
   writer.addMetricRow([
     { label: "Matching requests", value: tickets.length.toLocaleString() },
@@ -540,7 +550,7 @@ async function createMaintenancePdf(filters: ReportExportFilters, calendarDate: 
     tickets.map((ticket) => [
       [ticket.inventoryItem.name, ticket.inventoryItem.assetTag ?? "No asset tag", ticket.title].join("\n"),
       `${humanize(ticket.priority)}\n${ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved"}`,
-      ticket.reportedByName ?? "Not recorded",
+      (ticket.source === "QR" ? "QR issue report" : ticket.reportedByName ?? "Staff"),
       [`Opened: ${reportDateTime(ticket.openedAt)}`, ticket.resolvedAt ? `Resolved: ${reportDateTime(ticket.resolvedAt)}` : "Not resolved"].join("\n"),
       [ticket.description, ticket.resolutionNotes && `Resolution: ${ticket.resolutionNotes}`].filter(Boolean).join("\n"),
     ]),
@@ -598,7 +608,7 @@ async function createAuditPdf(parameters: URLSearchParams, calendarDate: string)
 }
 
 async function createOverviewPdf(canManage: boolean, calendarDate: string) {
-  const today = startOfManilaDay();
+  const today = new Date();
   const inspectionCutoff = new Date(today);
   inspectionCutoff.setDate(inspectionCutoff.getDate() - 90);
   const attentionWhere: Prisma.InventoryItemWhereInput = {
@@ -607,7 +617,7 @@ async function createOverviewPdf(canManage: boolean, calendarDate: string) {
       { condition: { in: [ItemCondition.POOR, ItemCondition.FOR_REPAIR] } },
     ],
   };
-  const [inventorySummary, statusCounts, conditionCounts, categoryCounts, locationCounts, attentionCount, attentionItems, pcCount, stalePcCount, openTicketCount, urgentTicketCount, activeBorrowCount, overdueBorrowCount, openTickets, overdueBorrows] = await Promise.all([
+  const [inventorySummary, statusCounts, conditionCounts, categoryCounts, locationCounts, attentionCount, attentionItems, pcCount, stalePcCount, openTicketCount, urgentTicketCount, activeBorrowCount, overdueBorrowCount, openTickets, overdueBorrows, reservations, qrIssueCount, reservationCount] = await Promise.all([
     prisma.inventoryItem.aggregate({ _count: { _all: true, purchasePrice: true }, _sum: { quantity: true, purchasePrice: true } }),
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.inventoryItem.groupBy({ by: ["condition"], _count: { _all: true } }),
@@ -623,6 +633,9 @@ async function createOverviewPdf(canManage: boolean, calendarDate: string) {
     canManage ? prisma.borrowRequest.count({ where: { status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] }, expectedReturnDate: { lt: today } } }) : Promise.resolve(0),
     canManage ? prisma.maintenanceTicket.findMany({ where: { status: MaintenanceStatus.OPEN }, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: [{ priority: "desc" }, { openedAt: "asc" }], take: 20 }) : Promise.resolve([]),
     canManage ? prisma.borrowRequest.findMany({ where: { status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] }, expectedReturnDate: { lt: today } }, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { expectedReturnDate: "asc" }, take: 20 }) : Promise.resolve([]),
+    canManage ? prisma.borrowRequest.findMany({ where: { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: today } }, include: { inventoryItem: { select: { assetTag: true, name: true } } }, orderBy: { startsAt: "asc" }, take: 21 }) : Promise.resolve([]),
+    canManage ? prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN, source: "QR" } }) : Promise.resolve(0),
+    canManage ? prisma.borrowRequest.count({ where: { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: today } } }) : Promise.resolve(0),
   ]);
   const statusMap = new Map(statusCounts.map((entry) => [entry.status, entry._count._all]));
   const conditionMap = new Map(conditionCounts.map((entry) => [entry.condition, entry._count._all]));
@@ -630,9 +643,9 @@ async function createOverviewPdf(canManage: boolean, calendarDate: string) {
   const topCategories = categoryCounts.filter((category) => category._count.items > 0).sort((left, right) => right._count.items - left._count.items).slice(0, 12);
   const topLocations = locationCounts.filter((location) => location._count.items > 0).sort((left, right) => right._count.items - left._count.items).slice(0, 12);
 
-  const { document, writer } = await reportDocument("Inventory overview", "Operational inventory overview");
-  writer.addBody("An operational overview of inventory coverage, condition, inspection readiness, and active workload. Counts reflect the live CEIT inventory at the time this report was generated.", 10, mutedColor);
-  writer.addHeading("Inventory position");
+  const { document, writer } = await reportDocument("Inventory overview", "Inventory overview");
+  writer.addBody("Inventory totals, equipment condition, inspections, and outstanding requests at the time of export.", 10, mutedColor);
+  writer.addHeading("Inventory totals");
   writer.addMetricRow([
     { label: "Inventory records", value: inventorySummary._count._all.toLocaleString() },
     { label: "Physical units", value: (inventorySummary._sum.quantity ?? 0).toLocaleString() },
@@ -648,29 +661,35 @@ async function createOverviewPdf(canManage: boolean, calendarDate: string) {
     { label: "Active locations", value: locationCounts.filter((location) => location._count.items > 0).length.toLocaleString() },
   ]);
   if (canManage) {
-    writer.addHeading("Operational workload");
+    writer.addHeading("Borrowing and maintenance");
     writer.addMetricRow([
-      { label: "Open maintenance requests", value: openTicketCount.toLocaleString() },
+      { label: "Open maintenance", value: openTicketCount.toLocaleString() },
       { label: "High / urgent", value: urgentTicketCount.toLocaleString() },
+      { label: "Open QR issues", value: qrIssueCount.toLocaleString() },
+    ]);
+    writer.addMetricRow([
       { label: "Currently borrowed", value: activeBorrowCount.toLocaleString() },
       { label: "Overdue borrowing", value: overdueBorrowCount.toLocaleString() },
+      { label: "Upcoming reservations", value: reservationCount.toLocaleString() },
     ]);
   }
-  writer.addHeading("Status distribution");
-  writer.addTable(["Status", "Records", "Operational reading"], Object.values(ItemStatus).map((status) => [inventoryStatusLabel(status), (statusMap.get(status) ?? 0).toLocaleString(), status === ItemStatus.DEFECTIVE ? "Requires maintenance or replacement review" : status === ItemStatus.NOT_TESTED ? "Inspection still required" : status === ItemStatus.LOST ? "Investigate location and accountability" : status === ItemStatus.RETIRED ? "Removed from active inventory" : "Available for use"]), { widths: [1, 0.8, 2.4] });
-  writer.addHeading("Condition distribution");
-  writer.addTable(["Condition", "Records", "Operational reading"], Object.values(ItemCondition).map((condition) => [humanize(condition), (conditionMap.get(condition) ?? 0).toLocaleString(), condition === ItemCondition.FOR_REPAIR ? "Repair work is required" : condition === ItemCondition.POOR ? "Review for repair or retirement" : "Usable condition"]), { widths: [1, 0.8, 2.4] });
+  writer.addHeading("Equipment status");
+  writer.addTable(["Status", "Records", "Meaning"], Object.values(ItemStatus).map((status) => [inventoryStatusLabel(status), (statusMap.get(status) ?? 0).toLocaleString(), status === ItemStatus.DEFECTIVE ? "Needs inspection for repair or replacement" : status === ItemStatus.NOT_TESTED ? "Needs inspection" : status === ItemStatus.LOST ? "Needs to be located or reported as missing" : status === ItemStatus.RETIRED ? "Removed from active inventory" : status === ItemStatus.DEPLOYED ? "In use or checked out" : "Available for use"]), { widths: [1, 0.8, 2.4] });
+  writer.addHeading("Equipment condition");
+  writer.addTable(["Condition", "Records", "Meaning"], Object.values(ItemCondition).map((condition) => [humanize(condition), (conditionMap.get(condition) ?? 0).toLocaleString(), condition === ItemCondition.FOR_REPAIR ? "Needs repair" : condition === ItemCondition.POOR ? "Check for repair or retirement" : "Usable condition"]), { widths: [1, 0.8, 2.4] });
   writer.addHeading(attentionCount > attentionItems.length ? `Items requiring attention (first ${attentionItems.length})` : "Items requiring attention");
   writer.addTable(["Item", "Category / location", "Status / condition", "Last checked"], attentionItems.map((item) => [[item.name, item.assetTag ?? "No asset tag"].join("\n"), `${item.category.name}\n${item.location.name}`, `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}`, reportDateTime(item.lastCheckedAt)]), { maxCellCharacters: 150, widths: [1.4, 1.3, 1.05, 1.15] });
-  writer.addHeading("Coverage by category");
+  writer.addHeading("Items by category");
   writer.addTable(["Category", "Records"], topCategories.map((category) => [category.name, category._count.items.toLocaleString()]), { widths: [3, 1] });
-  writer.addHeading("Coverage by location");
+  writer.addHeading("Items by room");
   writer.addTable(["Location", "Records"], topLocations.map((location) => [location.name, location._count.items.toLocaleString()]), { widths: [3, 1] });
   if (canManage) {
+    writer.addHeading(reservations.length > 20 ? "Upcoming reservations (first 20)" : "Upcoming reservations");
+    writer.addTable(["Item", "Borrower", "Pickup", "Return by"], reservations.slice(0, 20).map((request) => [request.inventoryItem.name, request.borrowerName, reportDateTime(request.startsAt), reportDateTime(request.expectedReturnDate)]), { widths: [1.4, 1.2, 1.2, 1.2] });
     writer.addHeading("Open maintenance requests");
     writer.addTable(["Item", "Priority", "Opened"], openTickets.map((ticket) => [[ticket.inventoryItem.name, ticket.inventoryItem.assetTag ?? "No asset tag", ticket.title].join("\n"), humanize(ticket.priority), reportDateTime(ticket.openedAt)]), { widths: [1.9, 0.85, 1.25] });
     writer.addHeading("Overdue borrowing");
-    writer.addTable(["Item", "Borrower", "Expected return", "Status"], overdueBorrows.map((request) => [[request.inventoryItem.name, request.inventoryItem.assetTag ?? "No asset tag"].join("\n"), request.borrowerName, reportDate(request.expectedReturnDate), humanize(request.status)]), { widths: [1.6, 1.25, 1.1, 0.8] });
+    writer.addTable(["Item", "Borrower", "Expected return", "Status"], overdueBorrows.map((request) => [[request.inventoryItem.name, request.inventoryItem.assetTag ?? "No asset tag"].join("\n"), request.borrowerName, reportDate(request.expectedReturnDate), borrowStatusLabel(request.status)]), { widths: [1.6, 1.25, 1.1, 0.8] });
   }
   writer.finish();
   return documentResponse(document, `ceit-inventory-overview-${calendarDate}.pdf`);

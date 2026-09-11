@@ -87,8 +87,13 @@ export async function createSession(userId: string) {
 export async function clearSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookie)?.value;
-  if (token) await prisma.userSession.deleteMany({ where: { tokenHash: tokenHash(token) } });
-  cookieStore.delete({ name: sessionCookie, path: "/" });
+  try {
+    if (token) await prisma.userSession.deleteMany({ where: { tokenHash: tokenHash(token) } });
+  } catch (error) {
+    console.error("Unable to revoke the stored session during sign-out", error);
+  } finally {
+    cookieStore.delete({ name: sessionCookie, path: "/" });
+  }
 }
 
 export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {

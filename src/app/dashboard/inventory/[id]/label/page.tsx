@@ -36,11 +36,11 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
             <p className="mt-2 text-sm text-slate-600">{item.assetTag ?? "No asset tag"} · {item.location.name}</p>
             <Image unoptimized className="mx-auto mt-6 h-64 w-64" src={qrDataUrl} alt={`QR code for ${item.name}`} width={280} height={280} />
             <p className="mt-5 break-all font-mono text-xs text-slate-600">{item.qrCode}</p>
-            <p className="mt-2 text-xs text-slate-600">Students can request to borrow this item. Signed-in staff can also open and update its record.</p>
+            <p className="mt-2 text-xs text-slate-600">Scan to view this item, request equipment, or report a problem.</p>
           </article>
         ) : (
           <section className="notice rounded-lg px-5 py-4 text-sm leading-6" role="alert">
-            Set <code>NEXT_PUBLIC_APP_URL</code> to the permanent CEIT public or school-LAN address before printing QR codes. On Vercel, expose the permanent production-domain variable as a fallback. This prevents QR codes from opening a preview deployment or Vercel sign-in page.
+            The permanent website address needs to be configured before you can print QR labels. Ask your administrator to finish the website setup.
           </section>
         )}
       </div>

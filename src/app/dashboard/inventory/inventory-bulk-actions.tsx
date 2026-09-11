@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { maximumLabelCount } from "@/lib/label-sheet";
 
 import { SubmitButton } from "@/app/components/submit-button";
 import { addSelectionChangeListener, isSelectionChangeForKey, notifySelectionChange, saveSelectedItemIds, selectedItemIds, syncVisibleItemSelection } from "./inventory-selection";
@@ -76,10 +78,11 @@ export function InventoryBulkActions({
         <div className="max-w-xl">
           <p className="eyebrow">Selected inventory</p>
           <h2 className="mt-2 text-lg font-bold tracking-tight">{countLabel}</h2>
-          <p className="muted mt-1 text-sm leading-6">Choose one focused action to apply across your current selection.</p>
+          <p className="muted mt-1 text-sm leading-6">Choose a change to apply to the selected items.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length <= maximumLabelCount ? <Link href={`/dashboard/inventory/labels?ids=${selectedIds.join(",")}`} className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Print QR labels</Link> : <p className="muted text-xs">Select up to {maximumLabelCount} items to print labels.</p>}
           <button type="button" onClick={clearSelection} className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Clear selection</button>
         </div>
       </div>

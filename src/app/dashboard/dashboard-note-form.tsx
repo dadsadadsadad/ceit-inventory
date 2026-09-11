@@ -14,7 +14,7 @@ type DashboardNoteFormProps = {
 
 export function DashboardNoteForm({ initialContent, updatedByName }: DashboardNoteFormProps) {
   return (
-    <FeedbackForm action={saveDashboardNote} className="mt-4 flex flex-1 flex-col">
+    <FeedbackForm resetOnSuccess={false} action={saveDashboardNote} className="mt-4 flex flex-1 flex-col">
       <label className="flex flex-1">
         <span className="sr-only">Department note</span>
         <textarea

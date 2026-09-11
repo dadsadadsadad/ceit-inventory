@@ -22,7 +22,7 @@ npm run db:migrate:deploy
 npm run db:check
 ```
 
-The last migration grants the app role only schema, table, and sequence access, and adds an RLS policy exclusively for that role. Do not run the web application with the migration account.
+The runtime-permissions migration grants the app role only schema, table, and sequence access, and adds an RLS policy exclusively for that role. Do not run the web application with the migration account.
 
 ## Routine operation
 

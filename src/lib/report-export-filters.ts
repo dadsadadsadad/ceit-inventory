@@ -3,7 +3,7 @@ import { BorrowStatus, ItemStatus } from "@prisma/client";
 import { manilaCalendarDate } from "@/lib/manila-date";
 
 export const exportPeriods = ["all", "today", "last-7-days", "last-30-days", "this-month", "this-year"] as const;
-export const borrowingReportStates = ["all", "currently-borrowed", "returned", "requested", "declined"] as const;
+export const borrowingReportStates = ["all", "currently-borrowed", "reserved", "returned", "requested", "declined", "cancelled"] as const;
 
 export type ExportPeriod = (typeof exportPeriods)[number];
 export type BorrowingReportState = (typeof borrowingReportStates)[number];
@@ -13,6 +13,7 @@ export type ReportExportFilters = {
   borrowingStatus?: BorrowStatus;
   dateRange: ExportDateRange;
   inventoryStatus?: ItemStatus;
+  maintenanceSource?: "QR" | "STAFF";
   pcOnly: boolean;
   period: ExportPeriod;
 };
@@ -82,6 +83,8 @@ function borrowingReportState(value: string | null) {
 }
 
 export function parseReportExportFilters(parameters: QueryParameters, now = new Date()): ReportExportFilters {
+  const source = parameters.get("maintenanceSource");
+  if (source && source !== "QR" && source !== "STAFF") throw new Error("Invalid maintenance source.");
   const requestedPeriod = parameters.get("period") ?? "all";
   if (!isExportPeriod(requestedPeriod)) throw new Error("Invalid export period.");
 
@@ -94,6 +97,7 @@ export function parseReportExportFilters(parameters: QueryParameters, now = new 
     borrowingStatus: optionalBorrowStatus(parameters.get("borrowingStatus")),
     dateRange: hasCustomRange ? dateRange(from, to) : periodRange(requestedPeriod, now),
     inventoryStatus: optionalItemStatus(parameters.get("inventoryStatus")),
+    ...(source ? { maintenanceSource: source as "QR" | "STAFF" } : {}),
     pcOnly: parameters.get("pcOnly") === "1",
     period: requestedPeriod,
   };
@@ -110,6 +114,10 @@ export function borrowingReportStatusFilter(filters: Pick<ReportExportFilters, "
       return { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] };
     case "returned":
       return BorrowStatus.RETURNED;
+    case "reserved":
+      return BorrowStatus.RESERVED;
+    case "cancelled":
+      return BorrowStatus.CANCELLED;
     case "requested":
       return BorrowStatus.REQUESTED;
     case "declined":
@@ -125,6 +133,10 @@ export function borrowingReportStateLabel(state: BorrowingReportState) {
       return "Currently borrowed";
     case "returned":
       return "Returned items";
+    case "reserved":
+      return "Approved reservations";
+    case "cancelled":
+      return "Cancelled reservations";
     case "requested":
       return "Pending requests";
     case "declined":

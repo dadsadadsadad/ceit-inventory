@@ -22,7 +22,7 @@ function CategoryEditor({ category }: { category: { id: string; name: string; as
         <span><strong>{category.name}</strong>{category.description ? <span className="muted"> · {category.description}</span> : null}</span>
         <span className="flex items-center gap-3"><span className="muted">{category._count.items} record{category._count.items === 1 ? "" : "s"}</span>{!category.isActive ? <span className="status-pill rounded-md px-2 py-1 text-xs font-semibold">Inactive</span> : null}</span>
       </summary>
-      <FeedbackForm action={updateCategory} className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_5rem_1.5fr_auto] sm:items-end">
+      <FeedbackForm resetOnSuccess={false} action={updateCategory} className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_5rem_1.5fr_auto] sm:items-end">
         <input type="hidden" name="id" value={category.id} />
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Name</span><input required name="name" defaultValue={category.name} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Tag code</span><input required name="assetTagCode" defaultValue={category.assetTagCode ?? ""} maxLength={3} pattern="[A-Za-z0-9]{3}" title="Use three letters or numbers." className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
@@ -48,7 +48,7 @@ function LocationEditor({ location }: { location: { id: string; name: string; as
         <span><strong>{location.name}</strong>{location.roomNumber ? <span className="muted"> · {location.roomNumber}</span> : null}</span>
         <span className="flex items-center gap-3"><span className="muted">{location._count.items} record{location._count.items === 1 ? "" : "s"}</span>{!location.isActive ? <span className="status-pill rounded-md px-2 py-1 text-xs font-semibold">Inactive</span> : null}</span>
       </summary>
-      <FeedbackForm action={updateLocation} className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2">
+      <FeedbackForm resetOnSuccess={false} action={updateLocation} className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2">
         <input type="hidden" name="id" value={location.id} />
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Location name</span><input required name="name" defaultValue={location.name} maxLength={255} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
         <label><span className="muted text-xs font-bold uppercase tracking-wide">Room number</span><input name="roomNumber" defaultValue={location.roomNumber ?? ""} maxLength={100} className="field mt-2 w-full rounded-lg px-3 py-2 text-sm" /></label>
@@ -82,7 +82,7 @@ function AccountSettings({ email, username }: { email: string; username: string 
         <h2 className="mt-2 text-lg font-semibold">Sign-in details</h2>
         <p className="muted mt-1 max-w-2xl text-sm leading-6">Use either your email address or username to sign in. Confirm your current password before changing account details.</p>
       </div>
-      <FeedbackForm action={updateOwnAccount} successMessage="Account updated." className="mt-5 space-y-5">
+      <FeedbackForm action={updateOwnAccount} resetOnSuccess={false} successMessage="Account updated." className="mt-5 space-y-5">
         <div className="grid gap-4 md:grid-cols-2">
           <label><span className="text-sm font-semibold">Email address</span><input required type="email" name="email" defaultValue={email} autoComplete="email" maxLength={254} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
           <label><span className="text-sm font-semibold">Username</span><input required name="username" defaultValue={username} autoComplete="username" minLength={3} maxLength={32} pattern="[A-Za-z0-9._-]{3,32}" title="Use 3–32 letters, numbers, periods, underscores, or hyphens." className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
@@ -112,8 +112,8 @@ export default async function SettingsPage() {
       <div className="page-inner space-y-6">
         <header>
           <p className="eyebrow">Settings</p>
-          <h1 className="title mt-3 text-3xl sm:text-4xl">Account and inventory settings</h1>
-          <p className="muted mt-2 max-w-2xl text-sm leading-6">Keep your sign-in details current. Administrators can also manage the rooms and item groups used throughout the CEIT inventory register.</p>
+          <h1 className="title mt-3 text-3xl sm:text-4xl">Settings</h1>
+          <p className="muted mt-2 max-w-2xl text-sm leading-6">Update your account. Administrators can also manage rooms and categories.</p>
         </header>
 
         <AccountSettings email={user.email} username={user.username} />
@@ -123,7 +123,7 @@ export default async function SettingsPage() {
             <section>
               <p className="eyebrow">Inventory setup</p>
               <h2 className="mt-2 text-xl font-semibold">Locations and categories</h2>
-              <p className="muted mt-1 max-w-2xl text-sm leading-6">Deactivated entries remain on historical records but cannot be selected for new records. The tag codes control the compatible <code>INV-CAT-ST-ROOM-0001</code> asset tags generated for new equipment.</p>
+              <p className="muted mt-1 max-w-2xl text-sm leading-6">Inactive rooms and categories stay on existing records. Tag codes are used in <code>INV-CAT-ST-ROOM-0001</code> asset tags generated for new equipment.</p>
             </section>
             <div className="grid gap-6 xl:grid-cols-2">
               <section className="card rounded-lg p-5 sm:p-6">

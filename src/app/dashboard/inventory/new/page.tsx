@@ -18,7 +18,7 @@ export default async function NewInventoryItemPage() {
 
   return (
     <div className="page new-item-page"><div className="page-narrow space-y-6">
-      <header><Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add inventory item</h1><p className="muted mt-2 text-sm leading-6">Create one individually tracked equipment asset, a supply record, or a PC/Mac with complete technical and lifecycle details.</p></header>
+      <header><Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add item</h1><p className="muted mt-2 text-sm leading-6">Add one item per equipment unit. For supplies, enter the quantity you have.</p></header>
       {!ready ? <div className="notice rounded-lg px-5 py-4 text-sm">Add at least one active category and location in Settings before creating inventory records.</div> : <NewInventoryForm categories={categories} locations={locations.map((location) => ({ ...location, nextPcNumber: (pcCountsByLocation.get(location.id) ?? 0) + 1 }))} />}
     </div></div>
   );

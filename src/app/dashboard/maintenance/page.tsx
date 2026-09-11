@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ItemStatus, MaintenancePriority, MaintenanceStatus } from "@prisma/client";
+import { ItemStatus, MaintenancePriority, MaintenanceStatus, type Prisma } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
@@ -13,7 +13,7 @@ import { createMaintenanceTicket, updateMaintenanceTicket } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = { item?: string | string[]; status?: string | string[]; created?: string | string[] };
+type SearchParams = { item?: string | string[]; status?: string | string[]; created?: string | string[]; source?: string | string[]; q?: string | string[]; page?: string | string[] };
 
 const resolutionItemStatuses = [ItemStatus.OK, ItemStatus.WORKING, ItemStatus.NOT_TESTED, ItemStatus.DEFECTIVE];
 
@@ -43,6 +43,25 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
   const requestedStatus = first(search.status);
   const status = Object.values(MaintenanceStatus).includes(requestedStatus as MaintenanceStatus) ? requestedStatus as MaintenanceStatus : undefined;
   const selectedItem = first(search.item);
+  const source = ["QR", "STAFF"].includes(first(search.source) ?? "") ? first(search.source) : undefined;
+  const query = first(search.q)?.trim().slice(0, 120) ?? "";
+  const where: Prisma.MaintenanceTicketWhereInput = {
+    ...(status ? { status } : {}), ...(source ? { source } : {}),
+    ...(selectedItem && /^[0-9a-f-]{36}$/i.test(selectedItem) ? { inventoryItemId: selectedItem } : {}),
+    ...(query ? { OR: [{ title: { contains: query, mode: "insensitive" } }, { inventoryItem: { name: { contains: query, mode: "insensitive" } } }, { inventoryItem: { assetTag: { contains: query, mode: "insensitive" } } }] } : {}),
+  };
+  const count = await prisma.maintenanceTicket.count({ where });
+  const totalPages = Math.max(1, Math.ceil(count / 25));
+  const requestedPage = Number(first(search.page));
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, totalPages) : 1;
+  function pageHref(next: number) {
+    const params = new URLSearchParams({ page: String(next) });
+    if (source) params.set("source", source);
+    if (status) params.set("status", status);
+    if (query) params.set("q", query);
+    if (selectedItem) params.set("item", selectedItem);
+    return `/dashboard/maintenance?${params}`;
+  }
   const [items, tickets] = await Promise.all([
     prisma.inventoryItem.findMany({
       where: { status: { not: ItemStatus.RETIRED } },
@@ -51,9 +70,11 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
       take: 2_000,
     }),
     prisma.maintenanceTicket.findMany({
-      where: status ? { status } : undefined,
+      where,
       include: { inventoryItem: { select: { assetTag: true, id: true, name: true, status: true } } },
-      orderBy: [{ status: "asc" }, { priority: "desc" }, { openedAt: "desc" }],
+      orderBy: [{ status: "asc" }, { priority: "desc" }, { openedAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * 25,
+      take: 25,
     }),
   ]);
 
@@ -64,9 +85,9 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
           <div>
             <p className="eyebrow">Maintenance</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Maintenance requests</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Report and resolve repairs without losing the equipment&apos;s inventory history.</p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review reported problems and record repairs.</p>
           </div>
-          <Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link>
+          <Link href={`/dashboard/reports?kind=maintenance${source ? `&maintenanceSource=${source}` : ""}`} className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Maintenance reports</Link>
         </header>
 
         {first(search.created) === "1" ? <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">Maintenance request reported.</div> : null}
@@ -100,10 +121,13 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
             <textarea required name="description" rows={4} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Describe the fault, damage, or work needed." />
           </label>
           <label className="flex items-center gap-3 text-sm"><input name="markDefective" type="checkbox" className="h-4 w-4" /><span>Mark the item as defective while this request needs attention.</span></label>
-          <SubmitButton pendingLabel="Reporting…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Report maintenance request</SubmitButton>
+          <SubmitButton pendingLabel="Reporting…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Submit maintenance request</SubmitButton>
         </FeedbackForm>
 
-        <form className="card flex flex-wrap items-end gap-3 rounded-lg p-4">
+        <form className="card flex flex-wrap items-end gap-3 rounded-lg p-4" aria-label="Maintenance filters">
+          {selectedItem ? <input type="hidden" name="item" value={selectedItem} /> : null}
+          <label className="min-w-0 flex-1"><span className="muted text-xs font-bold uppercase tracking-wide">Search</span><input name="q" defaultValue={query} maxLength={120} placeholder="Issue, item, or asset tag" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" /></label>
+          <label><span className="muted text-xs font-bold uppercase tracking-wide">Source</span><select name="source" defaultValue={source ?? ""} className="field mt-2 block rounded-lg px-3 py-2.5 text-sm"><option value="">All reports</option><option value="QR">QR issue reports</option><option value="STAFF">Staff reports</option></select></label>
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Ticket status</span>
             <select name="status" defaultValue={status ?? ""} className="field mt-2 rounded-lg px-3 py-2.5 text-sm">
@@ -116,22 +140,26 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
         </form>
 
         <section className="space-y-4" aria-label="Maintenance requests">
+          <p className="muted text-sm">{count} request{count === 1 ? "" : "s"} · Page {page} of {totalPages}</p>
           {tickets.length ? tickets.map((ticket) => (
-            <article key={ticket.id} className="card rounded-lg p-5 sm:p-6">
+            <article key={ticket.id} id={`ticket-${ticket.id}`} className="card scroll-mt-6 rounded-lg p-5 sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`${ticketTone(ticket.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{statusLabel(ticket.status)}</span>
                     <span className="card-muted rounded-md px-2.5 py-1 text-xs font-semibold">{priorityLabel(ticket.priority)} priority</span>
+                    {ticket.source === "QR" ? <span className="status-pill status-pill-deployed rounded-md px-2.5 py-1 text-xs font-semibold">QR issue report</span> : null}
                   </div>
                   <h2 className="mt-3 text-lg font-semibold">{ticket.title}</h2>
                   <Link href={`/dashboard/inventory/${ticket.inventoryItem.id}`} className="accent-link mt-1 inline-block text-sm font-semibold">{ticket.inventoryItem.name}{ticket.inventoryItem.assetTag ? ` · ${ticket.inventoryItem.assetTag}` : ""}</Link>
                   <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6">{ticket.description}</p>
-                  <p className="muted mt-3 text-xs">Reported {formatDate(ticket.openedAt)} by {ticket.reportedByName ?? "Staff"}</p>
+                  <p className="muted mt-3 text-xs">Reported {formatDate(ticket.openedAt)}{ticket.source === "QR" ? " through a QR code" : ` by ${ticket.reportedByName ?? "Staff"}`}</p>
                   {ticket.resolvedAt ? <p className="muted mt-1 text-xs">Resolved {formatDate(ticket.resolvedAt)}</p> : null}
                 </div>
-                <FeedbackForm action={updateMaintenanceTicket} className="w-full space-y-3 lg:max-w-md">
+                <FeedbackForm action={updateMaintenanceTicket} resetOnSuccess={false} className="w-full space-y-3 lg:max-w-md">
                   <input type="hidden" name="ticketId" value={ticket.id} />
+                  <input type="hidden" name="updatedAt" value={ticket.updatedAt.toISOString()} />
+                  <label className="block text-sm"><span className="font-semibold">Priority</span><select name="priority" defaultValue={ticket.priority} className="field mt-2 w-full rounded-lg px-3 py-2.5">{Object.values(MaintenancePriority).map((value) => <option key={value} value={value}>{priorityLabel(value)}</option>)}</select></label>
                   <label className="block text-sm">
                     <span className="font-semibold">Status</span>
                     <select required name="status" defaultValue={ticket.status} className="field mt-2 w-full rounded-lg px-3 py-2.5">
@@ -140,23 +168,24 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
                     </select>
                   </label>
                   <label className="block text-sm">
-                    <span className="font-semibold">Resolution / staff notes</span>
+                    <span className="font-semibold">Staff notes</span>
                     <textarea name="resolutionNotes" rows={3} defaultValue={ticket.resolutionNotes ?? ""} maxLength={5_000} className="field mt-2 w-full rounded-lg px-3 py-2.5" />
                   </label>
                   <label className="block text-sm">
-                    <span className="font-semibold">Item status after resolution</span>
+                    <span className="font-semibold">Equipment status</span>
                     <select name="itemStatus" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5">
                       <option value="">Keep current status ({inventoryStatusLabel(ticket.inventoryItem.status)})</option>
                       {resolutionItemStatuses.map((itemStatus) => <option key={itemStatus} value={itemStatus}>{inventoryStatusLabel(itemStatus)}</option>)}
                     </select>
-                    <span className="muted mt-1 block text-xs leading-5">Optional. This is applied only when you mark the request as resolved.</span>
+                    <span className="muted mt-1 block text-xs leading-5">Update after inspecting the equipment, or keep its current status.</span>
                   </label>
-                  <SubmitButton pendingLabel="Saving…" className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Save maintenance request</SubmitButton>
+                  <SubmitButton pendingLabel="Saving…" className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Save changes</SubmitButton>
                 </FeedbackForm>
               </div>
             </article>
           )) : <div className="notice rounded-lg px-5 py-4 text-sm">No maintenance requests match this filter.</div>}
         </section>
+        {totalPages > 1 ? <nav className="flex items-center justify-between gap-3" aria-label="Maintenance pages">{page > 1 ? <Link href={pageHref(page - 1)} className="pagination-link px-3 text-sm">← Previous</Link> : <span />}<span className="muted text-sm">{page} / {totalPages}</span>{page < totalPages ? <Link href={pageHref(page + 1)} className="pagination-link px-3 text-sm">Next →</Link> : <span />}</nav> : null}
       </div>
     </div>
   );

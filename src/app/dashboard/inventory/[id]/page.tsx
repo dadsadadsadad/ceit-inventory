@@ -174,6 +174,8 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
         computer: { include: { software: { orderBy: { name: "asc" } } } },
         photos: { orderBy: { createdAt: "desc" }, select: { id: true, fileName: true, byteSize: true, createdAt: true } },
         auditEvents: { orderBy: { createdAt: "desc" }, take: 12 },
+        borrowRequests: { where: { status: { in: ["REQUESTED", "RESERVED", "BORROWED", "RETURN_REQUESTED"] } }, orderBy: { startsAt: "asc" }, take: 10 },
+        maintenanceTickets: { where: { status: "OPEN" }, orderBy: { openedAt: "desc" }, take: 10 },
       },
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
@@ -233,7 +235,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               <article className="card rounded-lg p-5 sm:p-6">
                 <h2 className="text-lg font-semibold">PC hardware and software</h2>
                 {canManage ? (
-                  <FeedbackForm action={updateComputerDetails} className="mt-5 space-y-5">
+                  <FeedbackForm resetOnSuccess={false} action={updateComputerDetails} className="mt-5 space-y-5">
                     <input type="hidden" name="itemId" value={item.id} />
                     <input type="hidden" name="computerId" value={computer.id} />
                     <ComputerFields computer={computer} />
@@ -247,7 +249,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                     <div className="mt-3 space-y-3">
                       {computer.software.map((software) => canManage ? (
                         <div key={software.id} className="card-muted rounded-lg p-3">
-                          <FeedbackForm action={updateComputerSoftware} className="grid gap-3 sm:grid-cols-2">
+                          <FeedbackForm resetOnSuccess={false} action={updateComputerSoftware} className="grid gap-3 sm:grid-cols-2">
                             <input type="hidden" name="itemId" value={item.id} />
                             <input type="hidden" name="computerId" value={computer.id} />
                             <input type="hidden" name="id" value={software.id} />
@@ -302,6 +304,10 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
             ) : null}
 
             <article className="card rounded-lg p-5 sm:p-6">
+              <div className="mb-6 space-y-5">
+                <section><div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Borrowing and reservations</h2><Link href={`/dashboard/borrowing?q=${encodeURIComponent(item.assetTag ?? item.name)}`} className="accent-link text-xs">View all</Link></div>{item.borrowRequests.length ? <ul className="mt-3 space-y-3">{item.borrowRequests.map((request) => <li key={request.id} className="divider border-l pl-3 text-sm"><p className="font-medium">{request.isReservation ? "Reservation" : "Borrowing"} · {request.borrowerName}</p><p className="muted mt-1 text-xs">{request.status.toLowerCase().replaceAll("_", " ")} · {formatManilaDate(request.startsAt, { dateStyle: "medium", timeStyle: "short" })} – {formatManilaDate(request.expectedReturnDate, { dateStyle: "medium", timeStyle: "short" })}</p></li>)}</ul> : <p className="muted mt-2 text-sm">No active requests.</p>}</section>
+                <section><div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Open maintenance</h2><Link href={`/dashboard/maintenance?item=${item.id}`} className="accent-link text-xs">View or report an issue</Link></div>{item.maintenanceTickets.length ? <ul className="mt-3 space-y-2">{item.maintenanceTickets.map((ticket) => <li key={ticket.id} className="text-sm">{ticket.title}{ticket.source === "QR" ? <span className="muted ml-2 text-xs">QR report</span> : null}</li>)}</ul> : <p className="muted mt-2 text-sm">No open issues.</p>}</section>
+              </div>
               <h2 className="text-lg font-semibold">Recent activity</h2>
               {item.auditEvents.length ? (
                 <ol className="mt-4 space-y-3">
@@ -321,6 +327,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               <h2 className="text-lg font-semibold">Update record</h2>
               <FeedbackForm action={updateInventoryItem} className="mt-5 space-y-4">
                 <input type="hidden" name="id" value={item.id} />
+                <input type="hidden" name="updatedAt" value={item.updatedAt.toISOString()} />
                 <TextField name="name" label="Name" value={item.name} required maxLength={255} />
                 <TextField name="assetTag" label="Asset tag" value={item.assetTag} maxLength={255} />
                 <label>
@@ -404,7 +411,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               </section>
 
               <section className="divider mt-6 border-t pt-5" aria-labelledby="record-lifecycle">
-                <h3 id="record-lifecycle" className="text-sm font-semibold">Record lifecycle</h3>
+                <h3 id="record-lifecycle" className="text-sm font-semibold">Retire or delete</h3>
                 <p className="muted mt-2 text-xs leading-5">Removing from active inventory is reversible and keeps the PC, software, and activity history available.</p>
                 <FeedbackForm action={retireInventoryItem} className="mt-3">
                   <input type="hidden" name="id" value={item.id} />
