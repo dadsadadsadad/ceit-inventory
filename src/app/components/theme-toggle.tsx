@@ -205,7 +205,7 @@ function hsvToHex({ hue, saturation, value }: HsvColor) {
 }
 
 function customAppearanceTokens(theme: Theme, color: string): AppearanceTokens {
-  const textSurface = theme === "light" ? "#f0dfce" : "#2a201b";
+  const textSurface = theme === "light" ? "#e4e9ef" : "#343c47";
   const linkDirection = theme === "light" ? contrastDark : contrastLight;
   const accent = ensureContrast(color, textSurface, linkDirection);
   const accentHover = mixHexColors(accent, linkDirection, 0.14);

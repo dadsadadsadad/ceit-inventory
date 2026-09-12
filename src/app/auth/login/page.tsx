@@ -24,6 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="brand-mark grid h-11 w-11 place-items-center rounded-lg text-sm font-black"><Boxes className="h-6 w-6" aria-hidden="true" /></div>
           <div><div className="text-base font-semibold tracking-tight">CEIT Inventory</div><div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Inventory management</div></div>
         </div>
+        <div className="login-inventory-mark" aria-hidden="true"><Boxes size={100} strokeWidth={.8} /></div>
         <div className="max-w-xl">
           <h1 className="mt-4 text-4xl font-bold tracking-tight">Equipment, rooms, and the people who use them.</h1>
         </div>
