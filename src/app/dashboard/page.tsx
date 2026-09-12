@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
-import { ArrowRight, ArrowUpRight, BarChart3, ClipboardCheck, FileUp, MapPin, Package, PackagePlus, ScanLine, TriangleAlert, Wrench } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BarChart3, CalendarClock, ClipboardCheck, FileUp, MapPin, MessageSquareWarning, Package, PackagePlus, ScanLine, TriangleAlert, Undo2, Wrench } from "lucide-react";
 
 import { DashboardNoteForm } from "./dashboard-note-form";
 
@@ -60,6 +60,7 @@ export default async function DashboardPage() {
         <header className="dashboard-hero">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
+              <p className="eyebrow">CEIT Inventory</p>
               <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory dashboard</h1>
               <p className="muted mt-3 max-w-2xl text-sm leading-6">Check equipment, review requests, and keep track of repairs.</p>
             </div>
@@ -104,9 +105,9 @@ export default async function DashboardPage() {
                 <aside className="card dashboard-pulse-card rounded-lg p-5 sm:p-6">
                   <h2 className="mb-4 font-semibold">Requests and returns</h2>
                   <div className="mt-6 space-y-3">
-                    <Link href="/dashboard/borrowing?status=RESERVED" className="dashboard-pulse-row"><span className="flex-1 text-sm font-medium">Upcoming reservations</span><strong>{dashboard.reservationCount}</strong></Link>
-                    <Link href="/dashboard/borrowing?status=RETURN_REQUESTED" className="dashboard-pulse-row"><span className="flex-1 text-sm font-medium">Returns to confirm</span><strong>{dashboard.returnCount}</strong></Link>
-                    <Link href="/dashboard/maintenance?source=QR&status=OPEN" className="dashboard-pulse-row"><span className="flex-1 text-sm font-medium">QR issue reports</span><strong>{dashboard.qrIssueCount}</strong></Link>
+                    <Link href="/dashboard/borrowing?status=RESERVED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><CalendarClock className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Upcoming reservations</span><strong>{dashboard.reservationCount}</strong></Link>
+                    <Link href="/dashboard/borrowing?status=RETURN_REQUESTED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Undo2 className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Returns to confirm</span><strong>{dashboard.returnCount}</strong></Link>
+                    <Link href="/dashboard/maintenance?source=QR&status=OPEN" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><MessageSquareWarning className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">QR issue reports</span><strong>{dashboard.qrIssueCount}</strong></Link>
                     <Link href="/dashboard/maintenance" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Wrench className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Maintenance requests</span><strong>{dashboard.openTicketCount}</strong></Link>
                     <Link href="/dashboard/borrowing?status=REQUESTED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><ClipboardCheck className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Borrowing requests</span><strong>{dashboard.pendingBorrowCount}</strong></Link>
                     <Link href="/dashboard/borrowing?status=BORROWED" className="dashboard-pulse-row"><span className="dashboard-pulse-icon"><Package className="h-4 w-4" aria-hidden="true" /></span><span className="flex-1 text-sm font-medium">Items currently checked out</span><strong>{dashboard.checkedOutCount}</strong></Link>
