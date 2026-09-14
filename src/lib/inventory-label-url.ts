@@ -1,11 +1,17 @@
 function normalizePublicUrl(value: string | undefined) {
   const trimmedValue = value?.trim();
-  if (!trimmedValue) return null;
+  if (!trimmedValue) {
+    return null;
+  }
 
   try {
     const url = new URL(trimmedValue);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    if (url.username || url.password || url.search || url.hash) return null;
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+    if (url.username || url.password || url.search || url.hash) {
+      return null;
+    }
     return url.toString().replace(/\/$/, "");
   } catch {
     return null;
@@ -13,18 +19,33 @@ function normalizePublicUrl(value: string | undefined) {
 }
 
 function isLocalOrPrivateHostname(hostname: string) {
-  const normalizedHostname = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
-  if (normalizedHostname === "localhost" || normalizedHostname.endsWith(".localhost") || normalizedHostname.endsWith(".local") || normalizedHostname === "::1") {
+  const normalizedHostname = hostname
+    .toLowerCase()
+    .replace(/\.$/, "")
+    .replace(/^\[|\]$/g, "");
+  if (
+    normalizedHostname === "localhost" ||
+    normalizedHostname.endsWith(".localhost") ||
+    normalizedHostname.endsWith(".local") ||
+    normalizedHostname === "::1"
+  ) {
     return true;
   }
 
   const octets = normalizedHostname.split(".").map((part) => Number(part));
-  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  if (
+    octets.length !== 4 ||
+    octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
+  ) {
+    return false;
+  }
 
-  return octets[0] === 10
-    || octets[0] === 127
-    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
-    || (octets[0] === 192 && octets[1] === 168);
+  return (
+    octets[0] === 10 ||
+    octets[0] === 127 ||
+    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+    (octets[0] === 192 && octets[1] === 168)
+  );
 }
 
 function firstForwardedValue(value: string | null) {
@@ -32,16 +53,26 @@ function firstForwardedValue(value: string | null) {
 }
 
 function localRequestOrigin(requestHeaders: Headers) {
-  const forwardedProtocol = firstForwardedValue(requestHeaders.get("x-forwarded-proto"))?.toLowerCase();
-  const protocol = forwardedProtocol === "http" || forwardedProtocol === "https" ? forwardedProtocol : "http";
-  const hosts = [firstForwardedValue(requestHeaders.get("x-forwarded-host")), requestHeaders.get("host")?.trim()];
+  const forwardedProtocol = firstForwardedValue(
+    requestHeaders.get("x-forwarded-proto"),
+  )?.toLowerCase();
+  const protocol =
+    forwardedProtocol === "http" || forwardedProtocol === "https" ? forwardedProtocol : "http";
+  const hosts = [
+    firstForwardedValue(requestHeaders.get("x-forwarded-host")),
+    requestHeaders.get("host")?.trim(),
+  ];
 
   for (const host of hosts) {
     const url = normalizePublicUrl(host ? `${protocol}://${host}` : undefined);
-    if (!url) continue;
+    if (!url) {
+      continue;
+    }
 
     const parsedUrl = new URL(url);
-    if (parsedUrl.pathname === "/" && isLocalOrPrivateHostname(parsedUrl.hostname)) return parsedUrl.origin;
+    if (parsedUrl.pathname === "/" && isLocalOrPrivateHostname(parsedUrl.hostname)) {
+      return parsedUrl.origin;
+    }
   }
 
   return null;
@@ -49,10 +80,14 @@ function localRequestOrigin(requestHeaders: Headers) {
 
 function vercelProductionUrl(value: string | undefined) {
   const hostname = value?.trim();
-  if (!hostname) return null;
+  if (!hostname) {
+    return null;
+  }
 
   const url = normalizePublicUrl(hostname.includes("://") ? hostname : `https://${hostname}`);
-  if (!url) return null;
+  if (!url) {
+    return null;
+  }
   const parsedUrl = new URL(url);
   return parsedUrl.pathname === "/" ? parsedUrl.origin : null;
 }
@@ -61,7 +96,10 @@ function vercelProductionUrl(value: string | undefined) {
  * Returns the trusted origin used by the in-app scanner when it reads a full
  * QR code URL. Invalid configuration is ignored instead of breaking the scanner.
  */
-export function inventoryLabelAppOrigin(configuredUrl: string | undefined, platformProductionUrl?: string) {
+export function inventoryLabelAppOrigin(
+  configuredUrl: string | undefined,
+  platformProductionUrl?: string,
+) {
   const url = normalizePublicUrl(configuredUrl) ?? vercelProductionUrl(platformProductionUrl);
   return url ? new URL(url).origin : undefined;
 }
@@ -73,6 +111,14 @@ export function inventoryLabelAppOrigin(configuredUrl: string | undefined, platf
  * controlled by proxies (or point to a protected preview deployment), so they
  * are only used as a convenience for localhost and private-LAN development.
  */
-export function inventoryLabelAppUrl(configuredUrl: string | undefined, requestHeaders: Headers, platformProductionUrl?: string) {
-  return normalizePublicUrl(configuredUrl) ?? vercelProductionUrl(platformProductionUrl) ?? localRequestOrigin(requestHeaders);
+export function inventoryLabelAppUrl(
+  configuredUrl: string | undefined,
+  requestHeaders: Headers,
+  platformProductionUrl?: string,
+) {
+  return (
+    normalizePublicUrl(configuredUrl) ??
+    vercelProductionUrl(platformProductionUrl) ??
+    localRequestOrigin(requestHeaders)
+  );
 }

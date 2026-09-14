@@ -14,12 +14,16 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:launch:setup": "node scripts/setup-launch-test.mjs",
+    "test:launch:cleanup": "node scripts/clean-launch-test.mjs",
     "test:launch": "node scripts/build-launch-test.mjs && playwright test --config playwright.launch.config.ts",
     "test:db": "npm run db:check && prisma migrate status",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:check": "node scripts/check-db.cjs",
-    "db:purge-borrower-data": "node scripts/purge-borrower-data.cjs"
+    "db:purge-borrower-data": "node scripts/purge-borrower-data.cjs",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/*.{cjs,mjs}\" \"tests/**/*.ts\" \"*.{ts,mjs,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/*.{cjs,mjs}\" \"tests/**/*.ts\" \"*.{ts,mjs,json}\"",
+    "db:maintenance": "node scripts/maintain-db.cjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
@@ -47,6 +51,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "^16.3.4",
+    "prettier": "3.9.6",
     "prisma": "7.9.1",
     "tailwindcss": "^4",
     "typescript": "^5",

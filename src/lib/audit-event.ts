@@ -21,7 +21,14 @@ export function auditActorName(actor?: AuditActor | null) {
   return username && email ? `${username} | ${email}` : username || email || null;
 }
 
-export function auditEventData({ action, actor, entity, metadata, summary }: AuditEventInput): Prisma.InventoryAuditUncheckedCreateInput {
+// Build a consistent audit entry for an action.
+export function auditEventData({
+  action,
+  actor,
+  entity,
+  metadata,
+  summary,
+}: AuditEventInput): Prisma.InventoryAuditUncheckedCreateInput {
   return {
     action,
     actorId: actor?.id ?? null,

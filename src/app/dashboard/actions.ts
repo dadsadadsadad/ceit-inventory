@@ -10,25 +10,34 @@ import { FormError, formAction } from "@/lib/form-action";
 const sharedDashboardNoteScope = "shared-dashboard";
 const maximumDashboardNoteLength = 5_000;
 
+// Check the note's length before saving.
 function dashboardNoteContent(formData: FormData) {
   const value = formData.get("content");
-  if (typeof value !== "string") throw new FormError("Enter a valid dashboard note.");
+  if (typeof value !== "string") {
+    throw new FormError("Enter a valid dashboard note.");
+  }
 
   const content = value.trim();
   if (content.length > maximumDashboardNoteLength) {
-    throw new FormError(`Dashboard notes must be ${maximumDashboardNoteLength.toLocaleString()} characters or fewer.`);
+    throw new FormError(
+      `Dashboard notes must be ${maximumDashboardNoteLength.toLocaleString()} characters or fewer.`,
+    );
   }
 
   return content;
 }
 
+// Save the shared note and who changed it.
 export async function saveDashboardNote(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const content = dashboardNoteContent(formData);
 
     await prisma.$transaction(async (transaction) => {
-      const existing = await transaction.dashboardNote.findUnique({ where: { scope: sharedDashboardNoteScope }, select: { id: true } });
+      const existing = await transaction.dashboardNote.findUnique({
+        where: { scope: sharedDashboardNoteScope },
+        select: { id: true },
+      });
       await transaction.dashboardNote.upsert({
         where: { scope: sharedDashboardNoteScope },
         create: { scope: sharedDashboardNoteScope, content, updatedByName: actor.email },
@@ -38,7 +47,11 @@ export async function saveDashboardNote(formData: FormData) {
         data: auditEventData({
           action: existing ? "UPDATED" : "CREATED",
           actor,
-          entity: { id: sharedDashboardNoteScope, label: "Shared dashboard note", type: "dashboard-note" },
+          entity: {
+            id: sharedDashboardNoteScope,
+            label: "Shared dashboard note",
+            type: "dashboard-note",
+          },
           metadata: { activityKind: "dashboard-note", contentLength: content.length },
           summary: existing ? "Shared dashboard note updated." : "Shared dashboard note created.",
         }),

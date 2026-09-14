@@ -1,10 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { Prisma } from "@prisma/client";
+import { runTransaction } from "@/lib/database-transaction";
 
 import { auditEventData } from "@/lib/audit-event";
-import { clearSession, createSession, getCurrentInventoryUser, verifyPassword } from "@/lib/inventory-auth";
+import {
+  clearSession,
+  createSession,
+  getCurrentInventoryUser,
+  verifyPassword,
+} from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const maxIdentifierLength = 254;
@@ -13,35 +18,47 @@ const failedSignInWindowMs = 15 * 60 * 1000;
 const lockDurationMs = 15 * 60 * 1000;
 const maximumAttempts = 5;
 
+// Count failed attempts before applying the lockout.
 async function recordFailedSignIn(userId: string) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      return await prisma.$transaction(async (transaction) => {
-        const current = await transaction.user.findUnique({ where: { id: userId } });
-        if (!current) return false;
-        const now = new Date();
-        if (current.lockedUntil && current.lockedUntil > now) return true;
-        const isNewWindow = !current.firstFailedSignInAt || now.getTime() - current.firstFailedSignInAt.getTime() > failedSignInWindowMs;
-        const failedSignInCount = isNewWindow ? 1 : current.failedSignInCount + 1;
-        const lockedUntil = failedSignInCount >= maximumAttempts ? new Date(now.getTime() + lockDurationMs) : null;
-        await transaction.user.update({
-          where: { id: userId },
-          data: { failedSignInCount, firstFailedSignInAt: isNewWindow ? now : current.firstFailedSignInAt, lockedUntil },
-        });
-        return Boolean(lockedUntil);
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 4) continue;
-      throw error;
+  return runTransaction(async (transaction) => {
+    const current = await transaction.user.findUnique({ where: { id: userId } });
+    if (!current) {
+      return false;
     }
-  }
-  return true;
+    const now = new Date();
+    if (current.lockedUntil && current.lockedUntil > now) {
+      return true;
+    }
+    const isNewWindow =
+      !current.firstFailedSignInAt ||
+      now.getTime() - current.firstFailedSignInAt.getTime() > failedSignInWindowMs;
+    const failedSignInCount = isNewWindow ? 1 : current.failedSignInCount + 1;
+    const lockedUntil =
+      failedSignInCount >= maximumAttempts ? new Date(now.getTime() + lockDurationMs) : null;
+    await transaction.user.update({
+      where: { id: userId },
+      data: {
+        failedSignInCount,
+        firstFailedSignInAt: isNewWindow ? now : current.firstFailedSignInAt,
+        lockedUntil,
+      },
+    });
+    return Boolean(lockedUntil);
+  }, 5);
 }
 
+// Check credentials, create a session, and record the sign-in.
 export async function signIn(formData: FormData) {
-  const identifier = String(formData.get("identifier") ?? "").trim().toLowerCase();
+  const identifier = String(formData.get("identifier") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!identifier || !password || identifier.length > maxIdentifierLength || password.length > maxPasswordLength) {
+  if (
+    !identifier ||
+    !password ||
+    identifier.length > maxIdentifierLength ||
+    password.length > maxPasswordLength
+  ) {
     redirect("/auth/login?error=invalid-credentials");
   }
 
@@ -49,8 +66,12 @@ export async function signIn(formData: FormData) {
     where: identifier.includes("@") ? { email: identifier } : { username: identifier },
   });
   const now = new Date();
-  if (!user || !user.isActive) redirect("/auth/login?error=invalid-credentials");
-  if (user.lockedUntil && user.lockedUntil > now) redirect("/auth/login?error=temporarily-locked");
+  if (!user || !user.isActive) {
+    redirect("/auth/login?error=invalid-credentials");
+  }
+  if (user.lockedUntil && user.lockedUntil > now) {
+    redirect("/auth/login?error=temporarily-locked");
+  }
 
   if (!(await verifyPassword(password, user.passwordHash))) {
     const locked = await recordFailedSignIn(user.id);
@@ -76,6 +97,7 @@ export async function signIn(formData: FormData) {
   redirect("/dashboard");
 }
 
+// Record the sign-out and clear the session.
 export async function signOut() {
   try {
     const actor = await getCurrentInventoryUser();

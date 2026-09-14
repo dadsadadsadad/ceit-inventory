@@ -1,6 +1,10 @@
 import { AuditAction, Prisma } from "@prisma/client";
 
-import { exportPeriods, parseReportExportFilters, type ExportPeriod } from "@/lib/report-export-filters";
+import {
+  exportPeriods,
+  parseReportExportFilters,
+  type ExportPeriod,
+} from "@/lib/report-export-filters";
 
 export const auditActions = Object.values(AuditAction);
 
@@ -27,22 +31,38 @@ export type AuditTrailFilters = {
 type QueryParameters = Pick<URLSearchParams, "get">;
 
 const maximumFilterTextLength = 120;
-const recordChangeActions: AuditAction[] = [AuditAction.UPDATED, AuditAction.MOVED, AuditAction.STATUS_CHANGED];
+const recordChangeActions: AuditAction[] = [
+  AuditAction.UPDATED,
+  AuditAction.MOVED,
+  AuditAction.STATUS_CHANGED,
+];
 
 function textFilter(parameters: QueryParameters, key: string, label: string) {
   const value = parameters.get(key)?.trim();
-  if (!value) return undefined;
-  if (value.length > maximumFilterTextLength) throw new Error(`${label} must be ${maximumFilterTextLength} characters or fewer.`);
+  if (!value) {
+    return undefined;
+  }
+  if (value.length > maximumFilterTextLength) {
+    throw new Error(`${label} must be ${maximumFilterTextLength} characters or fewer.`);
+  }
   return value;
 }
 
 function optionalAction(value: string | null) {
-  if (!value) return undefined;
-  if (!auditActions.includes(value as AuditAction)) throw new Error("Invalid audit action.");
+  if (!value) {
+    return undefined;
+  }
+  if (!auditActions.includes(value as AuditAction)) {
+    throw new Error("Invalid audit action.");
+  }
   return value as AuditAction;
 }
 
-export function parseAuditTrailFilters(parameters: QueryParameters, now = new Date()): AuditTrailFilters {
+// Validate activity search, dates, and user filters.
+export function parseAuditTrailFilters(
+  parameters: QueryParameters,
+  now = new Date(),
+): AuditTrailFilters {
   const reportFilters = parseReportExportFilters(parameters, now);
   return {
     action: optionalAction(parameters.get("action")),
@@ -55,10 +75,15 @@ export function parseAuditTrailFilters(parameters: QueryParameters, now = new Da
   };
 }
 
+// Turn activity filters into a database query.
 export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAuditWhereInput {
   const conditions: Prisma.InventoryAuditWhereInput[] = [];
-  if (filters.action) conditions.push({ action: filters.action });
-  if (filters.actor) conditions.push({ actorName: { contains: filters.actor, mode: "insensitive" } });
+  if (filters.action) {
+    conditions.push({ action: filters.action });
+  }
+  if (filters.actor) {
+    conditions.push({ actorName: { contains: filters.actor, mode: "insensitive" } });
+  }
   if (filters.dateRange.from || filters.dateRange.toExclusive) {
     conditions.push({
       createdAt: {
@@ -82,15 +107,30 @@ export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAud
   return conditions.length ? { AND: conditions } : {};
 }
 
+// Preserve activity filters in links and downloads.
 export function auditTrailSearchParameters(filters: AuditTrailFilters, page?: number) {
   const parameters = new URLSearchParams();
-  if (filters.query) parameters.set("q", filters.query);
-  if (filters.action) parameters.set("action", filters.action);
-  if (filters.actor) parameters.set("actor", filters.actor);
-  if (filters.period !== "all") parameters.set("period", filters.period);
-  if (filters.from) parameters.set("from", filters.from);
-  if (filters.to) parameters.set("to", filters.to);
-  if (page && page > 1) parameters.set("page", String(page));
+  if (filters.query) {
+    parameters.set("q", filters.query);
+  }
+  if (filters.action) {
+    parameters.set("action", filters.action);
+  }
+  if (filters.actor) {
+    parameters.set("actor", filters.actor);
+  }
+  if (filters.period !== "all") {
+    parameters.set("period", filters.period);
+  }
+  if (filters.from) {
+    parameters.set("from", filters.from);
+  }
+  if (filters.to) {
+    parameters.set("to", filters.to);
+  }
+  if (page && page > 1) {
+    parameters.set("page", String(page));
+  }
   return parameters;
 }
 
@@ -113,15 +153,20 @@ export function auditActionLabel(action: AuditAction) {
   return labels[action];
 }
 
+// Show the staff account or public source of an event.
 export function auditActorLabel(event: Pick<AuditTrailEvent, "actorId" | "actorName">) {
   const savedName = event.actorName?.trim();
-  if (savedName) return savedName;
+  if (savedName) {
+    return savedName;
+  }
   return event.actorId ? "Former user" : "System / public";
 }
 
 export function auditMetadata(event: Pick<AuditTrailEvent, "metadata">): Prisma.JsonObject {
   const metadata = event.metadata;
-  return metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata as Prisma.JsonObject : {};
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? (metadata as Prisma.JsonObject)
+    : {};
 }
 
 function metadataText(metadata: Prisma.JsonObject, key: string) {
@@ -133,28 +178,70 @@ function hasMetadataValue(metadata: Prisma.JsonObject, key: string) {
   return metadata[key] !== undefined && metadata[key] !== null;
 }
 
+// Group events by the work they describe.
 export function auditCategory(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
   const activityKind = metadataText(metadata, "activityKind");
   const source = metadataText(metadata, "source");
 
-  if (event.entityType === "account" || activityKind === "account") return "Accounts";
-  if (event.entityType === "dashboard-note" || activityKind === "dashboard-note") return "Dashboard notes";
-  if (event.entityType === "category" || event.entityType === "location" || activityKind === "configuration") return "Configuration";
-  if (event.entityType === "report-export" || activityKind === "report-export") return "Report export";
-  if (event.entityType === "session" || activityKind === "session") return "Access";
-  if (event.entityType === "borrow-request") return "Borrowing";
-  if (event.entityType === "maintenance-ticket") return "Maintenance";
+  if (event.entityType === "account" || activityKind === "account") {
+    return "Accounts";
+  }
+  if (event.entityType === "dashboard-note" || activityKind === "dashboard-note") {
+    return "Dashboard notes";
+  }
+  if (
+    event.entityType === "category" ||
+    event.entityType === "location" ||
+    activityKind === "configuration"
+  ) {
+    return "Configuration";
+  }
+  if (event.entityType === "report-export" || activityKind === "report-export") {
+    return "Report export";
+  }
+  if (event.entityType === "session" || activityKind === "session") {
+    return "Access";
+  }
+  if (event.entityType === "borrow-request") {
+    return "Borrowing";
+  }
+  if (event.entityType === "maintenance-ticket") {
+    return "Maintenance";
+  }
 
-  if (activityKind === "qr-code-print" || activityKind === "label-print" || source === "qr-code" || source === "qr-label") return "QR code";
-  if (event.action === AuditAction.SCANNED || activityKind === "scan" || source === "qr") return "QR code scan";
-  if (source === "import" || activityKind === "record-import") return "Import";
-  if (hasMetadataValue(metadata, "borrowRequestId")) return "Borrowing";
-  if (hasMetadataValue(metadata, "maintenanceTicketId") || source === "maintenance") return "Maintenance";
-  if (source === "photo-upload" || source === "photo-delete") return "Item media";
-  if (activityKind === "record-edit") return "Record edit";
-  if (activityKind === "record-create" || event.action === AuditAction.CREATED) return "Record added";
-  if (recordChangeActions.includes(event.action)) return "Record edit";
+  if (
+    activityKind === "qr-code-print" ||
+    activityKind === "label-print" ||
+    source === "qr-code" ||
+    source === "qr-label"
+  ) {
+    return "QR code";
+  }
+  if (event.action === AuditAction.SCANNED || activityKind === "scan" || source === "qr") {
+    return "QR code scan";
+  }
+  if (source === "import" || activityKind === "record-import") {
+    return "Import";
+  }
+  if (hasMetadataValue(metadata, "borrowRequestId")) {
+    return "Borrowing";
+  }
+  if (hasMetadataValue(metadata, "maintenanceTicketId") || source === "maintenance") {
+    return "Maintenance";
+  }
+  if (source === "photo-upload" || source === "photo-delete") {
+    return "Item media";
+  }
+  if (activityKind === "record-edit") {
+    return "Record edit";
+  }
+  if (activityKind === "record-create" || event.action === AuditAction.CREATED) {
+    return "Record added";
+  }
+  if (recordChangeActions.includes(event.action)) {
+    return "Record edit";
+  }
   return "Other activity";
 }
 
@@ -168,33 +255,55 @@ export function auditFieldLabel(key: string) {
     purchasePrice: "Purchase price",
     serialNumber: "Serial number",
   };
-  return labels[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
+  return (
+    labels[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())
+  );
 }
 
 function displayValue(value: Prisma.JsonValue) {
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  if (!text) return "Empty";
+  if (!text) {
+    return "Empty";
+  }
   return text.length > 160 ? `${text.slice(0, 157)}…` : text;
 }
 
+// List the field values recorded by an update.
 export function auditChangedFields(event: AuditTrailEvent) {
   const changes = auditMetadata(event).changes;
-  if (!changes || typeof changes !== "object" || Array.isArray(changes)) return [];
-  return Object.entries(changes as Prisma.JsonObject).map(([key, value]) => ({ label: auditFieldLabel(key), value: displayValue(value ?? null) }));
+  if (!changes || typeof changes !== "object" || Array.isArray(changes)) {
+    return [];
+  }
+  return Object.entries(changes as Prisma.JsonObject).map(([key, value]) => ({
+    label: auditFieldLabel(key),
+    value: displayValue(value ?? null),
+  }));
 }
 
+// Explain an event using its stored metadata.
 export function auditEventDetail(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
   const changedFields = auditChangedFields(event);
-  if (changedFields.length) return `Captured ${changedFields.length} changed field${changedFields.length === 1 ? "" : "s"}.`;
+  if (changedFields.length) {
+    return `Captured ${changedFields.length} changed field${changedFields.length === 1 ? "" : "s"}.`;
+  }
 
   const bulkAction = metadataText(metadata, "bulkAction");
-  if (bulkAction) return `Bulk ${auditFieldLabel(bulkAction).toLowerCase()} update.`;
-  if (auditCategory(event) === "QR code scan") return metadataText(metadata, "scanType") === "public" ? "QR code opened from a public device." : "QR code opened by signed-in staff.";
-  if (auditCategory(event) === "QR code") return "QR code printed for physical use.";
+  if (bulkAction) {
+    return `Bulk ${auditFieldLabel(bulkAction).toLowerCase()} update.`;
+  }
+  if (auditCategory(event) === "QR code scan") {
+    return metadataText(metadata, "scanType") === "public"
+      ? "QR code opened from a public device."
+      : "QR code opened by signed-in staff.";
+  }
+  if (auditCategory(event) === "QR code") {
+    return "QR code printed for physical use.";
+  }
   return null;
 }
 
+// Build a short preview of the event details.
 export function auditMetadataPreview(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
   const text = JSON.stringify(metadata, null, 2);

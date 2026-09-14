@@ -11,5 +11,7 @@ const result = spawnSync(process.execPath, ["node_modules/next/dist/bin/next", "
   env: process.env,
   stdio: "inherit",
 });
-if (result.error) throw result.error;
+if (result.error) {
+  throw result.error;
+}
 process.exitCode = result.status ?? 1;

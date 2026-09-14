@@ -4,6 +4,7 @@ import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 import { ImportForm } from "./import-form";
 
+// Staff page for spreadsheet imports.
 export default async function ImportInventoryPage() {
   await requireInventoryManagementPageAccess();
 
@@ -17,10 +18,14 @@ export default async function ImportInventoryPage() {
           <p className="eyebrow mt-5">Bulk import</p>
           <h1 className="title mt-3 text-3xl">Import inventory data</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
-            Upload an existing CSV or Excel spreadsheet. Every valid equipment row becomes one individually tagged inventory record with its own QR code; use supply rows for quantity-based stock. The import reports rows that need correction instead of failing the entire file.
+            Upload an existing CSV or Excel spreadsheet. Every valid equipment row becomes one
+            individually tagged inventory record with its own QR code; use supply rows for
+            quantity-based stock. The import reports rows that need correction instead of failing
+            the entire file.
           </p>
         </header>
 
+        {/* Spreadsheet upload and validation results. */}
         <ImportForm />
       </div>
     </div>

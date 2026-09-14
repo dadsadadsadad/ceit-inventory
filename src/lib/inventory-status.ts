@@ -1,5 +1,7 @@
 export function inventoryStatusLabel(value: string) {
-  if (value === "OK") return "OK";
+  if (value === "OK") {
+    return "OK";
+  }
   return value
     .toLowerCase()
     .split("_")

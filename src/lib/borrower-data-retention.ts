@@ -2,13 +2,17 @@ import "server-only";
 
 import { BorrowStatus } from "@prisma/client";
 
-import { borrowerDataExpiresAt as expiresAtForDays, borrowerDataRetentionDays } from "@/lib/borrower-retention-policy";
+import {
+  borrowerDataExpiresAt as expiresAtForDays,
+  borrowerDataRetentionDays,
+} from "@/lib/borrower-retention-policy";
 import { prisma } from "@/prisma";
 
 export function borrowerDataExpiresAt(now = new Date()) {
   return expiresAtForDays(now, borrowerDataRetentionDays(process.env.BORROWER_DATA_RETENTION_DAYS));
 }
 
+// Remove personal details after closed requests expire.
 export async function purgeExpiredBorrowerData(now = new Date()) {
   return prisma.borrowRequest.updateMany({
     where: {

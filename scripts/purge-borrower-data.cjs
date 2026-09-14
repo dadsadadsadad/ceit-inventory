@@ -1,16 +1,7 @@
-const { existsSync } = require("node:fs");
-const { loadEnvFile } = require("node:process");
+const { databaseClient, databaseError } = require("./database.cjs");
+const client = databaseClient();
 
-if (existsSync(".env.local")) loadEnvFile(".env.local");
-if (existsSync(".env")) loadEnvFile(".env");
-
-const { Client } = require("pg");
-
-const connectionString = process.env.SCHOOL_DATABASE_URL || process.env.DATABASE_URL || process.env.DIRECT_URL;
-if (!connectionString) throw new Error("SCHOOL_DATABASE_URL, DATABASE_URL, or DIRECT_URL is missing.");
-
-const client = new Client({ connectionString });
-
+// Remove personal details from expired, closed requests.
 async function main() {
   await client.connect();
   const result = await client.query(
@@ -19,12 +10,16 @@ async function main() {
      WHERE status = ANY($4::"BorrowStatus"[])
        AND "personalDataExpiresAt" <= NOW()
        AND "studentNumber" <> $2`,
-    ["Archived borrower", "REDACTED", "Archived borrowing history", ["RETURNED", "DECLINED", "CANCELLED"]],
+    [
+      "Archived borrower",
+      "REDACTED",
+      "Archived borrowing history",
+      ["RETURNED", "DECLINED", "CANCELLED"],
+    ],
   );
   console.log(JSON.stringify({ redacted: result.rowCount ?? 0 }));
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-}).finally(() => client.end());
+main()
+  .catch(databaseError)
+  .finally(() => client.end());

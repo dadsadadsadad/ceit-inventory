@@ -5,11 +5,19 @@ import Link from "next/link";
 import { maximumLabelCount } from "@/lib/label-sheet";
 
 import { SubmitButton } from "@/app/components/submit-button";
-import { addSelectionChangeListener, isSelectionChangeForKey, notifySelectionChange, saveSelectedItemIds, selectedItemIds, syncVisibleItemSelection } from "./inventory-selection";
+import {
+  addSelectionChangeListener,
+  isSelectionChangeForKey,
+  notifySelectionChange,
+  saveSelectedItemIds,
+  selectedItemIds,
+  syncVisibleItemSelection,
+} from "./inventory-selection";
 
 type BulkAction = "condition" | "delete" | "location" | "remove" | "status";
 type SelectOption = { label: string; value: string };
 
+// Choose an action for the selected inventory.
 export function InventoryBulkActions({
   allItemIds,
   canPermanentlyDelete,
@@ -35,12 +43,16 @@ export function InventoryBulkActions({
     const syncSelection = () => {
       const eligibleIds = new Set(allItemIds);
       const itemIds = selectedItemIds(selectionKey).filter((itemId) => eligibleIds.has(itemId));
-      if (itemIds.length !== selectedItemIds(selectionKey).length) saveSelectedItemIds(selectionKey, itemIds);
+      if (itemIds.length !== selectedItemIds(selectionKey).length) {
+        saveSelectedItemIds(selectionKey, itemIds);
+      }
       syncVisibleItemSelection(itemIds);
       setSelectedIds(itemIds);
     };
     const handleSelectionChange = (event: Event) => {
-      if (isSelectionChangeForKey(event, selectionKey)) syncSelection();
+      if (isSelectionChangeForKey(event, selectionKey)) {
+        syncSelection();
+      }
     };
 
     if (clearSelectionOnLoad) {
@@ -51,78 +63,157 @@ export function InventoryBulkActions({
     return addSelectionChangeListener(handleSelectionChange);
   }, [allItemIds, clearSelectionOnLoad, selectionKey]);
 
+  // Clear the saved selection and visible checkboxes.
   function clearSelection() {
     saveSelectedItemIds(selectionKey, []);
     syncVisibleItemSelection([]);
     notifySelectionChange(selectionKey);
   }
 
-  if (!selectedIds.length) return null;
+  if (!selectedIds.length) {
+    return null;
+  }
 
   const countLabel = `${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"} selected`;
   const confirmationWord = action === "delete" ? "DELETE" : "RETIRE";
-  const actionDetails = action === "location"
-    ? "Move every selected item to one active location."
-    : action === "status"
-      ? "Apply one status to every selected item."
-      : action === "condition"
-      ? "Apply one condition to every selected item."
-        : action === "delete"
-          ? "Permanently erase selected records that have no borrowing or maintenance history. This also erases their tags, QR codes, technical details, photos, and record-level activity."
-          : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
+  const actionDetails =
+    action === "location"
+      ? "Move every selected item to one active location."
+      : action === "status"
+        ? "Apply one status to every selected item."
+        : action === "condition"
+          ? "Apply one condition to every selected item."
+          : action === "delete"
+            ? "Permanently erase selected records that have no borrowing or maintenance history. This also erases their tags, QR codes, technical details, photos, and record-level activity."
+            : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
 
   return (
-    <section className="bulk-action-toolbar card rounded-xl p-4 sm:p-5" aria-label="Bulk actions for selected inventory items">
-      {selectedIds.map((itemId) => <input key={itemId} type="hidden" name="itemIds" value={itemId} />)}
+    <section
+      className="bulk-action-toolbar card rounded-xl p-4 sm:p-5"
+      aria-label="Bulk actions for selected inventory items"
+    >
+      {selectedIds.map((itemId) => (
+        <input key={itemId} type="hidden" name="itemIds" value={itemId} />
+      ))}
+      {/* Selection count and quick controls. */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-xl">
           <p className="eyebrow">Selected inventory</p>
           <h2 className="mt-2 text-lg font-bold tracking-tight">{countLabel}</h2>
-          <p className="muted mt-1 text-sm leading-6">Choose a change to apply to the selected items.</p>
+          <p className="muted mt-1 text-sm leading-6">
+            Choose a change to apply to the selected items.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {selectedIds.length <= maximumLabelCount ? <Link href={`/dashboard/inventory/labels?ids=${selectedIds.join(",")}`} className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Print QR labels</Link> : <p className="muted text-xs">Select up to {maximumLabelCount} items to print labels.</p>}
-          <button type="button" onClick={clearSelection} className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Clear selection</button>
+          {selectedIds.length <= maximumLabelCount ? (
+            <Link
+              href={`/dashboard/inventory/labels?ids=${selectedIds.join(",")}`}
+              className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+            >
+              Print QR labels
+            </Link>
+          ) : (
+            <p className="muted text-xs">Select up to {maximumLabelCount} items to print labels.</p>
+          )}
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+          >
+            Clear selection
+          </button>
         </div>
       </div>
 
+      {/* Bulk action and target values. */}
       <div className="bulk-action-toolbar-controls mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(13rem,0.9fr)_minmax(15rem,1fr)_auto] xl:items-end">
         <label>
           <span className="muted text-xs font-bold uppercase tracking-wide">Action</span>
-          <select value={action} onChange={(event) => {
-            setAction(event.target.value as BulkAction);
-            setRemovalConfirmation("");
-          }} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+          <select
+            value={action}
+            onChange={(event) => {
+              setAction(event.target.value as BulkAction);
+              setRemovalConfirmation("");
+            }}
+            className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+          >
             <option value="status">Edit status</option>
             <option value="condition">Edit condition</option>
             <option value="location">Move to location</option>
             <option value="remove">Retire (keep record and history)</option>
-            {canPermanentlyDelete ? <option value="delete">Permanently delete (administrator)</option> : null}
+            {canPermanentlyDelete ? (
+              <option value="delete">Permanently delete (administrator)</option>
+            ) : null}
           </select>
         </label>
 
         <div>
-          <span className="muted text-xs font-bold uppercase tracking-wide">{action === "remove" || action === "delete" ? "What this does" : "New value"}</span>
+          <span className="muted text-xs font-bold uppercase tracking-wide">
+            {action === "remove" || action === "delete" ? "What this does" : "New value"}
+          </span>
           {action === "location" ? (
-            <select required name="bulkLocationId" defaultValue="" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" aria-label="New location">
-              <option value="" disabled>Choose an active location</option>
-              {locations.map((location) => <option key={location.value} value={location.value}>{location.label}</option>)}
+            <select
+              required
+              name="bulkLocationId"
+              defaultValue=""
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              aria-label="New location"
+            >
+              <option value="" disabled>
+                Choose an active location
+              </option>
+              {locations.map((location) => (
+                <option key={location.value} value={location.value}>
+                  {location.label}
+                </option>
+              ))}
             </select>
           ) : action === "status" ? (
-            <select name="bulkStatus" defaultValue={statuses[0]?.value} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" aria-label="New status">
-              {statuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+            <select
+              name="bulkStatus"
+              defaultValue={statuses[0]?.value}
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              aria-label="New status"
+            >
+              {statuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
           ) : action === "condition" ? (
-            <select name="bulkCondition" defaultValue={conditions[0]?.value} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" aria-label="New condition">
-              {conditions.map((condition) => <option key={condition.value} value={condition.value}>{condition.label}</option>)}
+            <select
+              name="bulkCondition"
+              defaultValue={conditions[0]?.value}
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              aria-label="New condition"
+            >
+              {conditions.map((condition) => (
+                <option key={condition.value} value={condition.value}>
+                  {condition.label}
+                </option>
+              ))}
             </select>
           ) : (
             <div className="mt-2 space-y-3">
-              <p className="bulk-action-remove-note rounded-lg px-3 py-2.5 text-sm leading-5">{actionDetails}</p>
+              <p className="bulk-action-remove-note rounded-lg px-3 py-2.5 text-sm leading-5">
+                {actionDetails}
+              </p>
               <label className="block">
-                <span className="muted text-xs font-bold uppercase tracking-wide">Type {confirmationWord} to confirm</span>
-                <input name="bulkRemovalConfirmation" required value={removalConfirmation} onChange={(event) => setRemovalConfirmation(event.target.value)} maxLength={16} autoComplete="off" className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder={confirmationWord} />
+                <span className="muted text-xs font-bold uppercase tracking-wide">
+                  Type {confirmationWord} to confirm
+                </span>
+                <input
+                  name="bulkRemovalConfirmation"
+                  required
+                  value={removalConfirmation}
+                  onChange={(event) => setRemovalConfirmation(event.target.value)}
+                  maxLength={16}
+                  autoComplete="off"
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                  placeholder={confirmationWord}
+                />
               </label>
             </div>
           )}
@@ -131,7 +222,20 @@ export function InventoryBulkActions({
         <div className="xl:min-w-40">
           <input type="hidden" name="bulkAction" value={action} />
           <p className="muted mb-2 hidden text-xs leading-5 xl:block">{actionDetails}</p>
-          <SubmitButton disabled={(action === "remove" || action === "delete") && removalConfirmation !== confirmationWord} pendingLabel={action === "delete" ? "Deleting…" : "Updating…"} className={`${action === "remove" || action === "delete" ? "danger-button" : "primary-button"} w-full rounded-lg px-4 py-2.5 text-sm font-semibold`}>{action === "delete" ? `Delete ${selectedIds.length}` : action === "remove" ? `Retire ${selectedIds.length}` : `Apply to ${selectedIds.length}`}</SubmitButton>
+          <SubmitButton
+            disabled={
+              (action === "remove" || action === "delete") &&
+              removalConfirmation !== confirmationWord
+            }
+            pendingLabel={action === "delete" ? "Deleting…" : "Updating…"}
+            className={`${action === "remove" || action === "delete" ? "danger-button" : "primary-button"} w-full rounded-lg px-4 py-2.5 text-sm font-semibold`}
+          >
+            {action === "delete"
+              ? `Delete ${selectedIds.length}`
+              : action === "remove"
+                ? `Retire ${selectedIds.length}`
+                : `Apply to ${selectedIds.length}`}
+          </SubmitButton>
         </div>
       </div>
     </section>

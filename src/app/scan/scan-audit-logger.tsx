@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { recordInventoryScan } from "./actions";
 
+// Record a QR visit once after the page opens.
 export function ScanAuditLogger({ itemId }: { itemId: string }) {
   useEffect(() => {
     void recordInventoryScan(itemId).catch(() => {

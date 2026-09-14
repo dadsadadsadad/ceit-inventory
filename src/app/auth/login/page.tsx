@@ -7,33 +7,60 @@ import { signIn } from "../actions";
 const messages: Record<string, string> = {
   "invalid-credentials": "The email address, username, or password is incorrect.",
   "missing-credentials": "Enter your email address or username and password.",
-  "temporarily-locked": "For security, this account is temporarily locked. Try again in about 15 minutes or ask an administrator for help.",
+  "temporarily-locked":
+    "For security, this account is temporarily locked. Try again in about 15 minutes or ask an administrator for help.",
 };
 
 const notices: Record<string, string> = {
   "password-updated": "Your password was updated. Sign in again with your new password.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; notice?: string }> }) {
+// Sign-in form and account notices.
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; notice?: string }>;
+}) {
   const { error, notice } = await searchParams;
 
   return (
     <main className="login-page grid min-h-screen px-5 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-0">
+      {/* Desktop branding panel. */}
+      {/* Desktop branding panel. */}
       <section className="login-panel hidden px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3">
-          <div className="brand-mark grid h-11 w-11 place-items-center rounded-lg text-sm font-black"><Boxes className="h-6 w-6" aria-hidden="true" /></div>
-          <div><div className="text-base font-semibold tracking-tight">CEIT Inventory</div><div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Inventory management</div></div>
+          <div className="brand-mark grid h-11 w-11 place-items-center rounded-lg text-sm font-black">
+            <Boxes className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <div>
+            <div className="text-base font-semibold tracking-tight">CEIT Inventory</div>
+            <div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">
+              Inventory management
+            </div>
+          </div>
         </div>
-        <div className="login-inventory-mark" aria-hidden="true"><Boxes size={100} strokeWidth={.8} /></div>
+        <div className="login-inventory-mark" aria-hidden="true">
+          <Boxes size={100} strokeWidth={0.8} />
+        </div>
         <div className="max-w-xl">
-          <h1 className="mt-4 text-4xl font-bold tracking-tight">Equipment, rooms, and the people who use them.</h1>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight">
+            Equipment, rooms, and the people who use them.
+          </h1>
         </div>
       </section>
 
+      {/* Mobile branding and sign-in form. */}
       <section className="flex flex-col items-center justify-center gap-5">
         <div className="login-mobile-brand flex items-center gap-3 lg:hidden">
-          <div className="brand-mark grid h-10 w-10 place-items-center rounded-lg"><Boxes className="h-5 w-5" aria-hidden="true" /></div>
-          <div><div className="text-sm font-semibold tracking-tight">CEIT Inventory</div><div className="login-mobile-subtitle text-[0.65rem] font-medium uppercase tracking-[0.18em]">Inventory management</div></div>
+          <div className="brand-mark grid h-10 w-10 place-items-center rounded-lg">
+            <Boxes className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold tracking-tight">CEIT Inventory</div>
+            <div className="login-mobile-subtitle text-[0.65rem] font-medium uppercase tracking-[0.18em]">
+              Inventory management
+            </div>
+          </div>
         </div>
         <div className="card w-full max-w-md rounded-lg p-6 sm:p-8">
           <div className="mb-7">
@@ -41,18 +68,54 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <h1 className="title mt-3 text-3xl">Sign in</h1>
             <p className="muted mt-2 text-sm leading-6">Enter your account details.</p>
           </div>
-          {error && messages[error] ? <div className="notice mb-5 rounded-lg px-4 py-3 text-sm" role="alert">{messages[error]}</div> : null}
-          {notice && notices[notice] ? <div className="notice notice-success mb-5 rounded-lg px-4 py-3 text-sm" role="status">{notices[notice]}</div> : null}
+          {error && messages[error] ? (
+            <div className="notice mb-5 rounded-lg px-4 py-3 text-sm" role="alert">
+              {messages[error]}
+            </div>
+          ) : null}
+          {notice && notices[notice] ? (
+            <div className="notice notice-success mb-5 rounded-lg px-4 py-3 text-sm" role="status">
+              {notices[notice]}
+            </div>
+          ) : null}
+          {/* Account credentials and sign-in button. */}
           <form action={signIn} className="space-y-4">
             <div>
-              <label htmlFor="identifier" className="block text-sm font-semibold">Email address or username</label>
-              <input required type="text" id="identifier" name="identifier" autoComplete="username" maxLength={254} className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition" placeholder="name@example.com or ceit.staff" />
+              <label htmlFor="identifier" className="block text-sm font-semibold">
+                Email address or username
+              </label>
+              <input
+                required
+                type="text"
+                id="identifier"
+                name="identifier"
+                autoComplete="username"
+                maxLength={254}
+                className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
+                placeholder="name@example.com or ceit.staff"
+              />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold">Password</label>
-              <input required type="password" id="password" name="password" autoComplete="current-password" maxLength={256} className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition" placeholder="Enter password" />
+              <label htmlFor="password" className="block text-sm font-semibold">
+                Password
+              </label>
+              <input
+                required
+                type="password"
+                id="password"
+                name="password"
+                autoComplete="current-password"
+                maxLength={256}
+                className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
+                placeholder="Enter password"
+              />
             </div>
-            <SubmitButton pendingLabel="Signing in…" className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors">Sign in</SubmitButton>
+            <SubmitButton
+              pendingLabel="Signing in…"
+              className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"
+            >
+              Sign in
+            </SubmitButton>
           </form>
         </div>
       </section>

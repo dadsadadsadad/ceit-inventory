@@ -24,7 +24,9 @@ import { prisma } from "@/prisma";
 export const dynamic = "force-dynamic";
 
 type SearchParams = Record<string, string | string[] | undefined>;
-type ActivityEvent = Prisma.InventoryAuditGetPayload<{ include: { item: { select: { assetTag: true; id: true; name: true } } } }>;
+type ActivityEvent = Prisma.InventoryAuditGetPayload<{
+  include: { item: { select: { assetTag: true; id: true; name: true } } };
+}>;
 
 const pageSize = 50;
 
@@ -41,7 +43,9 @@ function searchParameters(search: SearchParams) {
   const parameters = new URLSearchParams();
   for (const [key, value] of Object.entries(search)) {
     const selected = first(value);
-    if (selected) parameters.set(key, selected);
+    if (selected) {
+      parameters.set(key, selected);
+    }
   }
   return parameters;
 }
@@ -52,17 +56,27 @@ function pageLink(filters: AuditTrailFilters, page: number) {
   return query ? `/dashboard/activity?${query}` : "/dashboard/activity";
 }
 
+// Choose page numbers and gaps for the pager.
 function paginationEntries(totalPages: number, currentPage: number) {
   const pages = new Set<number>([1, totalPages]);
   if (totalPages <= 9) {
-    for (let page = 1; page <= totalPages; page += 1) pages.add(page);
+    for (let page = 1; page <= totalPages; page += 1) {
+      pages.add(page);
+    }
   } else {
-    const start = currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
+    const start =
+      currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
     const end = currentPage <= 3 ? 5 : currentPage >= totalPages - 2 ? totalPages : currentPage + 2;
-    for (let page = start; page <= end; page += 1) pages.add(page);
+    for (let page = start; page <= end; page += 1) {
+      pages.add(page);
+    }
   }
-  const sortedPages = [...pages].filter((page) => page >= 1 && page <= totalPages).sort((left, right) => left - right);
-  return sortedPages.flatMap((page, index) => index > 0 && page - sortedPages[index - 1] > 1 ? [null, page] : [page]);
+  const sortedPages = [...pages]
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+  return sortedPages.flatMap((page, index) =>
+    index > 0 && page - sortedPages[index - 1] > 1 ? [null, page] : [page],
+  );
 }
 
 function periodLabel(period: (typeof exportPeriods)[number]) {
@@ -86,11 +100,18 @@ function eventReference(event: ActivityEvent) {
 }
 
 function subjectTypeLabel(event: ActivityEvent) {
-  if (event.item) return "Inventory record";
+  if (event.item) {
+    return "Inventory record";
+  }
   return event.entityType?.replaceAll("-", " ") ?? "System activity";
 }
 
-export default async function AuditTrailPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+// Load the administrator's activity history.
+export default async function AuditTrailPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireAdministrationPageAccess();
   const search = await searchParams;
   const requestedPage = safePage(search.page);
@@ -133,7 +154,10 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
   }
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const updateCount = (actionCounts.get(AuditAction.UPDATED) ?? 0) + (actionCounts.get(AuditAction.MOVED) ?? 0) + (actionCounts.get(AuditAction.STATUS_CHANGED) ?? 0);
+  const updateCount =
+    (actionCounts.get(AuditAction.UPDATED) ?? 0) +
+    (actionCounts.get(AuditAction.MOVED) ?? 0) +
+    (actionCounts.get(AuditAction.STATUS_CHANGED) ?? 0);
   const exportParameters = auditTrailSearchParameters(filters);
   exportParameters.set("kind", "activity");
   const exportHref = `/dashboard/reports/export?${exportParameters.toString()}`;
@@ -142,82 +166,190 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
   return (
     <div className="page activity-page">
       <div className="page-inner space-y-6">
+        {/* Audit title and export links. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Administration</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Audit trail</h1>
-            <p className="muted mt-2 max-w-3xl text-sm leading-6">See who changed what and when. Search by item, user, or activity.</p>
+            <p className="muted mt-2 max-w-3xl text-sm leading-6">
+              See who changed what and when. Search by item, user, or activity.
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <a href={exportHref} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Export CSV</a>
-            <a href={pdfExportHref} className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Export PDF</a>
-            <Link href="/dashboard" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Back to dashboard</Link>
+            <a
+              href={exportHref}
+              className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+            >
+              Export CSV
+            </a>
+            <a
+              href={pdfExportHref}
+              className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
+            >
+              Export PDF
+            </a>
+            <Link
+              href="/dashboard"
+              className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Back to dashboard
+            </Link>
           </div>
         </header>
 
+        {/* Activity search and filters. */}
         <section className="card rounded-lg p-5 sm:p-6" aria-labelledby="audit-filters-heading">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="eyebrow">Find an event</p>
-              <h2 id="audit-filters-heading" className="mt-1 text-lg font-semibold">Filter the audit history</h2>
-              <p className="muted mt-1 text-sm leading-6">Custom dates override the selected timeframe. Search covers the event description, user, subject, item name, and asset tag.</p>
+              <h2 id="audit-filters-heading" className="mt-1 text-lg font-semibold">
+                Filter the audit history
+              </h2>
+              <p className="muted mt-1 text-sm leading-6">
+                Custom dates override the selected timeframe. Search covers the event description,
+                user, subject, item name, and asset tag.
+              </p>
             </div>
-            <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">Clear filters</Link>
+            <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
+              Clear filters
+            </Link>
           </div>
-          <form className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end" aria-label="Audit trail filters">
+          <form
+            className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
+            aria-label="Audit trail filters"
+          >
             <label className="sm:col-span-2 xl:col-span-2">
               <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
-              <input name="q" defaultValue={filters.query ?? ""} maxLength={120} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Event, user, item, or asset tag" />
+              <input
+                name="q"
+                defaultValue={filters.query ?? ""}
+                maxLength={120}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Event, user, item, or asset tag"
+              />
             </label>
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">System action</span>
-              <select name="action" defaultValue={filters.action ?? ""} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+              <select
+                name="action"
+                defaultValue={filters.action ?? ""}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              >
                 <option value="">All actions</option>
-                {auditActions.map((action) => <option key={action} value={action}>{auditActionLabel(action)}</option>)}
+                {auditActions.map((action) => (
+                  <option key={action} value={action}>
+                    {auditActionLabel(action)}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">User</span>
-              <input name="actor" defaultValue={filters.actor ?? ""} maxLength={120} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Name or email" />
+              <input
+                name="actor"
+                defaultValue={filters.actor ?? ""}
+                maxLength={120}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Name or email"
+              />
             </label>
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Timeframe</span>
-              <select name="period" defaultValue={filters.period} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
-                {exportPeriods.map((period) => <option key={period} value={period}>{periodLabel(period)}</option>)}
+              <select
+                name="period"
+                defaultValue={filters.period}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              >
+                {exportPeriods.map((period) => (
+                  <option key={period} value={period}>
+                    {periodLabel(period)}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Start date</span>
-              <input type="date" name="from" defaultValue={filters.from ?? ""} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />
+              <input
+                type="date"
+                name="from"
+                defaultValue={filters.from ?? ""}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              />
             </label>
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">End date</span>
-              <input type="date" name="to" defaultValue={filters.to ?? ""} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" />
+              <input
+                type="date"
+                name="to"
+                defaultValue={filters.to ?? ""}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              />
             </label>
-            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Apply filters</button>
+            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
+              Apply filters
+            </button>
           </form>
         </section>
 
-        {filterError ? <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">{filterError} Showing the unfiltered audit trail instead.</div> : null}
+        {filterError ? (
+          <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
+            {filterError} Showing the unfiltered audit trail instead.
+          </div>
+        ) : null}
 
         {!databaseError ? (
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Audit trail summary">
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Matching events</p><p className="mt-3 text-3xl font-semibold">{totalRecords.toLocaleString()}</p><p className="muted mt-2 text-sm">Across the selected filters</p></article>
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Updates</p><p className="mt-3 text-3xl font-semibold">{updateCount.toLocaleString()}</p><p className="muted mt-2 text-sm">Updated, moved, or status changed</p></article>
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">QR code scans</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.SCANNED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Staff and public QR code openings</p></article>
-            <article className="card rounded-lg p-5"><p className="muted text-xs font-bold uppercase tracking-wide">Created events</p><p className="mt-3 text-3xl font-semibold">{(actionCounts.get(AuditAction.CREATED) ?? 0).toLocaleString()}</p><p className="muted mt-2 text-sm">Records, accounts, notes, and setup</p></article>
+          <section
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            aria-label="Audit trail summary"
+          >
+            {/* Totals for the filtered activity. */}
+            <article className="card rounded-lg p-5">
+              <p className="muted text-xs font-bold uppercase tracking-wide">Matching events</p>
+              <p className="mt-3 text-3xl font-semibold">{totalRecords.toLocaleString()}</p>
+              <p className="muted mt-2 text-sm">Across the selected filters</p>
+            </article>
+            <article className="card rounded-lg p-5">
+              <p className="muted text-xs font-bold uppercase tracking-wide">Updates</p>
+              <p className="mt-3 text-3xl font-semibold">{updateCount.toLocaleString()}</p>
+              <p className="muted mt-2 text-sm">Updated, moved, or status changed</p>
+            </article>
+            <article className="card rounded-lg p-5">
+              <p className="muted text-xs font-bold uppercase tracking-wide">QR code scans</p>
+              <p className="mt-3 text-3xl font-semibold">
+                {(actionCounts.get(AuditAction.SCANNED) ?? 0).toLocaleString()}
+              </p>
+              <p className="muted mt-2 text-sm">Staff and public QR code openings</p>
+            </article>
+            <article className="card rounded-lg p-5">
+              <p className="muted text-xs font-bold uppercase tracking-wide">Created events</p>
+              <p className="mt-3 text-3xl font-semibold">
+                {(actionCounts.get(AuditAction.CREATED) ?? 0).toLocaleString()}
+              </p>
+              <p className="muted mt-2 text-sm">Records, accounts, notes, and setup</p>
+            </article>
           </section>
         ) : null}
 
         {databaseError ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">The audit trail could not be loaded. Confirm the database connection and try again.</div>
+          <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
+            The audit trail could not be loaded. Confirm the database connection and try again.
+          </div>
         ) : activity.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">No audit events match these filters. Try a broader search or clear the date range.</div>
+          <div className="notice rounded-lg px-5 py-4 text-sm">
+            No audit events match these filters. Try a broader search or clear the date range.
+          </div>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Filtered audit events">
+            {/* Matching audit entries. */}
             <div className="divider flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="eyebrow">Recorded events</p><h2 className="mt-1 text-lg font-semibold">Complete audit history</h2></div>
-              <p className="muted text-sm">{totalRecords.toLocaleString()} event{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>
+              <div>
+                <p className="eyebrow">Recorded events</p>
+                <h2 className="mt-1 text-lg font-semibold">Complete audit history</h2>
+              </div>
+              <p className="muted text-sm">
+                {totalRecords.toLocaleString()} event{totalRecords === 1 ? "" : "s"} · Page{" "}
+                {currentPage} of {totalPages}
+              </p>
             </div>
             <ol className="divide-y">
               {activity.map((event) => {
@@ -228,35 +360,145 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
                   <li key={event.id} className="px-5 py-5 sm:px-6">
                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(12rem,0.72fr)_minmax(12rem,0.78fr)] xl:items-start">
                       <div>
-                        <div className="flex flex-wrap items-center gap-2"><span className="status-pill rounded-md px-2.5 py-1 text-xs font-semibold">{auditCategory(event as AuditTrailEvent)}</span><span className="card-muted rounded-md px-2.5 py-1 text-xs font-semibold">{auditActionLabel(event.action)}</span><code className="muted rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem]">{eventReference(event)}</code></div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="status-pill rounded-md px-2.5 py-1 text-xs font-semibold">
+                            {auditCategory(event as AuditTrailEvent)}
+                          </span>
+                          <span className="card-muted rounded-md px-2.5 py-1 text-xs font-semibold">
+                            {auditActionLabel(event.action)}
+                          </span>
+                          <code className="muted rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem]">
+                            {eventReference(event)}
+                          </code>
+                        </div>
                         <p className="mt-3 text-sm font-semibold leading-6">{event.summary}</p>
                         {details ? <p className="muted mt-1 text-sm leading-6">{details}</p> : null}
-                        {changes.length ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Captured changes">{changes.map((change) => <span key={change.label} className="card-muted max-w-full rounded-md px-2.5 py-1 text-xs"><strong>{change.label}:</strong> <span className="break-all">{change.value}</span></span>)}</div> : null}
-                        {metadata !== "{}" ? <details className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2"><summary className="cursor-pointer text-sm font-semibold">View event metadata</summary><pre className="muted mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs leading-5">{metadata}</pre></details> : null}
+                        {changes.length ? (
+                          <div className="mt-3 flex flex-wrap gap-2" aria-label="Captured changes">
+                            {changes.map((change) => (
+                              <span
+                                key={change.label}
+                                className="card-muted max-w-full rounded-md px-2.5 py-1 text-xs"
+                              >
+                                <strong>{change.label}:</strong>{" "}
+                                <span className="break-all">{change.value}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {metadata !== "{}" ? (
+                          <details className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2">
+                            {/* Expand the event's recorded field values. */}
+                            <summary className="cursor-pointer text-sm font-semibold">
+                              View event metadata
+                            </summary>
+                            <pre className="muted mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs leading-5">
+                              {metadata}
+                            </pre>
+                          </details>
+                        ) : null}
                       </div>
                       <div className="text-sm">
-                        <p className="muted text-xs font-bold uppercase tracking-wide">{subjectTypeLabel(event)}</p>
-                        {event.item ? <Link href={`/dashboard/inventory/${event.item.id}`} className="accent-link mt-1 inline-block break-words font-semibold">{event.item.name}</Link> : <p className="mt-1 break-words font-semibold">{event.entityLabel ?? "System operation"}</p>}
-                        <p className="muted mt-1 break-all text-xs">{event.item?.assetTag ?? event.entityId ?? "No linked record"}</p>
+                        <p className="muted text-xs font-bold uppercase tracking-wide">
+                          {subjectTypeLabel(event)}
+                        </p>
+                        {event.item ? (
+                          <Link
+                            href={`/dashboard/inventory/${event.item.id}`}
+                            className="accent-link mt-1 inline-block break-words font-semibold"
+                          >
+                            {event.item.name}
+                          </Link>
+                        ) : (
+                          <p className="mt-1 break-words font-semibold">
+                            {event.entityLabel ?? "System operation"}
+                          </p>
+                        )}
+                        <p className="muted mt-1 break-all text-xs">
+                          {event.item?.assetTag ?? event.entityId ?? "No linked record"}
+                        </p>
                       </div>
                       <div className="text-sm xl:text-right">
-                        <p className="muted text-xs font-bold uppercase tracking-wide">Recorded by</p>
-                        <p className="mt-1 break-words font-medium">{auditActorLabel(event as AuditTrailEvent)}</p>
+                        <p className="muted text-xs font-bold uppercase tracking-wide">
+                          Recorded by
+                        </p>
+                        <p className="mt-1 break-words font-medium">
+                          {auditActorLabel(event as AuditTrailEvent)}
+                        </p>
                         <p className="muted mt-3 text-xs font-bold uppercase tracking-wide">When</p>
-                        <time className="mt-1 block font-medium" dateTime={event.createdAt.toISOString()}>{formattedTimestamp(event.createdAt)}</time>
+                        <time
+                          className="mt-1 block font-medium"
+                          dateTime={event.createdAt.toISOString()}
+                        >
+                          {formattedTimestamp(event.createdAt)}
+                        </time>
                       </div>
                     </div>
                   </li>
                 );
               })}
             </ol>
-            {totalPages > 1 ? <nav className="divider flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" aria-label="Audit trail pages">
-              {currentPage > 1 ? <Link href={pageLink(filters, currentPage - 1)} className="pagination-link px-3 text-sm font-semibold">← Previous</Link> : <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">← Previous</span>}
-              <div className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto pb-1 sm:order-none sm:w-auto sm:pb-0" aria-label="Choose audit trail page">
-                {paginationEntries(totalPages, currentPage).map((entry, index) => entry === null ? <span key={`gap-${index}`} className="muted px-1 text-sm" aria-hidden="true">…</span> : entry === currentPage ? <span key={entry} className="pagination-current text-sm font-semibold" aria-current="page">{entry}</span> : <Link key={entry} href={pageLink(filters, entry)} className="pagination-link text-sm font-semibold" aria-label={`Go to page ${entry}`}>{entry}</Link>)}
-              </div>
-              {currentPage < totalPages ? <Link href={pageLink(filters, currentPage + 1)} className="pagination-link px-3 text-sm font-semibold">Next →</Link> : <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">Next →</span>}
-            </nav> : null}
+            {totalPages > 1 ? (
+              <nav
+                className="divider flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3"
+                aria-label="Audit trail pages"
+              >
+                {/* Audit page navigation. */}
+                {currentPage > 1 ? (
+                  <Link
+                    href={pageLink(filters, currentPage - 1)}
+                    className="pagination-link px-3 text-sm font-semibold"
+                  >
+                    ← Previous
+                  </Link>
+                ) : (
+                  <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
+                    ← Previous
+                  </span>
+                )}
+                <div
+                  className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto pb-1 sm:order-none sm:w-auto sm:pb-0"
+                  aria-label="Choose audit trail page"
+                >
+                  {paginationEntries(totalPages, currentPage).map((entry, index) =>
+                    entry === null ? (
+                      <span key={`gap-${index}`} className="muted px-1 text-sm" aria-hidden="true">
+                        …
+                      </span>
+                    ) : entry === currentPage ? (
+                      <span
+                        key={entry}
+                        className="pagination-current text-sm font-semibold"
+                        aria-current="page"
+                      >
+                        {entry}
+                      </span>
+                    ) : (
+                      <Link
+                        key={entry}
+                        href={pageLink(filters, entry)}
+                        className="pagination-link text-sm font-semibold"
+                        aria-label={`Go to page ${entry}`}
+                      >
+                        {entry}
+                      </Link>
+                    ),
+                  )}
+                </div>
+                {currentPage < totalPages ? (
+                  <Link
+                    href={pageLink(filters, currentPage + 1)}
+                    className="pagination-link px-3 text-sm font-semibold"
+                  >
+                    Next →
+                  </Link>
+                ) : (
+                  <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
+                    Next →
+                  </span>
+                )}
+              </nav>
+            ) : null}
           </section>
         )}
       </div>

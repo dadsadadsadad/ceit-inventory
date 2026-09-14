@@ -2,13 +2,26 @@ import { AuditAction } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
 import { auditActorName, auditEventData } from "@/lib/audit-event";
-import { auditCategory, auditChangedFields, auditTrailWhere, parseAuditTrailFilters } from "@/lib/audit-trail";
+import {
+  auditCategory,
+  auditChangedFields,
+  auditTrailWhere,
+  parseAuditTrailFilters,
+} from "@/lib/audit-trail";
 
 describe("audit trail filters", () => {
   const now = new Date("2026-09-01T05:30:00.000Z");
 
   it("validates and preserves a searchable action, actor, and period", () => {
-    const filters = parseAuditTrailFilters(new URLSearchParams({ action: "SCANNED", actor: "staff@example.edu", period: "last-7-days", q: "asset-100" }), now);
+    const filters = parseAuditTrailFilters(
+      new URLSearchParams({
+        action: "SCANNED",
+        actor: "staff@example.edu",
+        period: "last-7-days",
+        q: "asset-100",
+      }),
+      now,
+    );
 
     expect(filters.action).toBe(AuditAction.SCANNED);
     expect(filters.actor).toBe("staff@example.edu");
@@ -24,11 +37,16 @@ describe("audit trail filters", () => {
   });
 
   it("uses custom dates ahead of a preset and rejects unknown actions", () => {
-    const filters = parseAuditTrailFilters(new URLSearchParams({ period: "today", from: "2026-08-01", to: "2026-08-03" }), now);
+    const filters = parseAuditTrailFilters(
+      new URLSearchParams({ period: "today", from: "2026-08-01", to: "2026-08-03" }),
+      now,
+    );
 
     expect(filters.dateRange.from?.toISOString()).toBe("2026-07-31T16:00:00.000Z");
     expect(filters.dateRange.toExclusive?.toISOString()).toBe("2026-08-03T16:00:00.000Z");
-    expect(() => parseAuditTrailFilters(new URLSearchParams({ action: "ERASED" }), now)).toThrow("Invalid audit action.");
+    expect(() => parseAuditTrailFilters(new URLSearchParams({ action: "ERASED" }), now)).toThrow(
+      "Invalid audit action.",
+    );
   });
 
   it("labels public scans and shows captured field values", () => {
@@ -61,16 +79,20 @@ describe("audit trail filters", () => {
       summary: "Account created.",
     });
 
-    expect(auditActorName({ id: "staff-id", username: "ceit.staff", email: "staff@example.edu" })).toBe("ceit.staff | staff@example.edu");
+    expect(
+      auditActorName({ id: "staff-id", username: "ceit.staff", email: "staff@example.edu" }),
+    ).toBe("ceit.staff | staff@example.edu");
     expect(accountEvent.entityLabel).toBe("ceit.staff | staff@example.edu");
-    expect(auditCategory({
-      action: accountEvent.action,
-      actorId: accountEvent.actorId ?? null,
-      actorName: accountEvent.actorName ?? null,
-      entityId: accountEvent.entityId ?? null,
-      entityLabel: accountEvent.entityLabel ?? null,
-      entityType: accountEvent.entityType ?? null,
-      metadata: { activityKind: "account", role: "STAFF" },
-    })).toBe("Accounts");
+    expect(
+      auditCategory({
+        action: accountEvent.action,
+        actorId: accountEvent.actorId ?? null,
+        actorName: accountEvent.actorName ?? null,
+        entityId: accountEvent.entityId ?? null,
+        entityLabel: accountEvent.entityLabel ?? null,
+        entityType: accountEvent.entityType ?? null,
+        metadata: { activityKind: "account", role: "STAFF" },
+      }),
+    ).toBe("Accounts");
   });
 });

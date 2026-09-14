@@ -6,20 +6,60 @@ import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
 
+// Load the categories and rooms for a new item.
 export default async function NewInventoryItemPage() {
   await requireInventoryManagementPageAccess();
   const [categories, locations, pcCounts] = await Promise.all([
-    prisma.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.location.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.inventoryItem.groupBy({ by: ["locationId"], where: { isComputer: true }, _count: { _all: true } }),
+    prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.location.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.inventoryItem.groupBy({
+      by: ["locationId"],
+      where: { isComputer: true },
+      _count: { _all: true },
+    }),
   ]);
   const ready = categories.length > 0 && locations.length > 0;
-  const pcCountsByLocation = new Map(pcCounts.map((entry) => [entry.locationId, entry._count._all]));
+  const pcCountsByLocation = new Map(
+    pcCounts.map((entry) => [entry.locationId, entry._count._all]),
+  );
 
   return (
-    <div className="page new-item-page"><div className="page-narrow space-y-6">
-      <header><Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">Back to inventory</Link><p className="eyebrow mt-5">New record</p><h1 className="title mt-3 text-3xl">Add item</h1><p className="muted mt-2 text-sm leading-6">Add one item per equipment unit. For supplies, enter the quantity you have.</p></header>
-      {!ready ? <div className="notice rounded-lg px-5 py-4 text-sm">Add at least one active category and location in Settings before creating inventory records.</div> : <NewInventoryForm categories={categories} locations={locations.map((location) => ({ ...location, nextPcNumber: (pcCountsByLocation.get(location.id) ?? 0) + 1 }))} />}
-    </div></div>
+    <div className="page new-item-page">
+      <div className="page-narrow space-y-6">
+        <header>
+          <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
+            Back to inventory
+          </Link>
+          <p className="eyebrow mt-5">New record</p>
+          <h1 className="title mt-3 text-3xl">Add item</h1>
+          <p className="muted mt-2 text-sm leading-6">
+            Add one item per equipment unit. For supplies, enter the quantity you have.
+          </p>
+        </header>
+        {!ready ? (
+          <div className="notice rounded-lg px-5 py-4 text-sm">
+            Add at least one active category and location in Settings before creating inventory
+            records.
+          </div>
+        ) : (
+          /* New inventory entry form. */
+          <NewInventoryForm
+            categories={categories}
+            locations={locations.map((location) => ({
+              ...location,
+              nextPcNumber: (pcCountsByLocation.get(location.id) ?? 0) + 1,
+            }))}
+          />
+        )}
+      </div>
+    </div>
   );
 }

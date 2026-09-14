@@ -12,9 +12,14 @@ type DashboardNoteFormProps = {
   updatedByName?: string | null;
 };
 
+// Edit the shared staff note.
 export function DashboardNoteForm({ initialContent, updatedByName }: DashboardNoteFormProps) {
   return (
-    <FeedbackForm resetOnSuccess={false} action={saveDashboardNote} className="mt-4 flex flex-1 flex-col">
+    <FeedbackForm
+      resetOnSuccess={false}
+      action={saveDashboardNote}
+      className="mt-4 flex flex-1 flex-col"
+    >
       <label className="flex flex-1">
         <span className="sr-only">Department note</span>
         <textarea
@@ -28,7 +33,12 @@ export function DashboardNoteForm({ initialContent, updatedByName }: DashboardNo
       </label>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="muted text-xs">{updatedByName ? `Last saved by ${updatedByName}.` : null}</p>
-        <SubmitButton pendingLabel="Saving note…" className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Save note</SubmitButton>
+        <SubmitButton
+          pendingLabel="Saving note…"
+          className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+        >
+          Save note
+        </SubmitButton>
       </div>
     </FeedbackForm>
   );

@@ -13,6 +13,7 @@ const maximumSessionsPerUser = 5;
 const sessionTokenPattern = /^[a-f0-9]{64}$/;
 const scryptOptions = { N: 16_384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 
+// Store a hash of the session token instead of the token itself.
 function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -30,47 +31,67 @@ export function canManageAdministration(role: string) {
 function derivePasswordHash(password: string, salt: string) {
   return new Promise<Buffer>((resolve, reject) => {
     scryptCallback(password, salt, 64, scryptOptions, (error, derivedKey) => {
-      if (error) reject(error);
-      else resolve(derivedKey);
+      if (error) {
+        reject(error);
+      } else {
+        resolve(derivedKey);
+      }
     });
   });
 }
 
+// Password hashing.
 export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const derivedHash = await derivePasswordHash(password, salt);
   return `scrypt-v1:${salt}:${derivedHash.toString("hex")}`;
 }
 
+// Check the password rules used by account forms.
 export function passwordValidationMessage(password: string) {
-  if (password.length < 8) return "Use at least 8 characters.";
-  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) return "Include at least one letter and one number.";
+  if (password.length < 8) {
+    return "Use at least 8 characters.";
+  }
+  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+    return "Include at least one letter and one number.";
+  }
   return null;
 }
 
+// Compare a password with the stored salted hash.
 export async function verifyPassword(password: string, passwordHash: string) {
   const values = passwordHash.split(":");
-  const [salt, savedHash] = values.length === 2 ? values : values[0] === "scrypt-v1" ? [values[1], values[2]] : [];
-  if (!salt || !savedHash) return false;
+  const [salt, savedHash] =
+    values.length === 2 ? values : values[0] === "scrypt-v1" ? [values[1], values[2]] : [];
+  if (!salt || !savedHash) {
+    return false;
+  }
   const derivedHash = await derivePasswordHash(password, salt);
   const storedHash = Buffer.from(savedHash, "hex");
   return storedHash.length === derivedHash.length && timingSafeEqual(storedHash, derivedHash);
 }
 
+// Create a sign-in session.
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + sessionLifetimeMs);
 
   await prisma.$transaction(async (transaction) => {
     await transaction.userSession.deleteMany({ where: { expiresAt: { lte: new Date() } } });
-    await transaction.userSession.create({ data: { tokenHash: tokenHash(token), userId, expiresAt } });
+    await transaction.userSession.create({
+      data: { tokenHash: tokenHash(token), userId, expiresAt },
+    });
     const olderSessions = await transaction.userSession.findMany({
       where: { userId },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: maximumSessionsPerUser,
       select: { id: true },
     });
-    if (olderSessions.length) await transaction.userSession.deleteMany({ where: { id: { in: olderSessions.map((session) => session.id) } } });
+    if (olderSessions.length) {
+      await transaction.userSession.deleteMany({
+        where: { id: { in: olderSessions.map((session) => session.id) } },
+      });
+    }
   });
 
   const cookieStore = await cookies();
@@ -84,11 +105,14 @@ export async function createSession(userId: string) {
   });
 }
 
+// Delete the session record and its browser cookie.
 export async function clearSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookie)?.value;
   try {
-    if (token) await prisma.userSession.deleteMany({ where: { tokenHash: tokenHash(token) } });
+    if (token) {
+      await prisma.userSession.deleteMany({ where: { tokenHash: tokenHash(token) } });
+    }
   } catch (error) {
     console.error("Unable to revoke the stored session during sign-out", error);
   } finally {
@@ -96,15 +120,20 @@ export async function clearSession() {
   }
 }
 
+// Read the signed-in account.
 export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookie)?.value;
-  if (!token || !sessionTokenPattern.test(token)) return null;
+  if (!token || !sessionTokenPattern.test(token)) {
+    return null;
+  }
   const session = await prisma.userSession.findUnique({
     where: { tokenHash: tokenHash(token) },
     include: { user: true },
   });
-  if (!session || session.expiresAt <= new Date() || !session.user.isActive) return null;
+  if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
+    return null;
+  }
   return {
     id: session.user.id,
     email: session.user.email,
@@ -113,32 +142,47 @@ export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {
   };
 }
 
+// Page and action permissions.
 export async function requireInventoryAccess() {
   const user = await getCurrentInventoryUser();
-  if (!user) redirect("/auth/login");
+  if (!user) {
+    redirect("/auth/login");
+  }
   return user;
 }
 
+// Require a signed-in account that can change inventory.
 export async function requireWriteAccess() {
   const user = await requireInventoryAccess();
-  if (!canManageInventory(user.role)) throw new Error("You do not have permission to change inventory records.");
+  if (!canManageInventory(user.role)) {
+    throw new Error("You do not have permission to change inventory records.");
+  }
   return user;
 }
 
+// Restrict administrative actions to administrators.
 export async function requireAdministrator() {
   const user = await requireInventoryAccess();
-  if (!canManageAdministration(user.role)) throw new Error("Only administrators can manage accounts and inventory setup.");
+  if (!canManageAdministration(user.role)) {
+    throw new Error("Only administrators can manage accounts and inventory setup.");
+  }
   return user;
 }
 
+// Redirect accounts without inventory access.
 export async function requireInventoryManagementPageAccess() {
   const user = await requireInventoryAccess();
-  if (!canManageInventory(user.role)) redirect("/dashboard");
+  if (!canManageInventory(user.role)) {
+    redirect("/dashboard");
+  }
   return user;
 }
 
+// Redirect accounts without administrator access.
 export async function requireAdministrationPageAccess() {
   const user = await requireInventoryAccess();
-  if (!canManageAdministration(user.role)) redirect("/dashboard");
+  if (!canManageAdministration(user.role)) {
+    redirect("/dashboard");
+  }
   return user;
 }
