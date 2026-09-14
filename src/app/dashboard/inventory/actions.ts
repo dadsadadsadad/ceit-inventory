@@ -2,12 +2,24 @@
 
 import { FormError, formAction } from "@/lib/form-action";
 
-import { AuditAction, BorrowStatus, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import {
+  AuditAction,
+  BorrowStatus,
+  ItemCondition,
+  ItemStatus,
+  ItemType,
+  Prisma,
+} from "@prisma/client";
+import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { redirect } from "next/navigation";
 
 import { auditEventData } from "@/lib/audit-event";
-import { canManageAdministration, requireAdministrator, requireInventoryAccess, requireWriteAccess } from "@/lib/inventory-auth";
+import {
+  canManageAdministration,
+  requireAdministrator,
+  requireInventoryAccess,
+  requireWriteAccess,
+} from "@/lib/inventory-auth";
 import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
 import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
@@ -17,14 +29,27 @@ const conditions = Object.values(ItemCondition);
 const itemTypes = Object.values(ItemType);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const maximumBulkSelection = 10_000;
-const activeBorrowRequestStatuses = [BorrowStatus.REQUESTED, BorrowStatus.RESERVED, BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED];
+const activeBorrowRequestStatuses = [
+  BorrowStatus.REQUESTED,
+  BorrowStatus.RESERVED,
+  BorrowStatus.BORROWED,
+  BorrowStatus.RETURN_REQUESTED,
+];
 
+// Add this label print to the audit trail.
 export async function recordInventoryLabelPrinted(itemId: string) {
   const actor = await requireInventoryAccess();
-  if (!uuidPattern.test(itemId)) return;
+  if (!uuidPattern.test(itemId)) {
+    return;
+  }
 
-  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } });
-  if (!item) return;
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: itemId },
+    select: { id: true },
+  });
+  if (!item) {
+    return;
+  }
 
   await prisma.inventoryAudit.create({
     data: {
@@ -39,32 +64,58 @@ export async function recordInventoryLabelPrinted(itemId: string) {
 }
 
 function fieldLabel(key: string) {
-  return key.replace(/Id$/, "").replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
+  return key
+    .replace(/Id$/, "")
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (letter) => letter.toUpperCase());
 }
 
+// Form values.
 function optionalText(formData: FormData, key: string, maximumLength = 2_000) {
   const value = String(formData.get(key) ?? "").trim();
-  if (value.length > maximumLength) throw new FormError(`${fieldLabel(key)} is too long.`);
+  if (value.length > maximumLength) {
+    throw new FormError(`${fieldLabel(key)} is too long.`);
+  }
   return value || null;
 }
 
 function requiredText(formData: FormData, key: string, maximumLength = 2_000) {
   const value = optionalText(formData, key, maximumLength);
-  if (!value) throw new FormError(`${fieldLabel(key)} is required.`);
+  if (!value) {
+    throw new FormError(`${fieldLabel(key)} is required.`);
+  }
   return value;
 }
 
 function requiredId(formData: FormData, key: string) {
   const value = requiredText(formData, key, 64);
-  if (!uuidPattern.test(value)) throw new FormError(`Invalid ${key}.`);
+  if (!uuidPattern.test(value)) {
+    throw new FormError(`Invalid ${key}.`);
+  }
   return value;
 }
 
+// Read and validate the selected inventory IDs.
 function selectedIds(formData: FormData) {
-  const ids = [...new Set(formData.getAll("itemIds").map((value) => String(value).trim()).filter(Boolean))];
-  if (!ids.length) throw new FormError("Select at least one inventory record.");
-  if (ids.length > maximumBulkSelection) throw new FormError(`Update up to ${maximumBulkSelection.toLocaleString()} inventory records at a time.`);
-  if (ids.some((id) => !uuidPattern.test(id))) throw new FormError("One or more selected inventory records are invalid.");
+  const ids = [
+    ...new Set(
+      formData
+        .getAll("itemIds")
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (!ids.length) {
+    throw new FormError("Select at least one inventory record.");
+  }
+  if (ids.length > maximumBulkSelection) {
+    throw new FormError(
+      `Update up to ${maximumBulkSelection.toLocaleString()} inventory records at a time.`,
+    );
+  }
+  if (ids.some((id) => !uuidPattern.test(id))) {
+    throw new FormError("One or more selected inventory records are invalid.");
+  }
   return ids;
 }
 
@@ -76,46 +127,83 @@ function checkedDate(formData: FormData) {
   return optionalDate(formData, "lastCheckedAt") ?? new Date();
 }
 
-function assertTrackedAssetQuantity(itemType: ItemType, quantity: number, existing?: { itemType: ItemType; quantity: number }) {
-  if (itemType !== ItemType.ASSET || quantity === 1) return;
-  if (existing?.itemType === ItemType.ASSET && existing.quantity === quantity) return;
-  throw new FormError("Track each physical equipment asset as one record so it can keep its own asset tag, QR code, room, and inspection history. Use a supply record for quantity-based stock.");
+// Keep one record per individually tagged asset.
+function assertTrackedAssetQuantity(
+  itemType: ItemType,
+  quantity: number,
+  existing?: { itemType: ItemType; quantity: number },
+) {
+  if (itemType !== ItemType.ASSET || quantity === 1) {
+    return;
+  }
+  if (existing?.itemType === ItemType.ASSET && existing.quantity === quantity) {
+    return;
+  }
+  throw new FormError(
+    "Track each physical equipment asset as one record so it can keep its own asset tag, QR code, room, and inspection history. Use a supply record for quantity-based stock.",
+  );
 }
 
+// Check the tag format before writing the item.
 function assertAssetTag(assetTag: string | null, itemType: ItemType) {
   if (itemType === ItemType.ASSET && assetTag && !isInventoryAssetTag(assetTag)) {
-    throw new FormError("Asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.");
+    throw new FormError(
+      "Asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.",
+    );
   }
 }
 
+// Translate duplicate identifiers into a form error.
 function inventoryWriteError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return new FormError("That asset tag, serial number, or PC MAC address is already assigned to another record.");
+    return new FormError(
+      "That asset tag, serial number, or PC MAC address is already assigned to another record.",
+    );
   }
   return error;
 }
 
-function enumValue<T extends string>(formData: FormData, key: string, values: readonly T[], fallback: T) {
+function enumValue<T extends string>(
+  formData: FormData,
+  key: string,
+  values: readonly T[],
+  fallback: T,
+) {
   const value = optionalText(formData, key, 64);
-  if (!value) return fallback;
-  if (!values.includes(value as T)) throw new FormError(`Invalid ${key}.`);
+  if (!value) {
+    return fallback;
+  }
+  if (!values.includes(value as T)) {
+    throw new FormError(`Invalid ${key}.`);
+  }
   return value as T;
 }
 
 function optionalInteger(formData: FormData, key: string, maximum = 1_000_000) {
   const value = optionalText(formData, key, 32);
-  if (!value) return null;
-  if (!/^\d+$/.test(value)) throw new FormError(`${key} must be a non-negative whole number.`);
+  if (!value) {
+    return null;
+  }
+  if (!/^\d+$/.test(value)) {
+    throw new FormError(`${key} must be a non-negative whole number.`);
+  }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed > maximum) throw new FormError(`${key} is outside the allowed range.`);
+  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+    throw new FormError(`${key} is outside the allowed range.`);
+  }
   return parsed;
 }
 
+// Accept a price with at most two decimal places.
 function optionalPurchasePrice(formData: FormData, key = "purchasePrice") {
   const value = optionalText(formData, key, 32);
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(value)) {
-    throw new FormError("Purchase price must be a non-negative Philippine peso amount with up to two decimal places.");
+    throw new FormError(
+      "Purchase price must be a non-negative Philippine peso amount with up to two decimal places.",
+    );
   }
   const [whole, decimal = ""] = value.split(".");
   return new Prisma.Decimal(`${whole}.${decimal.padEnd(2, "0")}`).toString();
@@ -123,13 +211,20 @@ function optionalPurchasePrice(formData: FormData, key = "purchasePrice") {
 
 function optionalDate(formData: FormData, key: string) {
   const value = optionalText(formData, key, 10);
-  if (!value) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new FormError(`${key} must use YYYY-MM-DD.`);
+  if (!value) {
+    return null;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new FormError(`${key} must use YYYY-MM-DD.`);
+  }
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) throw new FormError(`${key} is not a valid date.`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    throw new FormError(`${key} is not a valid date.`);
+  }
   return parsed;
 }
 
+// Computer form values.
 function computerData(formData: FormData, includeCheckTime = false) {
   return {
     operatingSystem: optionalText(formData, "operatingSystem", 255),
@@ -147,39 +242,62 @@ function computerData(formData: FormData, includeCheckTime = false) {
   };
 }
 
-async function assertActiveAssignments(categoryId: string, locationId: string, current?: { categoryId: string; locationId: string }) {
+// Allow only active categories and rooms for new assignments.
+async function assertActiveAssignments(
+  categoryId: string,
+  locationId: string,
+  current?: { categoryId: string; locationId: string },
+) {
   const [category, location] = await Promise.all([
-    categoryId === current?.categoryId ? Promise.resolve(true) : prisma.category.findFirst({ where: { id: categoryId, isActive: true }, select: { id: true } }),
-    locationId === current?.locationId ? Promise.resolve(true) : prisma.location.findFirst({ where: { id: locationId, isActive: true }, select: { id: true } }),
+    categoryId === current?.categoryId
+      ? Promise.resolve(true)
+      : prisma.category.findFirst({
+          where: { id: categoryId, isActive: true },
+          select: { id: true },
+        }),
+    locationId === current?.locationId
+      ? Promise.resolve(true)
+      : prisma.location.findFirst({
+          where: { id: locationId, isActive: true },
+          select: { id: true },
+        }),
   ]);
-  if (!category) throw new FormError("Choose an active item category.");
-  if (!location) throw new FormError("Choose an active location.");
+  if (!category) {
+    throw new FormError("Choose an active item category.");
+  }
+  if (!location) {
+    throw new FormError("Choose an active location.");
+  }
 }
 
+// Verify that these computer details belong to the item.
 async function requireComputerForItem(itemId: string, computerId: string) {
   const computer = await prisma.computer.findFirst({ where: { id: computerId, itemId } });
-  if (!computer) throw new FormError("The PC record does not belong to this inventory item.");
+  if (!computer) {
+    throw new FormError("The PC record does not belong to this inventory item.");
+  }
   return computer;
 }
 
-function refreshInventoryViews(itemId?: string) {
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/inventory");
-  revalidatePath("/dashboard/reports");
-  revalidatePath("/dashboard/borrowing");
-  revalidatePath("/dashboard/maintenance");
-  revalidatePath("/dashboard/activity");
-  revalidatePath("/scan/[qrCode]", "page");
-  if (itemId) revalidatePath(`/dashboard/inventory/${itemId}`);
-}
-
-function updatedFields(before: Record<string, unknown>, after: Record<string, unknown>): Prisma.InputJsonObject {
+// Collect changed values for the audit trail.
+function updatedFields(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): Prisma.InputJsonObject {
   const entries = Object.entries(after)
     .filter(([key, value]) => String(before[key] ?? "") !== String(value ?? ""))
-    .map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value === undefined ? null : value as string | number | boolean | null]);
+    .map(([key, value]) => [
+      key,
+      value instanceof Date
+        ? value.toISOString()
+        : value === undefined
+          ? null
+          : (value as string | number | boolean | null),
+    ]);
   return Object.fromEntries(entries) as Prisma.InputJsonObject;
 }
 
+// Create and update inventory.
 export async function createInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -194,37 +312,60 @@ export async function createInventoryItem(formData: FormData) {
     const lastCheckedAt = checkedDate(formData);
     assertTrackedAssetQuantity(itemType, quantity);
     assertAssetTag(suppliedAssetTag, itemType);
-    if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) throw new FormError("A PC must be a single tracked asset, not a supply record.");
+    if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) {
+      throw new FormError("A PC must be a single tracked asset, not a supply record.");
+    }
     await assertActiveAssignments(categoryId, locationId);
 
     let item;
     try {
-      item = await prisma.$transaction(async (transaction) => {
-        const assetTag = itemType === ItemType.ASSET ? suppliedAssetTag ?? await nextInventoryAssetTag(transaction, { categoryId, locationId, status }) : suppliedAssetTag;
-        return transaction.inventoryItem.create({
-          data: {
-            name: requiredText(formData, "name", 255),
-            assetTag,
-            categoryId,
-            locationId,
-            itemType,
-            isComputer,
-            quantity,
-            status,
-            condition,
-            description: optionalText(formData, "description", 5_000),
-            manufacturer: optionalText(formData, "manufacturer", 255),
-            model: optionalText(formData, "model", 255),
-            serialNumber: identifier(formData, "serialNumber"),
-            purchaseDate: optionalDate(formData, "purchaseDate"),
-            purchasePrice: optionalPurchasePrice(formData),
-            notes: optionalText(formData, "notes", 5_000),
-            lastCheckedAt,
-            computer: isComputer ? { create: { ...computerData(formData), lastCheckedAt } } : undefined,
-            auditEvents: { create: { action: AuditAction.CREATED, summary: "Inventory item created.", actorId: actor.id, actorName: actor.username, metadata: { source: "manual", activityKind: "record-create", assetTagGenerated: !suppliedAssetTag } } },
-          },
-        });
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      item = await prisma.$transaction(
+        async (transaction) => {
+          const assetTag =
+            itemType === ItemType.ASSET
+              ? (suppliedAssetTag ??
+                (await nextInventoryAssetTag(transaction, { categoryId, locationId, status })))
+              : suppliedAssetTag;
+          return transaction.inventoryItem.create({
+            data: {
+              name: requiredText(formData, "name", 255),
+              assetTag,
+              categoryId,
+              locationId,
+              itemType,
+              isComputer,
+              quantity,
+              status,
+              condition,
+              description: optionalText(formData, "description", 5_000),
+              manufacturer: optionalText(formData, "manufacturer", 255),
+              model: optionalText(formData, "model", 255),
+              serialNumber: identifier(formData, "serialNumber"),
+              purchaseDate: optionalDate(formData, "purchaseDate"),
+              purchasePrice: optionalPurchasePrice(formData),
+              notes: optionalText(formData, "notes", 5_000),
+              lastCheckedAt,
+              computer: isComputer
+                ? { create: { ...computerData(formData), lastCheckedAt } }
+                : undefined,
+              auditEvents: {
+                create: {
+                  action: AuditAction.CREATED,
+                  summary: "Inventory item created.",
+                  actorId: actor.id,
+                  actorName: actor.username,
+                  metadata: {
+                    source: "manual",
+                    activityKind: "record-create",
+                    assetTagGenerated: !suppliedAssetTag,
+                  },
+                },
+              },
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error) {
       throw inventoryWriteError(error);
     }
@@ -234,13 +375,21 @@ export async function createInventoryItem(formData: FormData) {
   });
 }
 
+// Save edits and reject a record changed by another user.
 export async function updateInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requiredId(formData, "id");
-    const existing = await prisma.inventoryItem.findUniqueOrThrow({ where: { id }, include: { computer: true } });
+    const existing = await prisma.inventoryItem.findUniqueOrThrow({
+      where: { id },
+      include: { computer: true },
+    });
     const submittedVersion = String(formData.get("updatedAt") ?? "");
-    if (submittedVersion && submittedVersion !== existing.updatedAt.toISOString()) throw new FormError("This item changed since you opened it. Refresh the page before saving your edits.");
+    if (submittedVersion && submittedVersion !== existing.updatedAt.toISOString()) {
+      throw new FormError(
+        "This item changed since you opened it. Refresh the page before saving your edits.",
+      );
+    }
     const categoryId = requiredId(formData, "categoryId");
     const locationId = requiredId(formData, "locationId");
     const itemType = enumValue(formData, "itemType", itemTypes, existing.itemType);
@@ -251,7 +400,9 @@ export async function updateInventoryItem(formData: FormData) {
     const existingAssetTag = itemType === ItemType.ASSET ? existing.assetTag : null;
     assertTrackedAssetQuantity(itemType, quantity, existing);
     assertAssetTag(suppliedAssetTag, itemType);
-    if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) throw new FormError("A PC must be a single tracked asset, not a supply record.");
+    if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) {
+      throw new FormError("A PC must be a single tracked asset, not a supply record.");
+    }
     await assertActiveAssignments(categoryId, locationId, existing);
 
     const data = {
@@ -274,33 +425,75 @@ export async function updateInventoryItem(formData: FormData) {
       lastCheckedAt: optionalDate(formData, "lastCheckedAt"),
     };
     try {
-      await prisma.$transaction(async (transaction) => {
-        const liveItem = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
-        if (liveItem.updatedAt.getTime() !== existing.updatedAt.getTime()) throw new FormError("This item changed while you were editing it. Refresh the page before saving again.");
-        const outstanding = await transaction.borrowRequest.count({ where: { inventoryItemId: id, status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] } } });
-        if (outstanding && (itemType !== existing.itemType || quantity !== existing.quantity || ((status === ItemStatus.OK || status === ItemStatus.WORKING) && status !== existing.status))) throw new FormError("This equipment is still borrowed. Confirm its return before changing its quantity, type, or availability.");
-        if (status === ItemStatus.RETIRED && existing.status !== ItemStatus.RETIRED) {
-          const activeBorrowingCount = await transaction.borrowRequest.count({
-            where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } },
-          });
-          if (activeBorrowingCount) {
-            throw new FormError(`Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still references this item. Resolve the request first.`);
+      await prisma.$transaction(
+        async (transaction) => {
+          const liveItem = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
+          if (liveItem.updatedAt.getTime() !== existing.updatedAt.getTime()) {
+            throw new FormError(
+              "This item changed while you were editing it. Refresh the page before saving again.",
+            );
           }
-        }
-        const resolvedData = {
-          ...data,
-          assetTag: itemType === ItemType.ASSET && !data.assetTag ? await nextInventoryAssetTag(transaction, { categoryId, locationId, status }) : data.assetTag,
-        };
-        const changes = updatedFields(existing, resolvedData);
-        const action = Object.keys(changes).length === 1 && "locationId" in changes ? AuditAction.MOVED : Object.keys(changes).length === 1 && "status" in changes ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED;
-        await transaction.inventoryItem.update({
-          where: { id },
-          data: {
-            ...resolvedData,
-            auditEvents: { create: { action, summary: Object.keys(changes).length ? `Updated ${Object.keys(changes).join(", ")}.` : "Inventory record saved with no field changes.", actorId: actor.id, actorName: actor.username, metadata: { changes, activityKind: "record-edit" } } },
-          },
-        });
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          const outstanding = await transaction.borrowRequest.count({
+            where: {
+              inventoryItemId: id,
+              status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
+            },
+          });
+          if (
+            outstanding &&
+            (itemType !== existing.itemType ||
+              quantity !== existing.quantity ||
+              ((status === ItemStatus.OK || status === ItemStatus.WORKING) &&
+                status !== existing.status))
+          ) {
+            throw new FormError(
+              "This equipment is still borrowed. Confirm its return before changing its quantity, type, or availability.",
+            );
+          }
+          if (status === ItemStatus.RETIRED && existing.status !== ItemStatus.RETIRED) {
+            const activeBorrowingCount = await transaction.borrowRequest.count({
+              where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } },
+            });
+            if (activeBorrowingCount) {
+              throw new FormError(
+                `Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still references this item. Resolve the request first.`,
+              );
+            }
+          }
+          const resolvedData = {
+            ...data,
+            assetTag:
+              itemType === ItemType.ASSET && !data.assetTag
+                ? await nextInventoryAssetTag(transaction, { categoryId, locationId, status })
+                : data.assetTag,
+          };
+          const changes = updatedFields(existing, resolvedData);
+          const action =
+            Object.keys(changes).length === 1 && "locationId" in changes
+              ? AuditAction.MOVED
+              : Object.keys(changes).length === 1 && "status" in changes
+                ? AuditAction.STATUS_CHANGED
+                : AuditAction.UPDATED;
+          await transaction.inventoryItem.update({
+            where: { id },
+            data: {
+              ...resolvedData,
+              auditEvents: {
+                create: {
+                  action,
+                  summary: Object.keys(changes).length
+                    ? `Updated ${Object.keys(changes).join(", ")}.`
+                    : "Inventory record saved with no field changes.",
+                  actorId: actor.id,
+                  actorName: actor.username,
+                  metadata: { changes, activityKind: "record-edit" },
+                },
+              },
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error) {
       throw inventoryWriteError(error);
     }
@@ -310,93 +503,158 @@ export async function updateInventoryItem(formData: FormData) {
   });
 }
 
+// Retire the item while keeping its history.
 export async function retireInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requiredId(formData, "id");
-    await prisma.$transaction(async (transaction) => {
-      const [item, activeBorrowingCount] = await Promise.all([
-        transaction.inventoryItem.findUnique({ where: { id }, select: { status: true } }),
-        transaction.borrowRequest.count({ where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } } }),
-      ]);
-      if (!item) throw new FormError("This item no longer exists.");
-      if (activeBorrowingCount) {
-        throw new FormError("This item has an active borrowing request. Resolve that request before retiring the record.");
-      }
+    await prisma.$transaction(
+      async (transaction) => {
+        const [item, activeBorrowingCount] = await Promise.all([
+          transaction.inventoryItem.findUnique({ where: { id }, select: { status: true } }),
+          transaction.borrowRequest.count({
+            where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } },
+          }),
+        ]);
+        if (!item) {
+          throw new FormError("This item no longer exists.");
+        }
+        if (activeBorrowingCount) {
+          throw new FormError(
+            "This item has an active borrowing request. Resolve that request before retiring the record.",
+          );
+        }
 
-      if (item.status !== ItemStatus.RETIRED) {
-        await transaction.inventoryItem.update({
-          where: { id },
-          data: {
-            status: ItemStatus.RETIRED,
-            auditEvents: {
-              create: {
-                action: AuditAction.STATUS_CHANGED,
-                summary: "Inventory item removed from active inventory.",
-                actorId: actor.id,
-                actorName: actor.username,
-                metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
+        if (item.status !== ItemStatus.RETIRED) {
+          await transaction.inventoryItem.update({
+            where: { id },
+            data: {
+              status: ItemStatus.RETIRED,
+              auditEvents: {
+                create: {
+                  action: AuditAction.STATUS_CHANGED,
+                  summary: "Inventory item removed from active inventory.",
+                  actorId: actor.id,
+                  actorName: actor.username,
+                  metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
+                },
               },
             },
-          },
-        });
-      }
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          });
+        }
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     refreshInventoryViews(id);
     redirect(`/dashboard/inventory/${id}`);
   });
 }
 
+// Give each unit its own record.
 export async function splitGroupedAsset(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requiredId(formData, "id");
     const confirmation = requiredText(formData, "confirmation", 16);
-    if (confirmation !== "SPLIT") throw new FormError("Type SPLIT to create one record per physical unit.");
+    if (confirmation !== "SPLIT") {
+      throw new FormError("Type SPLIT to create one record per physical unit.");
+    }
 
-    const original = await prisma.inventoryItem.findUnique({ where: { id }, select: { itemType: true, quantity: true, isComputer: true } });
-    if (!original || original.itemType !== ItemType.ASSET || original.quantity <= 1) throw new FormError("This record is already an individual asset.");
-    if (original.isComputer) throw new FormError("PC and Mac records must be corrected individually so their names, hardware profiles, and network identifiers remain accurate.");
-    const borrowingHistoryCount = await prisma.borrowRequest.count({ where: { inventoryItemId: id } });
-    if (borrowingHistoryCount) throw new FormError("This grouped asset has borrowing history and cannot be split automatically. Preserve its history, then create individual replacement records for the physical units.");
+    const original = await prisma.inventoryItem.findUnique({
+      where: { id },
+      select: { itemType: true, quantity: true, isComputer: true },
+    });
+    if (!original || original.itemType !== ItemType.ASSET || original.quantity <= 1) {
+      throw new FormError("This record is already an individual asset.");
+    }
+    if (original.isComputer) {
+      throw new FormError(
+        "PC and Mac records must be corrected individually so their names, hardware profiles, and network identifiers remain accurate.",
+      );
+    }
+    const borrowingHistoryCount = await prisma.borrowRequest.count({
+      where: { inventoryItemId: id },
+    });
+    if (borrowingHistoryCount) {
+      throw new FormError(
+        "This grouped asset has borrowing history and cannot be split automatically. Preserve its history, then create individual replacement records for the physical units.",
+      );
+    }
 
     try {
-      await prisma.$transaction(async (transaction) => {
-        const item = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
-        if (item.itemType !== ItemType.ASSET || item.quantity <= 1 || item.isComputer) throw new FormError("This record changed and can no longer be split. Refresh the page and try again.");
-        const unitCount = item.quantity;
-        await transaction.inventoryItem.update({
-          where: { id },
-          data: {
-            quantity: 1,
-            auditEvents: { create: { action: AuditAction.UPDATED, summary: `Grouped asset split into ${unitCount} individually tracked units.`, actorId: actor.id, actorName: actor.username, metadata: { source: "grouped-asset-split", originalQuantity: unitCount, activityKind: "record-edit" } } },
-          },
-        });
-        for (let unitNumber = 2; unitNumber <= unitCount; unitNumber += 1) {
-          const assetTag = await nextInventoryAssetTag(transaction, { categoryId: item.categoryId, locationId: item.locationId, status: item.status });
-          await transaction.inventoryItem.create({
+      await prisma.$transaction(
+        async (transaction) => {
+          const item = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
+          if (item.itemType !== ItemType.ASSET || item.quantity <= 1 || item.isComputer) {
+            throw new FormError(
+              "This record changed and can no longer be split. Refresh the page and try again.",
+            );
+          }
+          const unitCount = item.quantity;
+          await transaction.inventoryItem.update({
+            where: { id },
             data: {
-              name: `${item.name} (unit ${unitNumber})`,
-              assetTag,
-              categoryId: item.categoryId,
-              locationId: item.locationId,
-              itemType: ItemType.ASSET,
               quantity: 1,
-              status: item.status,
-              condition: item.condition,
-              description: item.description,
-              manufacturer: item.manufacturer,
-              model: item.model,
-              purchaseDate: item.purchaseDate,
-              purchasePrice: item.purchasePrice,
-              notes: item.notes,
-              lastCheckedAt: item.lastCheckedAt,
-              auditEvents: { create: { action: AuditAction.CREATED, summary: `Individual asset created from grouped record: unit ${unitNumber} of ${unitCount}.`, actorId: actor.id, actorName: actor.username, metadata: { source: "grouped-asset-split", sourceItemId: item.id, unitNumber, unitCount, activityKind: "record-create" } } },
+              auditEvents: {
+                create: {
+                  action: AuditAction.UPDATED,
+                  summary: `Grouped asset split into ${unitCount} individually tracked units.`,
+                  actorId: actor.id,
+                  actorName: actor.username,
+                  metadata: {
+                    source: "grouped-asset-split",
+                    originalQuantity: unitCount,
+                    activityKind: "record-edit",
+                  },
+                },
+              },
             },
           });
-        }
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          for (let unitNumber = 2; unitNumber <= unitCount; unitNumber += 1) {
+            const assetTag = await nextInventoryAssetTag(transaction, {
+              categoryId: item.categoryId,
+              locationId: item.locationId,
+              status: item.status,
+            });
+            await transaction.inventoryItem.create({
+              data: {
+                name: `${item.name} (unit ${unitNumber})`,
+                assetTag,
+                categoryId: item.categoryId,
+                locationId: item.locationId,
+                itemType: ItemType.ASSET,
+                quantity: 1,
+                status: item.status,
+                condition: item.condition,
+                description: item.description,
+                manufacturer: item.manufacturer,
+                model: item.model,
+                purchaseDate: item.purchaseDate,
+                purchasePrice: item.purchasePrice,
+                notes: item.notes,
+                lastCheckedAt: item.lastCheckedAt,
+                auditEvents: {
+                  create: {
+                    action: AuditAction.CREATED,
+                    summary: `Individual asset created from grouped record: unit ${unitNumber} of ${unitCount}.`,
+                    actorId: actor.id,
+                    actorName: actor.username,
+                    metadata: {
+                      source: "grouped-asset-split",
+                      sourceItemId: item.id,
+                      unitNumber,
+                      unitCount,
+                      activityKind: "record-create",
+                    },
+                  },
+                },
+              },
+            });
+          }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error) {
       throw inventoryWriteError(error);
     }
@@ -406,6 +664,7 @@ export async function splitGroupedAsset(formData: FormData) {
   });
 }
 
+// Save the inspection date and responsible staff member.
 export async function markInventoryItemChecked(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -415,13 +674,23 @@ export async function markInventoryItemChecked(formData: FormData) {
     await prisma.$transaction([
       prisma.inventoryItem.update({ where: { id }, data: { lastCheckedAt: checkedAt } }),
       prisma.computer.updateMany({ where: { itemId: id }, data: { lastCheckedAt: checkedAt } }),
-      prisma.inventoryAudit.create({ data: { itemId: id, action: AuditAction.UPDATED, summary: "Item inspection recorded.", actorId: actor.id, actorName: actor.username, metadata: { source: "inspection", checkedAt: checkedAt.toISOString() } } }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId: id,
+          action: AuditAction.UPDATED,
+          summary: "Item inspection recorded.",
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { source: "inspection", checkedAt: checkedAt.toISOString() },
+        },
+      }),
     ]);
 
     refreshInventoryViews(id);
   });
 }
 
+// Changes to selected items.
 export async function bulkUpdateInventory(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -429,41 +698,80 @@ export async function bulkUpdateInventory(formData: FormData) {
     const action = requiredText(formData, "bulkAction", 64);
 
     if (action === "delete") {
-      if (!canManageAdministration(actor.role)) throw new FormError("Only administrators can permanently delete inventory records.");
+      if (!canManageAdministration(actor.role)) {
+        throw new FormError("Only administrators can permanently delete inventory records.");
+      }
       const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
-      if (confirmation !== "DELETE") throw new FormError("Type DELETE to permanently remove the selected records.");
+      if (confirmation !== "DELETE") {
+        throw new FormError("Type DELETE to permanently remove the selected records.");
+      }
 
       try {
-        await prisma.$transaction(async (transaction) => {
-          const [items, borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
-            transaction.inventoryItem.findMany({ where: { id: { in: ids } }, select: { assetTag: true, id: true, name: true } }),
-            transaction.borrowRequest.count({ where: { inventoryItemId: { in: ids } } }),
-            transaction.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
-          ]);
-          if (items.length !== ids.length) throw new FormError("One or more selected records no longer exist. Refresh the inventory list and try again.");
-          if (borrowingHistoryCount || maintenanceHistoryCount) {
-            throw new FormError(`Permanent deletion is blocked because the selection has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire those items instead to preserve their history.`);
-          }
+        await prisma.$transaction(
+          async (transaction) => {
+            const [items, borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
+              transaction.inventoryItem.findMany({
+                where: { id: { in: ids } },
+                select: { assetTag: true, id: true, name: true },
+              }),
+              transaction.borrowRequest.count({ where: { inventoryItemId: { in: ids } } }),
+              transaction.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
+            ]);
+            if (items.length !== ids.length) {
+              throw new FormError(
+                "One or more selected records no longer exist. Refresh the inventory list and try again.",
+              );
+            }
+            if (borrowingHistoryCount || maintenanceHistoryCount) {
+              throw new FormError(
+                `Permanent deletion is blocked because the selection has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire those items instead to preserve their history.`,
+              );
+            }
 
-          await Promise.all(items.map((item) => transaction.inventoryAudit.updateMany({
-            where: { itemId: item.id },
-            data: { entityId: item.id, entityLabel: item.assetTag ?? item.name, entityType: "inventory-item" },
-          })));
-          await transaction.inventoryAudit.createMany({
-            data: items.map((item) => auditEventData({
-              action: "DELETED",
-              actor,
-              entity: { id: item.id, itemId: item.id, label: item.assetTag ?? item.name, type: "inventory-item" },
-              metadata: { activityKind: "record-delete", bulkAction: "delete" },
-              summary: "Inventory record permanently deleted through a bulk action.",
-            })),
-          });
-          const deleted = await transaction.inventoryItem.deleteMany({ where: { id: { in: ids } } });
-          if (deleted.count !== ids.length) throw new FormError("One or more selected records changed before deletion. Refresh the inventory list and try again.");
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+            await Promise.all(
+              items.map((item) =>
+                transaction.inventoryAudit.updateMany({
+                  where: { itemId: item.id },
+                  data: {
+                    entityId: item.id,
+                    entityLabel: item.assetTag ?? item.name,
+                    entityType: "inventory-item",
+                  },
+                }),
+              ),
+            );
+            await transaction.inventoryAudit.createMany({
+              data: items.map((item) =>
+                auditEventData({
+                  action: "DELETED",
+                  actor,
+                  entity: {
+                    id: item.id,
+                    itemId: item.id,
+                    label: item.assetTag ?? item.name,
+                    type: "inventory-item",
+                  },
+                  metadata: { activityKind: "record-delete", bulkAction: "delete" },
+                  summary: "Inventory record permanently deleted through a bulk action.",
+                }),
+              ),
+            });
+            const deleted = await transaction.inventoryItem.deleteMany({
+              where: { id: { in: ids } },
+            });
+            if (deleted.count !== ids.length) {
+              throw new FormError(
+                "One or more selected records changed before deletion. Refresh the inventory list and try again.",
+              );
+            }
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-          throw new FormError("One or more selected records gained borrowing or maintenance history. Retire those items instead to preserve that history.");
+          throw new FormError(
+            "One or more selected records gained borrowing or maintenance history. Retire those items instead to preserve that history.",
+          );
         }
         throw error;
       }
@@ -484,7 +792,9 @@ export async function bulkUpdateInventory(formData: FormData) {
       summary = "Bulk update: moved to a selected location.";
     } else if (action === "status") {
       const status = enumValue(formData, "bulkStatus", statuses, ItemStatus.OK);
-      if (status === ItemStatus.RETIRED) throw new FormError("Use the Retire bulk action to remove records from active inventory.");
+      if (status === ItemStatus.RETIRED) {
+        throw new FormError("Use the Retire bulk action to remove records from active inventory.");
+      }
       data = { status };
       summary = `Bulk update: status changed to ${status}.`;
     } else if (action === "condition") {
@@ -493,75 +803,118 @@ export async function bulkUpdateInventory(formData: FormData) {
       summary = `Bulk update: condition changed to ${condition}.`;
     } else if (isRetirement) {
       const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
-      if (confirmation !== "RETIRE") throw new FormError("Type RETIRE to remove selected records from active inventory.");
+      if (confirmation !== "RETIRE") {
+        throw new FormError("Type RETIRE to remove selected records from active inventory.");
+      }
       data = { status: ItemStatus.RETIRED };
       summary = "Bulk update: inventory items removed from active inventory.";
     } else {
       throw new FormError("Choose a valid bulk action.");
     }
 
-    await prisma.$transaction(async (transaction) => {
-      const selectedCount = await transaction.inventoryItem.count({ where: { id: { in: ids } } });
-      if (selectedCount !== ids.length) throw new FormError("One or more selected records no longer exist. Refresh the inventory list and try again.");
-
-      if (targetLocationId) {
-        const location = await transaction.location.findFirst({ where: { id: targetLocationId, isActive: true }, select: { name: true } });
-        if (!location) throw new FormError("Choose an active location.");
-        summary = `Bulk update: moved to ${location.name}.`;
-      }
-
-      if (isRetirement) {
-        const activeBorrowingCount = await transaction.borrowRequest.count({
-          where: { inventoryItemId: { in: ids }, status: { in: activeBorrowRequestStatuses } },
-        });
-        if (activeBorrowingCount) {
-          throw new FormError(`Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still reference the selection. Resolve those requests first.`);
+    await prisma.$transaction(
+      async (transaction) => {
+        const selectedCount = await transaction.inventoryItem.count({ where: { id: { in: ids } } });
+        if (selectedCount !== ids.length) {
+          throw new FormError(
+            "One or more selected records no longer exist. Refresh the inventory list and try again.",
+          );
         }
-      }
 
-      if (data.status === ItemStatus.OK || data.status === ItemStatus.WORKING) {
-        const outstanding = await transaction.borrowRequest.count({ where: { inventoryItemId: { in: ids }, status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] } } });
-        if (outstanding) throw new FormError("Some selected equipment is still borrowed. Confirm its return before making it available again.");
-      }
+        if (targetLocationId) {
+          const location = await transaction.location.findFirst({
+            where: { id: targetLocationId, isActive: true },
+            select: { name: true },
+          });
+          if (!location) {
+            throw new FormError("Choose an active location.");
+          }
+          summary = `Bulk update: moved to ${location.name}.`;
+        }
 
-      await transaction.inventoryItem.updateMany({ where: { id: { in: ids } }, data });
-      await transaction.inventoryAudit.createMany({
-        data: ids.map((itemId) => ({
-          itemId,
-          action: action === "location" ? AuditAction.MOVED : action === "status" || isRetirement ? AuditAction.STATUS_CHANGED : AuditAction.UPDATED,
-          summary,
-          actorId: actor.id,
-          actorName: actor.username,
-          metadata: { bulkAction: action, itemCount: ids.length },
-        })),
-      });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        if (isRetirement) {
+          const activeBorrowingCount = await transaction.borrowRequest.count({
+            where: { inventoryItemId: { in: ids }, status: { in: activeBorrowRequestStatuses } },
+          });
+          if (activeBorrowingCount) {
+            throw new FormError(
+              `Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still reference the selection. Resolve those requests first.`,
+            );
+          }
+        }
+
+        if (data.status === ItemStatus.OK || data.status === ItemStatus.WORKING) {
+          const outstanding = await transaction.borrowRequest.count({
+            where: {
+              inventoryItemId: { in: ids },
+              status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
+            },
+          });
+          if (outstanding) {
+            throw new FormError(
+              "Some selected equipment is still borrowed. Confirm its return before making it available again.",
+            );
+          }
+        }
+
+        await transaction.inventoryItem.updateMany({ where: { id: { in: ids } }, data });
+        await transaction.inventoryAudit.createMany({
+          data: ids.map((itemId) => ({
+            itemId,
+            action:
+              action === "location"
+                ? AuditAction.MOVED
+                : action === "status" || isRetirement
+                  ? AuditAction.STATUS_CHANGED
+                  : AuditAction.UPDATED,
+            summary,
+            actorId: actor.id,
+            actorName: actor.username,
+            metadata: { bulkAction: action, itemCount: ids.length },
+          })),
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     refreshInventoryViews();
     redirect("/dashboard/inventory?bulk=updated");
   });
 }
 
+// Delete only items without protected borrowing or repair history.
 export async function deleteInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireAdministrator();
     const id = requiredId(formData, "id");
     const confirmation = requiredText(formData, "confirmation", 16);
-    if (confirmation !== "DELETE") throw new FormError("Type DELETE to permanently remove this item.");
+    if (confirmation !== "DELETE") {
+      throw new FormError("Type DELETE to permanently remove this item.");
+    }
 
     const [borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
       prisma.borrowRequest.count({ where: { inventoryItemId: id } }),
       prisma.maintenanceTicket.count({ where: { inventoryItemId: id } }),
     ]);
     if (borrowingHistoryCount || maintenanceHistoryCount) {
-      throw new FormError(`This item has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Remove it from active inventory instead to preserve its history.`);
+      throw new FormError(
+        `This item has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Remove it from active inventory instead to preserve its history.`,
+      );
     }
 
     try {
       await prisma.$transaction(async (transaction) => {
-        const item = await transaction.inventoryItem.findUnique({ where: { id }, select: { assetTag: true, id: true, name: true } });
-        if (!item) throw new FormError("This item no longer exists.");
+        const item = await transaction.inventoryItem.findUnique({
+          where: { id },
+          select: { assetTag: true, id: true, name: true },
+        });
+        if (!item) {
+          throw new FormError("This item no longer exists.");
+        }
         const itemLabel = item.assetTag ?? item.name;
-        await transaction.inventoryAudit.updateMany({ where: { itemId: item.id }, data: { entityId: item.id, entityLabel: itemLabel, entityType: "inventory-item" } });
+        await transaction.inventoryAudit.updateMany({
+          where: { itemId: item.id },
+          data: { entityId: item.id, entityLabel: itemLabel, entityType: "inventory-item" },
+        });
         await transaction.inventoryAudit.create({
           data: auditEventData({
             action: "DELETED",
@@ -575,9 +928,13 @@ export async function deleteInventoryItem(formData: FormData) {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-        throw new FormError("This item now has borrowing or maintenance history. Remove it from active inventory instead to preserve that history.");
+        throw new FormError(
+          "This item now has borrowing or maintenance history. Remove it from active inventory instead to preserve that history.",
+        );
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new FormError("This item no longer exists.");
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new FormError("This item no longer exists.");
+      }
       throw error;
     }
     refreshInventoryViews(id);
@@ -589,71 +946,165 @@ const maximumItemPhotos = 4;
 const maximumPhotoBytes = 3 * 1024 * 1024;
 const supportedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+// Photo validation and uploads.
 function photoFileName(value: string) {
-  const name = value.replaceAll(/[^a-zA-Z0-9._-]/g, "_").replaceAll(/_+/g, "_").slice(0, 120);
+  const name = value
+    .replaceAll(/[^a-zA-Z0-9._-]/g, "_")
+    .replaceAll(/_+/g, "_")
+    .slice(0, 120);
   return name || "item-photo";
 }
 
+// Check the file contents against its image type.
 function imageTypeMatchesBytes(contentType: string, bytes: Uint8Array) {
-  if (contentType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (contentType === "image/png") return bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
-  return contentType === "image/webp" && bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  if (contentType === "image/jpeg") {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (contentType === "image/png") {
+    return (
+      bytes.length >= 8 &&
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    );
+  }
+  return (
+    contentType === "image/webp" &&
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  );
 }
 
+// Validate and attach an item photo.
 export async function uploadInventoryItemPhoto(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const itemId = requiredId(formData, "itemId");
     const file = formData.get("photo");
-    if (!(file instanceof File) || file.size === 0) throw new FormError("Choose an image to upload.");
-    if (file.size > maximumPhotoBytes) throw new FormError("Each photo must be 3 MB or smaller.");
-    if (!supportedPhotoTypes.has(file.type)) throw new FormError("Use a JPEG, PNG, or WebP image.");
+    if (!(file instanceof File) || file.size === 0) {
+      throw new FormError("Choose an image to upload.");
+    }
+    if (file.size > maximumPhotoBytes) {
+      throw new FormError("Each photo must be 3 MB or smaller.");
+    }
+    if (!supportedPhotoTypes.has(file.type)) {
+      throw new FormError("Use a JPEG, PNG, or WebP image.");
+    }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (!imageTypeMatchesBytes(file.type, bytes)) throw new FormError("The image file does not match its declared type.");
+    if (!imageTypeMatchesBytes(file.type, bytes)) {
+      throw new FormError("The image file does not match its declared type.");
+    }
 
     await prisma.$transaction(async (transaction) => {
       const [item, photoCount] = await Promise.all([
         transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } }),
         transaction.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
       ]);
-      if (!item) throw new FormError("This inventory item no longer exists.");
-      if (photoCount >= maximumItemPhotos) throw new FormError(`Each item can have up to ${maximumItemPhotos} photos.`);
-      await transaction.inventoryItemPhoto.create({ data: { inventoryItemId: itemId, fileName: photoFileName(file.name), contentType: file.type, byteSize: bytes.byteLength, data: Buffer.from(bytes) } });
-      await transaction.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: "Item photo added.", actorId: actor.id, actorName: actor.username, metadata: { source: "photo-upload", contentType: file.type, byteSize: bytes.byteLength } } });
+      if (!item) {
+        throw new FormError("This inventory item no longer exists.");
+      }
+      if (photoCount >= maximumItemPhotos) {
+        throw new FormError(`Each item can have up to ${maximumItemPhotos} photos.`);
+      }
+      await transaction.inventoryItemPhoto.create({
+        data: {
+          inventoryItemId: itemId,
+          fileName: photoFileName(file.name),
+          contentType: file.type,
+          byteSize: bytes.byteLength,
+          data: Buffer.from(bytes),
+        },
+      });
+      await transaction.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: "Item photo added.",
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { source: "photo-upload", contentType: file.type, byteSize: bytes.byteLength },
+        },
+      });
     });
 
     refreshInventoryViews(itemId);
   });
 }
 
+// Remove the selected photo from this item.
 export async function deleteInventoryItemPhoto(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const itemId = requiredId(formData, "itemId");
     const photoId = requiredId(formData, "photoId");
-    const photo = await prisma.inventoryItemPhoto.findFirst({ where: { id: photoId, inventoryItemId: itemId }, select: { id: true, fileName: true } });
-    if (!photo) throw new FormError("This photo no longer belongs to the item.");
+    const photo = await prisma.inventoryItemPhoto.findFirst({
+      where: { id: photoId, inventoryItemId: itemId },
+      select: { id: true, fileName: true },
+    });
+    if (!photo) {
+      throw new FormError("This photo no longer belongs to the item.");
+    }
 
     await prisma.$transaction([
       prisma.inventoryItemPhoto.delete({ where: { id: photo.id } }),
-      prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: `Item photo removed: ${photo.fileName}.`, actorId: actor.id, actorName: actor.username, metadata: { source: "photo-delete" } } }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: `Item photo removed: ${photo.fileName}.`,
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { source: "photo-delete" },
+        },
+      }),
     ]);
     refreshInventoryViews(itemId);
   });
 }
 
+// Attach a computer profile to eligible equipment.
 export async function addComputerDetails(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const itemId = requiredId(formData, "itemId");
-    const item = await prisma.inventoryItem.findUniqueOrThrow({ where: { id: itemId }, include: { computer: true } });
-    if (item.computer || !canHaveComputerDetails(item)) throw new FormError("Only a PC-designated single tracked asset without an existing PC record can receive PC details.");
+    const item = await prisma.inventoryItem.findUniqueOrThrow({
+      where: { id: itemId },
+      include: { computer: true },
+    });
+    if (item.computer || !canHaveComputerDetails(item)) {
+      throw new FormError(
+        "Only a PC-designated single tracked asset without an existing PC record can receive PC details.",
+      );
+    }
 
     await prisma.$transaction([
-      prisma.computer.create({ data: { itemId, ...computerData(formData), lastCheckedAt: new Date() } }),
+      prisma.computer.create({
+        data: { itemId, ...computerData(formData), lastCheckedAt: new Date() },
+      }),
       prisma.inventoryItem.update({ where: { id: itemId }, data: { lastCheckedAt: new Date() } }),
-      prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: "PC hardware record added.", actorId: actor.id, actorName: actor.username, metadata: { source: "manual" } } }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: "PC hardware record added.",
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { source: "manual" },
+        },
+      }),
     ]);
 
     refreshInventoryViews(itemId);
@@ -661,6 +1112,7 @@ export async function addComputerDetails(formData: FormData) {
   });
 }
 
+// Save hardware and operating system changes.
 export async function updateComputerDetails(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -672,8 +1124,20 @@ export async function updateComputerDetails(formData: FormData) {
 
     await prisma.$transaction([
       prisma.computer.update({ where: { id: computer.id }, data }),
-      prisma.inventoryItem.update({ where: { id: itemId }, data: { lastCheckedAt: data.lastCheckedAt } }),
-      prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: "PC hardware details updated.", actorId: actor.id, actorName: actor.username, metadata: { changes } } }),
+      prisma.inventoryItem.update({
+        where: { id: itemId },
+        data: { lastCheckedAt: data.lastCheckedAt },
+      }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: "PC hardware details updated.",
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { changes },
+        },
+      }),
     ]);
 
     refreshInventoryViews(itemId);
@@ -681,6 +1145,7 @@ export async function updateComputerDetails(formData: FormData) {
   });
 }
 
+// Add an installed application to the computer.
 export async function addComputerSoftware(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -700,7 +1165,16 @@ export async function addComputerSoftware(formData: FormData) {
           installedAt: optionalDate(formData, "installedAt"),
         },
       }),
-      prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: `Software record added: ${name}.`, actorId: actor.id, actorName: actor.username, metadata: { software: name } } }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: `Software record added: ${name}.`,
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { software: name },
+        },
+      }),
     ]);
 
     refreshInventoryViews(itemId);
@@ -708,6 +1182,7 @@ export async function addComputerSoftware(formData: FormData) {
   });
 }
 
+// Save an installed application's details.
 export async function updateComputerSoftware(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -716,7 +1191,9 @@ export async function updateComputerSoftware(formData: FormData) {
     const id = requiredId(formData, "id");
     await requireComputerForItem(itemId, computerId);
     const software = await prisma.computerSoftware.findFirst({ where: { id, computerId } });
-    if (!software) throw new FormError("The software record no longer exists for this PC.");
+    if (!software) {
+      throw new FormError("The software record no longer exists for this PC.");
+    }
     const data = {
       name: requiredText(formData, "name", 255),
       version: optionalText(formData, "version", 255),
@@ -727,7 +1204,16 @@ export async function updateComputerSoftware(formData: FormData) {
 
     await prisma.$transaction([
       prisma.computerSoftware.update({ where: { id: software.id }, data }),
-      prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: `Software record updated: ${data.name}.`, actorId: actor.id, actorName: actor.username, metadata: { changes: updatedFields(software, data) } } }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: `Software record updated: ${data.name}.`,
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { changes: updatedFields(software, data) },
+        },
+      }),
     ]);
 
     refreshInventoryViews(itemId);
@@ -735,6 +1221,7 @@ export async function updateComputerSoftware(formData: FormData) {
   });
 }
 
+// Remove an installed application from the record.
 export async function removeComputerSoftware(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -743,11 +1230,22 @@ export async function removeComputerSoftware(formData: FormData) {
     const id = requiredId(formData, "id");
     await requireComputerForItem(itemId, computerId);
     const software = await prisma.computerSoftware.findFirst({ where: { id, computerId } });
-    if (!software) throw new FormError("The software record no longer exists for this PC.");
+    if (!software) {
+      throw new FormError("The software record no longer exists for this PC.");
+    }
 
     await prisma.$transaction([
       prisma.computerSoftware.delete({ where: { id: software.id } }),
-      prisma.inventoryAudit.create({ data: { itemId, action: AuditAction.UPDATED, summary: `Software record removed: ${software.name}.`, actorId: actor.id, actorName: actor.username, metadata: { software: software.name } } }),
+      prisma.inventoryAudit.create({
+        data: {
+          itemId,
+          action: AuditAction.UPDATED,
+          summary: `Software record removed: ${software.name}.`,
+          actorId: actor.id,
+          actorName: actor.username,
+          metadata: { software: software.name },
+        },
+      }),
     ]);
 
     refreshInventoryViews(itemId);

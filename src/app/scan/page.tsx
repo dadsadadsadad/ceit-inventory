@@ -7,19 +7,28 @@ import { QrScanner } from "./qr-scanner";
 
 export const dynamic = "force-dynamic";
 
+// Open the camera and manual QR lookup.
 export default async function ScanPage() {
   await requireInventoryAccess();
-  const trustedQrOrigin = inventoryLabelAppOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL);
+  const trustedQrOrigin = inventoryLabelAppOrigin(
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  );
 
   return (
     <main className="page scan-page">
       <div className="page-narrow space-y-6">
         <header>
-          <Link href="/dashboard" className="accent-link text-sm font-semibold">← Dashboard</Link>
+          <Link href="/dashboard" className="accent-link text-sm font-semibold">
+            ← Dashboard
+          </Link>
           <p className="eyebrow mt-5">Mobile inventory</p>
           <h1 className="title mt-3 text-3xl">Scan a QR code</h1>
-          <p className="muted mt-2 text-sm leading-6">Scan an equipment label to view its details, borrow it, or report a problem.</p>
+          <p className="muted mt-2 text-sm leading-6">
+            Scan an equipment label to view its details, borrow it, or report a problem.
+          </p>
         </header>
+        {/* Camera scanner and manual lookup. */}
         <QrScanner trustedQrOrigin={trustedQrOrigin} />
       </div>
     </main>

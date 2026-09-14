@@ -11,6 +11,8 @@ describe("borrower data retention", () => {
 
   it("allows a bounded school policy", () => {
     expect(borrowerDataRetentionDays("180")).toBe(180);
-    expect(borrowerDataExpiresAt(new Date("2026-01-01T00:00:00.000Z"), 180).toISOString()).toBe("2026-06-30T00:00:00.000Z");
+    expect(borrowerDataExpiresAt(new Date("2026-01-01T00:00:00.000Z"), 180).toISOString()).toBe(
+      "2026-06-30T00:00:00.000Z",
+    );
   });
 });

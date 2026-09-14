@@ -12,7 +12,13 @@ describe("contact number matching", () => {
     expect(normalizeContactNumber("555-0123")).toBe("5550123");
   });
   it("rejects punctuation-only input and implausible lengths", () => {
-    for (const input of ["-------", "123-456", "0912hello345", "09+123456789", "1234567890123456"]) {
+    for (const input of [
+      "-------",
+      "123-456",
+      "0912hello345",
+      "09+123456789",
+      "1234567890123456",
+    ]) {
       expect(normalizeContactNumber(input)).toBeNull();
     }
   });

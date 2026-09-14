@@ -1,7 +1,12 @@
 import { ItemStatus, ItemType } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { availableBorrowQuantity, borrowableInventoryStatuses, canBorrowInventoryStatus, usesIndividualAssetCheckout } from "@/lib/borrow-availability";
+import {
+  availableBorrowQuantity,
+  borrowableInventoryStatuses,
+  canBorrowInventoryStatus,
+  usesIndividualAssetCheckout,
+} from "@/lib/borrow-availability";
 
 describe("borrowing availability", () => {
   it("only allows safe inventory statuses to be borrowed", () => {

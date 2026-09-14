@@ -10,13 +10,23 @@ import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
-import { approveReservation, cancelReservation, declineBorrowRequest, markBorrowed, returnBorrowRequest } from "./actions";
+import {
+  approveReservation,
+  cancelReservation,
+  declineBorrowRequest,
+  markBorrowed,
+  returnBorrowRequest,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = { page?: string | string[]; q?: string | string[]; status?: string | string[] };
 type BorrowingRecord = Prisma.BorrowRequestGetPayload<{
-  include: { inventoryItem: { select: { assetTag: true; id: true; name: true; quantity: true; status: true } } };
+  include: {
+    inventoryItem: {
+      select: { assetTag: true; id: true; name: true; quantity: true; status: true };
+    };
+  };
 }>;
 
 const pageSize = 25;
@@ -40,10 +50,13 @@ function shortSearch(value?: string | string[]) {
   return firstSearchValue(value)?.trim().slice(0, 120) ?? "";
 }
 
+// Build the search and status filters for borrowing.
 function borrowRequestWhere(search: SearchParams): Prisma.BorrowRequestWhereInput {
   const query = shortSearch(search.q);
   const where: Prisma.BorrowRequestWhereInput = {};
-  if (isBorrowStatus(search.status)) where.status = firstSearchValue(search.status) as BorrowStatus;
+  if (isBorrowStatus(search.status)) {
+    where.status = firstSearchValue(search.status) as BorrowStatus;
+  }
   if (query) {
     where.OR = [
       { borrowerName: { contains: query, mode: "insensitive" } },
@@ -59,25 +72,41 @@ function pageLink(search: SearchParams, page: number) {
   const parameters = new URLSearchParams();
   const query = shortSearch(search.q);
   const status = firstSearchValue(search.status);
-  if (query) parameters.set("q", query);
-  if (status && isBorrowStatus(status)) parameters.set("status", status);
-  if (page > 1) parameters.set("page", String(page));
+  if (query) {
+    parameters.set("q", query);
+  }
+  if (status && isBorrowStatus(status)) {
+    parameters.set("status", status);
+  }
+  if (page > 1) {
+    parameters.set("page", String(page));
+  }
   const queryString = parameters.toString();
   return queryString ? `/dashboard/borrowing?${queryString}` : "/dashboard/borrowing";
 }
 
+// Choose page numbers and gaps for the pager.
 function paginationEntries(totalPages: number, currentPage: number) {
   const pages = new Set<number>([1, totalPages]);
   if (totalPages <= 9) {
-    for (let page = 1; page <= totalPages; page += 1) pages.add(page);
+    for (let page = 1; page <= totalPages; page += 1) {
+      pages.add(page);
+    }
   } else {
-    const start = currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
+    const start =
+      currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
     const end = currentPage <= 3 ? 5 : currentPage >= totalPages - 2 ? totalPages : currentPage + 2;
-    for (let page = start; page <= end; page += 1) pages.add(page);
+    for (let page = start; page <= end; page += 1) {
+      pages.add(page);
+    }
   }
 
-  const sortedPages = [...pages].filter((page) => page >= 1 && page <= totalPages).sort((left, right) => left - right);
-  return sortedPages.flatMap((page, index) => index > 0 && page - sortedPages[index - 1] > 1 ? [null, page] : [page]);
+  const sortedPages = [...pages]
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+  return sortedPages.flatMap((page, index) =>
+    index > 0 && page - sortedPages[index - 1] > 1 ? [null, page] : [page],
+  );
 }
 
 function borrowStatusClass(status: BorrowStatus) {
@@ -98,47 +127,156 @@ function borrowStatusClass(status: BorrowStatus) {
 }
 
 function formatDateTime(value: Date) {
-  return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+  return formatManilaDate(value, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
+// Describe whether the requested equipment is available.
 function inventoryAvailabilityLabel(item: BorrowingRecord["inventoryItem"]) {
-  if (item.status === "DEPLOYED") return "Checked out";
-  if (!canBorrowInventoryStatus(item.status)) return item.status.toLowerCase().replaceAll("_", " ");
+  if (item.status === "DEPLOYED") {
+    return "Checked out";
+  }
+  if (!canBorrowInventoryStatus(item.status)) {
+    return item.status.toLowerCase().replaceAll("_", " ");
+  }
   return `${item.quantity} available`;
 }
 
-function BorrowingActions({ request, layout }: { request: BorrowingRecord; layout: "mobile" | "desktop" }) {
+// Show the staff actions allowed for this request's status.
+function BorrowingActions({
+  request,
+  layout,
+}: {
+  request: BorrowingRecord;
+  layout: "mobile" | "desktop";
+}) {
   const expired = request.expectedReturnDate <= new Date();
-  if (request.status === borrowStatus.RESERVED) return <div className="space-y-3">
-    {expired ? <p className="muted text-xs">Pickup period ended. Cancel this reservation to close it.</p> : request.startsAt > new Date() ? <p className="muted text-xs">Pickup: {formatDateTime(request.startsAt)}</p> : <FeedbackForm action={markBorrowed} successMessage="Equipment checked out."><input type="hidden" name="requestId" value={request.id} /><SubmitButton pendingLabel="Checking out…" className="primary-button rounded-lg px-3 py-2 text-sm font-semibold">Check out equipment</SubmitButton></FeedbackForm>}
-    <FeedbackForm action={cancelReservation} successMessage="Reservation cancelled." className="flex flex-wrap gap-2"><input type="hidden" name="requestId" value={request.id} /><input required name="staffNotes" maxLength={2_000} aria-label="Cancellation reason" placeholder="Reason for cancellation" className="field min-w-0 flex-1 rounded-lg px-3 py-2 text-sm" /><SubmitButton pendingLabel="Cancelling…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">Cancel reservation</SubmitButton></FeedbackForm>
-  </div>;
+  if (request.status === borrowStatus.RESERVED) {
+    return (
+      <div className="space-y-3">
+        {expired ? (
+          <p className="muted text-xs">Pickup period ended. Cancel this reservation to close it.</p>
+        ) : request.startsAt > new Date() ? (
+          <p className="muted text-xs">Pickup: {formatDateTime(request.startsAt)}</p>
+        ) : (
+          <FeedbackForm action={markBorrowed} successMessage="Equipment checked out.">
+            <input type="hidden" name="requestId" value={request.id} />
+            <SubmitButton
+              pendingLabel="Checking out…"
+              className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
+            >
+              Check out equipment
+            </SubmitButton>
+          </FeedbackForm>
+        )}
+        <FeedbackForm
+          action={cancelReservation}
+          successMessage="Reservation cancelled."
+          className="flex flex-wrap gap-2"
+        >
+          <input type="hidden" name="requestId" value={request.id} />
+          <input
+            required
+            name="staffNotes"
+            maxLength={2_000}
+            aria-label="Cancellation reason"
+            placeholder="Reason for cancellation"
+            className="field min-w-0 flex-1 rounded-lg px-3 py-2 text-sm"
+          />
+          <SubmitButton
+            pendingLabel="Cancelling…"
+            className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+          >
+            Cancel reservation
+          </SubmitButton>
+        </FeedbackForm>
+      </div>
+    );
+  }
   if (request.status === borrowStatus.REQUESTED) {
     return (
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <FeedbackForm action={request.isReservation ? approveReservation : markBorrowed} successMessage={request.isReservation ? "Reservation approved." : "Equipment checked out."} className="flex flex-1 flex-wrap gap-2">
+        <FeedbackForm
+          action={request.isReservation ? approveReservation : markBorrowed}
+          successMessage={
+            request.isReservation ? "Reservation approved." : "Equipment checked out."
+          }
+          className="flex flex-1 flex-wrap gap-2"
+        >
           <input type="hidden" name="requestId" value={request.id} />
-          <label className="sr-only" htmlFor={`approve-note-${layout}-${request.id}`}>Approval note</label>
-          <input id={`approve-note-${layout}-${request.id}`} name="staffNotes" maxLength={2_000} className="field min-w-40 flex-1 rounded-lg px-3 py-2 text-sm" placeholder="Optional staff note" />
-          <SubmitButton disabled={expired} pendingLabel={request.isReservation ? "Approving…" : "Checking out…"} className="primary-button rounded-lg px-3 py-2 text-sm font-semibold">{expired ? "Request expired" : request.isReservation ? "Approve reservation" : "Check out equipment"}</SubmitButton>
+          <label className="sr-only" htmlFor={`approve-note-${layout}-${request.id}`}>
+            Approval note
+          </label>
+          <input
+            id={`approve-note-${layout}-${request.id}`}
+            name="staffNotes"
+            maxLength={2_000}
+            className="field min-w-40 flex-1 rounded-lg px-3 py-2 text-sm"
+            placeholder="Optional staff note"
+          />
+          <SubmitButton
+            disabled={expired}
+            pendingLabel={request.isReservation ? "Approving…" : "Checking out…"}
+            className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
+          >
+            {expired
+              ? "Request expired"
+              : request.isReservation
+                ? "Approve reservation"
+                : "Check out equipment"}
+          </SubmitButton>
         </FeedbackForm>
         <FeedbackForm action={declineBorrowRequest} className="flex flex-1 flex-wrap gap-2">
           <input type="hidden" name="requestId" value={request.id} />
-          <label className="sr-only" htmlFor={`decline-note-${layout}-${request.id}`}>Decline note</label>
-          <input id={`decline-note-${layout}-${request.id}`} name="staffNotes" maxLength={2_000} className="field min-w-40 flex-1 rounded-lg px-3 py-2 text-sm" placeholder="Reason or staff note" />
-          <SubmitButton pendingLabel="Declining…" className="danger-button rounded-lg px-3 py-2 text-sm font-semibold">Decline</SubmitButton>
+          <label className="sr-only" htmlFor={`decline-note-${layout}-${request.id}`}>
+            Decline note
+          </label>
+          <input
+            id={`decline-note-${layout}-${request.id}`}
+            name="staffNotes"
+            maxLength={2_000}
+            className="field min-w-40 flex-1 rounded-lg px-3 py-2 text-sm"
+            placeholder="Reason or staff note"
+          />
+          <SubmitButton
+            pendingLabel="Declining…"
+            className="danger-button rounded-lg px-3 py-2 text-sm font-semibold"
+          >
+            Decline
+          </SubmitButton>
         </FeedbackForm>
       </div>
     );
   }
 
-  if (request.status === borrowStatus.BORROWED || request.status === borrowStatus.RETURN_REQUESTED) {
+  if (
+    request.status === borrowStatus.BORROWED ||
+    request.status === borrowStatus.RETURN_REQUESTED
+  ) {
     return (
       <FeedbackForm action={returnBorrowRequest} className="flex flex-wrap gap-2">
         <input type="hidden" name="requestId" value={request.id} />
-        <label className="sr-only" htmlFor={`return-note-${layout}-${request.id}`}>Return note</label>
-        <input id={`return-note-${layout}-${request.id}`} name="staffNotes" maxLength={2_000} className="field min-w-48 flex-1 rounded-lg px-3 py-2 text-sm" placeholder="Optional return note" />
-        <SubmitButton pendingLabel="Recording…" className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold">{request.status === borrowStatus.RETURN_REQUESTED ? "Confirm returned" : "Mark returned"}</SubmitButton>
+        <label className="sr-only" htmlFor={`return-note-${layout}-${request.id}`}>
+          Return note
+        </label>
+        <input
+          id={`return-note-${layout}-${request.id}`}
+          name="staffNotes"
+          maxLength={2_000}
+          className="field min-w-48 flex-1 rounded-lg px-3 py-2 text-sm"
+          placeholder="Optional return note"
+        />
+        <SubmitButton
+          pendingLabel="Recording…"
+          className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+        >
+          {request.status === borrowStatus.RETURN_REQUESTED ? "Confirm returned" : "Mark returned"}
+        </SubmitButton>
       </FeedbackForm>
     );
   }
@@ -146,6 +284,7 @@ function BorrowingActions({ request, layout }: { request: BorrowingRecord; layou
   return <p className="muted text-sm">No further action is needed.</p>;
 }
 
+// Show the borrower's name and contact details.
 function BorrowerDetails({ request }: { request: BorrowingRecord }) {
   return (
     <div className="space-y-1 text-sm">
@@ -156,18 +295,38 @@ function BorrowerDetails({ request }: { request: BorrowingRecord }) {
   );
 }
 
+// Show pickup, return, and reservation dates.
 function BorrowSchedule({ request }: { request: BorrowingRecord }) {
-  const overdue = [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED].some((status) => status === request.status) && request.expectedReturnDate < new Date();
-  return <div className="mt-2 space-y-1 text-xs leading-5">
-    <p className="font-semibold">{request.isReservation ? "Reservation" : "Borrow now"}</p>
-    <p className="muted">Pickup: {formatDateTime(request.startsAt)}</p>
-    <p className={overdue ? "text-[var(--status-critical)] font-semibold" : "muted"}>Return: {formatDateTime(request.expectedReturnDate)}{overdue ? " · Overdue" : ""}</p>
-    {request.approvedAt ? <p className="muted">Approved by {request.approvedByName} · {formatDateTime(request.approvedAt)}</p> : null}
-    {request.cancelledAt ? <p className="muted">Cancelled {formatDateTime(request.cancelledAt)}</p> : null}
-  </div>;
+  const overdue =
+    [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED].some(
+      (status) => status === request.status,
+    ) && request.expectedReturnDate < new Date();
+  return (
+    <div className="mt-2 space-y-1 text-xs leading-5">
+      <p className="font-semibold">{request.isReservation ? "Reservation" : "Borrow now"}</p>
+      <p className="muted">Pickup: {formatDateTime(request.startsAt)}</p>
+      <p className={overdue ? "text-[var(--status-critical)] font-semibold" : "muted"}>
+        Return: {formatDateTime(request.expectedReturnDate)}
+        {overdue ? " · Overdue" : ""}
+      </p>
+      {request.approvedAt ? (
+        <p className="muted">
+          Approved by {request.approvedByName} · {formatDateTime(request.approvedAt)}
+        </p>
+      ) : null}
+      {request.cancelledAt ? (
+        <p className="muted">Cancelled {formatDateTime(request.cancelledAt)}</p>
+      ) : null}
+    </div>
+  );
 }
 
-export default async function BorrowingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+// Load borrowing requests for the selected filters.
+export default async function BorrowingPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireInventoryManagementPageAccess();
   const search = await searchParams;
   const where = borrowRequestWhere(search);
@@ -183,7 +342,11 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
     currentPage = Math.min(requestedPage, totalPages);
     requests = await prisma.borrowRequest.findMany({
       where,
-      include: { inventoryItem: { select: { assetTag: true, id: true, name: true, quantity: true, status: true } } },
+      include: {
+        inventoryItem: {
+          select: { assetTag: true, id: true, name: true, quantity: true, status: true },
+        },
+      },
       orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
@@ -198,84 +361,270 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
   return (
     <div className="page borrowing-page">
       <div className="page-inner space-y-6">
+        {/* Borrowing title and summary. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Equipment lending</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Review requests and reservations, check out equipment, and confirm returns.</p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">
+              Review requests and reservations, check out equipment, and confirm returns.
+            </p>
           </div>
-          <div className="flex flex-wrap gap-3"><Link href="/dashboard/reports?kind=borrowings" className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold">Borrowing reports</Link><Link href="/dashboard/inventory" className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold">View inventory</Link></div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/reports?kind=borrowings"
+              className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Borrowing reports
+            </Link>
+            <Link
+              href="/dashboard/inventory"
+              className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              View inventory
+            </Link>
+          </div>
         </header>
 
-        <form className="card grid gap-3 rounded-lg p-4 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-end" aria-label="Borrowing request filters">
+        {/* Search requests and choose a borrowing status. */}
+        <form
+          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-end"
+          aria-label="Borrowing request filters"
+        >
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
-            <input name="q" defaultValue={shortSearch(search.q)} maxLength={120} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm" placeholder="Borrower, student number, item, or asset tag" />
+            <input
+              name="q"
+              defaultValue={shortSearch(search.q)}
+              maxLength={120}
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              placeholder="Borrower, student number, item, or asset tag"
+            />
           </label>
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Request status</span>
-            <select name="status" defaultValue={isBorrowStatus(search.status) ? firstSearchValue(search.status) : ""} className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm">
+            <select
+              name="status"
+              defaultValue={isBorrowStatus(search.status) ? firstSearchValue(search.status) : ""}
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+            >
               <option value="">All statuses</option>
-              {statuses.map((status) => <option key={status} value={status}>{borrowStatusLabel(status)}</option>)}
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {borrowStatusLabel(status)}
+                </option>
+              ))}
             </select>
           </label>
           <div className="flex gap-3">
-            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">Filter</button>
-            <Link href="/dashboard/borrowing" className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold">Clear</Link>
+            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
+              Filter
+            </button>
+            <Link
+              href="/dashboard/borrowing"
+              className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
+            >
+              Clear
+            </Link>
           </div>
         </form>
 
         {databaseError ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">Borrowing requests could not be loaded. Confirm the database connection and try again.</div>
+          <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
+            Borrowing requests could not be loaded. Confirm the database connection and try again.
+          </div>
         ) : requests.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">No borrowing requests match these filters. Students can submit a request from an item&apos;s QR code page.</div>
+          <div className="notice rounded-lg px-5 py-4 text-sm">
+            No borrowing requests match these filters. Students can submit a request from an
+            item&apos;s QR code page.
+          </div>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Borrowing requests">
             <div className="divider border-b px-5 py-3">
-              <p className="muted text-sm">{totalRecords.toLocaleString()} request{totalRecords === 1 ? "" : "s"} · Page {currentPage} of {totalPages}</p>
+              <p className="muted text-sm">
+                {totalRecords.toLocaleString()} request{totalRecords === 1 ? "" : "s"} · Page{" "}
+                {currentPage} of {totalPages}
+              </p>
             </div>
 
             <div className="divide-y md:hidden">
               {requests.map((request) => (
                 <article key={request.id} className="space-y-4 p-4">
+                  {/* Borrowing request card for mobile. */}
                   <div className="flex items-start justify-between gap-3">
-                    <Link href={`/dashboard/inventory/${request.inventoryItem.id}`} className="accent-link font-semibold">{request.inventoryItem.name}</Link>
-                    <span className={`${borrowStatusClass(request.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}>{borrowStatusLabel(request.status)}</span>
+                    <Link
+                      href={`/dashboard/inventory/${request.inventoryItem.id}`}
+                      className="accent-link font-semibold"
+                    >
+                      {request.inventoryItem.name}
+                    </Link>
+                    <span
+                      className={`${borrowStatusClass(request.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}
+                    >
+                      {borrowStatusLabel(request.status)}
+                    </span>
                   </div>
-                  <BorrowerDetails request={request} /><BorrowSchedule request={request} />
+                  <BorrowerDetails request={request} />
+                  <BorrowSchedule request={request} />
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><p className="muted text-xs font-bold uppercase tracking-wide">Quantity</p><p className="mt-1">{request.requestedQuantity} requested · {inventoryAvailabilityLabel(request.inventoryItem)}</p></div>
-                    <div><p className="muted text-xs font-bold uppercase tracking-wide">Return by</p><time className="mt-1 block" dateTime={request.expectedReturnDate.toISOString()}>{formatDateTime(request.expectedReturnDate)}</time></div>
+                    <div>
+                      <p className="muted text-xs font-bold uppercase tracking-wide">Quantity</p>
+                      <p className="mt-1">
+                        {request.requestedQuantity} requested ·{" "}
+                        {inventoryAvailabilityLabel(request.inventoryItem)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted text-xs font-bold uppercase tracking-wide">Return by</p>
+                      <time
+                        className="mt-1 block"
+                        dateTime={request.expectedReturnDate.toISOString()}
+                      >
+                        {formatDateTime(request.expectedReturnDate)}
+                      </time>
+                    </div>
                   </div>
-                  <div><p className="muted text-xs font-bold uppercase tracking-wide">Purpose</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.purpose}</p></div>
-                  {request.staffNotes ? <div><p className="muted text-xs font-bold uppercase tracking-wide">Staff note</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.staffNotes}</p></div> : null}
-                  {request.returnRequestNotes ? <div><p className="muted text-xs font-bold uppercase tracking-wide">Borrower return note</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.returnRequestNotes}</p></div> : null}
-                  {request.processedByName ? <p className="muted text-xs">Processed by {request.processedByName}{request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}</p> : null}
-                  {request.returnedByName ? <p className="muted text-xs">Returned by {request.returnedByName}{request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}</p> : null}
+                  <div>
+                    <p className="muted text-xs font-bold uppercase tracking-wide">Purpose</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.purpose}</p>
+                  </div>
+                  {request.staffNotes ? (
+                    <div>
+                      <p className="muted text-xs font-bold uppercase tracking-wide">Staff note</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
+                        {request.staffNotes}
+                      </p>
+                    </div>
+                  ) : null}
+                  {request.returnRequestNotes ? (
+                    <div>
+                      <p className="muted text-xs font-bold uppercase tracking-wide">
+                        Borrower return note
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
+                        {request.returnRequestNotes}
+                      </p>
+                    </div>
+                  ) : null}
+                  {request.processedByName ? (
+                    <p className="muted text-xs">
+                      Processed by {request.processedByName}
+                      {request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}
+                    </p>
+                  ) : null}
+                  {request.returnedByName ? (
+                    <p className="muted text-xs">
+                      Returned by {request.returnedByName}
+                      {request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}
+                    </p>
+                  ) : null}
                   <BorrowingActions request={request} layout="mobile" />
                 </article>
               ))}
             </div>
 
             <div className="hidden overflow-x-auto md:block">
+              {/* Borrowing requests on wider screens. */}
               <table className="w-full">
                 <thead>
                   <tr className="table-heading divider border-b">
-                    <th scope="col" className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]">Item</th>
-                    <th scope="col" className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]">Borrower</th>
-                    <th scope="col" className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]">Request</th>
-                    <th scope="col" className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]">Status</th>
-                    <th scope="col" className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]">Actions</th>
+                    <th
+                      scope="col"
+                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
+                    >
+                      Item
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
+                    >
+                      Borrower
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
+                    >
+                      Request
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
+                    >
+                      Status
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {requests.map((request) => (
                     <tr key={request.id} className="table-row border-b align-top last:border-0">
-                      <td className="px-5 py-4 text-sm"><Link href={`/dashboard/inventory/${request.inventoryItem.id}`} className="accent-link font-semibold">{request.inventoryItem.name}</Link><p className="muted mt-1 text-xs">{request.inventoryItem.assetTag ?? "No asset tag"} · {inventoryAvailabilityLabel(request.inventoryItem)}</p></td>
-                      <td className="px-5 py-4"><BorrowerDetails request={request} /></td>
-                      <td className="px-5 py-4 text-sm"><p>{request.requestedQuantity} requested</p><BorrowSchedule request={request} /><p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">{request.purpose}</p>{request.staffNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Staff: {request.staffNotes}</p> : null}{request.returnRequestNotes ? <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">Borrower return note: {request.returnRequestNotes}</p> : null}</td>
-                      <td className="px-5 py-4"><span className={`${borrowStatusClass(request.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}>{borrowStatusLabel(request.status)}</span><p className="muted mt-3 max-w-48 text-xs leading-5">Requested {formatDateTime(request.requestedAt)}</p>{request.returnRequestedAt ? <p className="muted mt-2 max-w-48 text-xs leading-5">Return requested {formatDateTime(request.returnRequestedAt)}</p> : null}{request.processedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Processed by {request.processedByName}{request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}</p> : null}{request.returnedByName ? <p className="muted mt-2 max-w-48 text-xs leading-5">Returned by {request.returnedByName}{request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}</p> : null}</td>
-                      <td className="min-w-[22rem] px-5 py-4"><BorrowingActions request={request} layout="desktop" /></td>
+                      <td className="px-5 py-4 text-sm">
+                        <Link
+                          href={`/dashboard/inventory/${request.inventoryItem.id}`}
+                          className="accent-link font-semibold"
+                        >
+                          {request.inventoryItem.name}
+                        </Link>
+                        <p className="muted mt-1 text-xs">
+                          {request.inventoryItem.assetTag ?? "No asset tag"} ·{" "}
+                          {inventoryAvailabilityLabel(request.inventoryItem)}
+                        </p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <BorrowerDetails request={request} />
+                      </td>
+                      <td className="px-5 py-4 text-sm">
+                        <p>{request.requestedQuantity} requested</p>
+                        <BorrowSchedule request={request} />
+                        <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">
+                          {request.purpose}
+                        </p>
+                        {request.staffNotes ? (
+                          <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">
+                            Staff: {request.staffNotes}
+                          </p>
+                        ) : null}
+                        {request.returnRequestNotes ? (
+                          <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">
+                            Borrower return note: {request.returnRequestNotes}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`${borrowStatusClass(request.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}
+                        >
+                          {borrowStatusLabel(request.status)}
+                        </span>
+                        <p className="muted mt-3 max-w-48 text-xs leading-5">
+                          Requested {formatDateTime(request.requestedAt)}
+                        </p>
+                        {request.returnRequestedAt ? (
+                          <p className="muted mt-2 max-w-48 text-xs leading-5">
+                            Return requested {formatDateTime(request.returnRequestedAt)}
+                          </p>
+                        ) : null}
+                        {request.processedByName ? (
+                          <p className="muted mt-2 max-w-48 text-xs leading-5">
+                            Processed by {request.processedByName}
+                            {request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}
+                          </p>
+                        ) : null}
+                        {request.returnedByName ? (
+                          <p className="muted mt-2 max-w-48 text-xs leading-5">
+                            Returned by {request.returnedByName}
+                            {request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="min-w-[22rem] px-5 py-4">
+                        <BorrowingActions request={request} layout="desktop" />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -283,12 +632,64 @@ export default async function BorrowingPage({ searchParams }: { searchParams: Pr
             </div>
 
             {totalPages > 1 ? (
-              <nav className="divider flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" aria-label="Borrowing request pages">
-                {currentPage > 1 ? <Link href={pageLink(search, currentPage - 1)} className="pagination-link px-3 text-sm font-semibold">← Previous</Link> : <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">← Previous</span>}
-                <div className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto pb-1 sm:order-none sm:w-auto sm:pb-0" aria-label="Choose borrowing request page">
-                  {paginationEntries(totalPages, currentPage).map((entry, index) => entry === null ? <span key={`gap-${index}`} className="muted px-1 text-sm" aria-hidden="true">…</span> : entry === currentPage ? <span key={entry} className="pagination-current text-sm font-semibold" aria-current="page">{entry}</span> : <Link key={entry} href={pageLink(search, entry)} className="pagination-link text-sm font-semibold" aria-label={`Go to page ${entry}`}>{entry}</Link>)}
+              <nav
+                className="divider flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3"
+                aria-label="Borrowing request pages"
+              >
+                {/* Borrowing page navigation. */}
+                {currentPage > 1 ? (
+                  <Link
+                    href={pageLink(search, currentPage - 1)}
+                    className="pagination-link px-3 text-sm font-semibold"
+                  >
+                    ← Previous
+                  </Link>
+                ) : (
+                  <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
+                    ← Previous
+                  </span>
+                )}
+                <div
+                  className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto pb-1 sm:order-none sm:w-auto sm:pb-0"
+                  aria-label="Choose borrowing request page"
+                >
+                  {paginationEntries(totalPages, currentPage).map((entry, index) =>
+                    entry === null ? (
+                      <span key={`gap-${index}`} className="muted px-1 text-sm" aria-hidden="true">
+                        …
+                      </span>
+                    ) : entry === currentPage ? (
+                      <span
+                        key={entry}
+                        className="pagination-current text-sm font-semibold"
+                        aria-current="page"
+                      >
+                        {entry}
+                      </span>
+                    ) : (
+                      <Link
+                        key={entry}
+                        href={pageLink(search, entry)}
+                        className="pagination-link text-sm font-semibold"
+                        aria-label={`Go to page ${entry}`}
+                      >
+                        {entry}
+                      </Link>
+                    ),
+                  )}
                 </div>
-                {currentPage < totalPages ? <Link href={pageLink(search, currentPage + 1)} className="pagination-link px-3 text-sm font-semibold">Next →</Link> : <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">Next →</span>}
+                {currentPage < totalPages ? (
+                  <Link
+                    href={pageLink(search, currentPage + 1)}
+                    className="pagination-link px-3 text-sm font-semibold"
+                  >
+                    Next →
+                  </Link>
+                ) : (
+                  <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
+                    Next →
+                  </span>
+                )}
               </nav>
             ) : null}
           </section>

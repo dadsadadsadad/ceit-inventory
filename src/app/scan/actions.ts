@@ -7,12 +7,20 @@ import { getCurrentInventoryUser } from "@/lib/inventory-auth";
 
 const scanDeduplicationWindowMs = 15_000;
 
+// Add the QR visit to the item's audit history.
 export async function recordInventoryScan(itemId: string) {
   const actor = await getCurrentInventoryUser();
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)) return;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)) {
+    return;
+  }
 
-  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } });
-  if (!item) return;
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: itemId },
+    select: { id: true },
+  });
+  if (!item) {
+    return;
+  }
 
   const recentScan = await prisma.inventoryAudit.findFirst({
     where: {
@@ -23,7 +31,9 @@ export async function recordInventoryScan(itemId: string) {
     },
     select: { id: true },
   });
-  if (recentScan) return;
+  if (recentScan) {
+    return;
+  }
 
   await prisma.inventoryAudit.create({
     data: {

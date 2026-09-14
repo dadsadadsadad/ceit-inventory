@@ -11,12 +11,15 @@ export function manilaCalendarDate(date = new Date()) {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(date);
-  const part = (type: "day" | "month" | "year") => parts.find((entry) => entry.type === type)?.value;
+  const part = (type: "day" | "month" | "year") =>
+    parts.find((entry) => entry.type === type)?.value;
   const year = part("year");
   const month = part("month");
   const day = part("day");
 
-  if (!year || !month || !day) throw new Error("Unable to determine the current Philippine calendar date.");
+  if (!year || !month || !day) {
+    throw new Error("Unable to determine the current Philippine calendar date.");
+  }
   return `${year}-${month}-${day}`;
 }
 

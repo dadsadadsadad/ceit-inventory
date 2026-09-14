@@ -6,28 +6,47 @@ import { importInventory, type ImportResult } from "./actions";
 
 const initialImportResult: ImportResult = { errors: [], imported: 0, previewed: false, skipped: 0 };
 
+// Upload a spreadsheet and display row feedback.
 export function ImportForm() {
   const preserveFields = useRef(false);
-  const [result, action, pending] = useActionState(async (previous: ImportResult, data: FormData) => {
-    const next = await importInventory(previous, data);
-    preserveFields.current = next.previewed || next.imported === 0;
-    return next;
-  }, initialImportResult);
+  const [result, action, pending] = useActionState(
+    async (previous: ImportResult, data: FormData) => {
+      const next = await importInventory(previous, data);
+      preserveFields.current = next.previewed || next.imported === 0;
+      return next;
+    },
+    initialImportResult,
+  );
 
   return (
-    <form action={action} onReset={(event) => { if (preserveFields.current) event.preventDefault(); }} className="card space-y-5 rounded-lg p-5 sm:p-7">
+    <form
+      action={action}
+      onReset={(event) => {
+        if (preserveFields.current) {
+          event.preventDefault();
+        }
+      }}
+      className="card space-y-5 rounded-lg p-5 sm:p-7"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Choose a spreadsheet</h2>
-          <p className="muted mt-1 text-sm leading-6">Use the template for a new file, or upload an existing inventory export directly.</p>
+          <p className="muted mt-1 text-sm leading-6">
+            Use the template for a new file, or upload an existing inventory export directly.
+          </p>
         </div>
-        <a href="/inventory-import-template.csv" download className="card-muted rounded-lg px-3 py-2 text-center text-sm font-semibold accent-link">
+        <a
+          href="/inventory-import-template.csv"
+          download
+          className="card-muted rounded-lg px-3 py-2 text-center text-sm font-semibold accent-link"
+        >
           Download CSV template
         </a>
       </div>
 
       <label className="block">
         <span className="text-sm font-semibold">CSV or Excel file</span>
+        {/* Choose the CSV or Excel file to import. */}
         <input
           required
           name="file"
@@ -37,28 +56,51 @@ export function ImportForm() {
         />
       </label>
 
+      {/* Default location for imported items. */}
       <fieldset className="card-muted space-y-3 rounded-lg p-4">
-        <legend className="text-sm font-semibold">Default location for files without a location column</legend>
+        <legend className="text-sm font-semibold">
+          Default location for files without a location column
+        </legend>
         <p className="muted text-xs leading-5">
           Use this room for rows that do not include a <code>location</code> or <code>room</code>.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="font-medium">Location name</span>
-            <input name="defaultLocation" className="field mt-1 w-full rounded-lg px-3 py-2" placeholder="e.g. CEIT Property Room" maxLength={160} />
+            <input
+              name="defaultLocation"
+              className="field mt-1 w-full rounded-lg px-3 py-2"
+              placeholder="e.g. CEIT Property Room"
+              maxLength={160}
+            />
           </label>
           <label className="block text-sm">
-            <span className="font-medium">Room number <span className="muted">(optional)</span></span>
-            <input name="defaultRoomNumber" className="field mt-1 w-full rounded-lg px-3 py-2" placeholder="e.g. 405" maxLength={80} />
+            <span className="font-medium">
+              Room number <span className="muted">(optional)</span>
+            </span>
+            <input
+              name="defaultRoomNumber"
+              className="field mt-1 w-full rounded-lg px-3 py-2"
+              placeholder="e.g. 405"
+              maxLength={80}
+            />
           </label>
         </div>
       </fieldset>
 
       <label className="flex items-start gap-3 text-sm leading-5">
-        <input name="createMissingSetup" type="checkbox" defaultChecked className="mt-0.5 h-4 w-4" />
+        <input
+          name="createMissingSetup"
+          type="checkbox"
+          defaultChecked
+          className="mt-0.5 h-4 w-4"
+        />
         <span>
           <strong>Create missing categories and locations.</strong>
-          <span className="muted block">Leave this checked for a first import. Uncheck it to catch spelling mistakes against your existing Settings data.</span>
+          <span className="muted block">
+            Leave this checked for a first import. Uncheck it to catch spelling mistakes against
+            your existing Settings data.
+          </span>
         </span>
       </label>
 
@@ -66,43 +108,69 @@ export function ImportForm() {
         <input name="previewOnly" type="checkbox" className="mt-0.5 h-4 w-4" />
         <span>
           <strong>Validate before importing.</strong>
-          <span className="muted block">Checks every row&apos;s format and repeated identifiers without saving anything. Uncheck it when the preview is clean to import.</span>
+          <span className="muted block">
+            Checks every row&apos;s format and repeated identifiers without saving anything. Uncheck
+            it when the preview is clean to import.
+          </span>
         </span>
       </label>
 
       <div className="card-muted rounded-lg p-4 text-sm leading-6">
         <p className="font-semibold">How quantity, asset tags, and QR codes work</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li><strong>Tracked equipment assets</strong> (including every PC or Mac) must use <code>quantity</code> <code>1</code> on one row per physical unit. Leave <code>asset tag</code> blank to generate the next compatible tag and a unique QR code for that row.</li>
-          <li><strong>Supplies / shared stock</strong> can use a quantity such as <code>4</code>, but are stored as one stock record with one QR code—not four separately assigned QR codes.</li>
+          <li>
+            <strong>Tracked equipment assets</strong> (including every PC or Mac) must use{" "}
+            <code>quantity</code> <code>1</code> on one row per physical unit. Leave{" "}
+            <code>asset tag</code> blank to generate the next compatible tag and a unique QR code
+            for that row.
+          </li>
+          <li>
+            <strong>Supplies / shared stock</strong> can use a quantity such as <code>4</code>, but
+            are stored as one stock record with one QR code—not four separately assigned QR codes.
+          </li>
         </ul>
-        <p className="muted mt-2">An equipment row with quantity greater than 1 is skipped with a row-level explanation. Duplicate asset tags, serial numbers, or PC MAC addresses are also skipped; valid rows in the same file can still import.</p>
+        <p className="muted mt-2">
+          An equipment row with quantity greater than 1 is skipped with a row-level explanation.
+          Duplicate asset tags, serial numbers, or PC MAC addresses are also skipped; valid rows in
+          the same file can still import.
+        </p>
         <p className="mt-4">
-          Required data: <code>name</code>/<code>item name</code>, <code>category</code>/<code>classification</code>, and a location
-          column or the default location above.
+          Required data: <code>name</code>/<code>item name</code>, <code>category</code>/
+          <code>classification</code>, and a location column or the default location above.
         </p>
         <p className="muted mt-2">
-          Headers may appear within the first 25 rows. The importer also recognizes legacy <code>inventory code</code>, <code>product info</code>,
-          <code>checked</code>, and <code>last date checked</code> columns. Header spaces, underscores, and capitalization are accepted.
+          Headers may appear within the first 25 rows. The importer also recognizes legacy{" "}
+          <code>inventory code</code>, <code>product info</code>,<code>checked</code>, and{" "}
+          <code>last date checked</code> columns. Header spaces, underscores, and capitalization are
+          accepted.
         </p>
         <p className="muted mt-2">
-          A legacy <code>checked</code> value is preserved as the inventory status: <code>OK</code>, <code>WORKING</code>, <code>DEPLOYED</code>,
-          <code>DEFECTIVE</code>, or <code>NOT TESTED</code>.
+          A legacy <code>checked</code> value is preserved as the inventory status: <code>OK</code>,{" "}
+          <code>WORKING</code>, <code>DEPLOYED</code>,<code>DEFECTIVE</code>, or{" "}
+          <code>NOT TESTED</code>.
         </p>
       </div>
 
       <p className="muted text-sm">
-        Imports accept up to 1,000 rows and 10 MB per file. Each row is saved atomically; duplicate identifiers or invalid rows are
-        skipped with a helpful row-level message.
+        Imports accept up to 1,000 rows and 10 MB per file. Each row is saved atomically; duplicate
+        identifiers or invalid rows are skipped with a helpful row-level message.
       </p>
 
-      <button disabled={pending} className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
+      {/* Validate the file or import accepted rows. */}
+      <button
+        disabled={pending}
+        className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
+      >
         {pending ? "Checking file…" : "Validate or import inventory"}
       </button>
 
+      {/* Import totals and row errors. */}
       {result.imported || result.skipped ? (
         <div className="notice rounded-lg px-4 py-3 text-sm" aria-live="polite">
-          <strong>{result.imported} {result.previewed ? "valid row" : "imported"}{result.previewed && result.imported !== 1 ? "s" : ""}</strong>
+          <strong>
+            {result.imported} {result.previewed ? "valid row" : "imported"}
+            {result.previewed && result.imported !== 1 ? "s" : ""}
+          </strong>
           {result.previewed ? " · no records were saved" : ""}
           {result.skipped ? ` · ${result.skipped} skipped` : ""}
         </div>
@@ -110,7 +178,9 @@ export function ImportForm() {
 
       {result.errors.length ? (
         <ul className="notice list-disc space-y-1 rounded-lg px-8 py-4 text-sm" aria-live="polite">
-          {result.errors.map((error) => <li key={error}>{error}</li>)}
+          {result.errors.map((error) => (
+            <li key={error}>{error}</li>
+          ))}
         </ul>
       ) : null}
     </form>

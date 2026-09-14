@@ -11,9 +11,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "src/generated/**",
+    "tmp/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
   {
     rules: {
+      curly: ["error", "all"],
       "@next/next/no-img-element": "off",
     },
   },

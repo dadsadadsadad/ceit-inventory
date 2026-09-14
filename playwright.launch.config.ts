@@ -7,7 +7,8 @@ export default defineConfig({
   reporter: "list",
   use: { baseURL: "http://127.0.0.1:3101", trace: "retain-on-failure" },
   webServer: {
-    command: "node --env-file=.env.e2e.local node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1",
+    command:
+      "node --env-file=.env.e2e.local node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1",
     url: "http://127.0.0.1:3101/auth/login",
     reuseExistingServer: false,
     timeout: 30_000,
