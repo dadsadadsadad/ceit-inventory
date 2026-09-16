@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Boxes,
+  ClipboardList,
   HandHelping,
   LayoutDashboard,
   Menu,
@@ -52,6 +53,7 @@ export function DashboardNavigation({
       ? [{ label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText }]
       : []),
     { label: "Scan QR code", href: "/scan", Icon: ScanLine },
+    { label: "Student survey", href: "/dashboard/student-survey", Icon: ClipboardList },
     ...(canManageAdministration ? [{ label: "Users", href: "/dashboard/users", Icon: Users }] : []),
     { label: "Settings", href: "/dashboard/settings", Icon: Settings },
   ];
