@@ -41,6 +41,8 @@ The permanent website address is embedded in each QR. A browser print request is
 
 The app reuses one Prisma client per process. `DB_POOL_MAX` defaults to 5 and accepts 1–20; database connection and idle timeouts are bounded. Keep the sum of connection limits for all running instances, maintenance tools, and test servers below the database provider's limit. For serverless hosting, use the provider's transaction-pool endpoint for runtime connections and a separate migration connection.
 
+Session lookups are shared only within a React server render, so the layout and page do not duplicate the same lookup. Private page data is not cached across users. Live-update revision checks run every five seconds against the current page's relevant tables; overlapping reads are coalesced and results are reused for two seconds. Test `/api/live` through the deployed proxy, including automatic reconnection, polling fallback, and a deactivated staff session. Background tabs should disconnect, and remote changes should wait while a form has unsaved edits.
+
 ## Dependency patches
 
 This release updates Next.js and its ESLint configuration to 16.3.4. The lockfile includes patched Sharp, URI parsing, and browser-mapping dependencies. The MySQL2 override patches Prisma's bundled driver without changing the app's PostgreSQL adapter; Prisma's CLI remains aligned with the 7.9.1 client. The ESLint js-yaml override is 4.3.2. Run `npm audit` with future dependency updates and use `npm ci` to reproduce the verified installation.

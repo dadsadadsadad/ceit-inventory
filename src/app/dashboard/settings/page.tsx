@@ -1,3 +1,6 @@
+export const metadata = { title: "Settings · CEIT Inventory" };
+
+import { OptimisticText } from "@/app/components/optimistic-state";
 import {
   createCategory,
   createLocation,
@@ -29,10 +32,14 @@ function CategoryEditor({
   };
 }) {
   return (
-    <details className="card-muted rounded-lg p-3">
+    <details className="section-disclosure card-muted rounded-lg p-3">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 text-sm">
         <span>
-          <strong>{category.name}</strong>
+          <strong>
+            <OptimisticText entity={`category:${category.id}`} field="name">
+              {category.name}
+            </OptimisticText>
+          </strong>
           {category.description ? <span className="muted"> · {category.description}</span> : null}
         </span>
         <span className="flex items-center gap-3">
@@ -48,7 +55,9 @@ function CategoryEditor({
       <FeedbackForm
         resetOnSuccess={false}
         action={updateCategory}
-        className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_5rem_1.5fr_auto] sm:items-end"
+        optimistic={{ entity: `category:${category.id}`, fields: { name: "name" } }}
+        revision={JSON.stringify(category)}
+        className="divider mt-4 grid gap-3 border-t pt-4 category-editor-grid"
       >
         <input type="hidden" name="id" value={category.id} />
         <label>
@@ -121,10 +130,14 @@ function LocationEditor({
   const hasAssignedItems = location._count.items > 0;
 
   return (
-    <details className="card-muted rounded-lg p-3">
+    <details className="section-disclosure card-muted rounded-lg p-3">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 text-sm">
         <span>
-          <strong>{location.name}</strong>
+          <strong>
+            <OptimisticText entity={`location:${location.id}`} field="name">
+              {location.name}
+            </OptimisticText>
+          </strong>
           {location.roomNumber ? <span className="muted"> · {location.roomNumber}</span> : null}
         </span>
         <span className="flex items-center gap-3">
@@ -140,6 +153,8 @@ function LocationEditor({
       <FeedbackForm
         resetOnSuccess={false}
         action={updateLocation}
+        optimistic={{ entity: `location:${location.id}`, fields: { name: "name" } }}
+        revision={JSON.stringify(location)}
         className="divider mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2"
       >
         <input type="hidden" name="id" value={location.id} />
@@ -252,6 +267,7 @@ function AccountSettings({ email, username }: { email: string; username: string 
       </div>
       <FeedbackForm
         action={updateOwnAccount}
+        revision={`${email}:${username}`}
         resetOnSuccess={false}
         successMessage="Account updated."
         className="mt-5 space-y-5"
@@ -288,6 +304,7 @@ function AccountSettings({ email, username }: { email: string; username: string 
           <label>
             <span className="text-sm font-semibold">Current password</span>
             <input
+              required
               type="password"
               name="currentPassword"
               autoComplete="current-password"
@@ -360,7 +377,7 @@ export default async function SettingsPage() {
       <div className="page-inner space-y-6">
         {/* Settings page title. */}
         <header>
-          <p className="eyebrow">Settings</p>
+          <p className="eyebrow">Workspace preferences</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Settings</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Update your account. Administrators can also manage rooms and categories.
@@ -383,57 +400,69 @@ export default async function SettingsPage() {
               {/* Create and edit rooms. */}
               <section className="card rounded-lg p-5 sm:p-6">
                 <h3 className="text-lg font-semibold">Rooms and locations</h3>
-                <FeedbackForm action={createLocation} className="mt-5 space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                      <span className="text-sm font-semibold">Location name *</span>
-                      <input
-                        required
-                        name="name"
-                        maxLength={255}
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="Computer Laboratory 1"
-                      />
-                    </label>
-                    <label>
-                      <span className="text-sm font-semibold">Room number</span>
-                      <input
-                        name="roomNumber"
-                        maxLength={100}
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="CEIT-201"
-                      />
-                    </label>
-                    <label>
-                      <span className="text-sm font-semibold">Asset-tag room code</span>
-                      <input
-                        name="assetTagCode"
-                        maxLength={2}
-                        pattern="[0-9]{2}"
-                        title="Use two digits, such as 05."
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="Auto"
-                      />
-                      <span className="muted mt-1 block text-xs">
-                        Leave empty to assign the next available two-digit code.
-                      </span>
-                    </label>
-                  </div>
-                  <label className="block">
-                    <span className="text-sm font-semibold">Description</span>
-                    <input
-                      name="description"
-                      maxLength={2_000}
-                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                    />
-                  </label>
-                  <SubmitButton
-                    pendingLabel="Adding location…"
-                    className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
-                  >
+                <details className="section-disclosure mt-5">
+                  <summary className="accent-link cursor-pointer text-sm font-semibold">
                     Add location
-                  </SubmitButton>
-                </FeedbackForm>
+                  </summary>
+                  <FeedbackForm
+                    action={createLocation}
+                    createPreview={{
+                      titleField: "name",
+                      detailFields: ["assetTagCode", "description"],
+                    }}
+                    className="mt-5 space-y-4"
+                  >
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label>
+                        <span className="text-sm font-semibold">Location name *</span>
+                        <input
+                          required
+                          name="name"
+                          maxLength={255}
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                          placeholder="Computer Laboratory 1"
+                        />
+                      </label>
+                      <label>
+                        <span className="text-sm font-semibold">Room number</span>
+                        <input
+                          name="roomNumber"
+                          maxLength={100}
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                          placeholder="CEIT-201"
+                        />
+                      </label>
+                      <label>
+                        <span className="text-sm font-semibold">Asset-tag room code</span>
+                        <input
+                          name="assetTagCode"
+                          maxLength={2}
+                          pattern="[0-9]{2}"
+                          title="Use two digits, such as 05."
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                          placeholder="Auto"
+                        />
+                        <span className="muted mt-1 block text-xs">
+                          Leave empty to assign the next available two-digit code.
+                        </span>
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="text-sm font-semibold">Description</span>
+                      <input
+                        name="description"
+                        maxLength={2_000}
+                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                      />
+                    </label>
+                    <SubmitButton
+                      pendingLabel="Adding location…"
+                      className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                    >
+                      Add location
+                    </SubmitButton>
+                  </FeedbackForm>
+                </details>
                 <div className="divider mt-6 space-y-3 border-t pt-5">
                   <h4 className="text-sm font-semibold">Current locations</h4>
                   {setup[1].length ? (
@@ -449,46 +478,58 @@ export default async function SettingsPage() {
               {/* Create and edit inventory categories. */}
               <section className="card rounded-lg p-5 sm:p-6">
                 <h3 className="text-lg font-semibold">Item categories</h3>
-                <FeedbackForm action={createCategory} className="mt-5 space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-[1fr_7rem]">
-                    <label>
-                      <span className="text-sm font-semibold">Category name *</span>
-                      <input
-                        required
-                        name="name"
-                        maxLength={255}
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="Desktop Computers"
-                      />
-                    </label>
-                    <label>
-                      <span className="text-sm font-semibold">Tag code</span>
-                      <input
-                        name="assetTagCode"
-                        maxLength={3}
-                        pattern="[A-Za-z0-9]{3}"
-                        title="Use three letters or numbers."
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="Auto"
-                      />
-                    </label>
-                  </div>
-                  <label className="block">
-                    <span className="text-sm font-semibold">Description</span>
-                    <input
-                      name="description"
-                      maxLength={2_000}
-                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                      placeholder="Optional description"
-                    />
-                  </label>
-                  <SubmitButton
-                    pendingLabel="Adding category…"
-                    className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
-                  >
+                <details className="section-disclosure mt-5">
+                  <summary className="accent-link cursor-pointer text-sm font-semibold">
                     Add category
-                  </SubmitButton>
-                </FeedbackForm>
+                  </summary>
+                  <FeedbackForm
+                    action={createCategory}
+                    createPreview={{
+                      titleField: "name",
+                      detailFields: ["assetTagCode", "description"],
+                    }}
+                    className="mt-5 space-y-4"
+                  >
+                    <div className="grid gap-4 sm:grid-cols-[1fr_7rem]">
+                      <label>
+                        <span className="text-sm font-semibold">Category name *</span>
+                        <input
+                          required
+                          name="name"
+                          maxLength={255}
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                          placeholder="Desktop Computers"
+                        />
+                      </label>
+                      <label>
+                        <span className="text-sm font-semibold">Tag code</span>
+                        <input
+                          name="assetTagCode"
+                          maxLength={3}
+                          pattern="[A-Za-z0-9]{3}"
+                          title="Use three letters or numbers."
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                          placeholder="Auto"
+                        />
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="text-sm font-semibold">Description</span>
+                      <input
+                        name="description"
+                        maxLength={2_000}
+                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                        placeholder="Optional description"
+                      />
+                    </label>
+                    <SubmitButton
+                      pendingLabel="Adding category…"
+                      className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                    >
+                      Add category
+                    </SubmitButton>
+                  </FeedbackForm>
+                </details>
                 <div className="divider mt-6 space-y-3 border-t pt-5">
                   <h4 className="text-sm font-semibold">Current categories</h4>
                   {setup[0].length ? (

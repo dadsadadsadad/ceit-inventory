@@ -1,3 +1,6 @@
+export const metadata = { title: "Borrowing · CEIT Inventory" };
+
+import { OptimisticStatus } from "@/app/components/optimistic-state";
 import Link from "next/link";
 
 import type { BorrowStatus, Prisma } from "@prisma/client";
@@ -7,6 +10,7 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowStatus, borrowStatuses, borrowStatusLabel } from "@/lib/borrow-status";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
+import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
@@ -109,23 +113,6 @@ function paginationEntries(totalPages: number, currentPage: number) {
   );
 }
 
-function borrowStatusClass(status: BorrowStatus) {
-  switch (status) {
-    case borrowStatus.REQUESTED:
-    case borrowStatus.RESERVED:
-      return "status-pill status-pill-pending";
-    case borrowStatus.BORROWED:
-      return "status-pill status-pill-deployed";
-    case borrowStatus.RETURN_REQUESTED:
-      return "status-pill status-pill-pending";
-    case borrowStatus.RETURNED:
-      return "status-pill status-pill-positive";
-    case borrowStatus.DECLINED:
-    case borrowStatus.CANCELLED:
-      return "status-pill status-pill-critical";
-  }
-}
-
 function formatDateTime(value: Date) {
   return formatManilaDate(value, {
     day: "numeric",
@@ -142,7 +129,7 @@ function inventoryAvailabilityLabel(item: BorrowingRecord["inventoryItem"]) {
     return "Checked out";
   }
   if (!canBorrowInventoryStatus(item.status)) {
-    return item.status.toLowerCase().replaceAll("_", " ");
+    return inventoryStatusLabel(item.status);
   }
   return `${item.quantity} available`;
 }
@@ -164,7 +151,11 @@ function BorrowingActions({
         ) : request.startsAt > new Date() ? (
           <p className="muted text-xs">Pickup: {formatDateTime(request.startsAt)}</p>
         ) : (
-          <FeedbackForm action={markBorrowed} successMessage="Equipment checked out.">
+          <FeedbackForm
+            action={markBorrowed}
+            optimistic={{ entity: `borrow:${request.id}`, values: { status: "BORROWED" } }}
+            successMessage="Equipment checked out."
+          >
             <input type="hidden" name="requestId" value={request.id} />
             <SubmitButton
               pendingLabel="Checking out…"
@@ -176,6 +167,7 @@ function BorrowingActions({
         )}
         <FeedbackForm
           action={cancelReservation}
+          optimistic={{ entity: `borrow:${request.id}`, values: { status: "CANCELLED" } }}
           successMessage="Reservation cancelled."
           className="flex flex-wrap gap-2"
         >
@@ -203,6 +195,10 @@ function BorrowingActions({
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <FeedbackForm
           action={request.isReservation ? approveReservation : markBorrowed}
+          optimistic={{
+            entity: `borrow:${request.id}`,
+            values: { status: request.isReservation ? "RESERVED" : "BORROWED" },
+          }}
           successMessage={
             request.isReservation ? "Reservation approved." : "Equipment checked out."
           }
@@ -231,7 +227,11 @@ function BorrowingActions({
                 : "Check out equipment"}
           </SubmitButton>
         </FeedbackForm>
-        <FeedbackForm action={declineBorrowRequest} className="flex flex-1 flex-wrap gap-2">
+        <FeedbackForm
+          action={declineBorrowRequest}
+          optimistic={{ entity: `borrow:${request.id}`, values: { status: "DECLINED" } }}
+          className="flex flex-1 flex-wrap gap-2"
+        >
           <input type="hidden" name="requestId" value={request.id} />
           <label className="sr-only" htmlFor={`decline-note-${layout}-${request.id}`}>
             Decline note
@@ -259,7 +259,11 @@ function BorrowingActions({
     request.status === borrowStatus.RETURN_REQUESTED
   ) {
     return (
-      <FeedbackForm action={returnBorrowRequest} className="flex flex-wrap gap-2">
+      <FeedbackForm
+        action={returnBorrowRequest}
+        optimistic={{ entity: `borrow:${request.id}`, values: { status: "RETURNED" } }}
+        className="flex flex-wrap gap-2"
+      >
         <input type="hidden" name="requestId" value={request.id} />
         <label className="sr-only" htmlFor={`return-note-${layout}-${request.id}`}>
           Return note
@@ -335,12 +339,8 @@ export default async function BorrowingPage({
   let requests: BorrowingRecord[] = [];
   let totalRecords = 0;
   let currentPage = requestedPage;
-
-  try {
-    totalRecords = await prisma.borrowRequest.count({ where });
-    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-    currentPage = Math.min(requestedPage, totalPages);
-    requests = await prisma.borrowRequest.findMany({
+  const loadPage = (page: number) =>
+    prisma.borrowRequest.findMany({
       where,
       include: {
         inventoryItem: {
@@ -348,9 +348,19 @@ export default async function BorrowingPage({
         },
       },
       orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
-      skip: (currentPage - 1) * pageSize,
+      skip: (page - 1) * pageSize,
       take: pageSize,
     });
+
+  try {
+    const [count, requestedRows] = await Promise.all([
+      prisma.borrowRequest.count({ where }),
+      loadPage(requestedPage),
+    ]);
+    totalRecords = count;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+    currentPage = Math.min(requestedPage, totalPages);
+    requests = currentPage === requestedPage ? requestedRows : await loadPage(currentPage);
   } catch (error) {
     console.error("Unable to load borrowing requests", error);
     databaseError = true;
@@ -373,15 +383,9 @@ export default async function BorrowingPage({
           <div className="flex flex-wrap gap-3">
             <Link
               href="/dashboard/reports?kind=borrowings"
-              className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
             >
               Borrowing reports
-            </Link>
-            <Link
-              href="/dashboard/inventory"
-              className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-            >
-              View inventory
             </Link>
           </div>
         </header>
@@ -447,7 +451,7 @@ export default async function BorrowingPage({
               </p>
             </div>
 
-            <div className="divide-y md:hidden">
+            <div className="record-cards divide-y xl:hidden">
               {requests.map((request) => (
                 <article key={request.id} className="space-y-4 p-4">
                   {/* Borrowing request card for mobile. */}
@@ -458,11 +462,11 @@ export default async function BorrowingPage({
                     >
                       {request.inventoryItem.name}
                     </Link>
-                    <span
-                      className={`${borrowStatusClass(request.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}
-                    >
-                      {borrowStatusLabel(request.status)}
-                    </span>
+                    <OptimisticStatus
+                      entity={`borrow:${request.id}`}
+                      value={request.status}
+                      kind="borrowing"
+                    />
                   </div>
                   <BorrowerDetails request={request} />
                   <BorrowSchedule request={request} />
@@ -523,7 +527,7 @@ export default async function BorrowingPage({
               ))}
             </div>
 
-            <div className="hidden overflow-x-auto md:block">
+            <div className="record-table hidden overflow-x-auto xl:block">
               {/* Borrowing requests on wider screens. */}
               <table className="w-full">
                 <thead>
@@ -596,11 +600,11 @@ export default async function BorrowingPage({
                         ) : null}
                       </td>
                       <td className="px-5 py-4">
-                        <span
-                          className={`${borrowStatusClass(request.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}
-                        >
-                          {borrowStatusLabel(request.status)}
-                        </span>
+                        <OptimisticStatus
+                          entity={`borrow:${request.id}`}
+                          value={request.status}
+                          kind="borrowing"
+                        />
                         <p className="muted mt-3 max-w-48 text-xs leading-5">
                           Requested {formatDateTime(request.requestedAt)}
                         </p>

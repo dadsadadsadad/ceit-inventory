@@ -4,25 +4,19 @@ import {
   ItemStatus,
   MaintenancePriority,
   MaintenanceStatus,
-  type Prisma,
 } from "@prisma/client";
 import { prisma } from "@/prisma";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { borrowStatusLabel } from "@/lib/borrow-status";
 import { formatReportDate, formatReportDateTime, humanize } from "../format";
 import { documentResponse, reportDocument, mutedColor } from "../pdf-writer";
+import { reportAttentionWhere } from "./attention";
 
 // Current inventory and outstanding work.
 export async function createOverviewPdf(canManage: boolean, calendarDate: string) {
   const today = new Date();
   const inspectionCutoff = new Date(today);
   inspectionCutoff.setDate(inspectionCutoff.getDate() - 90);
-  const attentionWhere: Prisma.InventoryItemWhereInput = {
-    OR: [
-      { status: { in: [ItemStatus.DEFECTIVE, ItemStatus.NOT_TESTED] } },
-      { condition: { in: [ItemCondition.POOR, ItemCondition.FOR_REPAIR] } },
-    ],
-  };
   const [
     inventorySummary,
     statusCounts,
@@ -57,9 +51,9 @@ export async function createOverviewPdf(canManage: boolean, calendarDate: string
       orderBy: { name: "asc" },
       select: { name: true, _count: { select: { items: true } } },
     }),
-    prisma.inventoryItem.count({ where: attentionWhere }),
+    prisma.inventoryItem.count({ where: reportAttentionWhere }),
     prisma.inventoryItem.findMany({
-      where: attentionWhere,
+      where: reportAttentionWhere,
       include: { category: true, location: true },
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       take: 25,
@@ -141,12 +135,12 @@ export async function createOverviewPdf(canManage: boolean, calendarDate: string
     minimumFractionDigits: 2,
     style: "currency",
   });
-  const topCategories = categoryCounts
-    .filter((category) => category._count.items > 0)
+  const populatedCategories = categoryCounts.filter((category) => category._count.items > 0);
+  const populatedLocations = locationCounts.filter((location) => location._count.items > 0);
+  const topCategories = populatedCategories
     .sort((left, right) => right._count.items - left._count.items)
     .slice(0, 12);
-  const topLocations = locationCounts
-    .filter((location) => location._count.items > 0)
+  const topLocations = populatedLocations
     .sort((left, right) => right._count.items - left._count.items)
     .slice(0, 12);
 
@@ -225,13 +219,21 @@ export async function createOverviewPdf(canManage: boolean, calendarDate: string
     ]),
     { maxCellCharacters: 150, widths: [1.4, 1.3, 1.05, 1.15] },
   );
-  writer.addHeading("Items by category");
+  writer.addHeading(
+    populatedCategories.length > topCategories.length
+      ? `Items by category (top ${topCategories.length})`
+      : "Items by category",
+  );
   writer.addTable(
     ["Category", "Records"],
     topCategories.map((category) => [category.name, category._count.items.toLocaleString()]),
     { widths: [3, 1] },
   );
-  writer.addHeading("Items by location");
+  writer.addHeading(
+    populatedLocations.length > topLocations.length
+      ? `Items by location (top ${topLocations.length})`
+      : "Items by location",
+  );
   writer.addTable(
     ["Location", "Records"],
     topLocations.map((location) => [location.name, location._count.items.toLocaleString()]),
@@ -253,7 +255,11 @@ export async function createOverviewPdf(canManage: boolean, calendarDate: string
         ]),
       { widths: [1.4, 1.2, 1.2, 1.2] },
     );
-    writer.addHeading("Open maintenance requests");
+    writer.addHeading(
+      openTicketCount > openTickets.length
+        ? `Open maintenance requests (first ${openTickets.length} of ${openTicketCount})`
+        : "Open maintenance requests",
+    );
     writer.addTable(
       ["Item", "Priority", "Opened"],
       openTickets.map((ticket) => [
@@ -267,7 +273,11 @@ export async function createOverviewPdf(canManage: boolean, calendarDate: string
       ]),
       { widths: [1.9, 0.85, 1.25] },
     );
-    writer.addHeading("Overdue");
+    writer.addHeading(
+      overdueBorrowCount > overdueBorrows.length
+        ? `Overdue (first ${overdueBorrows.length} of ${overdueBorrowCount})`
+        : "Overdue",
+    );
     writer.addTable(
       ["Item", "Borrower", "Return by", "Status"],
       overdueBorrows.map((request) => [

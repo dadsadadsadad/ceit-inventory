@@ -1,3 +1,5 @@
+export const metadata = { title: "Users · CEIT Inventory" };
+
 import { UserRole } from "@prisma/client";
 
 import { createUser, updateUser } from "./actions";
@@ -14,15 +16,18 @@ function roleLabel(role: UserRole) {
 
 // Load staff accounts for the administrator.
 export default async function UsersPage() {
-  await requireAdministrationPageAccess();
-  const users = await prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { email: "asc" }] });
+  const actor = await requireAdministrationPageAccess();
+  const users = await prisma.user.findMany({
+    orderBy: [{ isActive: "desc" }, { email: "asc" }],
+    select: { id: true, email: true, username: true, role: true, isActive: true, updatedAt: true },
+  });
 
   return (
     <div className="page users-page">
       <div className="page-inner space-y-6">
         {/* Account management title. */}
         <header>
-          <p className="eyebrow">Users</p>
+          <p className="eyebrow">Administration</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Users</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Add staff accounts, change access, or reset passwords.
@@ -30,14 +35,15 @@ export default async function UsersPage() {
         </header>
 
         {/* Create a staff account. */}
-        <section className="card rounded-lg p-5 sm:p-6">
-          <h2 className="text-lg font-semibold">Add account</h2>
+        <details className="section-disclosure card rounded-lg p-5 sm:p-6">
+          <summary className="cursor-pointer text-lg font-semibold">Add account</summary>
           <FeedbackForm
             action={createUser}
-            className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[1.2fr_1fr_0.8fr_1fr_auto] xl:items-end"
+            createPreview={{ titleField: "username", detailFields: ["email", "role"] }}
+            className="account-create-grid mt-5 grid gap-4"
           >
             <label>
-              <span className="text-sm font-semibold">Email *</span>
+              <span className="text-sm font-semibold">Email address *</span>
               <input
                 required
                 type="email"
@@ -98,7 +104,7 @@ export default async function UsersPage() {
               Create account
             </SubmitButton>
           </FeedbackForm>
-        </section>
+        </details>
 
         {/* Existing staff accounts. */}
         <section className="card overflow-hidden rounded-lg">
@@ -110,83 +116,107 @@ export default async function UsersPage() {
           </div>
           <div className="divide-y" style={{ borderColor: "var(--border)" }}>
             {users.map((user) => (
-              <FeedbackForm
-                key={user.id}
-                action={updateUser}
-                className="grid gap-4 px-5 py-5 xl:grid-cols-[minmax(12rem,1.25fr)_minmax(10rem,1fr)_10rem_8rem_minmax(12rem,1fr)_auto] xl:items-end"
-              >
-                {/* Update an account or reset its password. */}
-                <input type="hidden" name="id" value={user.id} />
-                <label>
-                  <span className="muted text-xs font-bold uppercase tracking-wide">Email</span>
-                  <input
-                    required
-                    type="email"
-                    name="email"
-                    defaultValue={user.email}
-                    autoComplete="email"
-                    maxLength={254}
-                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                  />
-                </label>
-                <label>
-                  <span className="muted text-xs font-bold uppercase tracking-wide">Username</span>
-                  <input
-                    required
-                    name="username"
-                    defaultValue={user.username}
-                    autoComplete="username"
-                    minLength={3}
-                    maxLength={32}
-                    pattern="[A-Za-z0-9._-]{3,32}"
-                    title="Use 3–32 letters, numbers, periods, underscores, or hyphens."
-                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                  />
-                </label>
-                <label>
-                  <span className="muted text-xs font-bold uppercase tracking-wide">Role</span>
-                  <select
-                    name="role"
-                    defaultValue={user.role}
-                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                  >
-                    {Object.values(UserRole).map((role) => (
-                      <option key={role} value={role}>
-                        {roleLabel(role)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex h-10 items-center gap-2 text-sm font-semibold">
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    defaultChecked={user.isActive}
-                    className="h-4 w-4"
-                  />{" "}
-                  Active
-                </label>
-                <label>
-                  <span className="muted text-xs font-bold uppercase tracking-wide">
-                    New password
+              <details key={user.id} className="section-disclosure px-5 py-4">
+                <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3 text-sm">
+                  <span>
+                    <strong>
+                      {user.username}
+                      {user.id === actor.id ? " (you)" : ""}
+                    </strong>
+                    <span className="muted mt-1 block break-all">{user.email}</span>
                   </span>
-                  <input
-                    minLength={8}
-                    maxLength={256}
-                    type="password"
-                    name="password"
-                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                    autoComplete="new-password"
-                    placeholder="Leave blank to keep"
-                  />
-                </label>
-                <SubmitButton
-                  pendingLabel="Saving…"
-                  className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                  <span className="flex items-center gap-3">
+                    <span className="muted">{roleLabel(user.role)}</span>
+                    <span className="status-pill rounded-md px-2 py-1 text-xs font-semibold">
+                      {user.isActive ? "Active" : "Inactive"}
+                    </span>
+                    <span className="accent-link font-semibold">Edit account</span>
+                  </span>
+                </summary>
+                <FeedbackForm
+                  action={updateUser}
+                  resetOnSuccess={false}
+                  revision={user.updatedAt.toISOString()}
+                  savedValues={{ role: user.role }}
+                  className="account-editor-grid divider mt-4 gap-4 border-t pt-5"
                 >
-                  Save
-                </SubmitButton>
-              </FeedbackForm>
+                  {/* Update an account or reset its password. */}
+                  <input type="hidden" name="id" value={user.id} />
+                  <label>
+                    <span className="muted text-xs font-bold uppercase tracking-wide">
+                      Email address
+                    </span>
+                    <input
+                      required
+                      type="email"
+                      name="email"
+                      defaultValue={user.email}
+                      autoComplete="email"
+                      maxLength={254}
+                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                    />
+                  </label>
+                  <label>
+                    <span className="muted text-xs font-bold uppercase tracking-wide">
+                      Username
+                    </span>
+                    <input
+                      required
+                      name="username"
+                      defaultValue={user.username}
+                      autoComplete="username"
+                      minLength={3}
+                      maxLength={32}
+                      pattern="[A-Za-z0-9._-]{3,32}"
+                      title="Use 3–32 letters, numbers, periods, underscores, or hyphens."
+                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                    />
+                  </label>
+                  <label>
+                    <span className="muted text-xs font-bold uppercase tracking-wide">Role</span>
+                    <select
+                      name="role"
+                      defaultValue={user.role}
+                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                    >
+                      {Object.values(UserRole).map((role) => (
+                        <option key={role} value={role}>
+                          {roleLabel(role)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex h-10 items-center gap-2 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      defaultChecked={user.isActive}
+                      className="h-4 w-4"
+                    />{" "}
+                    Active
+                  </label>
+                  <label>
+                    <span className="muted text-xs font-bold uppercase tracking-wide">
+                      New password
+                    </span>
+                    <input
+                      minLength={8}
+                      maxLength={256}
+                      type="password"
+                      name="password"
+                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                      autoComplete="new-password"
+                      placeholder="Leave blank to keep"
+                    />
+                  </label>
+                  <SubmitButton
+                    pendingLabel="Saving…"
+                    className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                  >
+                    Save account
+                  </SubmitButton>
+                </FeedbackForm>
+              </details>
             ))}
           </div>
         </section>

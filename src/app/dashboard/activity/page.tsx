@@ -1,3 +1,5 @@
+export const metadata = { title: "Audit trail · CEIT Inventory" };
+
 import Link from "next/link";
 
 import { AuditAction, Prisma } from "@prisma/client";
@@ -131,23 +133,25 @@ export default async function AuditTrailPage({
   let currentPage = requestedPage;
   let activity: ActivityEvent[] = [];
   let actionCounts = new Map<AuditAction, number>();
-
-  try {
-    const [count, groupedCounts] = await Promise.all([
-      prisma.inventoryAudit.count({ where }),
-      prisma.inventoryAudit.groupBy({ by: ["action"], where, _count: { _all: true } }),
-    ]);
-    totalRecords = count;
-    actionCounts = new Map(groupedCounts.map((entry) => [entry.action, entry._count._all]));
-    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-    currentPage = Math.min(requestedPage, totalPages);
-    activity = await prisma.inventoryAudit.findMany({
+  const loadPage = (page: number) =>
+    prisma.inventoryAudit.findMany({
       where,
       include: { item: { select: { assetTag: true, id: true, name: true } } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: (currentPage - 1) * pageSize,
+      skip: (page - 1) * pageSize,
       take: pageSize,
     });
+
+  try {
+    const [requestedRows, groupedCounts] = await Promise.all([
+      loadPage(requestedPage),
+      prisma.inventoryAudit.groupBy({ by: ["action"], where, _count: { _all: true } }),
+    ]);
+    totalRecords = groupedCounts.reduce((total, entry) => total + entry._count._all, 0);
+    actionCounts = new Map(groupedCounts.map((entry) => [entry.action, entry._count._all]));
+    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+    currentPage = Math.min(requestedPage, totalPages);
+    activity = currentPage === requestedPage ? requestedRows : await loadPage(currentPage);
   } catch (error) {
     console.error("Unable to load audit trail", error);
     databaseError = true;
@@ -175,26 +179,15 @@ export default async function AuditTrailPage({
               See who changed what and when. Search by item, user, or activity.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href={exportHref}
-              className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
-            >
-              Export CSV
-            </a>
-            <a
-              href={pdfExportHref}
-              className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
-            >
-              Export PDF
-            </a>
-            <Link
-              href="/dashboard"
-              className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-            >
-              Back to dashboard
-            </Link>
-          </div>
+          <details className="secondary-actions">
+            <summary className="secondary-button cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold">
+              Export history
+            </summary>
+            <div className="secondary-actions-menu">
+              <a href={exportHref}>Export CSV</a>
+              <a href={pdfExportHref}>Export PDF</a>
+            </div>
+          </details>
         </header>
 
         {/* Activity search and filters. */}
@@ -367,7 +360,7 @@ export default async function AuditTrailPage({
                           <span className="card-muted rounded-md px-2.5 py-1 text-xs font-semibold">
                             {auditActionLabel(event.action)}
                           </span>
-                          <code className="muted rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem]">
+                          <code className="muted rounded-md border border-[var(--border)] px-2 py-1 text-xs">
                             {eventReference(event)}
                           </code>
                         </div>

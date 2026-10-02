@@ -31,7 +31,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
     } catch {}
     controlsRef.current = null;
     const stream = videoRef.current?.srcObject;
-    if (stream instanceof MediaStream) {
+    if (typeof MediaStream !== "undefined" && stream instanceof MediaStream) {
       stream.getTracks().forEach((track) => track.stop());
     }
     if (videoRef.current) {
@@ -79,6 +79,11 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
     setMessage("Starting camera…");
     try {
       const { BrowserQRCodeReader } = await import("@zxing/browser");
+      // The reader is loaded only on demand. Navigation or a stopped attempt may
+      // finish before that download, so never request a camera for an old scan.
+      if (attempt !== attemptRef.current || !mountedRef.current || !videoRef.current) {
+        return;
+      }
       const reader = new BrowserQRCodeReader(undefined, {
         delayBetweenScanAttempts: 250,
         delayBetweenScanSuccess: 750,
@@ -147,12 +152,12 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
             <div className="scanner-empty-state">
               <ScanLine className="mx-auto h-7 w-7" aria-hidden="true" />
               <p className="mt-3 text-sm font-semibold">Camera preview</p>
-              <p className="mt-1 text-xs leading-5">Tap Use camera to scan a CEIT QR code.</p>
+              <p className="mt-1 text-xs leading-5">Use your camera to scan an equipment label.</p>
             </div>
           </div>
         ) : null}
       </div>
-      <p className="muted mt-4 text-sm leading-6" aria-live="polite">
+      <p id="scanner-status" className="muted mt-4 text-sm leading-6" role="status">
         {message}
       </p>
       {/* Start and stop the camera. */}
@@ -185,6 +190,10 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
             value={manualCode}
             onChange={(event) => setManualCode(event.target.value)}
             required
+            autoCapitalize="none"
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="scanner-status"
             maxLength={2048}
             className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm"
             placeholder="Paste or type QR code"

@@ -1,3 +1,5 @@
+export const metadata = { title: "Add item · CEIT Inventory" };
+
 import Link from "next/link";
 
 import { NewInventoryForm } from "./new-inventory-form";

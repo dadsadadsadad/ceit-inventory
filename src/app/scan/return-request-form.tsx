@@ -8,14 +8,13 @@ import { submitReturnRequest } from "./borrow-actions";
 // Match the borrower to an item being returned.
 export function ReturnRequestForm({ itemName, qrCode }: { itemName: string; qrCode: string }) {
   return (
-    <FeedbackForm action={submitReturnRequest} className="card rounded-lg p-5 sm:p-7">
+    <FeedbackForm action={submitReturnRequest} className="card request-form rounded-lg p-5 sm:p-7">
       <input type="hidden" name="qrCode" value={qrCode} />
-      <div className="absolute -left-[10000px] h-px w-px overflow-hidden" aria-hidden="true">
+      <div className="honeypot" aria-hidden="true">
         <label htmlFor="return-website">Leave this field blank</label>
         <input id="return-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
-      <p className="eyebrow">Return equipment</p>
-      <h2 className="mt-2 text-xl font-semibold">Request return for {itemName}</h2>
+      <h2 className="text-xl font-semibold">Return {itemName}</h2>
       <p className="muted mt-2 text-sm leading-6">
         Enter the same student number and contact number used for borrowing. Staff will inspect the
         item and confirm the return.
@@ -28,6 +27,7 @@ export function ReturnRequestForm({ itemName, qrCode }: { itemName: string; qrCo
             required
             name="studentNumber"
             autoComplete="off"
+            minLength={3}
             maxLength={64}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             placeholder="e.g. 2024-00001"
@@ -40,6 +40,7 @@ export function ReturnRequestForm({ itemName, qrCode }: { itemName: string; qrCo
             name="contact"
             type="tel"
             autoComplete="tel"
+            minLength={7}
             maxLength={32}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             placeholder="09XX XXX XXXX"
@@ -48,7 +49,7 @@ export function ReturnRequestForm({ itemName, qrCode }: { itemName: string; qrCo
       </div>
       {/* Condition notes for the staff receiving the item. */}
       <label className="mt-4 block">
-        <span className="text-sm font-semibold">Return notes</span>
+        <span className="text-sm font-semibold">Return notes (optional)</span>
         <textarea
           name="returnRequestNotes"
           rows={3}

@@ -1,3 +1,5 @@
+export const metadata = { title: "Reports · CEIT Inventory" };
+
 import Link from "next/link";
 import { ReportExportForm } from "./report-export-form";
 
@@ -55,7 +57,6 @@ export default async function ReportsPage({
   const canAdmin = canManageAdministration(user.role);
   const today = new Date();
   const [
-    itemCount,
     statusCounts,
     categoryCounts,
     locationCounts,
@@ -63,10 +64,7 @@ export default async function ReportsPage({
     activeBorrowCount,
     overdueBorrowCount,
     acquisitionSummary,
-    reservationCount,
-    qrIssueCount,
   ] = await Promise.all([
-    prisma.inventoryItem.count(),
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.category.findMany({
       orderBy: { name: "asc" },
@@ -98,11 +96,8 @@ export default async function ReportsPage({
           _sum: { purchasePrice: true },
         })
       : Promise.resolve({ _count: { purchasePrice: 0 }, _sum: { purchasePrice: null } }),
-    prisma.borrowRequest.count({
-      where: { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: today } },
-    }),
-    prisma.maintenanceTicket.count({ where: { source: "QR", status: MaintenanceStatus.OPEN } }),
   ]);
+  const itemCount = statusCounts.reduce((total, entry) => total + entry._count._all, 0);
   const statusMap = new Map(statusCounts.map((entry) => [entry.status, entry._count._all]));
   const populatedCategories = categoryCounts
     .filter((category) => category._count.items > 0)
@@ -149,22 +144,6 @@ export default async function ReportsPage({
             >
               Download overview PDF
             </a>
-            {canManage ? (
-              <>
-                <a
-                  href="/dashboard/reports/export/pdf?kind=pcs"
-                  className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
-                >
-                  PC register PDF
-                </a>
-                <Link
-                  href="/dashboard/reports?kind=borrowings"
-                  className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
-                >
-                  Borrowing reports
-                </Link>
-              </>
-            ) : null}
           </div>
         </header>
 
@@ -209,22 +188,6 @@ export default async function ReportsPage({
           ) : null}
         </section>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link
-            href="/dashboard/borrowing?status=RESERVED"
-            className="card card-link rounded-lg p-5"
-          >
-            <p className="muted text-sm">Upcoming reservations</p>
-            <p className="mt-2 text-2xl font-semibold">{reservationCount}</p>
-          </Link>
-          <Link
-            href="/dashboard/maintenance?source=QR&status=OPEN"
-            className="card card-link rounded-lg p-5"
-          >
-            <p className="muted text-sm">Open QR issue reports</p>
-            <p className="mt-2 text-2xl font-semibold">{qrIssueCount}</p>
-          </Link>
-        </div>
         {/* Filtered CSV and PDF downloads. */}
         <section className="card rounded-lg p-5 sm:p-6" aria-labelledby="filtered-export-heading">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -244,6 +207,16 @@ export default async function ReportsPage({
             ) : null}
           </div>
           <ReportExportForm
+            key={JSON.stringify([
+              selectedKind,
+              selectedPeriod,
+              selectedFrom,
+              selectedTo,
+              selectedInventoryStatus,
+              selectedBorrowingState,
+              maintenanceSource,
+              pcOnly,
+            ])}
             canAdmin={canAdmin}
             initial={{
               kind: selectedKind,
@@ -256,42 +229,6 @@ export default async function ReportsPage({
               pcOnly,
             }}
           />
-          {canManage ? (
-            <div className="reports-lending-shortcuts mt-5" aria-label="Lending report shortcuts">
-              <div>
-                <p className="text-sm font-semibold">Quick filters</p>
-                <p className="muted mt-1 text-xs leading-5">
-                  Choose a view, then adjust the dates above.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/dashboard/reports?kind=borrowings&borrowingState=currently-borrowed"
-                  className="reports-shortcut rounded-lg px-3 py-2 text-sm font-semibold"
-                >
-                  Currently borrowed
-                </Link>
-                <Link
-                  href="/dashboard/reports?kind=borrowings&borrowingState=returned"
-                  className="reports-shortcut rounded-lg px-3 py-2 text-sm font-semibold"
-                >
-                  Returned items
-                </Link>
-                <Link
-                  href="/dashboard/reports?kind=borrowings&borrowingState=reserved"
-                  className="reports-shortcut rounded-lg px-3 py-2 text-sm font-semibold"
-                >
-                  Reservations
-                </Link>
-                <Link
-                  href="/dashboard/reports?kind=maintenance&maintenanceSource=QR"
-                  className="reports-shortcut rounded-lg px-3 py-2 text-sm font-semibold"
-                >
-                  QR issues
-                </Link>
-              </div>
-            </div>
-          ) : null}
         </section>
 
         {/* Record counts for each equipment status. */}
@@ -317,7 +254,7 @@ export default async function ReportsPage({
         <section className="grid gap-6 xl:grid-cols-2">
           {/* Inventory grouped by category. */}
           <article className="card rounded-lg p-5 sm:p-6">
-            <h2 className="text-lg font-semibold">Items by category</h2>
+            <h2 className="text-lg font-semibold">Largest categories</h2>
             {populatedCategories.length ? (
               <ul className="mt-4 divide-y">
                 {populatedCategories.map((category) => (
@@ -333,7 +270,7 @@ export default async function ReportsPage({
           </article>
           {/* Inventory grouped by location. */}
           <article className="card rounded-lg p-5 sm:p-6">
-            <h2 className="text-lg font-semibold">Items by location</h2>
+            <h2 className="text-lg font-semibold">Largest locations</h2>
             {populatedLocations.length ? (
               <ul className="mt-4 divide-y">
                 {populatedLocations.map((location) => (

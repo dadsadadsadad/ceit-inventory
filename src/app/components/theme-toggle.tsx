@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Moon, Palette, Sun } from "lucide-react";
+import { usePathname } from "next/navigation";
 import {
   useEffect,
   useId,
@@ -95,7 +96,7 @@ function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPicke
             <span className="block text-xs font-semibold text-[var(--foreground)]">
               Create your accent
             </span>
-            <span className="block truncate text-[11px] text-[var(--muted)]">
+            <span className="block truncate text-xs text-[var(--muted)]">
               Your hue is tuned automatically for readable text.
             </span>
           </div>
@@ -341,7 +342,7 @@ function migrateAccentStorage(accent: Accent) {
 }
 
 // Save the device's theme and accent color.
-export function ThemeToggle() {
+export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   const theme = useSyncExternalStore<Theme>(subscribeToAppearance, getThemeSnapshot, () => "dark");
   const accent = useSyncExternalStore<Accent>(subscribeToAppearance, getAccentSnapshot, () => null);
   const [isOpen, setIsOpen] = useState(false);
@@ -420,8 +421,8 @@ export function ThemeToggle() {
   return (
     <div
       ref={controlRef}
-      className="appearance-control fixed right-4 z-50"
-      style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      className={`appearance-control ${embedded ? "appearance-embedded" : "fixed right-4 z-50"}`}
+      style={embedded ? undefined : { bottom: "max(1rem, env(safe-area-inset-bottom))" }}
     >
       {isOpen ? (
         <section
@@ -520,14 +521,21 @@ export function ThemeToggle() {
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         className="appearance-trigger grid h-12 w-12 place-items-center rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-        aria-label="Open appearance settings"
+        aria-label={isOpen ? "Close appearance settings" : "Open appearance settings"}
         aria-haspopup="dialog"
         aria-controls={dialogId}
         aria-expanded={isOpen}
         title="Appearance settings"
       >
         <Palette className="h-5 w-5" aria-hidden="true" />
+        {embedded ? <span>Appearance</span> : null}
       </button>
     </div>
   );
+}
+
+// Staff pages keep preferences with the account controls in the sidebar.
+export function GlobalAppearance() {
+  const pathname = usePathname();
+  return pathname.startsWith("/dashboard") ? null : <ThemeToggle />;
 }

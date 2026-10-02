@@ -1,7 +1,9 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { useContext, type ComponentProps } from "react";
 import { useFormStatus } from "react-dom";
+import { SavingEntityContext } from "./feedback-form";
+import { useOptimisticChanges } from "./optimistic-state";
 
 type SubmitButtonProps = ComponentProps<"button"> & { pendingLabel?: string };
 
@@ -9,19 +11,23 @@ type SubmitButtonProps = ComponentProps<"button"> & { pendingLabel?: string };
 export function SubmitButton({
   children,
   className = "",
-  pendingLabel = "Saving...",
+  pendingLabel = "Saving…",
   disabled,
   ...props
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
+  const entity = useContext(SavingEntityContext);
+  const { values } = useOptimisticChanges();
+  const saving = Boolean(entity && values[entity]);
+  const busy = pending || saving;
   return (
     <button
       {...props}
-      aria-busy={pending || undefined}
-      disabled={disabled || pending}
-      className={`${className} disabled:cursor-wait disabled:opacity-60`}
+      aria-busy={busy || undefined}
+      disabled={disabled || busy}
+      className={`${className} disabled:opacity-60 ${busy ? "cursor-wait" : "disabled:cursor-not-allowed"}`}
     >
-      {pending ? pendingLabel : children}
+      {busy ? pendingLabel : children}
     </button>
   );
 }

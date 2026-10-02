@@ -1,25 +1,8 @@
 import Link from "next/link";
-
+import type { Metadata } from "next";
 import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BarChart3,
-  CalendarClock,
-  ClipboardCheck,
-  FileUp,
-  MapPin,
-  MessageSquareWarning,
-  Package,
-  PackagePlus,
-  ScanLine,
-  TriangleAlert,
-  Undo2,
-  Wrench,
-} from "lucide-react";
-
+import { ArrowRight, CheckCheck, ClipboardCheck, PackagePlus, Undo2, Wrench } from "lucide-react";
 import { DashboardNoteForm } from "./dashboard-note-form";
-
 import {
   canManageAdministration,
   canManageInventory,
@@ -29,338 +12,289 @@ import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Dashboard · CEIT Inventory" };
 
 async function getDashboardData(includeAuditTrail: boolean) {
-  const [
-    itemCount,
-    locationCount,
-    attentionCount,
-    recentActivity,
-    dashboardNote,
-    openTicketCount,
-    pendingBorrowCount,
-    checkedOutCount,
-    reservationCount,
-    qrIssueCount,
-    returnCount,
-  ] = await Promise.all([
-    prisma.inventoryItem.count(),
-    prisma.location.count({ where: { isActive: true } }),
-    prisma.inventoryItem.count({ where: { status: ItemStatus.DEFECTIVE } }),
-    includeAuditTrail
-      ? prisma.inventoryAudit.findMany({
-          include: { item: { select: { id: true, name: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-        })
-      : Promise.resolve([]),
-    prisma.dashboardNote.findUnique({ where: { scope: "shared-dashboard" } }),
-    prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
-    prisma.borrowRequest.count({ where: { status: BorrowStatus.REQUESTED } }),
-    prisma.borrowRequest.count({
-      where: { status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] } },
-    }),
-    prisma.borrowRequest.count({
-      where: { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: new Date() } },
-    }),
-    prisma.maintenanceTicket.count({ where: { source: "QR", status: MaintenanceStatus.OPEN } }),
-    prisma.borrowRequest.count({ where: { status: BorrowStatus.RETURN_REQUESTED } }),
-  ]);
+  const now = new Date();
+  const [inventory, locationCount, recentActivity, dashboardNote, maintenance, borrowing] =
+    await Promise.all([
+      prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
+      prisma.location.count({ where: { isActive: true } }),
+      includeAuditTrail
+        ? prisma.inventoryAudit.findMany({
+            select: {
+              id: true,
+              summary: true,
+              entityLabel: true,
+              createdAt: true,
+              item: { select: { id: true, name: true } },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+          })
+        : Promise.resolve([]),
+      prisma.dashboardNote.findUnique({ where: { scope: "shared-dashboard" } }),
+      prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
+      prisma.borrowRequest.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+        where: {
+          OR: [
+            {
+              status: {
+                in: [BorrowStatus.REQUESTED, BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED],
+              },
+            },
+            { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: now } },
+          ],
+        },
+      }),
+    ]);
+  const count = (status: BorrowStatus) =>
+    borrowing.find((entry) => entry.status === status)?._count._all ?? 0;
   return {
-    attentionCount,
-    checkedOutCount,
-    dashboardNote,
-    itemCount,
+    itemCount: inventory.reduce((total, entry) => total + entry._count._all, 0),
+    attentionCount:
+      inventory.find((entry) => entry.status === ItemStatus.DEFECTIVE)?._count._all ?? 0,
     locationCount,
-    openTicketCount,
-    pendingBorrowCount,
     recentActivity,
-    reservationCount,
-    qrIssueCount,
-    returnCount,
+    dashboardNote,
+    openTicketCount: maintenance,
+    pendingBorrowCount: count(BorrowStatus.REQUESTED),
+    checkedOutCount: count(BorrowStatus.BORROWED) + count(BorrowStatus.RETURN_REQUESTED),
+    reservationCount: count(BorrowStatus.RESERVED),
+    returnCount: count(BorrowStatus.RETURN_REQUESTED),
   };
 }
 
-// Load the inventory totals and recent work.
 export default async function DashboardPage() {
   const user = await requireInventoryAccess();
   const canAdmin = canManageAdministration(user.role);
   const canManage = canManageInventory(user.role);
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
-
   try {
     dashboard = await getDashboardData(canAdmin);
   } catch (error) {
     console.error("Unable to load dashboard", error);
   }
-
-  const cards = dashboard
+  const waiting = dashboard
+    ? dashboard.pendingBorrowCount + dashboard.returnCount + dashboard.openTicketCount
+    : 0;
+  const queue = dashboard
     ? [
         {
-          label: "Inventory records",
-          value: dashboard.itemCount.toLocaleString(),
-          detail: "Equipment records",
-          href: "/dashboard/inventory",
-          Icon: Package,
+          label: "Borrowing requests",
+          detail: "Review and approve equipment requests",
+          count: dashboard.pendingBorrowCount,
+          href: "/dashboard/borrowing?status=REQUESTED",
+          Icon: ClipboardCheck,
         },
         {
-          label: "Active locations",
-          value: dashboard.locationCount.toLocaleString(),
-          detail: "Rooms, labs, and storage areas",
-          href: "/dashboard/settings",
-          Icon: MapPin,
+          label: "Returns to confirm",
+          detail: "Check returned equipment back in",
+          count: dashboard.returnCount,
+          href: "/dashboard/borrowing?status=RETURN_REQUESTED",
+          Icon: Undo2,
         },
         {
-          label: "Needs attention",
-          value: dashboard.attentionCount.toLocaleString(),
-          detail: "Defective items",
-          href: "/dashboard/inventory?status=DEFECTIVE",
-          Icon: TriangleAlert,
+          label: "Maintenance requests",
+          detail: "Review reported problems and repairs",
+          count: dashboard.openTicketCount,
+          href: "/dashboard/maintenance?status=OPEN",
+          Icon: Wrench,
         },
       ]
     : [];
-  const quickActions = [
-    {
-      label: "Scan an item",
-      detail: "Open a QR code with your camera",
-      href: "/scan",
-      Icon: ScanLine,
-    },
-    {
-      label: "View reports",
-      detail: "See the current inventory reports",
-      href: "/dashboard/reports",
-      Icon: BarChart3,
-    },
-    ...(canManage
-      ? [
-          {
-            label: "Add a record",
-            detail: "Register equipment",
-            href: "/dashboard/inventory/new",
-            Icon: PackagePlus,
-          },
-          {
-            label: "Import a file",
-            detail: "Bring in an existing register",
-            href: "/dashboard/inventory/import",
-            Icon: FileUp,
-          },
-        ]
-      : []),
-  ];
 
   return (
     <div className="page dashboard-overview-page">
       <div className="page-inner space-y-6">
-        {/* Dashboard title. */}
-        <header className="dashboard-header">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="eyebrow">CEIT Inventory</p>
-              <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory dashboard</h1>
-              <p className="muted mt-3 max-w-2xl text-sm leading-6">
-                Check equipment, review requests, and keep track of repairs.
-              </p>
-            </div>
+        <header className="dashboard-header flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="eyebrow">CEIT / Workspace</p>
+            <h1 className="title mt-2">Inventory dashboard</h1>
+            <p className="muted mt-2 text-sm">Your department, ready for the day.</p>
           </div>
+          <Link
+            href="/dashboard/inventory"
+            className="primary-button inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
+          >
+            Browse inventory <ArrowRight size={16} aria-hidden="true" />
+          </Link>
         </header>
+        <div className="overview-dateline">
+          <span>Equipment, rooms & everyday work</span>
+          <time dateTime={new Date().toISOString()}>
+            {formatManilaDate(new Date(), {
+              weekday: "short",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </time>
+        </div>
 
         {dashboard ? (
           <>
-            {/* Inventory totals. */}
-            <section
-              className="dashboard-stats grid grid-cols-3 gap-3 sm:gap-4"
-              aria-label="Inventory overview"
-            >
-              {cards.map((stat) => (
-                <Link
-                  key={stat.label}
-                  href={stat.href}
-                  className="card card-link dashboard-stat-card rounded-lg p-5 sm:p-6"
+            <section className="overview-metrics" aria-label="Inventory overview">
+              <div>
+                <span className="metric-index" aria-hidden="true">
+                  01
+                </span>
+                <p className="muted text-sm">Inventory records</p>
+                <strong>{dashboard.itemCount.toLocaleString()}</strong>
+                <span className="metric-detail">Equipment & supplies</span>
+              </div>
+              <div>
+                <span className="metric-index" aria-hidden="true">
+                  02
+                </span>
+                <p className="muted text-sm">Active locations</p>
+                <strong>{dashboard.locationCount.toLocaleString()}</strong>
+                <span className="metric-detail">Rooms, labs & storage</span>
+              </div>
+              <div>
+                <span className="metric-index" aria-hidden="true">
+                  03
+                </span>
+                <p className="muted text-sm">Needs attention</p>
+                <strong
+                  className={dashboard.attentionCount ? "text-[var(--status-critical)]" : undefined}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
-                      <stat.Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <ArrowUpRight className="h-4 w-4 text-[var(--muted)]" aria-hidden="true" />
-                  </div>
-                  <div className="dashboard-stat-number title mt-6">{stat.value}</div>
-                  <div className="mt-2 text-sm font-semibold">{stat.label}</div>
-                  <p className="muted mt-1 text-sm leading-6">{stat.detail}</p>
-                </Link>
-              ))}
+                  {dashboard.attentionCount.toLocaleString()}
+                </strong>
+                <span className="metric-detail">Defective items</span>
+              </div>
             </section>
 
             <section
-              className={`dashboard-shortcut-grid grid gap-5 ${canManage ? "xl:grid-cols-[1.28fr_0.72fr]" : ""}`}
-              aria-label="Inventory workspace shortcuts"
+              className={`overview-workspace grid gap-6 ${canManage ? "xl:grid-cols-[1.3fr_1fr]" : ""}`}
             >
-              {/* Common staff shortcuts. */}
-              <article className="card dashboard-shortcuts rounded-lg p-5 sm:p-6">
-                <div className="flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold">Shortcuts</h2>
-                  </div>
-                </div>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {quickActions.map((action) => (
-                    <Link
-                      key={action.label}
-                      href={action.href}
-                      className="dashboard-quick-action rounded-xl p-4"
-                    >
-                      <span className="dashboard-quick-icon">
-                        <action.Icon className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold">{action.label}</span>
-                        <span className="muted mt-1 block text-xs leading-5">{action.detail}</span>
-                      </span>
-                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    </Link>
-                  ))}
-                </div>
-              </article>
-
               {canManage ? (
-                <aside className="card dashboard-requests rounded-lg p-5 sm:p-6">
-                  {/* Requests waiting for staff action. */}
-                  <h2 className="mb-4 font-semibold">Requests and returns</h2>
-                  <div className="mt-6 space-y-3">
-                    <Link
-                      href="/dashboard/borrowing?status=RESERVED"
-                      className="dashboard-request-row"
-                    >
-                      <span className="dashboard-request-icon">
-                        <CalendarClock className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">Upcoming reservations</span>
-                      <strong>{dashboard.reservationCount}</strong>
-                    </Link>
-                    <Link
-                      href="/dashboard/borrowing?status=RETURN_REQUESTED"
-                      className="dashboard-request-row"
-                    >
-                      <span className="dashboard-request-icon">
-                        <Undo2 className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">Returns to confirm</span>
-                      <strong>{dashboard.returnCount}</strong>
-                    </Link>
-                    <Link
-                      href="/dashboard/maintenance?source=QR&status=OPEN"
-                      className="dashboard-request-row"
-                    >
-                      <span className="dashboard-request-icon">
-                        <MessageSquareWarning className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">QR issue reports</span>
-                      <strong>{dashboard.qrIssueCount}</strong>
-                    </Link>
-                    <Link href="/dashboard/maintenance" className="dashboard-request-row">
-                      <span className="dashboard-request-icon">
-                        <Wrench className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">Maintenance requests</span>
-                      <strong>{dashboard.openTicketCount}</strong>
-                    </Link>
-                    <Link
-                      href="/dashboard/borrowing?status=REQUESTED"
-                      className="dashboard-request-row"
-                    >
-                      <span className="dashboard-request-icon">
-                        <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">Borrowing requests</span>
-                      <strong>{dashboard.pendingBorrowCount}</strong>
-                    </Link>
-                    <Link
-                      href="/dashboard/borrowing?status=BORROWED"
-                      className="dashboard-request-row"
-                    >
-                      <span className="dashboard-request-icon">
-                        <Package className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">
-                        Items currently checked out
-                      </span>
-                      <strong>{dashboard.checkedOutCount}</strong>
-                    </Link>
+                <article className="card work-queue rounded-lg">
+                  <div className="section-heading">
+                    <div>
+                      <p className="eyebrow">Next up</p>
+                      <h2 className="mt-1">Requests and returns</h2>
+                    </div>
+                    <span className={`queue-total ${waiting ? "has-work" : ""}`}>
+                      {waiting ? `${waiting} to review` : "Up to date"}
+                    </span>
                   </div>
-                </aside>
-              ) : null}
-            </section>
-
-            <section className={`grid gap-5 ${canAdmin ? "xl:grid-cols-[1.35fr_1fr]" : ""}`}>
-              {canAdmin ? (
-                <article className="card rounded-lg">
-                  {/* Recent audit entries. */}
-                  <div className="divider flex items-center justify-between border-b px-6 py-4">
-                    <h2 className="text-base font-semibold">Recent activity</h2>
-                    <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
-                      See all
-                    </Link>
-                  </div>
-                  {dashboard.recentActivity.length ? (
-                    <ol className="divide-y">
-                      {dashboard.recentActivity.map((event) => (
-                        <li
-                          key={event.id}
-                          className="dashboard-activity-item flex items-start justify-between gap-4 px-6 py-4"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold">{event.summary}</p>
-                            {event.item ? (
-                              <Link
-                                href={`/dashboard/inventory/${event.item.id}`}
-                                className="muted mt-1 block text-xs hover:text-[var(--accent)]"
-                              >
-                                {event.item.name}
-                              </Link>
-                            ) : (
-                              <p className="muted mt-1 block text-xs">
-                                {event.entityLabel ?? "System activity"}
-                              </p>
-                            )}
-                          </div>
-                          <time
-                            className="muted shrink-0 text-xs"
-                            dateTime={event.createdAt.toISOString()}
-                          >
-                            {formatManilaDate(event.createdAt, { day: "numeric", month: "short" })}
-                          </time>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="muted px-6 py-8 text-sm">
-                      Activity will appear here after the first tracked operation.
+                  {waiting === 0 ? (
+                    <p className="queue-clear">
+                      <CheckCheck size={18} aria-hidden="true" /> All caught up. New requests will
+                      appear here.
                     </p>
-                  )}
+                  ) : null}
+                  <div className="queue-list">
+                    {queue.map(({ label, detail, count, href, Icon }) => (
+                      <Link key={href} href={href} className="queue-row">
+                        <Icon size={20} aria-hidden="true" />
+                        <span>
+                          <strong>{label}</strong>
+                          <small>{detail}</small>
+                        </span>
+                        <b className={count ? "has-work" : ""}>{count}</b>
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="queue-footnote">
+                    <span>
+                      <strong>{dashboard.checkedOutCount}</strong> currently on loan
+                    </span>
+                    <span>
+                      <strong>{dashboard.reservationCount}</strong> upcoming reservations
+                    </span>
+                  </div>
                 </article>
               ) : null}
-
-              {/* Shared staff note. */}
-              <aside className="card dashboard-note-card flex min-h-[27rem] flex-col rounded-lg p-6">
-                <h2 className="text-base font-semibold">Notes</h2>
+              <aside className="card dashboard-note-card rounded-lg p-6">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">For the team</p>
+                    <h2 className="mt-1">Department note</h2>
+                  </div>
+                  <span className="note-corner" aria-hidden="true" />
+                </div>
                 {canManage ? (
                   <DashboardNoteForm
                     initialContent={dashboard.dashboardNote?.content ?? ""}
                     updatedByName={dashboard.dashboardNote?.updatedByName}
                   />
                 ) : (
-                  <p className="muted mt-5 flex-1 whitespace-pre-wrap text-sm leading-6">
-                    {dashboard.dashboardNote?.content || "Add a note here"}
+                  <p className="muted mt-5 whitespace-pre-wrap text-sm">
+                    {dashboard.dashboardNote?.content || "No department note yet."}
                   </p>
                 )}
               </aside>
             </section>
+
+            {canAdmin ? (
+              <section
+                className="card activity-ledger rounded-lg"
+                aria-labelledby="recent-activity-heading"
+              >
+                <div className="section-heading">
+                  <h2 id="recent-activity-heading">Recent activity</h2>
+                  <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
+                    View audit trail <span aria-hidden="true">↗</span>
+                  </Link>
+                </div>
+                {dashboard.recentActivity.length ? (
+                  <ol className="divide-y">
+                    {dashboard.recentActivity.map((event) => (
+                      <li
+                        key={event.id}
+                        className="flex items-start justify-between gap-4 px-6 py-4"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">{event.summary}</p>
+                          {event.item ? (
+                            <Link
+                              href={`/dashboard/inventory/${event.item.id}`}
+                              className="muted mt-1 block text-xs hover:text-[var(--accent)]"
+                            >
+                              {event.item.name}
+                            </Link>
+                          ) : (
+                            <p className="muted mt-1 text-xs">
+                              {event.entityLabel ?? "System activity"}
+                            </p>
+                          )}
+                        </div>
+                        <time
+                          className="muted shrink-0 text-xs"
+                          dateTime={event.createdAt.toISOString()}
+                        >
+                          {formatManilaDate(event.createdAt, { day: "numeric", month: "short" })}
+                        </time>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="muted px-6 pb-6 text-sm">
+                    Changes to your inventory will appear here.
+                  </p>
+                )}
+              </section>
+            ) : null}
+            {canManage ? (
+              <div className="overview-footer">
+                <span>Adding equipment to the department?</span>
+                <Link
+                  href="/dashboard/inventory/new"
+                  className="accent-link inline-flex items-center gap-2 text-sm font-semibold"
+                >
+                  <PackagePlus size={16} aria-hidden="true" /> Add item
+                </Link>
+              </div>
+            ) : null}
           </>
         ) : (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            The dashboard is temporarily unavailable. Confirm the database connection and refresh
-            this page.
+            The dashboard could not load. Refresh the page to try again.
           </div>
         )}
       </div>

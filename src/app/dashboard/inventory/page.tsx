@@ -1,8 +1,11 @@
+export const metadata = { title: "Inventory · CEIT Inventory" };
+
+import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import Link from "next/link";
 
 import { ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 
-import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
+import { inventoryStatusLabel } from "@/lib/inventory-status";
 import {
   canManageAdministration,
   canManageInventory,
@@ -13,7 +16,7 @@ import { prisma } from "@/prisma";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { bulkUpdateInventory } from "./actions";
-import { BulkSelectionToggle } from "./bulk-selection-toggle";
+import { BulkSelectionToggle, ClearInventorySelection } from "./bulk-selection-toggle";
 import { InventoryBulkActions } from "./inventory-bulk-actions";
 import { InventoryRowNavigation } from "./inventory-row-navigation";
 
@@ -31,8 +34,9 @@ type SearchParams = {
   sort?: string;
   status?: string;
 };
+type RawSearchParams = { [Key in keyof SearchParams]?: string | string[] };
 type InventoryListItem = Prisma.InventoryItemGetPayload<{
-  include: { category: true; computer: true; location: true };
+  select: typeof inventoryListSelect;
 }>;
 type SortDirection = "asc" | "desc";
 type SortField = "assetTag" | "item" | "location" | "stock" | "status";
@@ -41,6 +45,17 @@ const pageSize = 25;
 const maximumBulkSelection = 10_000;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sortableFields: SortField[] = ["assetTag", "item", "location", "stock", "status"];
+const inventoryListSelect = {
+  id: true,
+  name: true,
+  assetTag: true,
+  quantity: true,
+  status: true,
+  lastCheckedAt: true,
+  category: { select: { name: true } },
+  computer: { select: { id: true } },
+  location: { select: { name: true } },
+} satisfies Prisma.InventoryItemSelect;
 
 function isItemStatus(value?: string): value is ItemStatus {
   return Boolean(value && Object.values(ItemStatus).includes(value as ItemStatus));
@@ -169,6 +184,9 @@ function selectionKey(search: SearchParams) {
 
 function pageLink(search: SearchParams, page: number) {
   const parameters = inventoryFilterParameters(search);
+  if (search.bulk === "1") {
+    parameters.set("bulk", "1");
+  }
   const sort = currentSort(search);
   if (sort) {
     parameters.set("sort", sort.field);
@@ -248,22 +266,6 @@ function paginationEntries(totalPages: number, currentPage: number) {
   );
 }
 
-// Links for opening and editing an inventory row.
-function ItemActions({ canManage, itemId }: { canManage: boolean; itemId: string }) {
-  return (
-    <div className="flex items-center justify-end gap-3 text-sm font-semibold">
-      <Link href={`/dashboard/inventory/${itemId}/label`} className="accent-link">
-        QR code
-      </Link>
-      {canManage ? (
-        <Link href={`/dashboard/inventory/${itemId}#edit-record`} className="accent-link">
-          Edit
-        </Link>
-      ) : null}
-    </div>
-  );
-}
-
 // Wrap bulk changes in a form when editing is allowed.
 function InventoryFormContainer({
   canManage,
@@ -276,7 +278,7 @@ function InventoryFormContainer({
     return <>{children}</>;
   }
   return (
-    <FeedbackForm action={bulkUpdateInventory} className="space-y-3">
+    <FeedbackForm action={bulkUpdateInventory} optimisticInventoryBulk className="space-y-3">
       {children}
     </FeedbackForm>
   );
@@ -286,10 +288,14 @@ function InventoryFormContainer({
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<RawSearchParams>;
 }) {
-  const [user, search] = await Promise.all([requireInventoryAccess(), searchParams]);
+  const [user, rawSearch] = await Promise.all([requireInventoryAccess(), searchParams]);
+  const search: SearchParams = Object.fromEntries(
+    Object.entries(rawSearch).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
+  );
   const canManage = canManageInventory(user.role);
+  const bulkMode = canManage && search.bulk === "1";
   const where = inventoryWhere(search);
   const sort = currentSort(search);
   const requestedPage = safePage(search.page);
@@ -300,9 +306,17 @@ export default async function InventoryPage({
   let inventoryItems: InventoryListItem[] = [];
   let allMatchingItemIds: string[] = [];
   let currentPage = requestedPage;
+  const loadPage = (page: number) =>
+    prisma.inventoryItem.findMany({
+      where,
+      orderBy: inventoryOrderBy(sort),
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: inventoryListSelect,
+    });
 
   try {
-    const [availableLocations, availableCategories, recordCount, matchingItemIds] =
+    const [availableLocations, availableCategories, recordCount, matchingItemIds, requestedItems] =
       await Promise.all([
         prisma.location.findMany({
           where: { isActive: true },
@@ -315,7 +329,7 @@ export default async function InventoryPage({
           select: { id: true, name: true },
         }),
         prisma.inventoryItem.count({ where }),
-        canManage
+        bulkMode
           ? prisma.inventoryItem.findMany({
               where,
               orderBy: { id: "asc" },
@@ -323,6 +337,7 @@ export default async function InventoryPage({
               take: maximumBulkSelection,
             })
           : Promise.resolve([]),
+        loadPage(requestedPage),
       ]);
     locations = availableLocations;
     categories = availableCategories;
@@ -330,13 +345,7 @@ export default async function InventoryPage({
     allMatchingItemIds = matchingItemIds.map((item) => item.id);
     const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
     currentPage = Math.min(requestedPage, totalPages);
-    inventoryItems = await prisma.inventoryItem.findMany({
-      where,
-      orderBy: inventoryOrderBy(sort),
-      skip: (currentPage - 1) * pageSize,
-      take: pageSize,
-      include: { category: true, computer: true, location: true },
-    });
+    inventoryItems = currentPage === requestedPage ? requestedItems : await loadPage(currentPage);
   } catch (error) {
     console.error("Unable to load inventory list", error);
     databaseError = true;
@@ -348,31 +357,28 @@ export default async function InventoryPage({
   return (
     <div className="page inventory-page">
       <InventoryRowNavigation />
+      {search.bulk === "updated" || search.bulk === "deleted" ? <ClearInventorySelection /> : null}
       <div className="page-inner space-y-6">
         {/* Inventory title and add/import links. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Inventory</p>
+            <p className="eyebrow">Equipment register</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Track CEIT equipment, supplies, inspections, and the hardware and software assigned to
-              each PC or Mac.
+              Find equipment, check its condition, and keep each record up to date.
             </p>
           </div>
           {canManage ? (
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/dashboard/inventory/labels"
-                className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
-              >
-                Print QR labels
-              </Link>
-              <Link
-                href="/dashboard/inventory/import"
-                className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-              >
-                Import file
-              </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <details className="secondary-actions">
+                <summary className="secondary-button cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold">
+                  Inventory tools
+                </summary>
+                <div className="secondary-actions-menu">
+                  <Link href="/dashboard/inventory/labels">Print QR labels</Link>
+                  <Link href="/dashboard/inventory/import">Import file</Link>
+                </div>
+              </details>
               <Link
                 href="/dashboard/inventory/new"
                 className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
@@ -388,6 +394,7 @@ export default async function InventoryPage({
           className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
           aria-label="Inventory filters"
         >
+          {bulkMode ? <input type="hidden" name="bulk" value="1" /> : null}
           {sort ? (
             <>
               <input type="hidden" name="sort" value={sort.field} />
@@ -436,53 +443,61 @@ export default async function InventoryPage({
               ))}
             </select>
           </label>
-          <label>
-            <span className="muted text-xs font-bold uppercase tracking-wide">Category</span>
-            <select
-              name="category"
-              defaultValue={
-                search.category && uuidPattern.test(search.category) ? search.category : ""
-              }
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            >
-              <option value="">All categories</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="muted text-xs font-bold uppercase tracking-wide">Item type</span>
-            <select
-              name="itemType"
-              defaultValue={isItemType(search.itemType) ? search.itemType : ""}
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            >
-              <option value="">All item types</option>
-              {Object.values(ItemType).map((itemType) => (
-                <option key={itemType} value={itemType}>
-                  {enumLabel(itemType)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="muted text-xs font-bold uppercase tracking-wide">Condition</span>
-            <select
-              name="condition"
-              defaultValue={isItemCondition(search.condition) ? search.condition : ""}
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            >
-              <option value="">All conditions</option>
-              {Object.values(ItemCondition).map((condition) => (
-                <option key={condition} value={condition}>
-                  {enumLabel(condition)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <details
+            className="filter-disclosure sm:col-span-2 xl:col-span-3"
+            open={Boolean(search.category || search.itemType || search.condition)}
+          >
+            <summary className="cursor-pointer text-sm font-semibold">More filters</summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <label>
+                <span className="muted text-xs font-bold uppercase tracking-wide">Category</span>
+                <select
+                  name="category"
+                  defaultValue={
+                    search.category && uuidPattern.test(search.category) ? search.category : ""
+                  }
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="muted text-xs font-bold uppercase tracking-wide">Item type</span>
+                <select
+                  name="itemType"
+                  defaultValue={isItemType(search.itemType) ? search.itemType : ""}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  <option value="">All item types</option>
+                  {Object.values(ItemType).map((itemType) => (
+                    <option key={itemType} value={itemType}>
+                      {enumLabel(itemType)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="muted text-xs font-bold uppercase tracking-wide">Condition</span>
+                <select
+                  name="condition"
+                  defaultValue={isItemCondition(search.condition) ? search.condition : ""}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  <option value="">All conditions</option>
+                  {Object.values(ItemCondition).map((condition) => (
+                    <option key={condition} value={condition}>
+                      {enumLabel(condition)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </details>
           <div className="flex gap-3">
             <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
               Filter
@@ -519,12 +534,11 @@ export default async function InventoryPage({
               : "Try clearing a filter."}
           </div>
         ) : (
-          <InventoryFormContainer canManage={canManage}>
-            {canManage ? (
+          <InventoryFormContainer canManage={bulkMode}>
+            {bulkMode ? (
               <InventoryBulkActions
                 allItemIds={allMatchingItemIds}
                 canPermanentlyDelete={canManageAdministration(user.role)}
-                clearSelectionOnLoad={search.bulk === "updated" || search.bulk === "deleted"}
                 locations={locations.map((location) => ({
                   label: location.name,
                   value: location.id,
@@ -546,16 +560,26 @@ export default async function InventoryPage({
                   {totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page{" "}
                   {currentPage} of {totalPages}
                 </p>
-                {canManage ? (
-                  <BulkSelectionToggle
-                    allItemIds={allMatchingItemIds}
-                    selectionKey={persistentSelectionKey}
-                    totalRecords={totalRecords}
-                  />
-                ) : null}
+                <div className="flex flex-wrap items-center gap-3">
+                  {bulkMode ? (
+                    <BulkSelectionToggle
+                      allItemIds={allMatchingItemIds}
+                      selectionKey={persistentSelectionKey}
+                      totalRecords={totalRecords}
+                    />
+                  ) : null}
+                  {canManage ? (
+                    <Link
+                      href={pageLink({ ...search, bulk: bulkMode ? undefined : "1" }, currentPage)}
+                      className="accent-link text-sm font-semibold"
+                    >
+                      {bulkMode ? "Done selecting" : "Select items"}
+                    </Link>
+                  ) : null}
+                </div>
               </div>
 
-              <div className="divide-y md:hidden">
+              <div className="record-cards divide-y xl:hidden">
                 {inventoryItems.map((item) => {
                   return (
                     <article
@@ -572,7 +596,9 @@ export default async function InventoryPage({
                             href={`/dashboard/inventory/${item.id}`}
                             className="accent-link font-semibold"
                           >
-                            {item.name}
+                            <OptimisticText entity={`item:${item.id}`} field="name">
+                              {item.name}
+                            </OptimisticText>
                           </Link>
                           <p className="muted mt-1 text-xs">
                             {item.category.name}
@@ -580,12 +606,8 @@ export default async function InventoryPage({
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`${inventoryStatusClass(item.status)} shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold`}
-                          >
-                            {inventoryStatusLabel(item.status)}
-                          </span>
-                          {canManage ? (
+                          <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
+                          {bulkMode ? (
                             <input
                               value={item.id}
                               type="checkbox"
@@ -598,23 +620,26 @@ export default async function InventoryPage({
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <p className="muted">{item.assetTag ?? "No asset tag"}</p>
-                        <p className="text-right">{item.location.name}</p>
+                        <p className="text-right">
+                          <OptimisticText entity={`item:${item.id}`} field="location">
+                            {item.location.name}
+                          </OptimisticText>
+                        </p>
                         <p className="muted">
                           {item.quantity} · {lastCheckedLabel(item.lastCheckedAt)}
                         </p>
-                        <ItemActions canManage={canManage} itemId={item.id} />
                       </div>
                     </article>
                   );
                 })}
               </div>
 
-              <div className="hidden overflow-x-auto md:block">
+              <div className="record-table hidden overflow-x-auto xl:block">
                 {/* Inventory table for wider screens. */}
                 <table className="w-full">
                   <thead>
                     <tr className="table-heading divider border-b">
-                      {canManage ? (
+                      {bulkMode ? (
                         <th scope="col" className="w-12 px-3 py-4">
                           <span className="sr-only">Select</span>
                         </th>
@@ -630,12 +655,6 @@ export default async function InventoryPage({
                       >
                         Last checked
                       </th>
-                      <th
-                        scope="col"
-                        className="px-5 py-4 text-right text-xs font-bold uppercase tracking-[0.16em]"
-                      >
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -648,7 +667,7 @@ export default async function InventoryPage({
                           aria-label={`Open ${item.name}`}
                           className="table-row cursor-pointer border-b last:border-0 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
                         >
-                          {canManage ? (
+                          {bulkMode ? (
                             <td className="px-3 py-4">
                               <input
                                 value={item.id}
@@ -665,27 +684,26 @@ export default async function InventoryPage({
                               href={`/dashboard/inventory/${item.id}`}
                               className="accent-link font-semibold"
                             >
-                              {item.name}
+                              <OptimisticText entity={`item:${item.id}`} field="name">
+                                {item.name}
+                              </OptimisticText>
                             </Link>
                             <div className="muted mt-1 text-xs">
                               {item.category.name}
                               {item.computer ? " · PC" : ""}
                             </div>
                           </td>
-                          <td className="muted px-5 py-4 text-sm">{item.location.name}</td>
+                          <td className="muted px-5 py-4 text-sm">
+                            <OptimisticText entity={`item:${item.id}`} field="location">
+                              {item.location.name}
+                            </OptimisticText>
+                          </td>
                           <td className="muted px-5 py-4 text-sm">{item.quantity}</td>
                           <td className="px-5 py-4">
-                            <span
-                              className={`${inventoryStatusClass(item.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}
-                            >
-                              {inventoryStatusLabel(item.status)}
-                            </span>
+                            <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
                           </td>
                           <td className="muted px-5 py-4 text-sm">
                             {lastCheckedLabel(item.lastCheckedAt)}
-                          </td>
-                          <td className="px-5 py-4">
-                            <ItemActions canManage={canManage} itemId={item.id} />
                           </td>
                         </tr>
                       );

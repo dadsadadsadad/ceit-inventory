@@ -1,3 +1,6 @@
+export const metadata = { title: "Maintenance · CEIT Inventory" };
+
+import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import Link from "next/link";
 
 import { ItemStatus, MaintenancePriority, MaintenanceStatus, type Prisma } from "@prisma/client";
@@ -20,6 +23,8 @@ type SearchParams = {
   source?: string | string[];
   q?: string | string[];
   page?: string | string[];
+  report?: string | string[];
+  itemSearch?: string | string[];
 };
 
 const resolutionItemStatuses = [
@@ -41,12 +46,6 @@ function priorityLabel(priority: MaintenancePriority) {
   return priority.charAt(0) + priority.slice(1).toLowerCase();
 }
 
-function ticketTone(status: MaintenanceStatus) {
-  return status === MaintenanceStatus.RESOLVED
-    ? "status-pill status-pill-positive"
-    : "status-pill status-pill-pending";
-}
-
 function formatDate(value: Date) {
   return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" });
 }
@@ -63,7 +62,14 @@ export default async function MaintenancePage({
   const status = Object.values(MaintenanceStatus).includes(requestedStatus as MaintenanceStatus)
     ? (requestedStatus as MaintenanceStatus)
     : undefined;
-  const selectedItem = first(search.item);
+  const requestedItem = first(search.item);
+  const selectedItem =
+    requestedItem &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedItem)
+      ? requestedItem
+      : undefined;
+  const reporting = first(search.report) === "1" || Boolean(selectedItem);
+  const itemSearch = first(search.itemSearch)?.trim().slice(0, 120) ?? "";
   const source = ["QR", "STAFF"].includes(first(search.source) ?? "")
     ? first(search.source)
     : undefined;
@@ -71,9 +77,7 @@ export default async function MaintenancePage({
   const where: Prisma.MaintenanceTicketWhereInput = {
     ...(status ? { status } : {}),
     ...(source ? { source } : {}),
-    ...(selectedItem && /^[0-9a-f-]{36}$/i.test(selectedItem)
-      ? { inventoryItemId: selectedItem }
-      : {}),
+    ...(selectedItem ? { inventoryItemId: selectedItem } : {}),
     ...(query
       ? {
           OR: [
@@ -84,13 +88,9 @@ export default async function MaintenancePage({
         }
       : {}),
   };
-  const count = await prisma.maintenanceTicket.count({ where });
-  const totalPages = Math.max(1, Math.ceil(count / 25));
-  const requestedPage = Number(first(search.page));
-  const page =
-    Number.isSafeInteger(requestedPage) && requestedPage > 0
-      ? Math.min(requestedPage, totalPages)
-      : 1;
+  const pageInput = Number(first(search.page));
+  const requestedPage =
+    Number.isSafeInteger(pageInput) && pageInput > 0 ? Math.min(pageInput, 10_000) : 1;
   function pageHref(next: number) {
     const params = new URLSearchParams({ page: String(next) });
     if (source) {
@@ -107,13 +107,7 @@ export default async function MaintenancePage({
     }
     return `/dashboard/maintenance?${params}`;
   }
-  const [items, tickets] = await Promise.all([
-    prisma.inventoryItem.findMany({
-      where: { status: { not: ItemStatus.RETIRED } },
-      orderBy: [{ name: "asc" }, { assetTag: "asc" }],
-      select: { assetTag: true, id: true, name: true },
-      take: 2_000,
-    }),
+  const loadTickets = (page: number) =>
     prisma.maintenanceTicket.findMany({
       where,
       include: {
@@ -122,8 +116,36 @@ export default async function MaintenancePage({
       orderBy: [{ status: "asc" }, { priority: "desc" }, { openedAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * 25,
       take: 25,
-    }),
+    });
+  const [items, requestedTickets, count] = await Promise.all([
+    reporting
+      ? prisma.inventoryItem.findMany({
+          where: {
+            status: { not: ItemStatus.RETIRED },
+            ...(selectedItem
+              ? { id: selectedItem }
+              : itemSearch
+                ? {
+                    OR: [
+                      { name: { contains: itemSearch, mode: "insensitive" } },
+                      { assetTag: { contains: itemSearch, mode: "insensitive" } },
+                      { serialNumber: { contains: itemSearch, mode: "insensitive" } },
+                    ],
+                  }
+                : {}),
+          },
+          orderBy: [{ name: "asc" }, { assetTag: "asc" }],
+          select: { assetTag: true, id: true, name: true },
+          take: 51,
+        })
+      : Promise.resolve([]),
+    loadTickets(requestedPage),
+    prisma.maintenanceTicket.count({ where }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(count / 25));
+  const page = Math.min(requestedPage, totalPages);
+  const tickets = page === requestedPage ? requestedTickets : await loadTickets(page);
+  const reportItems = items.slice(0, 50);
 
   return (
     <div className="page maintenance-page">
@@ -137,12 +159,20 @@ export default async function MaintenancePage({
               Review reported problems and record repairs.
             </p>
           </div>
-          <Link
-            href={`/dashboard/reports?kind=maintenance${source ? `&maintenanceSource=${source}` : ""}`}
-            className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-          >
-            Maintenance reports
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/dashboard/reports?kind=maintenance${source ? `&maintenanceSource=${source}` : ""}`}
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Maintenance reports
+            </Link>
+            <Link
+              href="/dashboard/maintenance?report=1#report-issue"
+              className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+            >
+              Report an issue
+            </Link>
+          </div>
         </header>
 
         {first(search.created) === "1" ? (
@@ -152,87 +182,131 @@ export default async function MaintenancePage({
         ) : null}
 
         {/* Create a maintenance request. */}
-        <FeedbackForm
-          action={createMaintenanceTicket}
-          className="card space-y-4 rounded-lg p-5 sm:p-6"
-        >
-          <div>
-            <h2 className="text-lg font-semibold">Report an item issue</h2>
-            <p className="muted mt-1 text-sm">
-              Use this when an item needs inspection, repair, or replacement.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="text-sm font-semibold">Inventory item *</span>
-              <select
-                required
-                name="itemId"
-                defaultValue={items.some((item) => item.id === selectedItem) ? selectedItem : ""}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+        {reporting ? (
+          <section id="report-issue" className="card scroll-mt-6 rounded-lg p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Report an issue</h2>
+              <Link href="/dashboard/maintenance" className="accent-link text-sm font-semibold">
+                Close form
+              </Link>
+            </div>
+            {!selectedItem ? (
+              <form
+                className="mt-4 flex flex-wrap items-end gap-3"
+                aria-label="Find equipment for maintenance"
               >
-                <option value="" disabled>
-                  Select an item
-                </option>
-                {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                    {item.assetTag ? ` · ${item.assetTag}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="text-sm font-semibold">Priority</span>
-              <select
-                name="priority"
-                defaultValue={MaintenancePriority.NORMAL}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                <input type="hidden" name="report" value="1" />
+                <label className="min-w-0 flex-1">
+                  <span className="text-sm font-semibold">Find equipment</span>
+                  <input
+                    name="itemSearch"
+                    defaultValue={itemSearch}
+                    maxLength={120}
+                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                    placeholder="Name, asset tag, or serial number"
+                  />
+                </label>
+                <button className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
+                  Find items
+                </button>
+              </form>
+            ) : null}
+            {items.length > 50 ? (
+              <p className="muted mt-3 text-sm">
+                Showing the first 50 matches. Search by name or asset tag to find a specific item.
+              </p>
+            ) : null}
+            {!items.length ? (
+              <p className="notice mt-4 rounded-lg px-4 py-3 text-sm">
+                No active equipment matches. Try another name or asset tag.
+              </p>
+            ) : null}
+            <FeedbackForm
+              action={createMaintenanceTicket}
+              createPreview={{ titleField: "title", detailFields: ["itemId", "description"] }}
+              className="mt-5 space-y-4"
+            >
+              <div>
+                <p className="muted mt-1 text-sm">
+                  Use this when an item needs inspection, repair, or replacement.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label>
+                  <span className="text-sm font-semibold">Inventory item *</span>
+                  <select
+                    required
+                    name="itemId"
+                    defaultValue={
+                      items.some((item) => item.id === selectedItem) ? selectedItem : ""
+                    }
+                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                  >
+                    <option value="" disabled>
+                      Select an item
+                    </option>
+                    {reportItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                        {item.assetTag ? ` · ${item.assetTag}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="text-sm font-semibold">Priority</span>
+                  <select
+                    name="priority"
+                    defaultValue={MaintenancePriority.NORMAL}
+                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                  >
+                    {Object.values(MaintenancePriority).map((priority) => (
+                      <option key={priority} value={priority}>
+                        {priorityLabel(priority)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-sm font-semibold">Issue title *</span>
+                <input
+                  required
+                  name="title"
+                  maxLength={255}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                  placeholder="e.g. Screen does not power on"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold">Description *</span>
+                <textarea
+                  required
+                  name="description"
+                  rows={4}
+                  maxLength={5_000}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                  placeholder="Describe the fault, damage, or work needed."
+                />
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <input name="markDefective" type="checkbox" className="h-4 w-4" />
+                <span>Mark the item as defective while this request needs attention.</span>
+              </label>
+              <SubmitButton
+                disabled={!reportItems.length}
+                pendingLabel="Reporting…"
+                className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
               >
-                {Object.values(MaintenancePriority).map((priority) => (
-                  <option key={priority} value={priority}>
-                    {priorityLabel(priority)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label className="block">
-            <span className="text-sm font-semibold">Issue title *</span>
-            <input
-              required
-              name="title"
-              maxLength={255}
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="e.g. Screen does not power on"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold">Description *</span>
-            <textarea
-              required
-              name="description"
-              rows={4}
-              maxLength={5_000}
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Describe the fault, damage, or work needed."
-            />
-          </label>
-          <label className="flex items-center gap-3 text-sm">
-            <input name="markDefective" type="checkbox" className="h-4 w-4" />
-            <span>Mark the item as defective while this request needs attention.</span>
-          </label>
-          <SubmitButton
-            pendingLabel="Reporting…"
-            className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
-          >
-            Submit maintenance request
-          </SubmitButton>
-        </FeedbackForm>
+                Submit maintenance request
+              </SubmitButton>
+            </FeedbackForm>
+          </section>
+        ) : null}
 
         {/* Filter issues by status, priority, and source. */}
         <form
-          className="card flex flex-wrap items-end gap-3 rounded-lg p-4"
+          className="maintenance-filters card grid items-end gap-3 rounded-lg p-4"
           aria-label="Maintenance filters"
         >
           {selectedItem ? <input type="hidden" name="item" value={selectedItem} /> : null}
@@ -259,13 +333,13 @@ export default async function MaintenancePage({
             </select>
           </label>
           <label>
-            <span className="muted text-xs font-bold uppercase tracking-wide">Ticket status</span>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Status</span>
             <select
               name="status"
               defaultValue={status ?? ""}
               className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
             >
-              <option value="">All tickets</option>
+              <option value="">All requests</option>
               {Object.values(MaintenanceStatus).map((value) => (
                 <option key={value} value={value}>
                   {statusLabel(value)}
@@ -297,16 +371,19 @@ export default async function MaintenancePage({
                 className="card scroll-mt-6 rounded-lg p-5 sm:p-6"
               >
                 {/* Issue details and repair status. */}
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="maintenance-ticket-grid">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`${ticketTone(ticket.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}
-                      >
-                        {statusLabel(ticket.status)}
-                      </span>
+                      <OptimisticStatus
+                        entity={`ticket:${ticket.id}`}
+                        value={ticket.status}
+                        kind="maintenance"
+                      />
                       <span className="card-muted rounded-md px-2.5 py-1 text-xs font-semibold">
-                        {priorityLabel(ticket.priority)} priority
+                        <OptimisticText entity={`ticket:${ticket.id}`} field="priority">
+                          {priorityLabel(ticket.priority)}
+                        </OptimisticText>{" "}
+                        priority
                       </span>
                       {ticket.source === "QR" ? (
                         <span className="status-pill status-pill-deployed rounded-md px-2.5 py-1 text-xs font-semibold">
@@ -336,76 +413,96 @@ export default async function MaintenancePage({
                     ) : null}
                   </div>
                   {/* Save inspection results and staff notes. */}
-                  <FeedbackForm
-                    action={updateMaintenanceTicket}
-                    resetOnSuccess={false}
-                    className="w-full space-y-3 lg:max-w-md"
-                  >
-                    <input type="hidden" name="ticketId" value={ticket.id} />
-                    <input type="hidden" name="updatedAt" value={ticket.updatedAt.toISOString()} />
-                    <label className="block text-sm">
-                      <span className="font-semibold">Priority</span>
-                      <select
-                        name="priority"
-                        defaultValue={ticket.priority}
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5"
-                      >
-                        {Object.values(MaintenancePriority).map((value) => (
-                          <option key={value} value={value}>
-                            {priorityLabel(value)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block text-sm">
-                      <span className="font-semibold">Status</span>
-                      <select
-                        required
-                        name="status"
-                        defaultValue={ticket.status}
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5"
-                      >
-                        <option value={MaintenanceStatus.OPEN}>Needs attention</option>
-                        <option value={MaintenanceStatus.RESOLVED}>Resolved</option>
-                      </select>
-                    </label>
-                    <label className="block text-sm">
-                      <span className="font-semibold">Staff notes</span>
-                      <textarea
-                        name="resolutionNotes"
-                        rows={3}
-                        defaultValue={ticket.resolutionNotes ?? ""}
-                        maxLength={5_000}
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5"
-                      />
-                    </label>
-                    <label className="block text-sm">
-                      <span className="font-semibold">Equipment status</span>
-                      <select
-                        name="itemStatus"
-                        defaultValue=""
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5"
-                      >
-                        <option value="">
-                          Keep current status ({inventoryStatusLabel(ticket.inventoryItem.status)})
-                        </option>
-                        {resolutionItemStatuses.map((itemStatus) => (
-                          <option key={itemStatus} value={itemStatus}>
-                            {inventoryStatusLabel(itemStatus)}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="muted mt-1 block text-xs leading-5">
-                        Update after inspecting the equipment, or keep its current status.
-                      </span>
-                    </label>
-                    <SubmitButton
-                      pendingLabel="Saving…"
-                      className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                  <details className="section-disclosure min-w-0">
+                    <summary className="secondary-button inline-flex cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold">
+                      Update request
+                    </summary>
+                    <FeedbackForm
+                      action={updateMaintenanceTicket}
+                      revision={ticket.updatedAt.toISOString()}
+                      savedValues={{
+                        status: ticket.status,
+                        priority: ticket.priority,
+                        itemStatus: "",
+                      }}
+                      optimistic={{
+                        entity: `ticket:${ticket.id}`,
+                        fields: { status: "status", priority: "priority" },
+                      }}
+                      resetOnSuccess={false}
+                      className="mt-4 w-full min-w-0 space-y-3"
                     >
-                      Save changes
-                    </SubmitButton>
-                  </FeedbackForm>
+                      <input type="hidden" name="ticketId" value={ticket.id} />
+                      <input
+                        type="hidden"
+                        name="updatedAt"
+                        value={ticket.updatedAt.toISOString()}
+                      />
+                      <label className="block text-sm">
+                        <span className="font-semibold">Priority</span>
+                        <select
+                          name="priority"
+                          defaultValue={ticket.priority}
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5"
+                        >
+                          {Object.values(MaintenancePriority).map((value) => (
+                            <option key={value} value={value}>
+                              {priorityLabel(value)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block text-sm">
+                        <span className="font-semibold">Status</span>
+                        <select
+                          required
+                          name="status"
+                          defaultValue={ticket.status}
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5"
+                        >
+                          <option value={MaintenanceStatus.OPEN}>Needs attention</option>
+                          <option value={MaintenanceStatus.RESOLVED}>Resolved</option>
+                        </select>
+                      </label>
+                      <label className="block text-sm">
+                        <span className="font-semibold">Staff notes</span>
+                        <textarea
+                          name="resolutionNotes"
+                          rows={3}
+                          defaultValue={ticket.resolutionNotes ?? ""}
+                          maxLength={5_000}
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5"
+                        />
+                      </label>
+                      <label className="block text-sm">
+                        <span className="font-semibold">Equipment status</span>
+                        <select
+                          name="itemStatus"
+                          defaultValue=""
+                          className="field mt-2 w-full rounded-lg px-3 py-2.5"
+                        >
+                          <option value="">
+                            Keep current status ({inventoryStatusLabel(ticket.inventoryItem.status)}
+                            )
+                          </option>
+                          {resolutionItemStatuses.map((itemStatus) => (
+                            <option key={itemStatus} value={itemStatus}>
+                              {inventoryStatusLabel(itemStatus)}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="muted mt-1 block text-xs leading-5">
+                          Update after inspecting the equipment, or keep its current status.
+                        </span>
+                      </label>
+                      <SubmitButton
+                        pendingLabel="Saving…"
+                        className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                      >
+                        Save changes
+                      </SubmitButton>
+                    </FeedbackForm>
+                  </details>
                 </div>
               </article>
             ))

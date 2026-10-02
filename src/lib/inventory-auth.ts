@@ -3,6 +3,7 @@ import "server-only";
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { prisma } from "@/prisma";
 
@@ -120,8 +121,9 @@ export async function clearSession() {
   }
 }
 
-// Read the signed-in account.
-export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {
+// Share the lookup between a layout and its page for this render only. React's
+// request cache never shares a session with another request or browser.
+export const getCurrentInventoryUser = cache(async (): Promise<InventoryUser | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookie)?.value;
   if (!token || !sessionTokenPattern.test(token)) {
@@ -129,7 +131,12 @@ export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {
   }
   const session = await prisma.userSession.findUnique({
     where: { tokenHash: tokenHash(token) },
-    include: { user: true },
+    select: {
+      expiresAt: true,
+      user: {
+        select: { id: true, email: true, username: true, role: true, isActive: true },
+      },
+    },
   });
   if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
     return null;
@@ -140,7 +147,7 @@ export async function getCurrentInventoryUser(): Promise<InventoryUser | null> {
     username: session.user.username,
     role: session.user.role.toLowerCase(),
   };
-}
+});
 
 // Page and action permissions.
 export async function requireInventoryAccess() {
