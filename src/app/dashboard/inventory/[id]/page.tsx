@@ -1,3 +1,6 @@
+export const metadata = { title: "Item record · CEIT Inventory" };
+
+import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -20,7 +23,7 @@ import {
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { ItemPhotoGallery } from "@/app/components/item-photo-gallery";
 import { SubmitButton } from "@/app/components/submit-button";
-import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
+import { inventoryStatusLabel } from "@/lib/inventory-status";
 import {
   canManageAdministration,
   canManageInventory,
@@ -251,11 +254,18 @@ function ComputerSummary({ computer }: { computer: ComputerInfo }) {
 }
 
 // Load one item with its history and editing forms.
-export default async function InventoryItemPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InventoryItemPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ edit?: string | string[] }>;
+}) {
   const user = await requireInventoryAccess();
   const canManage = canManageInventory(user.role);
   const canDelete = canManageAdministration(user.role);
   const { id } = await params;
+  const search = await searchParams;
   if (!uuidPattern.test(id)) {
     notFound();
   }
@@ -305,7 +315,11 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               ← Inventory
             </Link>
             <p className="eyebrow mt-5">Inventory record</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">{item.name}</h1>
+            <h1 className="title mt-3 text-3xl sm:text-4xl">
+              <OptimisticText entity={`item:${item.id}`} field="name">
+                {item.name}
+              </OptimisticText>
+            </h1>
             <p className="muted mt-2 text-sm">
               {item.assetTag ? `Asset tag: ${item.assetTag}` : `QR code: ${item.qrCode}`}
             </p>
@@ -313,7 +327,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
           <div className="flex flex-wrap gap-3">
             {canManage ? (
               <Link
-                href="#edit-record"
+                href={`/dashboard/inventory/${item.id}?edit=1#edit-record`}
                 className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
               >
                 Edit record
@@ -336,17 +350,13 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <div className="order-2 space-y-6 xl:order-1">
+        <div className="item-record-layout grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="space-y-6">
             {/* Item details and photo preview. */}
             <article className="card rounded-lg p-5 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold">Record summary</h2>
-                <span
-                  className={`${inventoryStatusClass(item.status)} rounded-md px-2.5 py-1 text-xs font-semibold`}
-                >
-                  {inventoryStatusLabel(item.status)}
-                </span>
+                <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
               </div>
               <div className="mt-5 flex flex-col gap-5 sm:flex-row">
                 {item.photos.length ? (
@@ -361,9 +371,21 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                 ) : null}
                 <dl className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <Detail label="Category">{item.category.name}</Detail>
-                  <Detail label="Location">{item.location.name}</Detail>
-                  <Detail label="Condition">{label(item.condition)}</Detail>
-                  <Detail label="Quantity">{item.quantity}</Detail>
+                  <Detail label="Location">
+                    <OptimisticText entity={`item:${item.id}`} field="location">
+                      {item.location.name}
+                    </OptimisticText>
+                  </Detail>
+                  <Detail label="Condition">
+                    <OptimisticText entity={`item:${item.id}`} field="condition">
+                      {label(item.condition)}
+                    </OptimisticText>
+                  </Detail>
+                  <Detail label="Quantity">
+                    <OptimisticText entity={`item:${item.id}`} field="quantity">
+                      {item.quantity}
+                    </OptimisticText>
+                  </Detail>
                   <Detail label="Manufacturer / model">
                     {[item.manufacturer, item.model].filter(Boolean).join(" ") || "Not recorded"}
                   </Detail>
@@ -402,25 +424,30 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               <article className="card rounded-lg p-5 sm:p-6">
                 {/* Computer profile and installed software. */}
                 <h2 className="text-lg font-semibold">PC hardware and software</h2>
+                <ComputerSummary computer={computer} />
                 {canManage ? (
-                  <FeedbackForm
-                    resetOnSuccess={false}
-                    action={updateComputerDetails}
-                    className="mt-5 space-y-5"
-                  >
-                    <input type="hidden" name="itemId" value={item.id} />
-                    <input type="hidden" name="computerId" value={computer.id} />
-                    <ComputerFields computer={computer} />
-                    <SubmitButton
-                      pendingLabel="Saving PC details…"
-                      className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                  <details className="section-disclosure mt-5">
+                    <summary className="accent-link cursor-pointer text-sm font-semibold">
+                      Edit PC details
+                    </summary>
+                    <FeedbackForm
+                      resetOnSuccess={false}
+                      action={updateComputerDetails}
+                      revision={computer.updatedAt.toISOString()}
+                      className="mt-5 space-y-5"
                     >
-                      Save PC details
-                    </SubmitButton>
-                  </FeedbackForm>
-                ) : (
-                  <ComputerSummary computer={computer} />
-                )}
+                      <input type="hidden" name="itemId" value={item.id} />
+                      <input type="hidden" name="computerId" value={computer.id} />
+                      <ComputerFields computer={computer} />
+                      <SubmitButton
+                        pendingLabel="Saving PC details…"
+                        className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                      >
+                        Save PC details
+                      </SubmitButton>
+                    </FeedbackForm>
+                  </details>
+                ) : null}
 
                 <div className="divider mt-6 border-t pt-5">
                   <h3 className="text-sm font-semibold">Installed software</h3>
@@ -428,12 +455,28 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                     <div className="mt-3 space-y-3">
                       {computer.software.map((software) =>
                         canManage ? (
-                          <div key={software.id} className="card-muted rounded-lg p-3">
+                          <details
+                            key={software.id}
+                            className="section-disclosure card-muted rounded-lg p-3"
+                          >
+                            <summary className="cursor-pointer text-sm">
+                              <strong>{software.name}</strong>
+                              {software.version ? (
+                                <span className="muted"> · {software.version}</span>
+                              ) : null}
+                              {software.licenseExpiresAt ? (
+                                <span className="muted">
+                                  {" "}
+                                  · License ends {displayDate(software.licenseExpiresAt)}
+                                </span>
+                              ) : null}
+                            </summary>
                             {/* Edit this installed application. */}
                             <FeedbackForm
                               resetOnSuccess={false}
                               action={updateComputerSoftware}
-                              className="grid gap-3 sm:grid-cols-2"
+                              revision={software.updatedAt.toISOString()}
+                              className="mt-4 grid gap-3 sm:grid-cols-2"
                             >
                               <input type="hidden" name="itemId" value={item.id} />
                               <input type="hidden" name="computerId" value={computer.id} />
@@ -484,7 +527,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                                 pendingLabel="Saving…"
                                 className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
                               >
-                                Save
+                                Save software
                               </SubmitButton>
                             </FeedbackForm>
                             {/* Remove this application from the record. */}
@@ -499,7 +542,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                                 Remove software
                               </SubmitButton>
                             </FeedbackForm>
-                          </div>
+                          </details>
                         ) : (
                           <div
                             key={software.id}
@@ -524,65 +567,70 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   )}
 
                   {canManage ? (
-                    <FeedbackForm
-                      action={addComputerSoftware}
-                      className="mt-4 grid gap-3 sm:grid-cols-2"
-                    >
-                      {/* Add another installed application. */}
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <input type="hidden" name="computerId" value={computer.id} />
-                      <input
-                        required
-                        name="name"
-                        maxLength={255}
-                        className="field rounded-lg px-3 py-2 text-sm"
-                        placeholder="Software name"
-                        aria-label="Software name"
-                      />
-                      <input
-                        name="version"
-                        maxLength={255}
-                        className="field rounded-lg px-3 py-2 text-sm"
-                        placeholder="Version"
-                        aria-label="Software version"
-                      />
-                      <input
-                        name="licenseKeyHint"
-                        maxLength={255}
-                        className="field rounded-lg px-3 py-2 text-sm"
-                        placeholder="License hint"
-                        aria-label="License hint"
-                      />
-                      <label className="text-sm">
-                        <span className="sr-only">Installed date</span>
-                        <input
-                          name="installedAt"
-                          type="date"
-                          className="field w-full rounded-lg px-3 py-2"
-                        />
-                      </label>
-                      <label className="text-sm">
-                        <span className="sr-only">License expiry date</span>
-                        <input
-                          name="licenseExpiresAt"
-                          type="date"
-                          className="field w-full rounded-lg px-3 py-2"
-                        />
-                      </label>
-                      <SubmitButton
-                        pendingLabel="Adding…"
-                        className="primary-button rounded-lg px-4 py-2 text-sm font-semibold"
-                      >
+                    <details className="section-disclosure mt-4">
+                      <summary className="accent-link cursor-pointer text-sm font-semibold">
                         Add software
-                      </SubmitButton>
-                    </FeedbackForm>
+                      </summary>
+                      <FeedbackForm
+                        action={addComputerSoftware}
+                        className="mt-4 grid gap-3 sm:grid-cols-2"
+                      >
+                        {/* Add another installed application. */}
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <input type="hidden" name="computerId" value={computer.id} />
+                        <input
+                          required
+                          name="name"
+                          maxLength={255}
+                          className="field rounded-lg px-3 py-2 text-sm"
+                          placeholder="Software name"
+                          aria-label="Software name"
+                        />
+                        <input
+                          name="version"
+                          maxLength={255}
+                          className="field rounded-lg px-3 py-2 text-sm"
+                          placeholder="Version"
+                          aria-label="Software version"
+                        />
+                        <input
+                          name="licenseKeyHint"
+                          maxLength={255}
+                          className="field rounded-lg px-3 py-2 text-sm"
+                          placeholder="License hint"
+                          aria-label="License hint"
+                        />
+                        <label className="text-sm">
+                          <span className="sr-only">Installed date</span>
+                          <input
+                            name="installedAt"
+                            type="date"
+                            className="field w-full rounded-lg px-3 py-2"
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <span className="sr-only">License expiry date</span>
+                          <input
+                            name="licenseExpiresAt"
+                            type="date"
+                            className="field w-full rounded-lg px-3 py-2"
+                          />
+                        </label>
+                        <SubmitButton
+                          pendingLabel="Adding…"
+                          className="primary-button rounded-lg px-4 py-2 text-sm font-semibold"
+                        >
+                          Add software
+                        </SubmitButton>
+                      </FeedbackForm>
+                    </details>
                   ) : null}
                 </div>
               </article>
             ) : canManage && canHaveComputerDetails(item) ? (
-              <article className="card rounded-lg p-5 sm:p-6">
+              <details className="section-disclosure card rounded-lg p-5 sm:p-6">
                 {/* Create the item's computer profile. */}
-                <h2 className="text-lg font-semibold">Add PC details</h2>
+                <summary className="cursor-pointer text-lg font-semibold">Add PC details</summary>
                 <p className="muted mt-2 text-sm">
                   Create a PC record for this single tracked asset.
                 </p>
@@ -596,7 +644,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                     Add PC record
                   </SubmitButton>
                 </FeedbackForm>
-              </article>
+              </details>
             ) : null}
 
             <article className="card rounded-lg p-5 sm:p-6">
@@ -690,14 +738,37 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
           </div>
 
           {canManage ? (
-            <aside
+            <details
               id="edit-record"
-              className="card order-1 h-fit scroll-mt-6 rounded-lg p-5 sm:p-6 xl:sticky xl:top-6 xl:order-2"
+              open={search.edit === "1"}
+              className="section-disclosure card h-fit scroll-mt-6 rounded-lg p-5 sm:p-6"
             >
               {/* Staff editing controls. */}
-              <h2 className="text-lg font-semibold">Update record</h2>
+              <summary className="cursor-pointer text-lg font-semibold">Edit record</summary>
               {/* Save the main inventory details. */}
-              <FeedbackForm action={updateInventoryItem} className="mt-5 space-y-4">
+              <FeedbackForm
+                action={updateInventoryItem}
+                resetOnSuccess={false}
+                revision={item.updatedAt.toISOString()}
+                savedValues={{
+                  status: item.status,
+                  condition: item.condition,
+                  categoryId: item.categoryId,
+                  locationId: item.locationId,
+                  itemType: item.itemType,
+                }}
+                optimistic={{
+                  entity: `item:${item.id}`,
+                  fields: {
+                    name: "name",
+                    status: "status",
+                    condition: "condition",
+                    location: "locationId",
+                    quantity: "quantity",
+                  },
+                }}
+                className="mt-5 space-y-4"
+              >
                 <input type="hidden" name="id" value={item.id} />
                 <input type="hidden" name="updatedAt" value={item.updatedAt.toISOString()} />
                 <TextField name="name" label="Name" value={item.name} required maxLength={255} />
@@ -964,8 +1035,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   Item photos
                 </h3>
                 <p className="muted mt-2 text-xs leading-5">
-                  Photos are stored in the PostgreSQL inventory database. Add up to four JPEG, PNG,
-                  or WebP images, 3 MB each.
+                  Add up to four JPEG, PNG, or WebP images, up to 3 MB each.
                 </p>
                 <FeedbackForm
                   action={uploadInventoryItemPhoto}
@@ -1038,14 +1108,18 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   Removing from active inventory is reversible and keeps the PC, software, and
                   activity history available.
                 </p>
-                <FeedbackForm action={retireInventoryItem} className="mt-3">
+                <FeedbackForm
+                  action={retireInventoryItem}
+                  optimistic={{ entity: `item:${item.id}`, values: { status: "RETIRED" } }}
+                  className="mt-3"
+                >
                   <input type="hidden" name="id" value={item.id} />
                   <SubmitButton
                     disabled={item.status === ItemStatus.RETIRED}
-                    pendingLabel="Removing…"
+                    pendingLabel="Retiring…"
                     className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
                   >
-                    {item.status === ItemStatus.RETIRED ? "Item is removed" : "Remove item"}
+                    {item.status === ItemStatus.RETIRED ? "Item is retired" : "Retire item"}
                   </SubmitButton>
                 </FeedbackForm>
 
@@ -1053,11 +1127,12 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   <details className="danger-zone mt-4 rounded-lg p-3">
                     {/* Administrator-only permanent deletion. */}
                     <summary className="cursor-pointer text-sm font-semibold">
-                      Permanently remove this item
+                      Permanently delete this item
                     </summary>
                     <p className="mt-2 text-xs leading-5">
-                      This also permanently deletes the attached PC, photos, software, and activity
-                      history. Type <strong>DELETE</strong> to continue.
+                      This permanently deletes the record, PC details, photos, and software. The
+                      audit trail is retained. Items with borrowing or maintenance history cannot be
+                      deleted. Type <strong>DELETE</strong> to continue.
                     </p>
                     <FeedbackForm action={deleteInventoryItem} className="mt-3 space-y-3">
                       <input type="hidden" name="id" value={item.id} />
@@ -1079,9 +1154,9 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                   </details>
                 ) : null}
               </section>
-            </aside>
+            </details>
           ) : (
-            <aside className="notice order-1 h-fit rounded-lg px-5 py-4 text-sm xl:order-2">
+            <aside className="notice h-fit rounded-lg px-5 py-4 text-sm">
               You have read-only access to this item.
             </aside>
           )}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, ArrowUpRight, CalendarDays, Undo2, Wrench } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, CalendarDays, Undo2, Wrench } from "lucide-react";
 import { IssueReportForm } from "./issue-report-form";
 
 import { BorrowRequestForm } from "./borrow-request-form";
@@ -28,63 +28,61 @@ export function BorrowReturnChooser({
   isAsset = true,
 }: BorrowReturnChooserProps) {
   const [mode, setMode] = useState<RequestMode>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLElement>(null);
+  const previousModeRef = useRef<RequestMode>(null);
 
-  if (mode === "issue") {
+  useEffect(() => {
+    if (mode) {
+      const heading = contentRef.current?.querySelector("h2");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus();
+    } else {
+      optionsRef.current
+        ?.querySelector<HTMLButtonElement>(`[data-request-mode="${previousModeRef.current}"]`)
+        ?.focus();
+    }
+  }, [mode]);
+
+  if (mode) {
     return (
-      <div className="space-y-4">
+      <div ref={contentRef} className="space-y-4">
         <button
           type="button"
           onClick={() => setMode(null)}
           className="accent-link inline-flex items-center gap-2 text-sm font-semibold"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={16} aria-hidden="true" />
           Back to item options
         </button>
-        {/* Report a problem with the item. */}
-        <IssueReportForm qrCode={qrCode} itemName={itemName} />
-      </div>
-    );
-  }
-
-  if (mode === "borrow") {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setMode(null)}
-          className="accent-link text-sm font-semibold"
-        >
-          Back to item options
-        </button>
-        {/* Borrow or reserve this equipment. */}
-        <BorrowRequestForm qrCode={qrCode} itemName={itemName} maximumQuantity={maximumQuantity} />
-      </div>
-    );
-  }
-
-  if (mode === "return") {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setMode(null)}
-          className="accent-link text-sm font-semibold"
-        >
-          Back to item options
-        </button>
-        {/* Ask staff to confirm an equipment return. */}
-        <ReturnRequestForm qrCode={qrCode} itemName={itemName} />
+        {mode === "borrow" ? (
+          <BorrowRequestForm
+            qrCode={qrCode}
+            itemName={itemName}
+            maximumQuantity={maximumQuantity}
+          />
+        ) : mode === "return" ? (
+          <ReturnRequestForm qrCode={qrCode} itemName={itemName} />
+        ) : (
+          <IssueReportForm qrCode={qrCode} itemName={itemName} />
+        )}
       </div>
     );
   }
 
   return (
-    <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="equipment-request-heading">
-      <h2 id="equipment-request-heading" className="mt-2 text-xl font-semibold">
-        What would you like to do?
+    <section
+      ref={optionsRef}
+      className="card rounded-lg p-5 sm:p-7"
+      aria-labelledby="equipment-request-heading"
+    >
+      <h2 id="equipment-request-heading" className="text-xl font-semibold">
+        Use this equipment
       </h2>
       <p className="muted mt-2 text-sm leading-6">
-        Send a request to CEIT staff using the options below.
+        {isAsset || canReport
+          ? "Requests go directly to CEIT staff for confirmation."
+          : "This item is no longer accepting requests. Contact CEIT staff for help."}
       </p>
       {/* Choose borrowing, returning, or reporting an issue. */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -92,7 +90,11 @@ export function BorrowReturnChooser({
           <>
             <button
               type="button"
-              onClick={() => setMode("borrow")}
+              data-request-mode="borrow"
+              onClick={() => {
+                previousModeRef.current = "borrow";
+                setMode("borrow");
+              }}
               disabled={!borrowable}
               className="primary-button request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -104,7 +106,11 @@ export function BorrowReturnChooser({
             </button>
             <button
               type="button"
-              onClick={() => setMode("return")}
+              data-request-mode="return"
+              onClick={() => {
+                previousModeRef.current = "return";
+                setMode("return");
+              }}
               className="secondary-button request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left"
             >
               <Undo2 className="mb-2" size={20} aria-hidden="true" />
@@ -118,7 +124,11 @@ export function BorrowReturnChooser({
         {canReport ? (
           <button
             type="button"
-            onClick={() => setMode("issue")}
+            data-request-mode="issue"
+            onClick={() => {
+              previousModeRef.current = "issue";
+              setMode("issue");
+            }}
             className="secondary-button request-choice gap-3 rounded-lg px-5 py-4 text-left sm:col-span-2"
           >
             <Wrench size={20} aria-hidden="true" />
@@ -128,7 +138,6 @@ export function BorrowReturnChooser({
                 Something damaged or not working?
               </span>
             </span>
-            <ArrowUpRight size={18} aria-hidden="true" />
           </button>
         ) : null}
       </div>

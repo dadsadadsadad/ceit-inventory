@@ -4,7 +4,7 @@ import {
   type ReportExportFilters,
 } from "@/lib/report-export-filters";
 import { documentResponse, reportDocument, mutedColor } from "../pdf-writer";
-import { ItemCondition, ItemStatus, type Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import {
   formatReportDate,
@@ -14,6 +14,7 @@ import {
   hasFilters,
 } from "../format";
 import { pdfRowLimit } from "../limits";
+import { needsReportAttention } from "./attention";
 
 // Inventory rows and totals.
 export async function createInventoryPdf(filters: ReportExportFilters, calendarDate: string) {
@@ -58,14 +59,7 @@ export async function createInventoryPdf(filters: ReportExportFilters, calendarD
     },
     {
       label: "Needs attention",
-      value: items
-        .filter(
-          (item) =>
-            item.status === ItemStatus.DEFECTIVE ||
-            item.status === ItemStatus.NOT_TESTED ||
-            item.condition === ItemCondition.FOR_REPAIR,
-        )
-        .length.toLocaleString(),
+      value: items.filter(needsReportAttention).length.toLocaleString(),
     },
   ]);
   writer.addHeading("Inventory records");

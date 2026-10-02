@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Script from "next/script";
 
 import { appearanceBootstrap } from "@/lib/appearance-bootstrap";
-import { ThemeToggle } from "./components/theme-toggle";
+import { GlobalAppearance } from "./components/theme-toggle";
+import { OptimisticProvider } from "./components/optimistic-state";
 import "./globals.css";
 import "./polish.css";
 
@@ -24,9 +25,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
-        <div id="main-content">{children}</div>
+        <OptimisticProvider>
+          <div id="main-content">{children}</div>
+        </OptimisticProvider>
         {/* Appearance controls shared by every page. */}
-        <ThemeToggle />
+        <GlobalAppearance />
       </body>
     </html>
   );

@@ -75,6 +75,10 @@ body {
 }
 
 @theme inline {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -208,7 +212,7 @@ body::before {
 }
 
 .mobile-nav-link span:last-child {
-  font-size: 0.69rem;
+  font-size: 0.8125rem;
   line-height: 1.15;
 }
 
@@ -765,7 +769,7 @@ summary:focus-visible {
 
 .sidebar-section-label {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 0.64rem;
+  font-size: 0.8125rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   margin: 0 1.25rem 0.4rem;
@@ -802,7 +806,7 @@ summary:focus-visible {
   align-items: center;
   color: var(--muted-strong);
   display: inline-flex;
-  font-size: 0.69rem;
+  font-size: 0.8125rem;
   font-weight: 800;
   gap: 0.45rem;
   letter-spacing: 0.16em;
@@ -2026,7 +2030,7 @@ label:has(.field) > span:first-child {
   border-radius: 999px;
   color: var(--muted-strong);
   font-family: var(--font-geist-mono);
-  font-size: 0.68rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   padding: 0.25rem 0.5rem;
   flex: 0 0 auto;
@@ -2097,7 +2101,7 @@ label:has(.field) > span:first-child {
   align-items: center;
   color: var(--muted-strong);
   display: grid;
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   font-weight: 650;
   gap: 0.35rem 0.65rem;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -2115,7 +2119,7 @@ label:has(.field) > span:first-child {
 .accent-color-range-label output {
   color: var(--muted);
   font-family: var(--font-geist-mono);
-  font-size: 0.66rem;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -2191,7 +2195,7 @@ label:has(.field) > span:first-child {
   color: var(--muted);
   display: flex;
   font-family: var(--font-geist-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   gap: 0.05rem;
   height: 2.15rem;
@@ -2305,7 +2309,7 @@ label:has(.field) > span:first-child {
   border-radius: 0.4rem;
   color: var(--muted);
   font-family: var(--font-geist-mono);
-  font-size: 0.64rem;
+  font-size: 0.8125rem;
   padding: 0.18rem 0.3rem;
 }
 
@@ -2430,7 +2434,7 @@ label:has(.field) > span:first-child {
 .command-menu-footer {
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   margin: 0.85rem 0 0;
   padding: 0.8rem 0.25rem 0.05rem;
 }
@@ -2614,7 +2618,7 @@ select.field {
 }
 
 .page .table-heading th {
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   letter-spacing: 0.075em;
   padding-bottom: 0.9rem;
   padding-top: 0.9rem;

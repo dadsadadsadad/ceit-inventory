@@ -499,7 +499,6 @@ export async function updateInventoryItem(formData: FormData) {
     }
 
     refreshInventoryViews(id);
-    redirect(`/dashboard/inventory/${id}`);
   });
 }
 

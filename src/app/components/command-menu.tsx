@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   BarChart3,
   Command,
@@ -115,13 +116,21 @@ const commands: CommandItem[] = [
   },
 ];
 
-type CommandMenuProps = { canManageAdministration: boolean; canManageInventory: boolean };
+type CommandMenuProps = {
+  canManageAdministration: boolean;
+  canManageInventory: boolean;
+  embedded?: boolean;
+};
 
 const focusableSelector =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // Search and open common dashboard actions.
-export function CommandMenu({ canManageAdministration, canManageInventory }: CommandMenuProps) {
+export function CommandMenu({
+  canManageAdministration,
+  canManageInventory,
+  embedded = false,
+}: CommandMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const dialogRef = useRef<HTMLElement>(null);
@@ -235,87 +244,96 @@ export function CommandMenu({ canManageAdministration, canManageInventory }: Com
       <button
         ref={triggerRef}
         type="button"
-        className="command-trigger"
+        className={`command-trigger ${embedded ? "command-embedded" : ""}`}
         onClick={openMenu}
         aria-label="Open quick navigation"
         title="Quick navigation (Ctrl or Cmd + K)"
       >
         <Command className="h-4 w-4" aria-hidden="true" />
-        <span className="hidden text-xs font-bold sm:inline">Quick nav</span>
-        <kbd className="command-shortcut hidden sm:inline">⌘ K</kbd>
+        <span>Quick navigation</span>
+        <kbd className="command-shortcut hidden sm:inline">Ctrl K</kbd>
       </button>
 
-      {isOpen ? (
-        <div className="command-menu-backdrop" role="presentation" onMouseDown={() => closeMenu()}>
-          {/* Command search dialog. */}
-          <section
-            ref={dialogRef}
-            className="command-menu"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="command-menu-title"
-            onKeyDown={handleDialogKeyDown}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="command-menu-heading">
-              <div>
-                <p className="eyebrow">Quick navigation</p>
-                <h2 id="command-menu-title" className="mt-1 text-lg font-semibold">
-                  Where would you like to go?
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="command-menu-close"
-                onClick={() => closeMenu()}
-                aria-label="Close quick navigation"
+      {isOpen
+        ? createPortal(
+            <div
+              className="command-menu-backdrop"
+              role="presentation"
+              onMouseDown={() => closeMenu()}
+            >
+              {/* Command search dialog. */}
+              <section
+                ref={dialogRef}
+                className="command-menu"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="command-menu-title"
+                onKeyDown={handleDialogKeyDown}
+                onMouseDown={(event) => event.stopPropagation()}
               >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-            <label className="command-menu-search">
-              <Search className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">Filter quick navigation</span>
-              {/* Filter the available commands. */}
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search pages and actions…"
-              />
-            </label>
-            <div className="command-menu-list">
-              {visibleCommands.length ? (
-                visibleCommands.map((command) => (
+                <div className="command-menu-heading">
+                  <div>
+                    <p className="eyebrow">Quick navigation</p>
+                    <h2 id="command-menu-title" className="mt-1 text-lg font-semibold">
+                      Where would you like to go?
+                    </h2>
+                  </div>
                   <button
-                    key={command.href}
                     type="button"
-                    className="command-menu-item"
-                    onClick={() => openCommand(command)}
+                    className="command-menu-close"
+                    onClick={() => closeMenu()}
+                    aria-label="Close quick navigation"
                   >
-                    <span className="command-menu-icon">
-                      <command.Icon className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 flex-1 text-left">
-                      <span className="block text-sm font-semibold">{command.label}</span>
-                      <span className="muted mt-0.5 block text-xs">{command.description}</span>
-                    </span>
-                    <span className="command-menu-arrow" aria-hidden="true">
-                      ↗
-                    </span>
+                    <X className="h-4 w-4" aria-hidden="true" />
                   </button>
-                ))
-              ) : (
-                <p className="muted px-3 py-8 text-center text-sm">No pages match that search.</p>
-              )}
-            </div>
-            <p className="command-menu-footer">
-              <kbd>Esc</kbd> to close <span aria-hidden="true">·</span> choose a destination to
-              continue
-            </p>
-          </section>
-        </div>
-      ) : null}
+                </div>
+                <label className="command-menu-search">
+                  <Search className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">Filter quick navigation</span>
+                  {/* Filter the available commands. */}
+                  <input
+                    ref={inputRef}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search pages and actions…"
+                  />
+                </label>
+                <div className="command-menu-list">
+                  {visibleCommands.length ? (
+                    visibleCommands.map((command) => (
+                      <button
+                        key={command.href}
+                        type="button"
+                        className="command-menu-item"
+                        onClick={() => openCommand(command)}
+                      >
+                        <span className="command-menu-icon">
+                          <command.Icon className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block text-sm font-semibold">{command.label}</span>
+                          <span className="muted mt-0.5 block text-xs">{command.description}</span>
+                        </span>
+                        <span className="command-menu-arrow" aria-hidden="true">
+                          ↗
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="muted px-3 py-8 text-center text-sm">
+                      No pages match that search.
+                    </p>
+                  )}
+                </div>
+                <p className="command-menu-footer">
+                  <kbd>Esc</kbd> to close <span aria-hidden="true">·</span> choose a destination to
+                  continue
+                </p>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

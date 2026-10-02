@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryLabelAppOrigin } from "@/lib/inventory-label-url";
@@ -6,6 +7,7 @@ import { inventoryLabelAppOrigin } from "@/lib/inventory-label-url";
 import { QrScanner } from "./qr-scanner";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Scan an item · CEIT Inventory" };
 
 // Open the camera and manual QR lookup.
 export default async function ScanPage() {

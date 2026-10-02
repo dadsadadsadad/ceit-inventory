@@ -1,3 +1,5 @@
+export const metadata = { title: "Print QR labels · CEIT Inventory" };
+
 import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";

@@ -8,6 +8,7 @@ export function IssueReportForm({ qrCode, itemName }: { qrCode: string; itemName
   return (
     <FeedbackForm
       action={submitIssueReport}
+      createPreview={{ titleField: "title", detailFields: ["description"] }}
       className="card request-form space-y-4 rounded-lg p-5 sm:p-7"
     >
       <input type="hidden" name="qrCode" value={qrCode} />

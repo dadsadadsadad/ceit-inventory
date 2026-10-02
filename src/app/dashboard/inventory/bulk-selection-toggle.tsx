@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   addSelectionChangeListener,
+  clearInventorySelections,
   isSelectionChangeForKey,
   itemSelector,
   notifySelectionChange,
@@ -12,6 +13,13 @@ import {
   syncVisibleItemSelection,
   updateSelectedItem,
 } from "./inventory-selection";
+
+export function ClearInventorySelection() {
+  useEffect(() => {
+    clearInventorySelections();
+  }, []);
+  return null;
+}
 
 // Select one row or all matching inventory.
 export function BulkSelectionToggle({

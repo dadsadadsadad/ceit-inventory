@@ -108,7 +108,11 @@ export function NewInventoryForm({
   }
 
   return (
-    <FeedbackForm action={createInventoryItem} className="card space-y-7 rounded-lg p-5 sm:p-7">
+    <FeedbackForm
+      action={createInventoryItem}
+      createPreview={{ titleField: "name", detailFields: ["locationId", "categoryId"] }}
+      className="card space-y-7 rounded-lg p-5 sm:p-7"
+    >
       {/* Item type, quantity, and identifiers. */}
       <section>
         <div>

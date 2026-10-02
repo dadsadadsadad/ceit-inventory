@@ -84,7 +84,7 @@ export function InventoryBulkActions({
         : action === "condition"
           ? "Apply one condition to every selected item."
           : action === "delete"
-            ? "Permanently erase selected records that have no borrowing or maintenance history. This also erases their tags, QR codes, technical details, photos, and record-level activity."
+            ? "Permanently delete selected records that have no borrowing or maintenance history, including their tags, QR codes, technical details, and photos. The audit trail is retained."
             : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
 
   return (

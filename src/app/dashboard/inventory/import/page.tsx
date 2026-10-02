@@ -1,3 +1,5 @@
+export const metadata = { title: "Import inventory · CEIT Inventory" };
+
 import Link from "next/link";
 
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";

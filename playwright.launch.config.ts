@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
-  testDir: "./tests/launch",
+  testDir: "./tests",
+  testMatch: ["launch/**/*.spec.ts", "e2e/**/*.spec.ts"],
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,

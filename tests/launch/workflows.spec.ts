@@ -70,6 +70,49 @@ async function fillBorrow(
   await page.getByLabel("Purpose", { exact: false }).fill("Class presentation test");
 }
 
+test("inventory handles repeated filters and keeps bulk selection across sorting", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/dashboard/inventory?q=Lab%20equipment&q=ignored&sort=item&sort=status");
+  await expect(page.getByRole("heading", { name: "Inventory", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search", exact: true })).toHaveValue(
+    "Lab equipment",
+  );
+  await expect(page.locator('input[data-bulk-selection-item="true"]')).toHaveCount(0);
+  await page.getByRole("link", { name: "Select items", exact: true }).click();
+  await expect(page).toHaveURL(/bulk=1/);
+  const selection = page
+    .getByRole("checkbox", { name: "Select Lab equipment 2", exact: true })
+    .filter({ visible: true });
+  await selection.check();
+  await page.getByRole("link", { name: /^Sort by Item/ }).click();
+  await expect(page).toHaveURL(/bulk=1/);
+  await expect(selection).toBeChecked();
+  await page.getByRole("link", { name: "Done selecting", exact: true }).click();
+  await expect(page.locator('input[data-bulk-selection-item="true"]')).toHaveCount(0);
+});
+
+test("maintenance finds equipment on demand and accepts an exact item link", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/dashboard/maintenance?item=------------------------------------");
+  await expect(
+    page.getByRole("heading", { name: "Maintenance requests", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Inventory item" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Report an issue", exact: true }).click();
+  await page.getByRole("textbox", { name: "Find equipment", exact: true }).fill("Lab equipment 27");
+  await page.getByRole("button", { name: "Find items", exact: true }).click();
+  const picker = page.getByRole("combobox", { name: "Inventory item", exact: false });
+  await expect(picker.locator("option")).toHaveCount(2);
+  await expect(picker.locator("option").last()).toContainText("Lab equipment 27");
+  const item = (
+    await query('SELECT id FROM "InventoryItem" WHERE "qrCode"=$1', ["ceit-launch-item-27"])
+  ).rows[0];
+  await page.goto(`/dashboard/maintenance?item=${item.id}`);
+  await expect(picker).toHaveValue(item.id);
+});
+
 test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ page }) => {
   await page.goto("/scan/ceit-launch-item-1");
   await page.getByRole("button", { name: /Report a problem/ }).click();
@@ -121,6 +164,7 @@ test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ pa
   const ticket = page
     .locator("article")
     .filter({ has: page.getByRole("heading", { name: "Lamp flickers during class" }) });
+  await ticket.locator("summary").filter({ hasText: "Update request" }).click();
   await ticket.getByRole("combobox", { name: "Priority", exact: true }).selectOption("URGENT");
   await ticket.getByRole("combobox", { name: /^Equipment status/ }).selectOption("DEFECTIVE");
   await ticket.getByRole("button", { name: "Save changes" }).click();
@@ -331,6 +375,7 @@ test("a reservation checks out only at pickup and the public return accepts phon
     await query('SELECT id FROM "InventoryItem" WHERE "qrCode"=$1', ["ceit-launch-item-4"])
   ).rows[0];
   await page.goto(`/dashboard/inventory/${item.id}`);
+  await page.locator("#edit-record > summary").click();
   await page
     .locator("#edit-record")
     .getByRole("combobox", { name: "Status", exact: true })
@@ -399,6 +444,7 @@ test("item creation, stale edits, and import preview keep records and inputs con
   ).rows[0];
   expect(created.assetTag).toMatch(/^INV-TST-OK-01-\d{4}$/);
   await expect(page.locator('#edit-record input[name="updatedAt"]')).toBeAttached();
+  await page.locator("#edit-record > summary").click();
   await query('UPDATE "InventoryItem" SET "updatedAt"=NOW(), name=$1 WHERE id=$2', [
     "Camera updated by another staff member",
     created.id,

@@ -9,18 +9,49 @@ const initialImportResult: ImportResult = { errors: [], imported: 0, previewed: 
 // Upload a spreadsheet and display row feedback.
 export function ImportForm() {
   const preserveFields = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const [result, action, pending] = useActionState(
     async (previous: ImportResult, data: FormData) => {
-      const next = await importInventory(previous, data);
-      preserveFields.current = next.previewed || next.imported === 0;
-      return next;
+      try {
+        const next = await importInventory(previous, data);
+        preserveFields.current = next.previewed || next.imported === 0;
+        if (!preserveFields.current) {
+          formRef.current?.removeAttribute("data-dirty");
+        }
+        window.dispatchEvent(
+          new CustomEvent("ceit:mutation", {
+            detail: { success: next.imported > 0 && !next.previewed },
+          }),
+        );
+        return next;
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "digest" in error &&
+          String(error.digest).startsWith("NEXT_REDIRECT")
+        ) {
+          throw error;
+        }
+        preserveFields.current = true;
+        return {
+          ...initialImportResult,
+          errors: [
+            "The import could not finish. Your file is still selected. Validate it again before retrying to check for any rows already imported.",
+          ],
+        };
+      }
     },
     initialImportResult,
   );
 
   return (
     <form
+      ref={formRef}
       action={action}
+      data-saving={pending || undefined}
+      aria-busy={pending || undefined}
+      onChange={() => formRef.current?.setAttribute("data-dirty", "true")}
       onReset={(event) => {
         if (preserveFields.current) {
           event.preventDefault();

@@ -18,6 +18,7 @@ export function DashboardNoteForm({ initialContent, updatedByName }: DashboardNo
     <FeedbackForm
       resetOnSuccess={false}
       action={saveDashboardNote}
+      revision={initialContent}
       className="mt-4 flex flex-1 flex-col"
     >
       <label className="flex flex-1">
@@ -26,16 +27,16 @@ export function DashboardNoteForm({ initialContent, updatedByName }: DashboardNo
           name="content"
           defaultValue={initialContent}
           maxLength={maximumDashboardNoteLength}
-          rows={10}
-          className="field h-full min-h-[19rem] w-full resize-y rounded-lg px-3 py-2.5 text-sm leading-6"
-          placeholder="Add a note here"
+          rows={5}
+          className="field h-full min-h-[10rem] w-full resize-y rounded-lg px-3 py-2.5 text-sm leading-6"
+          placeholder="A reminder, a handover, or something the team should know…"
         />
       </label>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="muted text-xs">{updatedByName ? `Last saved by ${updatedByName}.` : null}</p>
         <SubmitButton
           pendingLabel="Saving note…"
-          className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+          className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
         >
           Save note
         </SubmitButton>

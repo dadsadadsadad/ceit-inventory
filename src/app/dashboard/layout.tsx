@@ -1,5 +1,4 @@
 import { DashboardNavigation } from "./dashboard-navigation";
-import { CommandMenu } from "../components/command-menu";
 import {
   canManageAdministration,
   canManageInventory,
@@ -25,11 +24,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* The current dashboard page. */}
         <main className="min-w-0 flex-1">{children}</main>
       </div>
-      {/* Keyboard-accessible dashboard shortcuts. */}
-      <CommandMenu
-        canManageAdministration={canManageAdministration(user.role)}
-        canManageInventory={canManageInventory(user.role)}
-      />
     </>
   );
 }

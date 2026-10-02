@@ -3,6 +3,20 @@ const selectionChangeEvent = "inventory-bulk-selection-change";
 const selectionStoragePrefix = "ceit-inventory-selection:";
 const memorySelection = new Map<string, string[]>();
 
+export function clearInventorySelections() {
+  memorySelection.clear();
+  try {
+    for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.sessionStorage.key(index);
+      if (key?.startsWith(selectionStoragePrefix)) {
+        window.sessionStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // The in-memory selection is already cleared when storage is unavailable.
+  }
+}
+
 function uniqueItemIds(itemIds: Iterable<string>) {
   return [...new Set([...itemIds].filter(Boolean))];
 }

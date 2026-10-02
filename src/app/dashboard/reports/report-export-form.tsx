@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { ItemStatus } from "@prisma/client";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import {
@@ -49,6 +48,9 @@ export function ReportExportForm({ canAdmin, initial }: Props) {
   const [to, setTo] = useState(initial.to);
   const [period, setPeriod] = useState(initial.period);
   const [borrowingState, setBorrowingState] = useState(initial.borrowingState);
+  const [inventoryStatus, setInventoryStatus] = useState(initial.inventoryStatus);
+  const [maintenanceSource, setMaintenanceSource] = useState(initial.maintenanceSource);
+  const [pcOnly, setPcOnly] = useState(initial.pcOnly);
   const dateNote =
     kind === "borrowings"
       ? `Filtered by ${borrowingDates[borrowingState]} date.`
@@ -61,6 +63,17 @@ export function ReportExportForm({ canAdmin, initial }: Props) {
     <form
       action="/dashboard/reports/export"
       method="get"
+      onReset={(event) => {
+        event.preventDefault();
+        setKind("inventory");
+        setPeriod("all");
+        setFrom("");
+        setTo("");
+        setBorrowingState("all");
+        setInventoryStatus("");
+        setMaintenanceSource("");
+        setPcOnly(false);
+      }}
       className="reports-export-form mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
     >
       {/* Report type and date filters. */}
@@ -130,7 +143,12 @@ export function ReportExportForm({ canAdmin, initial }: Props) {
       {kind === "inventory" || kind === "pcs" ? (
         <label>
           <span className="text-sm font-semibold">Inventory status</span>
-          <select name="inventoryStatus" defaultValue={initial.inventoryStatus} className={field}>
+          <select
+            name="inventoryStatus"
+            value={inventoryStatus}
+            onChange={(event) => setInventoryStatus(event.target.value)}
+            className={field}
+          >
             <option value="">All statuses</option>
             {Object.values(ItemStatus).map((value) => (
               <option key={value} value={value}>
@@ -146,7 +164,8 @@ export function ReportExportForm({ canAdmin, initial }: Props) {
             name="pcOnly"
             type="checkbox"
             value="1"
-            defaultChecked={initial.pcOnly}
+            checked={pcOnly}
+            onChange={(event) => setPcOnly(event.target.checked)}
             className="h-4 w-4"
           />
           PC / Mac only
@@ -176,7 +195,8 @@ export function ReportExportForm({ canAdmin, initial }: Props) {
           <span className="text-sm font-semibold">Report source</span>
           <select
             name="maintenanceSource"
-            defaultValue={initial.maintenanceSource}
+            value={maintenanceSource}
+            onChange={(event) => setMaintenanceSource(event.target.value)}
             className={field}
           >
             <option value="">All reports</option>
@@ -200,12 +220,12 @@ export function ReportExportForm({ canAdmin, initial }: Props) {
         >
           Download PDF
         </button>
-        <Link
-          href="/dashboard/reports"
+        <button
+          type="reset"
           className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
         >
           Reset filters
-        </Link>
+        </button>
       </div>
       <p className="muted text-xs leading-5 sm:col-span-2 xl:col-span-4">{dateNote}</p>
     </form>

@@ -1,4 +1,5 @@
 import { ItemStatus, ItemType } from "@prisma/client";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -11,8 +12,10 @@ import { prisma } from "@/prisma";
 
 import { BorrowReturnChooser } from "../borrow-return-chooser";
 import { ScanAuditLogger } from "../scan-audit-logger";
+import { LiveUpdates } from "@/app/components/live-updates";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Equipment details · CEIT Inventory" };
 
 function isBorrowableItem(
   item: {
@@ -76,21 +79,23 @@ export default async function ScannedItemPage({
   const requestSent =
     (Array.isArray(search.request) ? search.request[0] : search.request) === "sent";
   const returnSent = (Array.isArray(search.return) ? search.return[0] : search.return) === "sent";
-  const activeLoans = await prisma.borrowRequest.aggregate({
-    where: {
-      inventoryItemId: item.id,
-      status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
-      checkedOutItemStatus: null,
-    },
-    _sum: { requestedQuantity: true },
-  });
-  const activeIndividualLoan = await prisma.borrowRequest.count({
-    where: {
-      inventoryItemId: item.id,
-      status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
-      checkedOutItemStatus: { not: null },
-    },
-  });
+  const [activeLoans, activeIndividualLoan] = await Promise.all([
+    prisma.borrowRequest.aggregate({
+      where: {
+        inventoryItemId: item.id,
+        status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
+        checkedOutItemStatus: null,
+      },
+      _sum: { requestedQuantity: true },
+    }),
+    prisma.borrowRequest.count({
+      where: {
+        inventoryItemId: item.id,
+        status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
+        checkedOutItemStatus: { not: null },
+      },
+    }),
+  ]);
   const availableQuantity = item.quantity + (activeLoans._sum.requestedQuantity ?? 0);
   const borrowable = isBorrowableItem(item, activeIndividualLoan > 0) && availableQuantity > 0;
   const issueSent = (Array.isArray(search.issue) ? search.issue[0] : search.issue) === "sent";
@@ -111,18 +116,14 @@ export default async function ScannedItemPage({
                 Staff sign in
               </Link>
             )}
-            <Link
-              href={canManage ? "/dashboard" : "/"}
-              className="muted text-sm font-semibold hover:text-[var(--accent-strong)]"
-            >
-              {canManage ? "Dashboard" : "CEIT Inventory"}
-            </Link>
+            <span className="muted text-sm font-semibold">CEIT Inventory</span>
           </div>
           <p className="eyebrow mt-5">Scanned item</p>
           <h1 className="title mt-3 text-3xl">{item.name}</h1>
           <p className="muted mt-2 text-sm leading-6">
             {item.category.name} · {item.location.name}
           </p>
+          <LiveUpdates />
         </header>
 
         {requestSent ? (
@@ -179,23 +180,14 @@ export default async function ScannedItemPage({
         />
 
         {canManage ? (
-          <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="staff-tools-heading">
-            {/* Editing link for signed-in staff. */}
-            <p className="eyebrow">Staff tools</p>
-            <h2 id="staff-tools-heading" className="mt-2 text-xl font-semibold">
-              Update this scanned record
-            </h2>
-            <p className="muted mt-2 text-sm leading-6">
-              You are signed in with inventory access. Open the full record to edit item details,
-              hardware, status, and location.
-            </p>
+          <div className="text-center">
             <Link
-              href={`/dashboard/inventory/${item.id}#edit-record`}
-              className="primary-button mt-5 inline-block rounded-lg px-4 py-2.5 text-sm font-semibold"
+              href={`/dashboard/inventory/${item.id}?edit=1#edit-record`}
+              className="accent-link inline-flex px-4 py-2.5 text-sm font-semibold"
             >
-              Open and update item
+              Edit item record
             </Link>
-          </section>
+          </div>
         ) : null}
       </div>
     </main>

@@ -4,10 +4,11 @@ import {
   type ReportExportFilters,
 } from "@/lib/report-export-filters";
 import { documentResponse, reportDocument, mutedColor } from "../pdf-writer";
-import { ItemStatus, type Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatReportDateTime, humanize, filterLabel, hasFilters } from "../format";
 import { pcProfileLimit } from "../limits";
+import { needsReportAttention } from "./attention";
 
 type ComputerRecord = Prisma.InventoryItemGetPayload<{
   include: { category: true; location: true; computer: { include: { software: true } } };
@@ -92,11 +93,7 @@ export async function createPcRegisterPdf(filters: ReportExportFilters, calendar
     },
     {
       label: "Needs attention",
-      value: pcs
-        .filter(
-          (item) => item.status === ItemStatus.DEFECTIVE || item.status === ItemStatus.NOT_TESTED,
-        )
-        .length.toLocaleString(),
+      value: pcs.filter(needsReportAttention).length.toLocaleString(),
     },
   ]);
   writer.addHeading("PC / Mac records");

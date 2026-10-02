@@ -24,6 +24,16 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history
 - Shared dashboard notes and a paginated activity history that records the responsible user
 - Administrator account management, account deactivation, and password reset
+- Optimistic inventory, borrowing, and maintenance changes with automatic rollback on failed saves
+- Live dashboard and public QR updates across browser sessions, with reconnect and polling fallback
+
+## Live updates and form behavior
+
+Dashboard pages and public item pages subscribe to `/api/live` using server-sent events. The server checks database revisions every five seconds and scopes each dashboard subscription to the tables used by that page. Concurrent subscribers share an in-flight revision query and its result for two seconds after completion. A normal initial connection establishes a baseline without immediately loading the page again; subsequent changes refresh its data. Same-browser tabs also notify each other after a successful mutation. This works across application workers and with the existing PostgreSQL connection pool; no additional service, database migration, or Supabase Realtime configuration is required.
+
+The feed returns opaque revision hashes. Dashboard subscriptions require an active staff session; public subscriptions are scoped to one QR code and never include borrower information. Streams rotate after about 25 seconds, reconnect automatically, and fall back to ten-second polling when streaming is unavailable. Background tabs stop subscribing until visible again. Preserve streaming and disable proxy buffering for `/api/live` where supported; polling still works when a proxy buffers the response.
+
+Inventory edits and bulk changes, borrowing decisions, and maintenance status changes appear immediately with a saving indicator. New-record forms show a provisional preview. The server remains authoritative: failures restore the original display and retain the entered values. Remote refreshes wait while forms contain unsaved changes, and stale-record errors offer a way to refresh the surrounding details while keeping the draft. A once-per-minute reconciliation updates time-dependent reservation and overdue displays and catches changes between page rendering and subscription. Polling fallback also reconciles its first response after a delayed connection. These behaviors, offline recovery, and responsive layouts are covered by `tests/launch/live-updates.spec.ts`.
 
 ## Local setup
 
