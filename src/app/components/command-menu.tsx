@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   BarChart3,
+  ClipboardList,
   Command,
   HandHelping,
   LayoutDashboard,
@@ -29,6 +30,12 @@ type CommandItem = {
 };
 
 const commands: CommandItem[] = [
+  {
+    label: "Open student survey",
+    description: "Display the QR code for students to answer the form",
+    href: "/dashboard/student-survey",
+    Icon: ClipboardList,
+  },
   {
     label: "Open dashboard",
     description: "Equipment and requests at a glance",

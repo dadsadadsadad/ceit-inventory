@@ -294,7 +294,7 @@ function AccountSettings({ email, username }: { email: string; username: string 
               autoComplete="username"
               minLength={3}
               maxLength={32}
-              pattern="[A-Za-z0-9._-]{3,32}"
+              pattern={"[A-Za-z0-9._\\-]{3,32}"}
               title="Use 3–32 letters, numbers, periods, underscores, or hyphens."
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />

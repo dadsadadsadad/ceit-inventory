@@ -1431,7 +1431,31 @@ input[type="file"].field {
 }
 .appearance-embedded {
   position: relative;
+  inset: auto;
   z-index: 80;
+}
+.appearance-public {
+  position: relative;
+  inset: auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.25rem max(1.25rem, env(safe-area-inset-bottom));
+}
+.appearance-public .appearance-trigger {
+  display: inline-flex;
+  width: auto;
+  gap: 0.6rem;
+  padding-inline: 0.9rem;
+  height: 42px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  box-shadow: none;
+}
+.appearance-public .appearance-popover {
+  right: 1.25rem;
+  bottom: 4.5rem;
+  width: min(22.5rem, calc(100vw - 2.5rem));
+  max-width: calc(100vw - 2.5rem);
 }
 .appearance-embedded .appearance-popover {
   position: fixed;
