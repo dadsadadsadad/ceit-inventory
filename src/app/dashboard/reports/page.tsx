@@ -168,7 +168,7 @@ export default async function ReportsPage({
                 </p>
               </article>
               <article className="card rounded-lg p-5">
-                <p className="muted text-xs font-bold uppercase tracking-wide">Needs attention</p>
+                <p className="muted text-xs font-bold uppercase tracking-wide">Open maintenance</p>
                 <p className="mt-3 text-3xl font-semibold">{openTicketCount}</p>
                 <Link
                   href="/dashboard/maintenance"

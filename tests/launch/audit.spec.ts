@@ -201,6 +201,7 @@ test("every route has a readable mobile and desktop view in both themes", async 
     ["borrowing", "/dashboard/borrowing"],
     ["maintenance", "/dashboard/maintenance"],
     ["reports", "/dashboard/reports"],
+    ["student-survey", "/dashboard/student-survey"],
     ["activity", "/dashboard/activity"],
     ["settings", "/dashboard/settings"],
     ["users", "/dashboard/users"],
@@ -243,4 +244,101 @@ test("every route has a readable mobile and desktop view in both themes", async 
     }
   }
   expect(errors).toEqual([]);
+});
+
+test("account creation, password changes, resets, and deactivation enforce session access", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const username = `audit.staff.${Date.now()}`;
+  const email = `${username}@ceit.invalid`;
+  const initialPassword = process.env.CEIT_TEST_PASSWORD!;
+  const changedPassword = `${initialPassword}Change9`;
+  const resetPassword = `${initialPassword}Reset9`;
+  const staffContext = await browser.newContext();
+  const staff = await staffContext.newPage();
+  staff.setDefaultTimeout(15_000);
+  const login = async (password: string) => {
+    await staff.goto("/auth/login");
+    await staff.getByLabel("Email address or username").fill(username);
+    await staff.getByLabel("Password", { exact: true }).fill(password);
+    await staff.getByRole("button", { name: "Sign in", exact: true }).click();
+  };
+  try {
+    await signIn(page);
+    await page.goto("/dashboard/users");
+    const create = page
+      .locator("details")
+      .filter({ has: page.locator("summary", { hasText: "Add account" }) });
+    await create.locator("summary").click();
+    await create.getByLabel("Email address").fill(email);
+    await create.getByLabel("Username").fill("invalid!username");
+    expect(
+      await create
+        .getByLabel("Username")
+        .evaluate((input: HTMLInputElement) => input.validity.patternMismatch),
+    ).toBe(true);
+    await create.getByLabel("Username").fill(username);
+    await create.getByLabel("Initial password").fill(initialPassword);
+    await create.getByRole("button", { name: "Create account" }).click();
+    await expect
+      .poll(
+        async () =>
+          (await query('SELECT COUNT(*)::int AS count FROM "User" WHERE email=$1', [email])).rows[0]
+            .count,
+      )
+      .toBe(1);
+    await login(initialPassword);
+    await expect(staff).toHaveURL(/\/dashboard$/);
+    await staff.goto("/dashboard/settings");
+    await staff.getByLabel("Current password", { exact: true }).fill(initialPassword);
+    await staff.locator('input[name="newPassword"]').fill(changedPassword);
+    await staff.getByLabel("Confirm new password", { exact: true }).fill(changedPassword);
+    await staff.getByRole("button", { name: "Update account" }).click();
+    await expect(staff).toHaveURL(/\/auth\/login\?notice=password-updated/);
+    await login(initialPassword);
+    await expect(staff).toHaveURL(/error=invalid-credentials/);
+    await login(changedPassword);
+    await expect(staff).toHaveURL(/\/dashboard$/);
+    await page.reload();
+    const account = page
+      .locator("details")
+      .filter({ has: page.locator("summary", { hasText: email }) });
+    await account.locator("summary").click();
+    await account.getByLabel("New password", { exact: true }).fill(resetPassword);
+    await account.getByRole("button", { name: "Save account" }).click();
+    await expect
+      .poll(
+        async () =>
+          (
+            await query(
+              'SELECT COUNT(*)::int AS count FROM "UserSession" s JOIN "User" u ON u.id=s."userId" WHERE u.email=$1',
+              [email],
+            )
+          ).rows[0].count,
+      )
+      .toBe(0);
+    await staff.goto("/dashboard");
+    await expect(staff).toHaveURL(/\/auth\/login/);
+    await login(resetPassword);
+    await expect(staff).toHaveURL(/\/dashboard$/);
+    await page.reload();
+    await account.locator("summary").click();
+    await account.getByLabel("Active", { exact: true }).uncheck();
+    await account.getByRole("button", { name: "Save account" }).click();
+    await expect
+      .poll(
+        async () =>
+          (await query('SELECT "isActive" FROM "User" WHERE email=$1', [email])).rows[0].isActive,
+      )
+      .toBe(false);
+    await staff.goto("/dashboard");
+    await expect(staff).toHaveURL(/\/auth\/login/);
+    await login(resetPassword);
+    await expect(staff).toHaveURL(/error=invalid-credentials/);
+  } finally {
+    await staffContext.close().catch(() => {});
+    await query('DELETE FROM "User" WHERE email=$1', [email]);
+  }
 });

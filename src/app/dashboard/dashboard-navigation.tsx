@@ -4,6 +4,7 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  ClipboardList,
   HandHelping,
   LayoutDashboard,
   LoaderCircle,
@@ -78,6 +79,7 @@ export function DashboardNavigation({
       label: "Management",
       items: [
         { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
+        { label: "Student survey", href: "/dashboard/student-survey", Icon: ClipboardList },
         ...(canManageAdministration
           ? [
               { label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText },

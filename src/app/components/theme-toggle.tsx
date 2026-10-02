@@ -421,8 +421,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   return (
     <div
       ref={controlRef}
-      className={`appearance-control ${embedded ? "appearance-embedded" : "fixed right-4 z-50"}`}
-      style={embedded ? undefined : { bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      className={`appearance-control ${embedded ? "appearance-embedded" : "appearance-public"}`}
     >
       {isOpen ? (
         <section
@@ -528,7 +527,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
         title="Appearance settings"
       >
         <Palette className="h-5 w-5" aria-hidden="true" />
-        {embedded ? <span>Appearance</span> : null}
+        <span>Appearance</span>
       </button>
     </div>
   );
