@@ -114,6 +114,15 @@ Public borrowing, return, and issue reports are rate-limited using a hashed requ
 
 Run `npm run test:unit` for fast logic tests, `npm run test:e2e` for public browser checks, `npm run test:db` against a configured database, and `npm run verify` before deployment. GitHub Actions runs the unit, browser, lint, type, and production-build checks on every push and pull request.
 
+After deploying, set `CEIT_E2E_BASE_URL` to the public website URL and run
+`npm run test:e2e` to test that deployment instead of starting a local server.
+These public checks do not sign in or modify inventory data; appearance changes
+are confined to the test browser. They include checks that the delivered CSS
+matches the appearance controls, with usable targets and readable theme text.
+Production builds bypass Turbopack's persisted compilation cache after a release
+was observed serving old global CSS alongside updated components. Browser asset
+caching and runtime data behavior are unchanged.
+
 For authenticated workflow checks, run `npm run test:launch:setup`, then `npm run test:launch`. Setup applies every migration to a new `ceit_test_launch_*` schema and seeds temporary accounts and equipment. The suite only resets data inside that schema; it refuses to run against the normal inventory schema. It starts and stops a production server on port 3101. Temporary credentials stay in the ignored `.env.e2e.local`; screenshots and sample reports are in the ignored `test-results` directory. Use a development database with schema-creation permission. Do not run setup against the school production database.
 
 After testing, run `npm run test:launch:cleanup` to preview removal, then add `-- --apply` to remove that test schema and its local credentials. Run `npm run build` afterward to restore the normal application build.

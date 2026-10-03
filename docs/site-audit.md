@@ -85,3 +85,22 @@ Validation for these corrections:
   short-screen and mobile views.
 
 The environment-specific verification limits above still apply.
+
+## Production follow-up
+
+GitHub verification and the Vercel deployment of `93602b3` succeeded. A subsequent
+read-only check of the public URL found that this deployment combined current
+components and palette styles with an older compiled `globals.css`. The appearance
+panel consequently used absolute positioning above the viewport. This was
+reproduced by the public browser regression, which failed on the delivered panel
+position rather than relying on deployment status alone.
+
+Production builds now bypass persisted Turbopack compilation transforms to force
+fresh output. The public Playwright suite also accepts `CEIT_E2E_BASE_URL`, so the
+same tests can verify the actual public deployment without signing in or changing
+production records. Browser asset caching and runtime data queries are unaffected.
+
+The fresh build passed `npm run verify` and all seven public production-browser
+tests locally. The new deployment-specific test fails on the older live asset,
+covering panel positioning, pointer access, target size, scroll behavior, and
+theme typography.
