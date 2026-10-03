@@ -11,6 +11,7 @@ import {
   Undo2,
   Wrench,
 } from "lucide-react";
+import { EquipmentStudy } from "@/app/components/equipment-study";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import {
   canManageAdministration,
@@ -118,21 +119,24 @@ export default async function DashboardPage() {
   return (
     <div className="page dashboard-overview-page">
       <div className="page-inner space-y-6">
-        <header className="dashboard-header flex flex-wrap items-end justify-between gap-5">
-          <div>
-            <p className="eyebrow">CEIT / Workspace</p>
+        <header className="dashboard-header">
+          <div className="overview-intro">
+            <p className="eyebrow">Your equipment workspace</p>
             <h1 className="title mt-2">Inventory dashboard</h1>
-            <p className="muted mt-2 text-sm">Your department, ready for the day.</p>
+            <p className="muted mt-3 text-sm">Everything in its place. Ready for what’s next.</p>
+            <Link
+              href="/dashboard/inventory"
+              className="primary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
+            >
+              Browse inventory <ArrowRight size={16} aria-hidden="true" />
+            </Link>
           </div>
-          <Link
-            href="/dashboard/inventory"
-            className="primary-button inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
-          >
-            Browse inventory <ArrowRight size={16} aria-hidden="true" />
-          </Link>
+          <div className="overview-study">
+            <EquipmentStudy />
+          </div>
         </header>
         <div className="overview-dateline">
-          <span>Equipment, rooms & everyday work</span>
+          <span>At a glance</span>
           <time dateTime={new Date().toISOString()}>
             {formatManilaDate(new Date(), {
               weekday: "short",
@@ -176,14 +180,12 @@ export default async function DashboardPage() {
               </div>
             </section>
 
-            <section
-              className={`overview-workspace grid gap-6 ${canManage ? "xl:grid-cols-[1.3fr_1fr]" : ""}`}
-            >
+            <section className={`overview-workspace ${canManage ? "has-queue" : ""}`}>
               {canManage ? (
                 <article className="card work-queue rounded-lg">
                   <div className="section-heading">
                     <div>
-                      <p className="eyebrow">Next up</p>
+                      <p className="eyebrow">The worklist</p>
                       <h2 className="mt-1">Requests and returns</h2>
                     </div>
                     <span className={`queue-total ${waiting ? "has-work" : ""}`}>
@@ -224,7 +226,7 @@ export default async function DashboardPage() {
               <aside className="card dashboard-note-card rounded-lg p-6">
                 <div className="section-heading">
                   <div>
-                    <p className="eyebrow">For the team</p>
+                    <p className="eyebrow">Team memo</p>
                     <h2 className="mt-1">Department note</h2>
                   </div>
                   <span className="note-corner" aria-hidden="true" />
@@ -240,63 +242,62 @@ export default async function DashboardPage() {
                   </p>
                 )}
               </aside>
-            </section>
-
-            {canAdmin ? (
-              <section
-                className="card activity-ledger rounded-lg"
-                aria-labelledby="recent-activity-heading"
-              >
-                <div className="section-heading">
-                  <h2 id="recent-activity-heading">Recent activity</h2>
-                  <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
-                    View audit trail <span aria-hidden="true">↗</span>
-                  </Link>
-                </div>
-                {dashboard.recentActivity.length ? (
-                  <ol className="activity-timeline">
-                    {dashboard.recentActivity.map((event) => (
-                      <li
-                        key={event.id}
-                        className="activity-entry flex items-start justify-between gap-4"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{event.summary}</p>
-                          {event.item ? (
-                            <Link
-                              href={`/dashboard/inventory/${event.item.id}`}
-                              className="muted mt-1 block text-xs hover:text-[var(--accent)]"
-                            >
-                              {event.item.name}
-                            </Link>
-                          ) : (
-                            <p className="muted mt-1 text-xs">
-                              {event.entityLabel ?? "System activity"}
-                            </p>
-                          )}
-                        </div>
-                        <time
-                          className="activity-time muted shrink-0 text-xs"
-                          dateTime={event.createdAt.toISOString()}
+              {canAdmin ? (
+                <section
+                  className="card activity-ledger rounded-lg"
+                  aria-labelledby="recent-activity-heading"
+                >
+                  <div className="section-heading">
+                    <h2 id="recent-activity-heading">Recent activity</h2>
+                    <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
+                      View audit trail <span aria-hidden="true">↗</span>
+                    </Link>
+                  </div>
+                  {dashboard.recentActivity.length ? (
+                    <ol className="activity-timeline">
+                      {dashboard.recentActivity.map((event) => (
+                        <li
+                          key={event.id}
+                          className="activity-entry flex items-start justify-between gap-4"
                         >
-                          {formatManilaDate(event.createdAt, { day: "numeric", month: "short" })}
-                          <span>
-                            {formatManilaDate(event.createdAt, {
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </time>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="muted px-6 pb-6 text-sm">
-                    Changes to your inventory will appear here.
-                  </p>
-                )}
-              </section>
-            ) : null}
+                          <div>
+                            <p className="text-sm font-medium">{event.summary}</p>
+                            {event.item ? (
+                              <Link
+                                href={`/dashboard/inventory/${event.item.id}`}
+                                className="muted mt-1 block text-xs hover:text-[var(--accent)]"
+                              >
+                                {event.item.name}
+                              </Link>
+                            ) : (
+                              <p className="muted mt-1 text-xs">
+                                {event.entityLabel ?? "System activity"}
+                              </p>
+                            )}
+                          </div>
+                          <time
+                            className="activity-time muted shrink-0 text-xs"
+                            dateTime={event.createdAt.toISOString()}
+                          >
+                            {formatManilaDate(event.createdAt, { day: "numeric", month: "short" })}
+                            <span>
+                              {formatManilaDate(event.createdAt, {
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </time>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="muted px-6 pb-6 text-sm">
+                      Changes to your inventory will appear here.
+                    </p>
+                  )}
+                </section>
+              ) : null}
+            </section>
             {canManage ? (
               <div className="overview-footer">
                 <span>Adding equipment to the department?</span>

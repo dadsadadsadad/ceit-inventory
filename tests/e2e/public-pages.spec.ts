@@ -7,11 +7,51 @@ test("login page is available without a database query", async ({ page }) => {
   await expect(page.getByLabel("Password")).toBeVisible();
 });
 
+test("workspace font loads locally and sign-in remains usable when fonts fail", async ({
+  page,
+}) => {
+  const fontResponses: { url: string; ok: boolean }[] = [];
+  page.on("response", (response) => {
+    if (response.request().resourceType() === "font") {
+      fontResponses.push({ url: response.url(), ok: response.ok() });
+    }
+  });
+  await page.goto("/auth/login");
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  expect(fontResponses.length).toBeGreaterThan(0);
+  for (const font of fontResponses) {
+    expect(new URL(font.url).origin).toBe(new URL(page.url()).origin);
+    expect(font.ok).toBe(true);
+  }
+
+  await page.route("**/*.woff2", (route) => route.abort());
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.reload();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  await expect(page.getByLabel("Email address or username")).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  await page.getByLabel("Email address or username").fill("font-fallback-check");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
 test("login error state is rendered without leaking credentials", async ({ page }) => {
   await page.goto("/auth/login?error=invalid-credentials");
   await expect(
     page.getByText("The email address, username, or password is incorrect.", { exact: true }),
   ).toBeVisible();
+});
+
+test("sign-in shows one brand at desktop and mobile widths", async ({ page }) => {
+  await page.goto("/auth/login");
+  for (const width of [1440, 1024, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator(".login-page .brand-lockup:visible")).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+  }
 });
 
 test("unknown routes receive the application not-found page", async ({ page }) => {

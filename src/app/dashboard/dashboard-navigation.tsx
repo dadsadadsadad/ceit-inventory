@@ -22,6 +22,7 @@ import { signOut } from "@/app/auth/actions";
 import { LiveUpdates } from "@/app/components/live-updates";
 import { CommandMenu } from "@/app/components/command-menu";
 import { ThemeToggle } from "@/app/components/theme-toggle";
+import { BrandMark } from "@/app/components/brand-mark";
 
 type DashboardNavigationProps = {
   canManageAdministration: boolean;
@@ -95,12 +96,15 @@ export function DashboardNavigation({
     <aside className="dashboard-sidebar border-b lg:flex lg:w-64 lg:flex-col lg:self-stretch lg:border-b-0 lg:border-r">
       <div className="sidebar-brand">
         <Link href="/dashboard" className="brand-lockup" aria-label="CEIT Inventory dashboard">
-          <span className="brand-mark brand-monogram" aria-hidden="true">
-            CE<span>IT</span>
-          </span>
+          <BrandMark />
           <span>
-            <strong>CEIT Inventory</strong>
-            <span className="brand-caption">Equipment & resources</span>
+            <strong>
+              CEIT
+              <span className="brand-wordmark-dot" aria-hidden="true">
+                .
+              </span>
+            </strong>
+            <span className="brand-caption">Inventory workspace</span>
           </span>
         </Link>
         <button

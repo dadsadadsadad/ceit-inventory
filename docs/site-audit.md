@@ -134,3 +134,36 @@ Validation for this refinement:
   layering, theme persistence, menu access, and text contrast were rechecked.
 - Dashboard, inventory, reports, settings, borrowing, appearance, and narrow-screen
   screenshots were visually reviewed. Test data remains isolated from production.
+
+## Equipment studio redesign — 4 October 2026
+
+The repeated-card composition has been replaced with a more varied dashboard:
+large editorial headings, original equipment line art, an open worklist/activity
+column, and a compact ruled team memo. Shared typography, sign-in branding,
+filters, record links, reports, and control shapes follow the same direction.
+The favicon now uses the neutral charcoal palette. See
+[design-refinement.md](design-refinement.md) for references and asset licensing.
+
+The self-hosted variable font adds 24,836 bytes. The illustration is inline SVG;
+there are no new dependencies, external runtime requests, or database queries.
+Existing data actions and authorization remain unchanged.
+
+Validation:
+
+- All 76 unit tests passed.
+- Final formatting, ESLint, TypeScript, and the normal production build passed.
+- The complete isolated production-browser run passed all 49 scenarios, including
+  the 17-route matrix in both themes at desktop/mobile widths, responsive controls,
+  live updates, permissions, imports, borrowing/returns, concurrent reservations,
+  CSV/PDF exports, and two-sheet batch labels.
+- Visual review caught a duplicated brand on desktop sign-in. After that CSS
+  correction, all 20 affected public/UI scenarios passed, including a new check
+  across 320, 390, 768, 1024, and 1440px: 50 distinct verified browser scenarios.
+- Font delivery is verified as same-origin; sign-in is checked at 320px with font
+  requests blocked. Theme persistence, neutral surfaces, accent feedback,
+  appearance pointer access, sticky sidebar scrolling, readable text, keyboard
+  controls, reduced motion, and pending-save feedback all passed again.
+- Dashboard, inventory, reports, borrowing, sign-in, mobile item creation, public
+  QR item details, appearance, and mobile layouts were visually reviewed.
+
+All data-changing browser tests used the isolated test schema, not production.

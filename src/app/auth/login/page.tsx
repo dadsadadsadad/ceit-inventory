@@ -1,7 +1,8 @@
-import { Boxes } from "lucide-react";
 import type { Metadata } from "next";
 
 import { SubmitButton } from "@/app/components/submit-button";
+import { EquipmentStudy } from "@/app/components/equipment-study";
+import { BrandMark } from "@/app/components/brand-mark";
 
 import { signIn } from "../actions";
 
@@ -30,38 +31,42 @@ export default async function LoginPage({
     <main className="login-page grid min-h-screen px-5 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-0">
       {/* Desktop branding panel. */}
       <section className="login-panel hidden px-10 py-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="brand-mark grid h-11 w-11 place-items-center rounded-lg text-sm font-black">
-            <Boxes className="h-6 w-6" aria-hidden="true" />
-          </div>
+        <div className="brand-lockup flex items-center gap-3">
+          <BrandMark />
           <div>
-            <div className="text-base font-semibold tracking-tight">CEIT Inventory</div>
-            <div className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
-              Inventory management
-            </div>
+            <strong className="text-base">
+              CEIT
+              <span className="brand-wordmark-dot" aria-hidden="true">
+                .
+              </span>
+            </strong>
+            <span className="brand-caption text-xs">Inventory workspace</span>
           </div>
         </div>
-        <div className="login-inventory-mark" aria-hidden="true">
-          <Boxes size={100} strokeWidth={0.8} />
+        <div className="login-study">
+          <EquipmentStudy />
         </div>
         <div className="max-w-xl">
+          <p className="eyebrow">A place for everything.</p>
           <h2 className="mt-4 text-4xl font-bold tracking-tight">
-            Equipment, rooms, and the people who use them.
+            Good work starts with the right equipment.
           </h2>
+          <p className="login-caption">Keep it organized. Put it to work. Pass it on.</p>
         </div>
       </section>
 
       {/* Mobile branding and sign-in form. */}
-      <section className="flex flex-col items-center justify-center gap-5">
-        <div className="login-mobile-brand flex items-center gap-3 lg:hidden">
-          <div className="brand-mark grid h-10 w-10 place-items-center rounded-lg">
-            <Boxes className="h-5 w-5" aria-hidden="true" />
-          </div>
+      <section className="login-form-side flex flex-col items-center justify-center gap-5">
+        <div className="login-mobile-brand brand-lockup flex items-center gap-3 lg:hidden">
+          <BrandMark />
           <div>
-            <div className="text-sm font-semibold tracking-tight">CEIT Inventory</div>
-            <div className="login-mobile-subtitle text-xs font-medium uppercase tracking-[0.18em]">
-              Inventory management
-            </div>
+            <strong>
+              CEIT
+              <span className="brand-wordmark-dot" aria-hidden="true">
+                .
+              </span>
+            </strong>
+            <span className="brand-caption">Inventory workspace</span>
           </div>
         </div>
         <div className="card w-full max-w-md rounded-lg p-6 sm:p-8">
