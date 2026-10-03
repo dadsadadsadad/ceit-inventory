@@ -104,3 +104,33 @@ The fresh build passed `npm run verify` and all seven public production-browser
 tests locally. The new deployment-specific test fails on the older live asset,
 covering panel positioning, pointer access, target size, scroll behavior, and
 theme typography.
+
+The deployed follow-up (`36aec37`) subsequently passed all seven public browser
+checks at `https://ceit-inventory.vercel.app`, including actual pointer access to
+appearance controls and the corrected neutral theme styles.
+
+## Restrained design and interaction refinement
+
+The next pass preserves the approved layout and neutral palette, adding label
+details, equipment symbols, a timed activity rail, tactile buttons, and consistent
+hover, press, focus, open, and saving states. See [design-refinement.md](design-refinement.md)
+for the reference review and decisions. It adds no dependencies or database queries.
+
+The broader browser run found an ambiguous wrapping label on the shared note when
+it contained saved text. This is corrected with an explicit label and input ID.
+Tablet metrics also adapt to the actual workspace width to avoid caption overlap.
+
+Validation for this refinement:
+
+- All 76 unit tests passed; formatting, ESLint, TypeScript, and the production
+  build passed.
+- The full browser run passed 46 of 47 scenarios and exposed the note-label issue.
+  After correcting it and the tablet icon layout, all 19 affected checks passed,
+  including the new public hover/press check: 48 distinct verified scenarios.
+- The route matrix covered 17 pages in both themes at desktop/mobile widths.
+  Focused metric checks covered 320, 390, 768, 1024, 1280, and 1440px, including
+  caption overlap and number alignment.
+- Pointer, keyboard, reduced-motion, pending-save, sidebar scroll, appearance
+  layering, theme persistence, menu access, and text contrast were rechecked.
+- Dashboard, inventory, reports, settings, borrowing, appearance, and narrow-screen
+  screenshots were visually reviewed. Test data remains isolated from production.
