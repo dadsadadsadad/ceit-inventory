@@ -45,3 +45,43 @@ physical printer output, production-scale load, and the school's backup/restore
 process still need checks in their actual environments. Account listing remains
 unpaginated; the queries no longer load password hashes and editors are collapsed.
 This audit is evidence of the checked workflows, not a guarantee of zero defects.
+
+## Corrections after the reported UI regressions
+
+The first audit missed interaction failures in the staff appearance panel and did
+not test the desktop sidebar after scrolling. The reported failures were real:
+the appearance panel was trapped below the workspace's stacking context, body
+overflow prevented reliable sticky positioning, and newer style rules reduced
+many captions to 10–12px. The same stacking problem also covered the Inventory
+tools dropdown with the filter form.
+
+The appearance panel now renders outside the workspace, with usable controls,
+viewport bounds, an always-reachable close button, outside-click dismissal, and
+keyboard focus restoration. Escape closes the panel before the mobile navigation.
+The sidebar remains in the viewport during document scrolling and scrolls its own
+contents on short screens. Ordinary interface text is at least 14px, navigation
+and work-queue titles use 16px, and mobile metric values align. Physical printed
+labels retain their existing dimensions.
+
+Dark mode uses neutral charcoal and light mode uses neutral white/gray throughout
+the workspace and login page. Accent choices visibly update buttons, links,
+selection indicators, and focus outlines while keeping page surfaces neutral.
+Saved theme/accent choices and the default-color reset are tested. Login branding
+was also corrected to maintain readable contrast in both modes.
+
+Validation for these corrections:
+
+- All 76 unit tests passed.
+- Full production browser suite: 42 tests passed. After the final login contrast
+  and mobile alignment corrections, all 20 affected browser tests passed.
+- The 17-route, two-theme desktop/mobile matrix now checks actual rendered text
+  size as well as overflow, headings, IDs, and browser errors. Existing responsive
+  control checks also passed at 360, 768, 1024, and 1440px.
+- Seven focused UI regressions cover actual appearance clicks above dashboard
+  content, document/sidebar scrolling, 320px metric alignment, mobile keyboard
+  behavior, visible and persistent theme/accent changes, dropdown navigation, and
+  login text contrast. These explicitly wait for loaded dashboard content.
+- Open-panel and scrolled-layout screenshots were visually reviewed, including
+  short-screen and mobile views.
+
+The environment-specific verification limits above still apply.

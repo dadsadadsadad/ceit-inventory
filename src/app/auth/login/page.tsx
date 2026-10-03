@@ -29,14 +29,14 @@ export default async function LoginPage({
   return (
     <main className="login-page grid min-h-screen px-5 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-0">
       {/* Desktop branding panel. */}
-      <section className="login-panel hidden px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
+      <section className="login-panel hidden px-10 py-12 lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3">
           <div className="brand-mark grid h-11 w-11 place-items-center rounded-lg text-sm font-black">
             <Boxes className="h-6 w-6" aria-hidden="true" />
           </div>
           <div>
             <div className="text-base font-semibold tracking-tight">CEIT Inventory</div>
-            <div className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">
+            <div className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
               Inventory management
             </div>
           </div>

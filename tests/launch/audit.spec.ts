@@ -232,6 +232,23 @@ test("every route has a readable mobile and desktop view in both themes", async 
           if (new Set(ids).size !== ids.length) {
             issues.push("duplicate element IDs");
           }
+          // Check rendered text, including small metadata; compact printed labels
+          // deliberately retain their physical print dimensions.
+          for (const element of document.querySelectorAll<HTMLElement>("body *")) {
+            if (element.closest('.sr-only, [aria-hidden="true"], .sheet-label')) {
+              continue;
+            }
+            const bounds = element.getBoundingClientRect();
+            if (bounds.width <= 1 || bounds.height <= 1 || !element.checkVisibility()) {
+              continue;
+            }
+            const hasText = [...element.childNodes].some(
+              (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+            );
+            if (hasText && parseFloat(getComputedStyle(element).fontSize) < 14) {
+              issues.push(`small text: ${element.textContent?.trim().slice(0, 60)}`);
+            }
+          }
           return issues;
         });
         expect(issues, `${path} / ${theme} / ${width}`).toEqual([]);
