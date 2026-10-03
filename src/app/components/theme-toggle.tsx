@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, Moon, Palette, Sun } from "lucide-react";
+import { Check, Moon, Palette, Sun, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   useEffect,
   useId,
@@ -96,8 +97,8 @@ function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPicke
             <span className="block text-xs font-semibold text-[var(--foreground)]">
               Create your accent
             </span>
-            <span className="block truncate text-xs text-[var(--muted)]">
-              Your hue is tuned automatically for readable text.
+            <span className="block text-xs text-[var(--muted)]">
+              Adjusted for readable text in either mode.
             </span>
           </div>
         </div>
@@ -346,7 +347,8 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   const theme = useSyncExternalStore<Theme>(subscribeToAppearance, getThemeSnapshot, () => "dark");
   const accent = useSyncExternalStore<Accent>(subscribeToAppearance, getAccentSnapshot, () => null);
   const [isOpen, setIsOpen] = useState(false);
-  const controlRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogId = useId();
   const headingId = useId();
@@ -365,25 +367,36 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
       return;
     }
 
-    function closeOnOutsidePress(event: PointerEvent) {
-      if (event.target instanceof Node && !controlRef.current?.contains(event.target)) {
+    closeRef.current?.focus({ preventScroll: true });
+
+    function closeOnOutsidePress(event: Event) {
+      if (
+        event.target instanceof Node &&
+        !panelRef.current?.contains(event.target) &&
+        !triggerRef.current?.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         setIsOpen(false);
-        triggerRef.current?.focus();
+        triggerRef.current?.focus({ preventScroll: true });
       }
     }
 
     document.addEventListener("pointerdown", closeOnOutsidePress);
-    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("focusin", closeOnOutsidePress);
+    // Handle the panel before the mobile navigation's Escape listener.
+    document.addEventListener("keydown", closeOnEscape, true);
 
     return () => {
       document.removeEventListener("pointerdown", closeOnOutsidePress);
-      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("focusin", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape, true);
     };
   }, [isOpen]);
 
@@ -419,100 +432,117 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   const accentLabel = accent ? `${accent} custom accent` : "CEIT orange default accent";
 
   return (
-    <div
-      ref={controlRef}
-      className={`appearance-control ${embedded ? "appearance-embedded" : "appearance-public"}`}
-    >
-      {isOpen ? (
-        <section
-          id={dialogId}
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={headingId}
-          className="appearance-popover absolute bottom-14 right-0 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-[var(--shadow)]"
-        >
-          <div className="mb-4 flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
-              <Palette className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 id={headingId} className="text-sm font-semibold tracking-tight">
-                Appearance
-              </h2>
-              <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
-                Choose a mode and a personal accent for this device.
-              </p>
-            </div>
-          </div>
+    <div className={`appearance-control ${embedded ? "appearance-embedded" : "appearance-public"}`}>
+      {isOpen
+        ? createPortal(
+            <section
+              ref={panelRef}
+              id={dialogId}
+              role="dialog"
+              aria-modal="false"
+              aria-labelledby={headingId}
+              className={`appearance-popover ${embedded ? "appearance-popover-embedded" : ""} text-[var(--foreground)]`}
+            >
+              <div className="appearance-heading flex items-start gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
+                  <Palette className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 id={headingId} className="text-base font-semibold tracking-tight">
+                    Appearance
+                  </h2>
+                  <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
+                    Saved on this device. Changes apply immediately.
+                  </p>
+                </div>
+                <button
+                  ref={closeRef}
+                  type="button"
+                  className="appearance-close"
+                  aria-label="Close appearance panel"
+                  onClick={() => {
+                    setIsOpen(false);
+                    triggerRef.current?.focus({ preventScroll: true });
+                  }}
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
 
-          {/* Light and dark mode buttons. */}
-          <fieldset className="border-0 p-0">
-            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              Mode
-            </legend>
-            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Color mode">
-              <button
-                type="button"
-                onClick={() => selectTheme("light")}
-                aria-pressed={theme === "light"}
-                className={`appearance-mode-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                  theme === "light"
-                    ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                    : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                <Sun className="h-4 w-4" aria-hidden="true" />
-                Light
-              </button>
-              <button
-                type="button"
-                onClick={() => selectTheme("dark")}
-                aria-pressed={theme === "dark"}
-                className={`appearance-mode-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                  theme === "dark"
-                    ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                    : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                <Moon className="h-4 w-4" aria-hidden="true" />
-                Dark
-              </button>
-            </div>
-          </fieldset>
+              {/* Light and dark mode buttons. */}
+              <fieldset className="border-0 p-0">
+                <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                  Mode
+                </legend>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Color mode">
+                  <button
+                    type="button"
+                    onClick={() => selectTheme("light")}
+                    aria-pressed={theme === "light"}
+                    className={`appearance-mode-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                      theme === "light"
+                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                        : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    <Sun className="h-4 w-4" aria-hidden="true" />
+                    Light
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectTheme("dark")}
+                    aria-pressed={theme === "dark"}
+                    className={`appearance-mode-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                      theme === "dark"
+                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                        : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    <Moon className="h-4 w-4" aria-hidden="true" />
+                    Dark
+                  </button>
+                </div>
+              </fieldset>
 
-          {/* Custom accent picker and default-color reset. */}
-          <fieldset className="mt-5 border-0 p-0">
-            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              Accent color
-            </legend>
-            <div className="appearance-color-picker">
-              <AccentColorPicker
-                color={pickerColor}
-                selectedAccent={accent}
-                onChange={(nextAccent) => saveAppearance(theme, nextAccent)}
-              />
-              <button
-                type="button"
-                onClick={resetAccent}
-                aria-pressed={accent === null}
-                className={`appearance-reset-color mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                  accent === null
-                    ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                    : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                {accent === null ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                Use CEIT orange default
-              </button>
-            </div>
-          </fieldset>
+              {/* Custom accent picker and default-color reset. */}
+              <fieldset className="mt-5 border-0 p-0">
+                <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                  Accent color
+                </legend>
+                <p className="mb-3 text-sm text-[var(--muted)]">
+                  Colors buttons, links, selection indicators, and focus outlines. Page backgrounds
+                  stay neutral.
+                </p>
+                <div className="appearance-color-picker">
+                  <AccentColorPicker
+                    color={pickerColor}
+                    selectedAccent={accent}
+                    onChange={(nextAccent) => saveAppearance(theme, nextAccent)}
+                  />
+                  <button
+                    type="button"
+                    onClick={resetAccent}
+                    aria-pressed={accent === null}
+                    className={`appearance-reset-color mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                      accent === null
+                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                        : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    {accent === null ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                    Use CEIT orange default
+                  </button>
+                </div>
+              </fieldset>
 
-          <p
-            className="sr-only"
-            aria-live="polite"
-          >{`${theme} mode with ${accentLabel} selected.`}</p>
-        </section>
-      ) : null}
+              <p
+                className="sr-only"
+                aria-live="polite"
+              >{`${theme} mode with ${accentLabel} selected.`}</p>
+            </section>,
+            document.body,
+          )
+        : null}
 
       {/* Open or close appearance settings. */}
       <button
