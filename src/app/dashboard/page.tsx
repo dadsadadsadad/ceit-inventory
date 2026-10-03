@@ -1,7 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
-import { ArrowRight, CheckCheck, ClipboardCheck, PackagePlus, Undo2, Wrench } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCheck,
+  ClipboardCheck,
+  MapPin,
+  Package,
+  PackagePlus,
+  Undo2,
+  Wrench,
+} from "lucide-react";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import {
   canManageAdministration,
@@ -138,24 +147,24 @@ export default async function DashboardPage() {
           <>
             <section className="overview-metrics" aria-label="Inventory overview">
               <div>
-                <span className="metric-index" aria-hidden="true">
-                  01
+                <span className="metric-symbol" aria-hidden="true">
+                  <Package size={20} strokeWidth={1.6} />
                 </span>
                 <p className="muted text-sm">Inventory records</p>
                 <strong>{dashboard.itemCount.toLocaleString()}</strong>
                 <span className="metric-detail">Equipment & supplies</span>
               </div>
               <div>
-                <span className="metric-index" aria-hidden="true">
-                  02
+                <span className="metric-symbol" aria-hidden="true">
+                  <MapPin size={20} strokeWidth={1.6} />
                 </span>
                 <p className="muted text-sm">Active locations</p>
                 <strong>{dashboard.locationCount.toLocaleString()}</strong>
                 <span className="metric-detail">Rooms, labs & storage</span>
               </div>
               <div>
-                <span className="metric-index" aria-hidden="true">
-                  03
+                <span className="metric-symbol" aria-hidden="true">
+                  <Wrench size={20} strokeWidth={1.6} />
                 </span>
                 <p className="muted text-sm">Needs attention</p>
                 <strong
@@ -190,8 +199,10 @@ export default async function DashboardPage() {
                   <div className="queue-list">
                     {queue.map(({ label, detail, count, href, Icon }) => (
                       <Link key={href} href={href} className="queue-row">
-                        <Icon size={20} aria-hidden="true" />
-                        <span>
+                        <span className="queue-icon" aria-hidden="true">
+                          <Icon size={20} strokeWidth={1.7} />
+                        </span>
+                        <span className="queue-copy">
                           <strong>{label}</strong>
                           <small>{detail}</small>
                         </span>
@@ -243,11 +254,11 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
                 {dashboard.recentActivity.length ? (
-                  <ol className="divide-y">
+                  <ol className="activity-timeline">
                     {dashboard.recentActivity.map((event) => (
                       <li
                         key={event.id}
-                        className="flex items-start justify-between gap-4 px-6 py-4"
+                        className="activity-entry flex items-start justify-between gap-4"
                       >
                         <div>
                           <p className="text-sm font-medium">{event.summary}</p>
@@ -265,10 +276,16 @@ export default async function DashboardPage() {
                           )}
                         </div>
                         <time
-                          className="muted shrink-0 text-xs"
+                          className="activity-time muted shrink-0 text-xs"
                           dateTime={event.createdAt.toISOString()}
                         >
                           {formatManilaDate(event.createdAt, { day: "numeric", month: "short" })}
+                          <span>
+                            {formatManilaDate(event.createdAt, {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
                         </time>
                       </li>
                     ))}

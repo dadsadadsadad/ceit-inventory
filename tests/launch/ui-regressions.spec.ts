@@ -22,6 +22,122 @@ async function signIn(page: Page) {
   ).toBeVisible();
 }
 
+test("hover, press, and keyboard feedback remain distinct in both themes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await signIn(page);
+  for (const theme of ["Light", "Dark"]) {
+    await page.getByRole("button", { name: "Open appearance settings" }).click();
+    await page
+      .getByRole("dialog", { name: "Appearance", exact: true })
+      .getByRole("button", { name: theme, exact: true })
+      .click();
+    await page.keyboard.press("Escape");
+    const browse = page.getByRole("link", { name: "Browse inventory" });
+    await page.mouse.move(300, 0);
+    const resting = await browse.evaluate((node) => getComputedStyle(node).backgroundColor);
+    await browse.hover();
+    await expect
+      .poll(() => browse.evaluate((node) => getComputedStyle(node).backgroundColor))
+      .not.toBe(resting);
+    await expect
+      .poll(() => browse.evaluate((node) => new DOMMatrix(getComputedStyle(node).transform).m42))
+      .toBeLessThan(0);
+    await page.mouse.down();
+    await expect
+      .poll(() => browse.evaluate((node) => new DOMMatrix(getComputedStyle(node).transform).m42))
+      .toBeGreaterThan(0);
+    // Release away from the link, then exercise a queue link with the keyboard.
+    await page.mouse.move(300, 0);
+    await page.mouse.up();
+    const queue = page.locator(".queue-row").first();
+    const rowBackground = await queue.evaluate((node) => getComputedStyle(node).backgroundColor);
+    await queue.hover();
+    await expect
+      .poll(() => queue.evaluate((node) => getComputedStyle(node).backgroundColor))
+      .not.toBe(rowBackground);
+    await page.mouse.move(300, 0);
+    await page.keyboard.press("Tab");
+    await queue.focus();
+    await expect(queue).toBeFocused();
+    expect(await queue.evaluate((node) => node.matches(":focus-visible"))).toBe(true);
+    expect(await queue.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe("solid");
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/dashboard\/borrowing\?status=REQUESTED$/);
+    await expect(page.locator("main h1")).toBeVisible();
+    await page.goto("/dashboard");
+    await expect(
+      page.getByRole("heading", { name: "Inventory dashboard", exact: true }),
+    ).toBeVisible();
+  }
+});
+
+test("reduced motion preserves feedback without moving controls", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await signIn(page);
+  const browse = page.getByRole("link", { name: "Browse inventory" });
+  const resting = await browse.evaluate((node) => getComputedStyle(node).backgroundColor);
+  await browse.hover();
+  expect(await browse.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe(resting);
+  expect(await browse.evaluate((node) => getComputedStyle(node).transform)).toBe("none");
+  await page.mouse.down();
+  expect(await browse.evaluate((node) => getComputedStyle(node).transform)).toBe("none");
+  await page.mouse.move(300, 0);
+  await page.mouse.up();
+  await page.getByRole("link", { name: "Inventory", exact: true }).hover();
+  expect(
+    await page
+      .getByRole("link", { name: "Inventory", exact: true })
+      .evaluate((node) => getComputedStyle(node).transform),
+  ).toBe("none");
+  await page.locator(".queue-row").first().hover();
+  expect(
+    await page
+      .locator(".queue-row > svg")
+      .first()
+      .evaluate((node) => getComputedStyle(node).transform),
+  ).toBe("none");
+});
+
+test("saving a note gives visible pending feedback and prevents another submission", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await signIn(page);
+  let releaseSave!: () => void;
+  const heldRequest = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  await page.route("**/dashboard", async (route) => {
+    if (route.request().method() === "POST") {
+      await heldRequest;
+    }
+    await route.continue();
+  });
+  await page.getByLabel("Department note", { exact: true }).fill("Interaction review: note saved.");
+  await page.getByRole("button", { name: "Save note", exact: true }).click();
+  try {
+    const saving = page.getByRole("button", { name: "Saving note…", exact: true });
+    await expect(saving).toBeVisible();
+    await expect(saving).toBeDisabled();
+    await expect(saving).toHaveAttribute("aria-busy", "true");
+    await expect(saving.locator(".submit-spinner")).toBeVisible();
+    expect(await saving.evaluate((node) => getComputedStyle(node).transform)).toBe("none");
+  } finally {
+    releaseSave();
+  }
+  await expect(page.getByRole("button", { name: "Save note", exact: true })).toBeEnabled();
+  await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+  await page.unrouteAll({ behavior: "wait" });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Inventory dashboard", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Department note", { exact: true })).toHaveValue(
+    "Interaction review: note saved.",
+  );
+});
+
 test("appearance controls receive pointer clicks above dashboard content", async ({ page }) => {
   await page.setViewportSize({ width: 1851, height: 985 });
   await signIn(page);
@@ -94,13 +210,40 @@ test("dashboard supporting text is readable without browser zoom", async ({ page
       );
   });
   expect(smallText).toEqual([]);
-  await page.setViewportSize({ width: 320, height: 700 });
-  await expect(page.locator(".overview-metrics strong")).toHaveCount(3);
-  const metricTops = await page
-    .locator(".overview-metrics strong")
-    .evaluateAll((metrics) => metrics.map((metric) => metric.getBoundingClientRect().top));
-  expect(Math.max(...metricTops) - Math.min(...metricTops)).toBeLessThan(1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  for (const width of [1440, 1280, 1024, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 700 });
+    await expect(page.locator(".overview-metrics strong")).toHaveCount(3);
+    const metricTops = await page
+      .locator(".overview-metrics strong")
+      .evaluateAll((metrics) => metrics.map((metric) => metric.getBoundingClientRect().top));
+    expect(
+      Math.max(...metricTops) - Math.min(...metricTops),
+      `Metric alignment at ${width}px`,
+    ).toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+    const overlappingSymbols = await page.locator(".overview-metrics > div").evaluateAll(
+      (metrics) =>
+        metrics.filter((metric) => {
+          const symbol = metric.querySelector(".metric-symbol")!;
+          if (getComputedStyle(symbol).display === "none") {
+            return false;
+          }
+          const icon = symbol.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(metric.querySelector("p")!);
+          return [...range.getClientRects()].some(
+            (text) =>
+              text.left < icon.right &&
+              text.right > icon.left &&
+              text.top < icon.bottom &&
+              text.bottom > icon.top,
+          );
+        }).length,
+    );
+    expect(overlappingSymbols, `Metric caption overlap at ${width}px`).toBe(0);
+  }
   await page.screenshot({ path: "test-results/ui-dashboard-narrow.png", fullPage: true });
 });
 

@@ -13,6 +13,8 @@
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 6%);
   --panel-tint: color-mix(in srgb, var(--accent) 7%, var(--surface));
   --sidebar-base: #1b1b1b;
+  --interaction-duration: 160ms;
+  --interaction-ease: cubic-bezier(0.2, 0, 0.2, 1);
 }
 html[data-theme="light"] {
   --background: #f5f5f5;
@@ -284,14 +286,10 @@ summary:focus-visible {
 .danger-button {
   min-height: 44px;
   transition:
-    background-color 140ms,
-    border-color 140ms,
-    transform 140ms;
-}
-.primary-button:active:not(:disabled),
-.secondary-button:active:not(:disabled),
-.danger-button:active:not(:disabled) {
-  transform: scale(0.98);
+    background-color var(--interaction-duration),
+    border-color var(--interaction-duration),
+    box-shadow var(--interaction-duration),
+    transform var(--interaction-duration) var(--interaction-ease);
 }
 .notice {
   overflow-wrap: anywhere;
@@ -604,10 +602,10 @@ summary:focus-visible {
     transform: translateY(-1px);
     box-shadow: 0 3px 12px rgb(0 0 0 / 8%);
   }
-  .primary-button:hover,
-  .secondary-button:hover,
-  .danger-button:hover,
-  .pagination-link:hover {
+  .primary-button:hover:not(:active, :disabled, [aria-disabled="true"]),
+  .secondary-button:hover:not(:active, :disabled, [aria-disabled="true"]),
+  .danger-button:hover:not(:active, :disabled, [aria-disabled="true"]),
+  .pagination-link:hover:not(:active, [aria-disabled="true"]) {
     transform: translateY(-1px);
   }
 }
@@ -671,12 +669,6 @@ summary:focus-visible {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
-  }
-  .card-link:hover,
-  .primary-button:hover,
-  .secondary-button:hover,
-  .danger-button:hover {
-    transform: none;
   }
 }
 
@@ -1174,10 +1166,23 @@ input[type="file"].field {
   overflow: visible;
 }
 .page-inner > header:not(.card)::before,
-.page-inner > header:not(.card)::after,
-.page-narrow > header:not(.card)::before,
-.page-narrow > header:not(.card)::after {
+.page-narrow > header:not(.card)::before {
   display: none;
+}
+.page-inner > header:not(.card)::after,
+.page-narrow > header:not(.card)::after {
+  display: block;
+  content: "";
+  position: absolute;
+  inset: auto auto -1px 0;
+  width: 2.5rem;
+  height: 2px;
+  border: 0;
+  border-radius: 0;
+  background: var(--accent);
+  box-shadow: none;
+  opacity: 1;
+  pointer-events: none;
 }
 .page-inner > header:not(.card) .title,
 .page-narrow > header:not(.card) .title,
@@ -1202,6 +1207,24 @@ input[type="file"].field {
   font-weight: 600;
   letter-spacing: -0.02em;
 }
+.page-inner > header:not(.card) .eyebrow,
+.page-narrow > header:not(.card) .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.page-inner > header:not(.card) .eyebrow::before,
+.page-narrow > header:not(.card) .eyebrow::before {
+  display: block;
+  content: "";
+  flex: 0 0 0.65rem;
+  height: 0.85rem;
+  border: 1.5px solid var(--accent);
+  border-right: 0;
+  border-radius: 2px 0 0 2px;
+  background: transparent;
+  box-shadow: none;
+}
 .page-inner > header:not(.card) .muted,
 .page-narrow > header:not(.card) .muted {
   color: var(--muted);
@@ -1219,7 +1242,9 @@ input[type="file"].field {
 }
 .page .primary-button {
   background: var(--accent-strong);
-  box-shadow: none;
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 16%),
+    0 2px 0 rgb(0 0 0 / 20%);
   color: var(--accent-on-strong, white);
 }
 .page .primary-button:hover {
@@ -1228,7 +1253,9 @@ input[type="file"].field {
 .secondary-button {
   background: transparent;
   border-color: var(--border);
-  box-shadow: none;
+  box-shadow:
+    inset 0 1px var(--surface-highlight),
+    0 1px 2px rgb(0 0 0 / 6%);
 }
 .table-heading th {
   text-transform: none;
@@ -1361,6 +1388,9 @@ input[type="file"].field {
 .dashboard-nav-list .nav-link:hover {
   background: var(--surface-muted);
   color: var(--foreground);
+}
+.dashboard-nav-list .nav-link-active > svg:first-child {
+  color: var(--accent);
 }
 .dashboard-nav-list .nav-link-active {
   color: var(--foreground);
@@ -1510,6 +1540,18 @@ input[type="file"].field {
   position: relative;
   padding: 0.3rem 1.5rem;
 }
+.overview-metrics p {
+  padding-right: 2.75rem;
+}
+@container workspace (max-width: 55rem) {
+  .overview-metrics p {
+    padding-right: 0;
+    min-height: 3em;
+  }
+  .overview-metrics .metric-symbol {
+    display: none;
+  }
+}
 .overview-metrics > div:first-child {
   padding-left: 0;
 }
@@ -1524,13 +1566,18 @@ input[type="file"].field {
   letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
 }
-.metric-index {
+.metric-symbol {
+  display: grid;
+  place-items: center;
   position: absolute;
   right: 1rem;
-  top: 0.4rem;
+  top: 0.3rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
   color: var(--muted);
-  font-family: var(--font-geist-mono);
-  font-size: 0.875rem;
 }
 .metric-detail {
   color: var(--muted);
@@ -1548,6 +1595,16 @@ input[type="file"].field {
 .work-queue > .section-heading,
 .activity-ledger > .section-heading {
   padding: 1.4rem 1.5rem;
+  background: var(--surface-soft);
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.work-queue:has(.queue-clear) > .section-heading {
+  padding-bottom: 1rem;
+}
+.activity-ledger > .section-heading {
+  border-bottom: 1px solid var(--border);
 }
 .queue-total {
   white-space: nowrap;
@@ -1568,6 +1625,7 @@ input[type="file"].field {
   padding: 0 1.5rem 1.2rem;
   font-size: 0.875rem;
   color: var(--status-positive);
+  background: var(--surface-soft);
 }
 .queue-row {
   display: flex;
@@ -1576,12 +1634,25 @@ input[type="file"].field {
   border-top: 1px solid var(--border);
   padding: 1rem 1.5rem;
   min-height: 78px;
+  transition:
+    background-color var(--interaction-duration),
+    box-shadow var(--interaction-duration);
 }
-.queue-row > svg:first-child {
+.queue-row .queue-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface-soft);
   color: var(--muted);
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  transition:
+    color var(--interaction-duration),
+    background-color var(--interaction-duration);
 }
-.queue-row > span {
+.queue-row .queue-copy {
   flex: 1;
   min-width: 0;
 }
@@ -1608,9 +1679,28 @@ input[type="file"].field {
 }
 .queue-row > svg:last-child {
   color: var(--muted);
+  flex-shrink: 0;
+  transition:
+    transform var(--interaction-duration) var(--interaction-ease),
+    color var(--interaction-duration);
 }
-.queue-row:hover {
-  background: var(--surface-soft);
+.queue-row:is(:hover, :focus-visible) {
+  background: var(--panel-tint);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.queue-row:is(:hover, :focus-visible) .queue-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.queue-row:is(:hover, :focus-visible) > svg:last-child {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+.queue-row:active {
+  background: var(--accent-soft);
+}
+.queue-row:active > svg:last-child {
+  transform: translateX(1px);
 }
 .queue-footnote {
   display: flex;
@@ -1637,9 +1727,59 @@ input[type="file"].field {
   font-size: 1rem;
 }
 .note-corner {
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(135deg, transparent 50%, var(--surface-muted) 50%);
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, transparent 49%, var(--border) 50%, var(--surface-muted) 54%);
+  border-radius: 0 0 3px 0;
+}
+.activity-timeline {
+  margin: 0 1.5rem;
+  padding: 0.4rem 0;
+}
+.activity-entry {
+  position: relative;
+  padding: 1rem 0 1rem 1.5rem;
+}
+.activity-entry + .activity-entry {
+  border-top: 1px solid var(--border);
+}
+.activity-entry::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.activity-entry:first-child::before {
+  top: 1.6rem;
+}
+.activity-entry:last-child::before {
+  bottom: calc(100% - 1.6rem);
+}
+.activity-entry::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.45rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  box-shadow: 0 0 0 4px var(--surface);
+}
+.activity-entry:first-child::after {
+  background: var(--accent);
+}
+.activity-time {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.activity-time span {
+  display: block;
+  margin-top: 0.3rem;
 }
 .overview-footer {
   display: flex;
@@ -1664,11 +1804,16 @@ input[type="file"].field {
   list-style: none;
 }
 .secondary-actions > summary::after {
-  content: "+";
-  font-size: 1rem;
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--interaction-duration) var(--interaction-ease);
 }
 .secondary-actions[open] > summary::after {
-  content: "−";
+  transform: translateY(2px) rotate(225deg);
 }
 .secondary-actions-menu {
   position: absolute;
@@ -1713,6 +1858,122 @@ input[type="file"].field {
 
 .item-record-layout:not(:has(> #edit-record[open])) {
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* Shared interaction states: a small lift, a firm press, and an explicit focus ring. */
+.primary-button,
+.secondary-button,
+.danger-button,
+.pagination-link,
+.mobile-menu-toggle,
+.appearance-mode-button,
+.appearance-trigger,
+.command-trigger,
+.secondary-actions-menu a,
+.filter-disclosure > summary,
+.section-disclosure > summary {
+  transition:
+    background-color var(--interaction-duration),
+    border-color var(--interaction-duration),
+    color var(--interaction-duration),
+    box-shadow var(--interaction-duration),
+    transform var(--interaction-duration) var(--interaction-ease);
+}
+.page .secondary-button:hover:not(:disabled, [aria-disabled="true"]),
+.secondary-button:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--surface-muted);
+  border-color: color-mix(in srgb, var(--foreground) 28%, var(--border));
+  box-shadow:
+    inset 0 1px var(--surface-highlight),
+    0 2px 3px rgb(0 0 0 / 8%);
+}
+.page .primary-button:active:not(:disabled, [aria-disabled="true"]),
+.page .secondary-button:active:not(:disabled, [aria-disabled="true"]),
+.primary-button:active:not(:disabled, [aria-disabled="true"]),
+.secondary-button:active:not(:disabled, [aria-disabled="true"]),
+.danger-button:active:not(:disabled, [aria-disabled="true"]) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 15%);
+}
+.dashboard-nav-list .nav-link:active,
+.sidebar-utilities :is(.command-embedded, .appearance-trigger):active,
+.mobile-menu-toggle:active,
+.secondary-actions-menu a:active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  transform: none;
+}
+.mobile-menu-toggle:is(:hover, [aria-expanded="true"]),
+.filter-disclosure > summary:is(:hover, :focus-visible),
+.section-disclosure > summary:is(:hover, :focus-visible),
+.secondary-actions-menu a:is(:hover, :focus-visible) {
+  background: var(--surface-soft);
+  color: var(--accent);
+}
+.filter-disclosure > summary,
+.section-disclosure > summary {
+  border-radius: 0.35rem;
+  padding-inline: 0.4rem;
+}
+.secondary-actions[open] > summary,
+.appearance-trigger[aria-expanded="true"],
+.sidebar-utilities .appearance-trigger[aria-expanded="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.accent-link {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+.accent-link:is(:hover, :focus-visible),
+.activity-entry a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+}
+.table-row:focus-within,
+.inventory-page .table-row:focus-within,
+.borrowing-page .table-row:focus-within {
+  background: var(--panel-tint);
+}
+.table-row:focus-within td:first-child {
+  box-shadow: inset 3px 0 var(--accent);
+}
+.submit-spinner {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: submit-turn 700ms linear infinite;
+}
+@keyframes submit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.page :is(.primary-button, .secondary-button, .danger-button):disabled,
+:is(.primary-button, .secondary-button, .danger-button):disabled,
+:is(.primary-button, .secondary-button, .danger-button, .pagination-link)[aria-disabled="true"] {
+  transform: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .primary-button,
+    .secondary-button,
+    .danger-button,
+    .card-link,
+    .pagination-link,
+    .nav-link,
+    .request-choice
+  ):is(:hover, :active),
+  .queue-row:is(:hover, :focus-visible, :active) > svg:last-child,
+  .request-choice:hover svg {
+    transform: none !important;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1780,8 +2041,11 @@ input[type="file"].field {
     font-size: 0.875rem;
     min-height: 3em;
   }
-  .metric-index {
+  .metric-symbol {
     display: none;
+  }
+  .overview-metrics p {
+    padding-right: 0;
   }
   .metric-detail {
     font-size: 0.875rem;
@@ -1794,6 +2058,12 @@ input[type="file"].field {
   .queue-row small {
     font-size: 0.875rem;
   }
+  .queue-row .queue-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 0;
+    background: transparent;
+  }
   .queue-row > svg:last-child {
     display: none;
   }
@@ -1803,6 +2073,9 @@ input[type="file"].field {
   }
   .sidebar-utilities .command-shortcut {
     display: none;
+  }
+  .activity-timeline {
+    margin-inline: 1rem;
   }
 }
 @media print {

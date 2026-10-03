@@ -27,6 +27,7 @@ export function SubmitButton({
       disabled={disabled || busy}
       className={`${className} disabled:opacity-60 ${busy ? "cursor-wait" : "disabled:cursor-not-allowed"}`}
     >
+      {busy ? <span className="submit-spinner" aria-hidden="true" /> : null}
       {busy ? pendingLabel : children}
     </button>
   );

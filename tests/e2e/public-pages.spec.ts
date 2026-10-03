@@ -114,3 +114,23 @@ test("deployed global styles match the appearance controls and neutral themes", 
   await panel.getByRole("button", { name: "Close appearance panel" }).click();
   await expect(panel).toHaveCount(0);
 });
+
+test("public buttons distinguish hovering from pressing and respect reduced motion", async ({
+  page,
+}) => {
+  await page.goto("/auth/login");
+  const button = page.getByRole("button", { name: "Sign in", exact: true });
+  for (const reducedMotion of ["no-preference", "reduce"] as const) {
+    await page.emulateMedia({ reducedMotion });
+    await button.hover();
+    const offset = () =>
+      button.evaluate((node) => new DOMMatrix(getComputedStyle(node).transform).m42);
+    await expect.poll(offset).toBe(reducedMotion === "reduce" ? 0 : -1);
+    await page.mouse.down();
+    await expect.poll(offset).toBe(reducedMotion === "reduce" ? 0 : 1);
+    // End the press away from the control so this never submits credentials.
+    await page.mouse.move(0, 0);
+    await page.mouse.up();
+  }
+  await expect(page).toHaveURL(/\/auth\/login$/);
+});
