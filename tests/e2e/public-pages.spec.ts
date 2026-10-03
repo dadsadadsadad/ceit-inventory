@@ -75,3 +75,42 @@ test("appearance popover stays within a compact viewport", async ({ page }) => {
   expect(layout.scrollWidth).toBeLessThanOrEqual(Math.ceil(layout.right - layout.left));
   expect(layout.pickerScrollWidth).toBeLessThanOrEqual(Math.ceil(layout.pickerWidth));
 });
+
+test("deployed global styles match the appearance controls and neutral themes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/auth/login");
+  await page.getByRole("button", { name: "Open appearance settings" }).click();
+  const panel = page.getByRole("dialog", { name: "Appearance", exact: true });
+  await expect(panel).toBeVisible();
+  const layout = await panel.evaluate((element) => {
+    const button = element.querySelector<HTMLButtonElement>(".appearance-mode-button")!;
+    const bounds = button.getBoundingClientRect();
+    return {
+      position: getComputedStyle(element).position,
+      buttonHeight: bounds.height,
+      receivesClicks: button.contains(
+        document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2),
+      ),
+      bodyOverflow: getComputedStyle(document.body).overflowX,
+    };
+  });
+  expect(layout.position).toBe("fixed");
+  expect(layout.buttonHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.receivesClicks).toBe(true);
+  expect(layout.bodyOverflow).toBe("clip");
+  for (const mode of ["Light", "Dark"]) {
+    await panel.getByRole("button", { name: mode, exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", mode.toLowerCase());
+    const surfaces = await page.evaluate(() => {
+      const background = getComputedStyle(document.body).backgroundColor;
+      const label = getComputedStyle(document.querySelector(".login-panel .text-xs")!);
+      return { background, captionSize: parseFloat(label.fontSize) };
+    });
+    expect(surfaces.background).toBe(mode === "Light" ? "rgb(245, 245, 245)" : "rgb(21, 21, 21)");
+    expect(surfaces.captionSize).toBeGreaterThanOrEqual(14);
+  }
+  await panel.getByRole("button", { name: "Close appearance panel" }).click();
+  await expect(panel).toHaveCount(0);
+});

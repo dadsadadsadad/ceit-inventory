@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactCompiler: true,
   experimental: {
+    // Rebuild releases after stale compiled CSS was observed on a deployed build.
+    // This bypasses persisted transforms, not browser or runtime caching.
+    turbopackFileSystemCacheForBuild: false,
     serverActions: {
       bodySizeLimit: "10mb",
     },
