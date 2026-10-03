@@ -594,7 +594,7 @@ export default async function InventoryPage({
                         <div>
                           <Link
                             href={`/dashboard/inventory/${item.id}`}
-                            className="accent-link font-semibold"
+                            className="accent-link record-name font-semibold"
                           >
                             <OptimisticText entity={`item:${item.id}`} field="name">
                               {item.name}
@@ -619,7 +619,7 @@ export default async function InventoryPage({
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p className="muted">{item.assetTag ?? "No asset tag"}</p>
+                        <p className="muted asset-code">{item.assetTag ?? "No asset tag"}</p>
                         <p className="text-right">
                           <OptimisticText entity={`item:${item.id}`} field="location">
                             {item.location.name}
@@ -678,11 +678,13 @@ export default async function InventoryPage({
                               />
                             </td>
                           ) : null}
-                          <td className="muted px-5 py-4 text-sm">{item.assetTag ?? "–"}</td>
+                          <td className="muted asset-code px-5 py-4 text-sm">
+                            {item.assetTag ?? "–"}
+                          </td>
                           <td className="px-5 py-4 text-sm">
                             <Link
                               href={`/dashboard/inventory/${item.id}`}
-                              className="accent-link font-semibold"
+                              className="accent-link record-name font-semibold"
                             >
                               <OptimisticText entity={`item:${item.id}`} field="name">
                                 {item.name}
