@@ -30,10 +30,12 @@ Additional research:
 
 ## Changes
 
-- Desktop pages sit in a rounded workspace frame, with soft neutral card layers.
+- Desktop pages use a continuous workspace background, with soft neutral card layers.
   Headers are more compact and forms, buttons, tables, and navigation share the
   same corner and spacing language. The dashboard's large decorative opening is
   replaced by a direct heading and primary action.
+- The outer workspace border, inset, and rounded frame were removed following
+  feedback. The sign-in equipment illustration was also removed; its area is blank.
 - The inventory mix uses the existing dashboard aggregation, with an accessible
   text legend linking to the corresponding inventory filters. Counts describe
   records, not physical supply quantities. There is no extra database query or
