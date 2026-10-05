@@ -27,6 +27,63 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
+test("inventory overview shows real status counts and opens the matching filter", async ({
+  page,
+}) => {
+  const originals = (
+    await query(
+      `SELECT id, status, "qrCode" FROM "InventoryItem" WHERE "qrCode" IN ('ceit-launch-item-24', 'ceit-launch-item-25', 'ceit-launch-item-26')`,
+    )
+  ).rows;
+  try {
+    await query(
+      `UPDATE "InventoryItem" SET status = CASE "qrCode"
+      WHEN 'ceit-launch-item-24' THEN 'DEFECTIVE'::"ItemStatus"
+      WHEN 'ceit-launch-item-25' THEN 'DEPLOYED'::"ItemStatus"
+      ELSE 'RETIRED'::"ItemStatus" END WHERE id = ANY($1::uuid[])`,
+      [originals.map((row) => row.id)],
+    );
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await signIn(page);
+    const mix = page.getByRole("region", { name: "Your inventory, at a glance" });
+    const total = (await query('SELECT COUNT(*)::int AS count FROM "InventoryItem"')).rows[0].count;
+    await expect(mix).toContainText(`${total} records`);
+    for (const name of ["Defective 1", "Deployed 1", "Retired 1"]) {
+      await expect(mix.getByRole("link", { name, exact: true })).toBeVisible();
+    }
+    for (const theme of ["Light", "Dark"]) {
+      await page.getByRole("button", { name: "Open appearance settings" }).click();
+      await page.getByRole("button", { name: theme, exact: true }).click();
+      await page.keyboard.press("Escape");
+      await page.screenshot({
+        path: `test-results/overview-mix-${theme.toLowerCase()}.png`,
+        fullPage: true,
+      });
+    }
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await mix.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+      await page.screenshot({ path: `test-results/overview-mix-${width}.png`, fullPage: true });
+    }
+    await mix.getByRole("link", { name: "Defective 1", exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard\/inventory\?status=DEFECTIVE$/);
+    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue(
+      "DEFECTIVE",
+    );
+    await expect(
+      page.getByRole("link", { name: "Lab equipment 24", exact: true }).filter({ visible: true }),
+    ).toBeVisible();
+  } finally {
+    for (const row of originals) {
+      await query('UPDATE "InventoryItem" SET status=$1::"ItemStatus" WHERE id=$2', [
+        row.status,
+        row.id,
+      ]);
+    }
+  }
+});
+
 test("public request choices keep keyboard focus and failed return details", async ({ page }) => {
   await page.goto("/scan/ceit-launch-item-24");
   await expect(page).toHaveTitle("Equipment details · CEIT Inventory");
@@ -36,7 +93,10 @@ test("public request choices keep keyboard focus and failed return details", asy
     ["issue", "Report a problem"],
   ]) {
     const option = page.locator(`[data-request-mode="${choice}"]`);
+    await expect(option).toBeVisible();
+    await expect(option).toBeEnabled();
     await option.focus();
+    await expect(option).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeFocused();
     await page.getByRole("button", { name: "Back to item options" }).click();
@@ -104,6 +164,21 @@ test("photos upload, open above the page, preserve navigation focus, and can be 
         page.getByRole("button", { name: `Open ${fileName}`, exact: true }),
       ).toBeVisible();
     }
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const row = page.locator(".photo-editor-row").first();
+      await row.scrollIntoViewIfNeeded();
+      expect(await row.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+      expect(
+        await row
+          .locator("p")
+          .first()
+          .evaluate((node) => node.scrollWidth <= node.clientWidth),
+      ).toBe(true);
+      expect((await row.boundingBox())!.height).toBeLessThan(220);
+      await page.screenshot({ path: `test-results/photo-controls-${width}.png` });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
     const opener = page.getByRole("button", { name: "Open audit-front.png", exact: true });
     await opener.click();
     const viewer = page.getByRole("dialog");
@@ -132,7 +207,8 @@ test("photos upload, open above the page, preserve navigation focus, and can be 
       const photoRow = page
         .locator(".card-muted")
         .filter({ has: page.getByRole("button", { name: `Open ${fileName}`, exact: true }) });
-      await photoRow.getByRole("button", { name: "Remove", exact: true }).click();
+      await photoRow.getByRole("button", { name: "Remove photo", exact: true }).click();
+      await photoRow.getByRole("button", { name: "Confirm removal", exact: true }).click();
       await expect(page.getByRole("button", { name: `Open ${fileName}`, exact: true })).toHaveCount(
         0,
       );

@@ -23,6 +23,7 @@ import {
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { ItemPhotoGallery } from "@/app/components/item-photo-gallery";
 import { SubmitButton } from "@/app/components/submit-button";
+import { HoldSubmitButton } from "@/app/components/hold-submit-button";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import {
   canManageAdministration,
@@ -1065,7 +1066,7 @@ export default async function InventoryItemPage({
                     {item.photos.map((photo) => (
                       <div
                         key={photo.id}
-                        className="card-muted flex items-center gap-3 rounded-lg p-2"
+                        className="card-muted photo-editor-row flex items-center gap-3 rounded-lg p-2"
                       >
                         <ItemPhotoGallery
                           itemId={item.id}
@@ -1086,12 +1087,11 @@ export default async function InventoryItemPage({
                         <FeedbackForm action={deleteInventoryItemPhoto}>
                           <input type="hidden" name="itemId" value={item.id} />
                           <input type="hidden" name="photoId" value={photo.id} />
-                          <SubmitButton
+                          <HoldSubmitButton
+                            label="Remove photo"
                             pendingLabel="Removing…"
-                            className="accent-link px-2 py-1 text-xs font-semibold"
-                          >
-                            Remove
-                          </SubmitButton>
+                            confirmation={`Remove ${photo.fileName}? This cannot be undone.`}
+                          />
                         </FeedbackForm>
                       </div>
                     ))}
@@ -1132,24 +1132,16 @@ export default async function InventoryItemPage({
                     <p className="mt-2 text-xs leading-5">
                       This permanently deletes the record, PC details, photos, and software. The
                       audit trail is retained. Items with borrowing or maintenance history cannot be
-                      deleted. Type <strong>DELETE</strong> to continue.
+                      deleted. Hold the button and release to confirm, or use the click
+                      confirmation.
                     </p>
                     <FeedbackForm action={deleteInventoryItem} className="mt-3 space-y-3">
                       <input type="hidden" name="id" value={item.id} />
-                      <input
-                        required
-                        name="confirmation"
-                        maxLength={16}
-                        className="field w-full rounded-lg px-3 py-2 text-sm"
-                        placeholder="Type DELETE"
-                        aria-label="Type DELETE to permanently remove this item"
+                      <input type="hidden" name="confirmation" value="DELETE" />
+                      <HoldSubmitButton
+                        label="Permanently delete"
+                        confirmation={`Permanently delete ${item.name}? This cannot be undone.`}
                       />
-                      <SubmitButton
-                        pendingLabel="Removing…"
-                        className="danger-button rounded-lg px-3 py-2 text-sm font-semibold"
-                      >
-                        Permanently delete
-                      </SubmitButton>
                     </FeedbackForm>
                   </details>
                 ) : null}

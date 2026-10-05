@@ -11,7 +11,7 @@ import {
   Undo2,
   Wrench,
 } from "lucide-react";
-import { EquipmentStudy } from "@/app/components/equipment-study";
+import { InventoryMix } from "@/app/components/inventory-mix";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import {
   canManageAdministration,
@@ -63,6 +63,7 @@ async function getDashboardData(includeAuditTrail: boolean) {
   const count = (status: BorrowStatus) =>
     borrowing.find((entry) => entry.status === status)?._count._all ?? 0;
   return {
+    statusCounts: inventory.map((entry) => ({ status: entry.status, count: entry._count._all })),
     itemCount: inventory.reduce((total, entry) => total + entry._count._all, 0),
     attentionCount:
       inventory.find((entry) => entry.status === ItemStatus.DEFECTIVE)?._count._all ?? 0,
@@ -124,15 +125,14 @@ export default async function DashboardPage() {
             <p className="eyebrow">Your equipment workspace</p>
             <h1 className="title mt-2">Inventory dashboard</h1>
             <p className="muted mt-3 text-sm">Everything in its place. Ready for what’s next.</p>
+          </div>
+          <div className="overview-header-actions">
             <Link
               href="/dashboard/inventory"
               className="primary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
             >
               Browse inventory <ArrowRight size={16} aria-hidden="true" />
             </Link>
-          </div>
-          <div className="overview-study">
-            <EquipmentStudy />
           </div>
         </header>
         <div className="overview-dateline">
@@ -179,6 +179,8 @@ export default async function DashboardPage() {
                 <span className="metric-detail">Defective items</span>
               </div>
             </section>
+
+            <InventoryMix counts={dashboard.statusCounts} />
 
             <section className={`overview-workspace ${canManage ? "has-queue" : ""}`}>
               {canManage ? (
