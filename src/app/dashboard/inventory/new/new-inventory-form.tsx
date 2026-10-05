@@ -6,7 +6,7 @@ import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { manilaCalendarDate } from "@/lib/manila-date";
 
-import { createInventoryItem } from "../actions";
+import { createInventoryItem } from "../actions/item";
 
 type SetupOption = { id: string; name: string };
 type LocationOption = SetupOption & { nextPcNumber: number };

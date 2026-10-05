@@ -1,12 +1,7 @@
+import { humanizeEnum } from "./labels";
+
 export function inventoryStatusLabel(value: string) {
-  if (value === "OK") {
-    return "OK";
-  }
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return value === "OK" ? "OK" : humanizeEnum(value);
 }
 
 export function inventoryStatusClass(value: string) {

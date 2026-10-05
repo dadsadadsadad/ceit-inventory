@@ -7,26 +7,26 @@ import QRCode from "qrcode";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryLabelAppUrl } from "@/lib/inventory-label-url";
 import { labelLayouts, labelPages, maximumLabelCount } from "@/lib/label-sheet";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 import { PrintSheet } from "./print-sheet";
 
 export const dynamic = "force-dynamic";
 type Search = { ids?: string | string[]; location?: string | string[]; layout?: string | string[] };
-const first = (value?: string | string[]) => (Array.isArray(value) ? value[0] : value);
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Group selected QR labels into printable sheets.
 export default async function LabelsPage({ searchParams }: { searchParams: Promise<Search> }) {
   await requireInventoryAccess();
   const search = await searchParams;
-  const selection = first(search.ids) ?? "";
+  const selection = firstParam(search.ids) ?? "";
   const ids = [...new Set(selection.split(",").filter(Boolean))];
-  const location = first(search.location) ?? "";
-  const layout = first(search.layout) === "large" ? "large" : "compact";
+  const location = firstParam(search.location) ?? "";
+  const layout = firstParam(search.layout) === "large" ? "large" : "compact";
   const invalid =
     ids.length > maximumLabelCount ||
-    ids.some((id) => !uuid.test(id)) ||
-    Boolean(location && !uuid.test(location));
+    ids.some((id) => !isUuid(id)) ||
+    Boolean(location && !isUuid(location));
   const [locations, items, requestHeaders] = await Promise.all([
     prisma.location.findMany({
       where: { isActive: true },

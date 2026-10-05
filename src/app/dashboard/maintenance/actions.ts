@@ -13,27 +13,17 @@ import { auditEventData } from "@/lib/audit-event";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 import { FormError, formAction } from "@/lib/form-action";
+import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function text(formData: FormData, key: string, maximumLength: number, required = false) {
-  const value = String(formData.get(key) ?? "").trim();
-  if (value.length > maximumLength) {
-    throw new FormError(`${key} is too long.`);
-  }
-  if (required && !value) {
-    throw new FormError(`${key} is required.`);
-  }
-  return value || null;
+  return required
+    ? requiredText(formData, key, maximumLength)
+    : optionalText(formData, key, maximumLength);
 }
 
 function id(formData: FormData, key: string) {
-  const value = text(formData, key, 64, true);
-  if (!value || !uuidPattern.test(value)) {
-    throw new FormError("Invalid maintenance record.");
-  }
-  return value;
+  return requiredUuid(formData, key, "Invalid maintenance record.");
 }
 
 function enumValue<T extends string>(

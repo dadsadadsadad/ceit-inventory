@@ -1,6 +1,7 @@
 export const metadata = { title: "Maintenance · CEIT Inventory" };
 
 import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
+import { Pager } from "@/app/components/pager";
 import Link from "next/link";
 
 import { ItemStatus, MaintenancePriority, MaintenanceStatus, type Prisma } from "@prisma/client";
@@ -11,6 +12,7 @@ import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
 import { everyTermMatches, searchTerms } from "@/lib/search-terms";
+import { firstParam, pageParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
 import { createMaintenanceTicket, updateMaintenanceTicket } from "./actions";
@@ -35,10 +37,6 @@ const resolutionItemStatuses = [
   ItemStatus.DEFECTIVE,
 ];
 
-function first(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 function statusLabel(status: MaintenanceStatus) {
   return status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved";
 }
@@ -59,22 +57,22 @@ export default async function MaintenancePage({
 }) {
   await requireInventoryManagementPageAccess();
   const search = await searchParams;
-  const requestedStatus = first(search.status);
+  const requestedStatus = firstParam(search.status);
   const status = Object.values(MaintenanceStatus).includes(requestedStatus as MaintenanceStatus)
     ? (requestedStatus as MaintenanceStatus)
     : undefined;
-  const requestedItem = first(search.item);
+  const requestedItem = firstParam(search.item);
   const selectedItem =
     requestedItem &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedItem)
       ? requestedItem
       : undefined;
-  const reporting = first(search.report) === "1" || Boolean(selectedItem);
-  const itemSearch = first(search.itemSearch)?.trim().slice(0, 120) ?? "";
-  const source = ["QR", "STAFF"].includes(first(search.source) ?? "")
-    ? first(search.source)
+  const reporting = firstParam(search.report) === "1" || Boolean(selectedItem);
+  const itemSearch = firstParam(search.itemSearch)?.trim().slice(0, 120) ?? "";
+  const source = ["QR", "STAFF"].includes(firstParam(search.source) ?? "")
+    ? firstParam(search.source)
     : undefined;
-  const query = first(search.q)?.trim().slice(0, 120) ?? "";
+  const query = firstParam(search.q)?.trim().slice(0, 120) ?? "";
   const where: Prisma.MaintenanceTicketWhereInput = {
     ...(status ? { status } : {}),
     ...(source ? { source } : {}),
@@ -90,9 +88,7 @@ export default async function MaintenancePage({
         }
       : {}),
   };
-  const pageInput = Number(first(search.page));
-  const requestedPage =
-    Number.isSafeInteger(pageInput) && pageInput > 0 ? Math.min(pageInput, 10_000) : 1;
+  const requestedPage = pageParam(search.page);
   function pageHref(next: number) {
     const params = new URLSearchParams({ page: String(next) });
     if (source) {
@@ -177,7 +173,7 @@ export default async function MaintenancePage({
           </div>
         </header>
 
-        {first(search.created) === "1" ? (
+        {firstParam(search.created) === "1" ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
             Maintenance request reported.
           </div>
@@ -517,28 +513,12 @@ export default async function MaintenancePage({
             </div>
           )}
         </section>
-        {totalPages > 1 ? (
-          <nav className="flex items-center justify-between gap-3" aria-label="Maintenance pages">
-            {/* Maintenance page navigation. */}
-            {page > 1 ? (
-              <Link href={pageHref(page - 1)} className="pagination-link px-3 text-sm">
-                ← Previous
-              </Link>
-            ) : (
-              <span />
-            )}
-            <span className="muted text-sm">
-              {page} / {totalPages}
-            </span>
-            {page < totalPages ? (
-              <Link href={pageHref(page + 1)} className="pagination-link px-3 text-sm">
-                Next →
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
-        ) : null}
+        <Pager
+          label="Maintenance"
+          currentPage={page}
+          totalPages={totalPages}
+          hrefForPage={pageHref}
+        />
       </div>
     </div>
   );

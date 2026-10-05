@@ -10,6 +10,7 @@ import { formatManilaDate } from "@/lib/manila-date";
 import { runTransaction } from "@/lib/database-transaction";
 
 import { FormError, formAction } from "@/lib/form-action";
+import { requiredUuid } from "@/lib/form-fields";
 
 import { borrowStatus } from "@/lib/borrow-status";
 import {
@@ -19,16 +20,11 @@ import {
 } from "@/lib/borrow-availability";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const maximumStaffNoteLength = 2_000;
 
 // Validate the borrowing request ID from the form.
 function requestId(formData: FormData) {
-  const value = String(formData.get("requestId") ?? "").trim();
-  if (!uuidPattern.test(value)) {
-    throw new FormError("Invalid borrowing request.");
-  }
-  return value;
+  return requiredUuid(formData, "requestId", "Invalid borrowing request.");
 }
 
 // Read the staff note and check its length.

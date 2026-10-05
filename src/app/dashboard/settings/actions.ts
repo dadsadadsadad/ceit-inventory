@@ -1,6 +1,7 @@
 "use server";
 
 import { FormError, formAction } from "@/lib/form-action";
+import { fieldLabel, optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -22,36 +23,11 @@ import {
   verifyPassword,
 } from "@/lib/inventory-auth";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[a-z0-9._-]{3,32}$/;
 
-function fieldLabel(key: string) {
-  return key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
-}
-
-function optionalText(formData: FormData, key: string, maximumLength = 500) {
-  const value = String(formData.get(key) ?? "").trim();
-  if (value.length > maximumLength) {
-    throw new FormError(`${fieldLabel(key)} is too long.`);
-  }
-  return value || null;
-}
-
-function requiredText(formData: FormData, key: string, maximumLength = 255) {
-  const value = optionalText(formData, key, maximumLength);
-  if (!value) {
-    throw new FormError(`${fieldLabel(key)} is required.`);
-  }
-  return value;
-}
-
 function requiredId(formData: FormData) {
-  const id = requiredText(formData, "id", 64);
-  if (!uuidPattern.test(id)) {
-    throw new FormError("Invalid setup record.");
-  }
-  return id;
+  return requiredUuid(formData, "id", "Invalid setup record.");
 }
 
 function optionalAssetTagCode(formData: FormData, key: string, length: number) {

@@ -5,9 +5,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { sessionCookieName } from "@/lib/session-cookie";
 import { prisma } from "@/prisma";
 
-const sessionCookie = "ceit_inventory_session";
 const writableRoles = ["administrator", "staff"] as const;
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
 const maximumSessionsPerUser = 5;
@@ -102,7 +102,7 @@ export async function createSession(userId: string) {
   });
 
   const cookieStore = await cookies();
-  cookieStore.set(sessionCookie, token, {
+  cookieStore.set(sessionCookieName, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -115,7 +115,7 @@ export async function createSession(userId: string) {
 // Delete the session record and its browser cookie.
 export async function clearSession() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(sessionCookie)?.value;
+  const token = cookieStore.get(sessionCookieName)?.value;
   try {
     if (token) {
       await prisma.userSession.deleteMany({ where: { tokenHash: tokenHash(token) } });
@@ -123,7 +123,7 @@ export async function clearSession() {
   } catch (error) {
     console.error("Unable to revoke the stored session during sign-out", error);
   } finally {
-    cookieStore.delete({ name: sessionCookie, path: "/" });
+    cookieStore.delete({ name: sessionCookieName, path: "/" });
   }
 }
 
@@ -131,7 +131,7 @@ export async function clearSession() {
 // request cache never shares a session with another request or browser.
 export const getCurrentInventoryUser = cache(async (): Promise<InventoryUser | null> => {
   const cookieStore = await cookies();
-  const token = cookieStore.get(sessionCookie)?.value;
+  const token = cookieStore.get(sessionCookieName)?.value;
   if (!token || !sessionTokenPattern.test(token)) {
     return null;
   }

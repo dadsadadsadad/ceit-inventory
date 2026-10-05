@@ -9,17 +9,16 @@ import QRCode from "qrcode";
 import { PrintLabel } from "@/app/components/print-label";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryLabelAppUrl } from "@/lib/inventory-label-url";
+import { isUuid } from "@/lib/ids";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
-
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Build the printable QR label for one item.
 export default async function ItemLabelPage({ params }: { params: Promise<{ id: string }> }) {
   await requireInventoryAccess();
   const [{ id }, requestHeaders] = await Promise.all([params, headers()]);
-  if (!uuidPattern.test(id)) {
+  if (!isUuid(id)) {
     notFound();
   }
 

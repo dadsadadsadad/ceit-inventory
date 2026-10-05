@@ -19,6 +19,8 @@ import {
   type AuditTrailEvent,
   type AuditTrailFilters,
 } from "@/lib/audit-trail";
+import { Pager } from "@/app/components/pager";
+import { firstParam, pageParam } from "@/lib/search-params";
 import { requireAdministrationPageAccess } from "@/lib/inventory-auth";
 import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
@@ -32,19 +34,10 @@ type ActivityEvent = Prisma.InventoryAuditGetPayload<{
 
 const pageSize = 50;
 
-function first(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function safePage(value?: string | string[]) {
-  const parsed = Number(first(value));
-  return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(parsed, 10_000) : 1;
-}
-
 function searchParameters(search: SearchParams) {
   const parameters = new URLSearchParams();
   for (const [key, value] of Object.entries(search)) {
-    const selected = first(value);
+    const selected = firstParam(value);
     if (selected) {
       parameters.set(key, selected);
     }
@@ -56,29 +49,6 @@ function pageLink(filters: AuditTrailFilters, page: number) {
   const parameters = auditTrailSearchParameters(filters, page);
   const query = parameters.toString();
   return query ? `/dashboard/activity?${query}` : "/dashboard/activity";
-}
-
-// Choose page numbers and gaps for the pager.
-function paginationEntries(totalPages: number, currentPage: number) {
-  const pages = new Set<number>([1, totalPages]);
-  if (totalPages <= 9) {
-    for (let page = 1; page <= totalPages; page += 1) {
-      pages.add(page);
-    }
-  } else {
-    const start =
-      currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
-    const end = currentPage <= 3 ? 5 : currentPage >= totalPages - 2 ? totalPages : currentPage + 2;
-    for (let page = start; page <= end; page += 1) {
-      pages.add(page);
-    }
-  }
-  const sortedPages = [...pages]
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right);
-  return sortedPages.flatMap((page, index) =>
-    index > 0 && page - sortedPages[index - 1] > 1 ? [null, page] : [page],
-  );
 }
 
 function periodLabel(period: (typeof exportPeriods)[number]) {
@@ -116,7 +86,7 @@ export default async function AuditTrailPage({
 }) {
   await requireAdministrationPageAccess();
   const search = await searchParams;
-  const requestedPage = safePage(search.page);
+  const requestedPage = pageParam(search.page);
   let filters: AuditTrailFilters;
   let filterError: string | null = null;
 
@@ -431,67 +401,12 @@ export default async function AuditTrailPage({
                 );
               })}
             </ol>
-            {totalPages > 1 ? (
-              <nav
-                className="divider flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3"
-                aria-label="Audit trail pages"
-              >
-                {/* Audit page navigation. */}
-                {currentPage > 1 ? (
-                  <Link
-                    href={pageLink(filters, currentPage - 1)}
-                    className="pagination-link px-3 text-sm font-semibold"
-                  >
-                    ← Previous
-                  </Link>
-                ) : (
-                  <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
-                    ← Previous
-                  </span>
-                )}
-                <div
-                  className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto pb-1 sm:order-none sm:w-auto sm:pb-0"
-                  aria-label="Choose audit trail page"
-                >
-                  {paginationEntries(totalPages, currentPage).map((entry, index) =>
-                    entry === null ? (
-                      <span key={`gap-${index}`} className="muted px-1 text-sm" aria-hidden="true">
-                        …
-                      </span>
-                    ) : entry === currentPage ? (
-                      <span
-                        key={entry}
-                        className="pagination-current text-sm font-semibold"
-                        aria-current="page"
-                      >
-                        {entry}
-                      </span>
-                    ) : (
-                      <Link
-                        key={entry}
-                        href={pageLink(filters, entry)}
-                        className="pagination-link text-sm font-semibold"
-                        aria-label={`Go to page ${entry}`}
-                      >
-                        {entry}
-                      </Link>
-                    ),
-                  )}
-                </div>
-                {currentPage < totalPages ? (
-                  <Link
-                    href={pageLink(filters, currentPage + 1)}
-                    className="pagination-link px-3 text-sm font-semibold"
-                  >
-                    Next →
-                  </Link>
-                ) : (
-                  <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
-                    Next →
-                  </span>
-                )}
-              </nav>
-            ) : null}
+            <Pager
+              label="Audit trail"
+              currentPage={currentPage}
+              totalPages={totalPages}
+              hrefForPage={(page) => pageLink(filters, page)}
+            />
           </section>
         )}
       </div>

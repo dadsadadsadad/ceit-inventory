@@ -1,6 +1,6 @@
 "use client";
 
-import { recordInventoryLabelPrinted } from "@/app/dashboard/inventory/actions";
+import { recordInventoryLabelPrinted } from "@/app/dashboard/inventory/labels/actions";
 import { useState } from "react";
 
 // Record the label print and open the print dialog.

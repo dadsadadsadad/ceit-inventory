@@ -1,6 +1,7 @@
 "use server";
 
 import { FormError, formAction } from "@/lib/form-action";
+import { requiredText, requiredUuid } from "@/lib/form-fields";
 
 import { Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -15,26 +16,10 @@ import {
 import { prisma } from "@/prisma";
 
 const roles = Object.values(UserRole);
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const usernamePattern = /^[a-z0-9._-]{3,32}$/;
 
-function requiredText(formData: FormData, key: string, maximumLength = 255) {
-  const value = String(formData.get(key) ?? "").trim();
-  if (!value) {
-    throw new FormError(`${key} is required.`);
-  }
-  if (value.length > maximumLength) {
-    throw new FormError(`${key} is too long.`);
-  }
-  return value;
-}
-
 function idFrom(formData: FormData) {
-  const id = requiredText(formData, "id", 64);
-  if (!uuidPattern.test(id)) {
-    throw new FormError("Invalid account identifier.");
-  }
-  return id;
+  return requiredUuid(formData, "id", "Invalid account identifier.");
 }
 
 function emailFrom(formData: FormData) {
