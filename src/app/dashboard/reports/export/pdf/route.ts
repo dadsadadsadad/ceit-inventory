@@ -1,76 +1,34 @@
+import { requireInventoryAccess } from "@/lib/inventory-auth";
+import { buildReport, downloadName } from "@/lib/reports/build";
 import { recordExport } from "@/lib/reports/export-log";
-import {
-  canManageAdministration,
-  canManageInventory,
-  requireInventoryAccess,
-  type InventoryUser,
-} from "@/lib/inventory-auth";
-import { manilaCalendarDate } from "@/lib/manila-date";
-import { parseReportExportFilters, type ReportExportFilters } from "@/lib/report-export-filters";
-import { createInventoryPdf } from "@/lib/reports/pdf/inventory";
-import { createPcRegisterPdf } from "@/lib/reports/pdf/pcs";
-import { createBorrowingsPdf } from "@/lib/reports/pdf/borrowing";
-import { createMaintenancePdf } from "@/lib/reports/pdf/maintenance";
-import { createAuditPdf } from "@/lib/reports/pdf/activity";
-import { createOverviewPdf } from "@/lib/reports/pdf/overview";
+import { ReportRequestError } from "@/lib/reports/model";
+import { renderReportPdf } from "@/lib/reports/pdf/render";
 
 export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 
-async function auditPdfDownload(user: InventoryUser, kind: string, response: Response) {
-  const isPdfDownload =
-    response.ok && response.headers.get("Content-Type")?.startsWith("application/pdf");
-  if (!isPdfDownload) {
-    return response;
-  }
-
-  await recordExport(user, kind, "PDF");
-  return response;
-}
-
-// Check access before building the report.
+// The printable version of a report: the same filters as the page, drawn as a PDF.
 export async function GET(request: Request) {
   const user = await requireInventoryAccess();
-  const parameters = new URL(request.url).searchParams;
-  const kind = parameters.get("kind");
-  const calendarDate = manilaCalendarDate();
-  const canManage = canManageInventory(user.role);
-
-  if (!kind || kind === "overview") {
-    return auditPdfDownload(user, "overview", await createOverviewPdf(canManage, calendarDate));
-  }
-
-  if (kind === "activity") {
-    if (!canManageAdministration(user.role)) {
-      return new Response("Forbidden", { status: 403 });
-    }
-    return auditPdfDownload(user, "activity", await createAuditPdf(parameters, calendarDate));
-  }
-
-  let filters: ReportExportFilters;
   try {
-    filters = parseReportExportFilters(parameters);
-  } catch (error) {
-    return new Response(error instanceof Error ? error.message : "Invalid export filters.", {
-      status: 400,
+    const report = await buildReport(new URL(request.url).searchParams, "pdf");
+    const bytes = await renderReportPdf(report);
+    await recordExport(user, report.kind, "PDF");
+    const body = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(body).set(bytes);
+    return new Response(body, {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": `attachment; filename="${downloadName(report, "pdf")}"`,
+        "Content-Type": "application/pdf",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
+  } catch (error) {
+    if (error instanceof ReportRequestError) {
+      return new Response(error.message, { status: error.status });
+    }
+    throw error;
   }
-
-  if (kind === "inventory") {
-    return auditPdfDownload(user, "inventory", await createInventoryPdf(filters, calendarDate));
-  }
-  if (!canManage) {
-    return new Response("Forbidden", { status: 403 });
-  }
-  if (kind === "pcs") {
-    return auditPdfDownload(user, "pcs", await createPcRegisterPdf(filters, calendarDate));
-  }
-  if (kind === "borrowings") {
-    return auditPdfDownload(user, "borrowings", await createBorrowingsPdf(filters, calendarDate));
-  }
-  if (kind === "maintenance") {
-    return auditPdfDownload(user, "maintenance", await createMaintenancePdf(filters, calendarDate));
-  }
-  return new Response("Unknown export", { status: 400 });
 }

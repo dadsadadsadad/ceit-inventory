@@ -5,7 +5,8 @@ import { auditActorName } from "@/lib/audit-event";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { checkLoanAvailability, checkLoanExtension } from "@/lib/loan-availability";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
-import { parseManilaDateTime } from "@/lib/borrow-schedule";
+import { borrowPolicyFromEnvironment, dayCount, dayMs } from "@/lib/borrow-policy";
+import { isHoldLapsed, parseManilaDateTime } from "@/lib/borrow-schedule";
 import { formatManilaDate } from "@/lib/manila-date";
 import { runTransaction } from "@/lib/database-transaction";
 
@@ -45,6 +46,7 @@ function unitLabel(quantity: number) {
 // Check equipment out to a borrower.
 export async function markBorrowed(formData: FormData) {
   return formAction(async () => {
+    const policy = borrowPolicyFromEnvironment();
     const actor = await requireWriteAccess();
     const id = requestId(formData);
     const notes = staffNotes(formData);
@@ -68,6 +70,11 @@ export async function markBorrowed(formData: FormData) {
         throw new FormError("Approve the reservation before checking out the equipment.");
       }
       const now = new Date();
+      if (request.status === borrowStatus.REQUESTED && isHoldLapsed(request, now, policy)) {
+        throw new FormError(
+          "This request was not handled in time and no longer holds the equipment. Decline it and ask the borrower to submit a new request.",
+        );
+      }
       if (request.startsAt > now) {
         throw new FormError(
           "This reservation has not started yet. Check out the item at the agreed pickup time.",
@@ -315,9 +322,12 @@ export async function approveReservation(formData: FormData) {
       if (!request || !request.isReservation || request.status !== borrowStatus.REQUESTED) {
         throw new FormError("Only pending reservations can be approved.");
       }
-      if (request.expectedReturnDate <= new Date()) {
+      if (
+        request.expectedReturnDate <= new Date() ||
+        isHoldLapsed(request, new Date(), borrowPolicyFromEnvironment())
+      ) {
         throw new FormError(
-          "This reservation has expired. Decline it and ask the borrower to choose new dates.",
+          "This reservation has expired or its pickup time has passed. Decline it and ask the borrower to choose new dates.",
         );
       }
       await checkLoanAvailability(
@@ -434,6 +444,12 @@ export async function extendBorrowRequest(formData: FormData) {
       }
       if (newReturn.getTime() === request.expectedReturnDate.getTime()) {
         throw new FormError("Choose a different return time to save a change.");
+      }
+      const policy = borrowPolicyFromEnvironment();
+      if (newReturn.getTime() - request.startsAt.getTime() > policy.maximumTotalLoanDays * dayMs) {
+        throw new FormError(
+          `A loan can run for at most ${dayCount(policy.maximumTotalLoanDays)} in total. Choose an earlier return time, or have the borrower return the equipment and request it again.`,
+        );
       }
       if (newReturn > request.expectedReturnDate) {
         await checkLoanExtension(transaction, request, newReturn, now);

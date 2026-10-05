@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { nextInventoryAssetTag } from "@/lib/asset-tag";
 import { FormError, formAction } from "@/lib/form-action";
-import { requireAdministrator, requireWriteAccess } from "@/lib/inventory-auth";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 import { isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { prisma } from "@/prisma";
@@ -439,7 +439,7 @@ export async function markInventoryItemChecked(formData: FormData) {
 // Delete only items without protected borrowing or repair history.
 export async function deleteInventoryItem(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const id = requiredId(formData, "id");
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "DELETE") {

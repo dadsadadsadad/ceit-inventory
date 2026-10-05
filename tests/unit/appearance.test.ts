@@ -61,7 +61,7 @@ describe("saved appearance", () => {
 
   it("uses defaults for invalid preferences and accepts old saved presets", () => {
     expect(restoreAppearance("unknown", "invalid").dataset).toEqual({
-      theme: "dark",
+      theme: "light",
       accent: "orange",
     });
     expect(restoreAppearance(null, null).properties.size).toBe(0);

@@ -37,6 +37,24 @@ export function startOfManilaDay(date = new Date()) {
 // This avoids creating a formatter for every cell of a large export.
 const manilaOffsetMs = 8 * 60 * 60 * 1000;
 
+/** "Today", "Yesterday", or a readable date such as "Monday, October 5". */
+export function manilaDayLabel(value: Date, now = new Date()) {
+  const day = manilaDateText(value);
+  if (day === manilaDateText(now)) {
+    return "Today";
+  }
+  if (day === manilaDateText(new Date(now.getTime() - 24 * 60 * 60 * 1000))) {
+    return "Yesterday";
+  }
+  const sameYear = day.slice(0, 4) === manilaDateText(now).slice(0, 4);
+  return formatManilaDate(value, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
 export function manilaDateText(value: Date) {
   return new Date(value.getTime() + manilaOffsetMs).toISOString().slice(0, 10);
 }

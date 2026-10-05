@@ -9,7 +9,8 @@ import { sessionCookieName } from "@/lib/session-cookie";
 import { prisma } from "@/prisma";
 
 const writableRoles = ["administrator", "staff"] as const;
-const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
+// A week, so a shared lab computer does not stay signed in for a month.
+const sessionLifetimeMs = 7 * 24 * 60 * 60 * 1000;
 const maximumSessionsPerUser = 5;
 const sessionTokenPattern = /^[a-f0-9]{64}$/;
 const scryptOptions = { N: 16_384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
@@ -25,7 +26,8 @@ export function canManageInventory(role: string) {
   return writableRoles.includes(role as (typeof writableRoles)[number]);
 }
 
-export function canManageAdministration(role: string) {
+// Only administrators can add, change, or deactivate accounts. Faculty staff can do everything else.
+export function canManageUsers(role: string) {
   return role === "administrator";
 }
 
@@ -173,11 +175,11 @@ export async function requireWriteAccess() {
   return user;
 }
 
-// Restrict administrative actions to administrators.
-export async function requireAdministrator() {
+// Restrict account management to administrators.
+export async function requireUserManager() {
   const user = await requireInventoryAccess();
-  if (!canManageAdministration(user.role)) {
-    throw new Error("Only administrators can manage accounts and inventory setup.");
+  if (!canManageUsers(user.role)) {
+    throw new Error("Only administrators can add or manage accounts.");
   }
   return user;
 }
@@ -191,10 +193,10 @@ export async function requireInventoryManagementPageAccess() {
   return user;
 }
 
-// Redirect accounts without administrator access.
-export async function requireAdministrationPageAccess() {
+// Redirect accounts that cannot manage other accounts.
+export async function requireUserManagementPageAccess() {
   const user = await requireInventoryAccess();
-  if (!canManageAdministration(user.role)) {
+  if (!canManageUsers(user.role)) {
     redirect("/dashboard");
   }
   return user;

@@ -10,6 +10,7 @@ import { ReturnRequestForm } from "./return-request-form";
 type RequestMode = "borrow" | "return" | "issue" | null;
 
 type BorrowReturnChooserProps = {
+  policy: { maximumAdvanceDays: number; maximumLoanDays: number };
   borrowable: boolean;
   itemName: string;
   maximumQuantity: number;
@@ -20,6 +21,7 @@ type BorrowReturnChooserProps = {
 
 // Switch between borrowing, returns, and issue reports.
 export function BorrowReturnChooser({
+  policy,
   borrowable,
   itemName,
   maximumQuantity,
@@ -60,6 +62,7 @@ export function BorrowReturnChooser({
             qrCode={qrCode}
             itemName={itemName}
             maximumQuantity={maximumQuantity}
+            policy={policy}
           />
         ) : mode === "return" ? (
           <ReturnRequestForm qrCode={qrCode} itemName={itemName} />

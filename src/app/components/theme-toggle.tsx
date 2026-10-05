@@ -247,15 +247,15 @@ function resolveAccent(value: string | null): Accent {
 // Read the saved theme with a browser-safe fallback.
 function getThemeSnapshot(): Theme {
   if (typeof window === "undefined") {
-    return "dark";
+    return "light";
   }
 
   try {
     const storedTheme = window.localStorage.getItem(themeStorageKey);
-    return isTheme(storedTheme) ? storedTheme : "dark";
+    return isTheme(storedTheme) ? storedTheme : "light";
   } catch {
     const documentTheme = document.documentElement.dataset.theme;
-    return documentTheme === "dark" || documentTheme === "light" ? documentTheme : "dark";
+    return documentTheme === "dark" || documentTheme === "light" ? documentTheme : "light";
   }
 }
 
@@ -344,7 +344,7 @@ function migrateAccentStorage(accent: Accent) {
 
 // Save the device's theme and accent color.
 export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
-  const theme = useSyncExternalStore<Theme>(subscribeToAppearance, getThemeSnapshot, () => "dark");
+  const theme = useSyncExternalStore<Theme>(subscribeToAppearance, getThemeSnapshot, () => "light");
   const accent = useSyncExternalStore<Accent>(subscribeToAppearance, getAccentSnapshot, () => null);
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);

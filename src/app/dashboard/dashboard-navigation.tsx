@@ -19,13 +19,14 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
+import { roleLabel } from "@/lib/roles";
 import { LiveUpdates } from "@/app/components/live-updates";
 import { CommandMenu } from "@/app/components/command-menu";
 import { ThemeToggle } from "@/app/components/theme-toggle";
 import { BrandMark } from "@/app/components/brand-mark";
 
 type DashboardNavigationProps = {
-  canManageAdministration: boolean;
+  canManageUsers: boolean;
   canManageInventory: boolean;
   email?: string | null;
   username?: string | null;
@@ -39,7 +40,7 @@ function NavigationProgress() {
 }
 
 export function DashboardNavigation({
-  canManageAdministration,
+  canManageUsers,
   canManageInventory,
   email,
   username,
@@ -81,12 +82,10 @@ export function DashboardNavigation({
       items: [
         { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
         { label: "Student survey", href: "/dashboard/student-survey", Icon: ClipboardList },
-        ...(canManageAdministration
-          ? [
-              { label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText },
-              { label: "Users", href: "/dashboard/users", Icon: Users },
-            ]
+        ...(canManageInventory
+          ? [{ label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText }]
           : []),
+        ...(canManageUsers ? [{ label: "Users", href: "/dashboard/users", Icon: Users }] : []),
         { label: "Settings", href: "/dashboard/settings", Icon: Settings },
       ],
     },
@@ -152,7 +151,7 @@ export function DashboardNavigation({
         </nav>
         <div className="sidebar-utilities">
           <CommandMenu
-            canManageAdministration={canManageAdministration}
+            canManageUsers={canManageUsers}
             canManageInventory={canManageInventory}
             embedded
           />
@@ -166,7 +165,7 @@ export function DashboardNavigation({
             <div className="min-w-0 flex-1">
               <strong className="block truncate">{username || email || "Staff account"}</strong>
               <span className="account-role">
-                {canManageAdministration ? "Administrator" : "Staff"}
+                {roleLabel(canManageUsers ? "ADMINISTRATOR" : "STAFF")}
               </span>
             </div>
             <form action={signOut}>

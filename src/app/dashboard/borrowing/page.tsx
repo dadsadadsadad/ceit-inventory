@@ -2,6 +2,7 @@ export const metadata = { title: "Borrowing · CEIT Inventory" };
 
 import Link from "next/link";
 
+import { ClearFiltersButton, FilterForm } from "@/app/components/filter-form";
 import { OptimisticStatus } from "@/app/components/optimistic-state";
 import { Pager } from "@/app/components/pager";
 import { borrowStatusLabel } from "@/lib/borrow-status";
@@ -21,9 +22,11 @@ import {
   isBorrowStatus,
   isOverdue,
   isOverdueFilter,
+  lapsedLabel,
   overdueFilter,
   pageLink,
   pageSize,
+  reportHref,
   statuses,
   type BorrowingRecord,
   type SearchParams,
@@ -88,7 +91,7 @@ export default async function BorrowingPage({
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/dashboard/reports?kind=borrowings"
+              href="/dashboard/reports?kind=borrowing"
               className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
             >
               Borrowing reports
@@ -96,12 +99,12 @@ export default async function BorrowingPage({
           </div>
         </header>
 
-        {/* Search requests and choose a borrowing status. */}
-        <form
-          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-end"
-          aria-label="Borrowing request filters"
+        {/* Search requests and narrow them down. Choices apply as soon as they are made. */}
+        <FilterForm
+          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] xl:items-end"
+          label="Borrowing request filters"
         >
-          <label>
+          <label className="sm:col-span-2 xl:col-span-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
               name="q"
@@ -131,18 +134,49 @@ export default async function BorrowingPage({
               ))}
             </select>
           </label>
-          <div className="flex gap-3">
-            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-              Filter
-            </button>
-            <Link
-              href="/dashboard/borrowing"
-              className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
+          <label>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Kind</span>
+            <select
+              name="type"
+              defaultValue={
+                firstParam(search.type) === "reservation" || firstParam(search.type) === "now"
+                  ? firstParam(search.type)
+                  : ""
+              }
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             >
-              Clear
+              <option value="">Reservations and borrow now</option>
+              <option value="reservation">Reservations only</option>
+              <option value="now">Borrow now only</option>
+            </select>
+          </label>
+          <label>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Requested from</span>
+            <input
+              type="date"
+              name="from"
+              defaultValue={textParam(search.from)}
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+            />
+          </label>
+          <label>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Requested to</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={textParam(search.to)}
+              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-4 sm:col-span-2 xl:col-span-5">
+            <ClearFiltersButton className="accent-link text-sm font-semibold">
+              Clear all filters
+            </ClearFiltersButton>
+            <Link href={reportHref(search)} className="accent-link text-sm font-semibold">
+              Open as report
             </Link>
           </div>
-        </form>
+        </FilterForm>
 
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
@@ -177,6 +211,11 @@ export default async function BorrowingPage({
                       {isOverdue(request) ? (
                         <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
                           Overdue
+                        </span>
+                      ) : null}
+                      {lapsedLabel(request) ? (
+                        <span className="status-pill status-pill-pending rounded-md px-2.5 py-1 text-xs font-semibold">
+                          {lapsedLabel(request)}
                         </span>
                       ) : null}
                       <OptimisticStatus
@@ -327,6 +366,11 @@ export default async function BorrowingPage({
                           {isOverdue(request) ? (
                             <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
                               Overdue
+                            </span>
+                          ) : null}
+                          {lapsedLabel(request) ? (
+                            <span className="status-pill status-pill-pending rounded-md px-2.5 py-1 text-xs font-semibold">
+                              {lapsedLabel(request)}
                             </span>
                           ) : null}
                         </div>

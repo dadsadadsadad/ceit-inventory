@@ -15,11 +15,8 @@ import {
 } from "lucide-react";
 import { InventoryMix } from "@/app/components/inventory-mix";
 import { DashboardNoteForm } from "./dashboard-note-form";
-import {
-  canManageAdministration,
-  canManageInventory,
-  requireInventoryAccess,
-} from "@/lib/inventory-auth";
+import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { auditViewWhere } from "@/lib/audit-trail";
 import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
 import { inventoryAttentionWhere } from "@/lib/inventory-attention";
 import { formatManilaDate } from "@/lib/manila-date";
@@ -44,6 +41,7 @@ async function getDashboardData(includeAuditTrail: boolean) {
     prisma.location.count({ where: { isActive: true } }),
     includeAuditTrail
       ? prisma.inventoryAudit.findMany({
+          where: auditViewWhere("important"),
           select: {
             id: true,
             summary: true,
@@ -107,11 +105,10 @@ async function getDashboardData(includeAuditTrail: boolean) {
 export default async function DashboardPage() {
   const user = await requireInventoryAccess();
   after(() => purgeExpiredBorrowerDataIfDue());
-  const canAdmin = canManageAdministration(user.role);
   const canManage = canManageInventory(user.role);
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
-    dashboard = await getDashboardData(canAdmin);
+    dashboard = await getDashboardData(canManage);
   } catch (error) {
     console.error("Unable to load dashboard", error);
   }
@@ -285,7 +282,7 @@ export default async function DashboardPage() {
                   </p>
                 )}
               </aside>
-              {canAdmin ? (
+              {canManage ? (
                 <section
                   className="card activity-ledger rounded-lg"
                   aria-labelledby="recent-activity-heading"

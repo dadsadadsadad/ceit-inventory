@@ -5,11 +5,7 @@ import { notFound } from "next/navigation";
 
 import { OptimisticText } from "@/app/components/optimistic-state";
 import { isUuid } from "@/lib/ids";
-import {
-  canManageAdministration,
-  canManageInventory,
-  requireInventoryAccess,
-} from "@/lib/inventory-auth";
+import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { firstParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
@@ -31,7 +27,6 @@ export default async function InventoryItemPage({
 }) {
   const user = await requireInventoryAccess();
   const canManage = canManageInventory(user.role);
-  const canDelete = canManageAdministration(user.role);
   const { id } = await params;
   const search = await searchParams;
   if (!isUuid(id)) {
@@ -105,7 +100,6 @@ export default async function InventoryItemPage({
               item={item}
               categories={categories}
               locations={locations}
-              canDelete={canDelete}
               open={firstParam(search.edit) === "1"}
             />
           ) : (

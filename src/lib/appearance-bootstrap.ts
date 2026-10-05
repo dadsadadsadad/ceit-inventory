@@ -3,7 +3,7 @@ export const appearanceBootstrap = `
 try {
   const root = document.documentElement;
   const savedTheme = localStorage.getItem("ceit-theme");
-  const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "dark";
+  const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
   const savedAccent = localStorage.getItem("ceit-accent");
   const legacy = { violet: "#8b5cf6", blue: "#0ea5e9", emerald: "#10b981" };
   const savedKey = (savedAccent || "").toLowerCase();

@@ -21,13 +21,11 @@ export function ItemEditPanel({
   item,
   categories,
   locations,
-  canDelete,
   open,
 }: {
   item: ItemRecord;
   categories: Category[];
   locations: Location[];
-  canDelete: boolean;
   open: boolean;
 }) {
   const computer = item.computer;
@@ -320,7 +318,7 @@ export function ItemEditPanel({
 
       <PhotoManager item={item} />
 
-      <RecordLifecycle item={item} canDelete={canDelete} />
+      <RecordLifecycle item={item} />
     </details>
   );
 }

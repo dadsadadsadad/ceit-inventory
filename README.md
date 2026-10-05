@@ -17,12 +17,18 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Multi-word search (every word must match, across name, tag, serial, room, MAC/IP, and more), filters, sorting, and page navigation for status, room, category, type, condition, items that need attention, and items not checked in 90+ days
 - Bulk status, condition, location, and inspection changes for selected items, including **Record inspection** for a whole room
 - CSV/XLSX import with flexible column headings and row-level feedback. **Validate before importing** checks every row against Settings (missing or inactive categories and rooms) and against records that already exist (asset tags, serial numbers, MAC addresses), so a clean preview matches what the real import will do
-- Filterable inventory, PC/Mac register, borrowing, maintenance, and audit exports in CSV or PDF, plus a detailed operational overview PDF
+- **Hardware and Software views** next to the Inventory list: every processor, memory size, storage, graphics part, operating system, and installed program, grouped, searchable, and showing which PCs have it, with license expiry for software
+- **Reports** you generate on the page first and then download as a PDF or CSV: overview, inventory, PC register, hardware, software, borrowing, maintenance, and audit trail, each with its own filters and a set of one-click quick reports (overdue loans, licenses ending soon, PCs missing details, and more)
+- Filters that apply as you choose them and live in the address bar, on Inventory, Borrowing, Maintenance, Users, Hardware, Software, Labels, Reports, and the audit trail
+- An audit trail that opens on the important changes, groups events by day, and keeps routine events (QR scans, label prints, report downloads, sign-ins) one click away
+- Borrowing limits: reservations at most 3 days ahead, loans at most 7 days (14 with an extension), at most 3 open requests per student, no new requests while something is overdue, and missed pickups release the equipment automatically. See [the launch notes](docs/launch-checklist.md) for the exact rules and how to change them
+- Two account types: **Administrator** and **Faculty staff**. Faculty staff can do everything except create or manage accounts
+- A paper-and-ink "ledger" look with a serif for titles, a mono for asset tags, and light and dark themes; see [the design notes](docs/design-system.md)
 - Public borrowing requests from QR codes, including future reservations in the same borrow form, staff approval, checkout, cancellation, and return tracking
 - QR issue reports routed to Maintenance, with a source filter, staff inspection, item history, and CSV/PDF exports
 - Reservation pickup and return times in Philippine time, overlap protection, and report views for pending, reserved, borrowed, returned, and cancelled requests
 - One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
-- Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history
+- Bulk retirement keeps a record and its history, while permanent deletion is deliberately blocked for records with borrowing or maintenance history
 - Shared dashboard notes and a paginated activity history that records the responsible user
 - Administrator account management, account deactivation, password reset, and unlocking accounts that were temporarily locked after repeated failed sign-ins
 - Overdue loans are flagged in Borrowing and on the dashboard worklist, can be filtered, and staff can change a checked-out item's return time (availability is re-checked against other bookings)
@@ -109,7 +115,7 @@ See [the school PostgreSQL runbook](docs/school-postgresql.md) for role setup, b
 
 ## Production access control
 
-The dashboard uses application accounts stored in PostgreSQL. Public QR pages allow students to request equipment, arrange returns, and report problems without an account. There are two staff roles: `ADMINISTRATOR` and `STAFF`. Every inventory-changing staff action rechecks the signed-in role. Administrators manage accounts, inventory setup, permanent deletion, and the audit trail; staff manage daily inventory, borrowing, maintenance, and reports. Both roles can open Settings to change their own password.
+The dashboard uses application accounts stored in PostgreSQL. Public QR pages allow students to request equipment, arrange returns, and report problems without an account. There are two staff roles: `ADMINISTRATOR`, shown as **Administrator**, and `STAFF`, shown as **Faculty staff**. Every staff action rechecks the signed-in role. Faculty staff can do everything the administrator can (inventory, borrowing, maintenance, reports, the audit trail, and setting up rooms and categories) except create, change, deactivate, or unlock accounts, which only administrators can do. Both roles can open Settings to change their own password. Sessions last 7 days.
 
 Before any public deployment, replace or remove every temporary development account and verify that only school-approved administrators remain active.
 

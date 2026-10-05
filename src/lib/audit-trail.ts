@@ -1,5 +1,6 @@
 import { AuditAction, Prisma } from "@prisma/client";
 
+import { manilaDateText, manilaDayLabel } from "@/lib/manila-date";
 import {
   exportPeriods,
   parseReportExportFilters,
@@ -19,6 +20,54 @@ export type AuditTrailEvent = {
   metadata: Prisma.JsonValue | null;
 };
 
+/**
+ * What the audit trail shows by default and the quick views staff can switch to.
+ * "Routine" is activity that happens constantly and rarely matters afterwards.
+ */
+export const auditViews = [
+  "important",
+  "inventory",
+  "borrowing",
+  "maintenance",
+  "setup",
+  "routine",
+  "all",
+] as const;
+export type AuditView = (typeof auditViews)[number];
+
+export function isAuditView(value: string | null | undefined): value is AuditView {
+  return auditViews.includes(value as AuditView);
+}
+
+export function auditViewLabel(view: AuditView) {
+  return {
+    important: "Important",
+    inventory: "Inventory",
+    borrowing: "Borrowing",
+    maintenance: "Maintenance",
+    setup: "Accounts & setup",
+    routine: "Routine",
+    all: "Everything",
+  }[view];
+}
+
+export function auditViewDescription(view: AuditView) {
+  return {
+    important: "Changes to records, borrowing, maintenance, accounts, and setup.",
+    inventory: "Records added, edited, moved, imported, inspected, or removed.",
+    borrowing: "Requests, reservations, check-outs, and returns.",
+    maintenance: "Reported problems and repairs.",
+    setup: "Accounts, rooms, categories, and the department note.",
+    routine: "QR scans, label prints, report downloads, and sign-ins.",
+    all: "Every recorded event.",
+  }[view];
+}
+
+/** Without a chosen view, searching for one kind of action looks through everything. */
+export function defaultAuditView(action?: AuditAction): AuditView {
+  return action ? "all" : "important";
+}
+
 export type AuditTrailFilters = {
   action?: AuditAction;
   actor?: string;
@@ -27,6 +76,7 @@ export type AuditTrailFilters = {
   period: ExportPeriod;
   query?: string;
   to?: string;
+  view: AuditView;
 };
 
 type QueryParameters = Pick<URLSearchParams, "get">;
@@ -65,8 +115,14 @@ export function parseAuditTrailFilters(
   now = new Date(),
 ): AuditTrailFilters {
   const reportFilters = parseReportExportFilters(parameters, now);
+  const action = optionalAction(parameters.get("action"));
+  const requestedView = parameters.get("view");
+  if (requestedView && !isAuditView(requestedView)) {
+    throw new Error("Invalid audit view.");
+  }
   return {
-    action: optionalAction(parameters.get("action")),
+    action,
+    view: isAuditView(requestedView) ? requestedView : defaultAuditView(action),
     actor: textFilter(parameters, "actor", "User filter"),
     dateRange: reportFilters.dateRange,
     from: parameters.get("from") || undefined,
@@ -76,9 +132,63 @@ export function parseAuditTrailFilters(
   };
 }
 
+const routineActions: AuditAction[] = [
+  AuditAction.SCANNED,
+  AuditAction.SIGNED_IN,
+  AuditAction.SIGNED_OUT,
+  AuditAction.EXPORTED,
+];
+// Older single-label prints were recorded as ordinary updates with this summary.
+const singleLabelPrintSummary = "QR label opened for printing.";
+const nonInventoryEntities = [
+  "borrow-request",
+  "maintenance-ticket",
+  "account",
+  "category",
+  "location",
+  "dashboard-note",
+  "session",
+  "report-export",
+];
+
+/** Only non-nullable columns are compared, so negating this never drops rows with blanks. */
+export function routineAuditWhere(): Prisma.InventoryAuditWhereInput {
+  return {
+    OR: [{ action: { in: routineActions } }, { summary: singleLabelPrintSummary }],
+  };
+}
+
+/** The part of the query that each quick view adds. */
+export function auditViewWhere(view: AuditView): Prisma.InventoryAuditWhereInput {
+  switch (view) {
+    case "all":
+      return {};
+    case "routine":
+      return routineAuditWhere();
+    case "important":
+      return { NOT: routineAuditWhere() };
+    case "borrowing":
+      return { entityType: "borrow-request" };
+    case "maintenance":
+      return { entityType: "maintenance-ticket" };
+    case "setup":
+      return { entityType: { in: ["account", "category", "location", "dashboard-note"] } };
+    case "inventory":
+      return {
+        AND: [
+          { NOT: routineAuditWhere() },
+          { OR: [{ entityType: null }, { entityType: { notIn: nonInventoryEntities } }] },
+        ],
+      };
+  }
+}
+
 // Turn activity filters into a database query.
 export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAuditWhereInput {
   const conditions: Prisma.InventoryAuditWhereInput[] = [];
+  if (filters.view !== "all") {
+    conditions.push(auditViewWhere(filters.view));
+  }
   if (filters.action) {
     conditions.push({ action: filters.action });
   }
@@ -109,6 +219,9 @@ export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAud
 // Preserve activity filters in links and downloads.
 export function auditTrailSearchParameters(filters: AuditTrailFilters, page?: number) {
   const parameters = new URLSearchParams();
+  if (filters.view !== defaultAuditView(filters.action)) {
+    parameters.set("view", filters.view);
+  }
   if (filters.query) {
     parameters.set("q", filters.query);
   }
@@ -150,6 +263,21 @@ export function auditActionLabel(action: AuditAction) {
     [AuditAction.EXPORTED]: "Exported",
   };
   return labels[action];
+}
+
+/** Newest-first events split into one group per Philippine calendar day. */
+export function groupEventsByDay<T extends { createdAt: Date }>(events: T[], now = new Date()) {
+  const groups: { events: T[]; key: string; label: string }[] = [];
+  for (const event of events) {
+    const key = manilaDateText(event.createdAt);
+    const current = groups.at(-1);
+    if (current?.key === key) {
+      current.events.push(event);
+    } else {
+      groups.push({ key, label: manilaDayLabel(event.createdAt, now), events: [event] });
+    }
+  }
+  return groups;
 }
 
 // Show the staff account or public source of an event.

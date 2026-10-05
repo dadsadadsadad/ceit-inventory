@@ -31,7 +31,7 @@ export const minimumContrast = 4.7;
 
 export const defaultAccents: Readonly<Record<Theme, string>> = {
   dark: "#ff9b50",
-  light: "#963509",
+  light: "#b83f0b",
 };
 
 export const accentPresets = [

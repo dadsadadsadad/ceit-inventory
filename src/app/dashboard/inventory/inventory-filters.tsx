@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 
+import { ClearFiltersButton, FilterForm } from "@/app/components/filter-form";
 import { inspectionIntervalDays } from "@/lib/inventory-attention";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { humanizeEnum } from "@/lib/labels";
@@ -29,13 +30,27 @@ export function InventoryFilters({
   search: SearchParams;
 }) {
   const sort = currentSort(search);
+  const reportQuery = new URLSearchParams({ kind: "inventory" });
+  for (const [key, value] of [
+    ["q", search.q?.trim().slice(0, 120) ?? ""],
+    ["inventoryStatus", isItemStatus(search.status) ? search.status : ""],
+    ["location", search.location && isUuid(search.location) ? search.location : ""],
+    ["category", search.category && isUuid(search.category) ? search.category : ""],
+    ["itemType", isItemType(search.itemType) ? search.itemType : ""],
+    ["condition", isItemCondition(search.condition) ? search.condition : ""],
+    ["attention", search.attention === "1" ? "1" : ""],
+  ]) {
+    if (value) {
+      reportQuery.set(key, value);
+    }
+  }
 
   return (
     <>
-      {/* Search, filter, and sort the inventory. */}
-      <form
+      {/* Search, filter, and sort the inventory. Choices apply as soon as they are made. */}
+      <FilterForm
         className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
-        aria-label="Inventory filters"
+        label="Inventory filters"
       >
         {bulkMode ? <input type="hidden" name="bulk" value="1" /> : null}
         {sort ? (
@@ -84,15 +99,29 @@ export function InventoryFilters({
             ))}
           </select>
         </label>
+        <div className="filter-chips sm:col-span-2 xl:col-span-4" aria-label="Quick filters">
+          <label className="filter-chip">
+            <input
+              type="checkbox"
+              name="attention"
+              value="1"
+              defaultChecked={search.attention === "1"}
+            />
+            <span>Needs attention</span>
+          </label>
+          <label className="filter-chip">
+            <input
+              type="checkbox"
+              name="checked"
+              value="overdue"
+              defaultChecked={search.checked === "overdue"}
+            />
+            <span>{`Not checked in ${inspectionIntervalDays}+ days`}</span>
+          </label>
+        </div>
         <details
-          className="filter-disclosure sm:col-span-2 xl:col-span-3"
-          open={Boolean(
-            search.category ||
-            search.itemType ||
-            search.condition ||
-            search.attention === "1" ||
-            search.checked === "overdue",
-          )}
+          className="filter-disclosure sm:col-span-2 xl:col-span-4"
+          open={Boolean(search.category || search.itemType || search.condition)}
         >
           <summary className="cursor-pointer text-sm font-semibold">More filters</summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -127,28 +156,6 @@ export function InventoryFilters({
               </select>
             </label>
             <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">Attention</span>
-              <select
-                name="attention"
-                defaultValue={search.attention === "1" ? "1" : ""}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              >
-                <option value="">Any record</option>
-                <option value="1">Needs attention (defective, untested, poor)</option>
-              </select>
-            </label>
-            <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">Last checked</span>
-              <select
-                name="checked"
-                defaultValue={search.checked === "overdue" ? "overdue" : ""}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              >
-                <option value="">Any time</option>
-                <option value="overdue">{`Not checked in ${inspectionIntervalDays}+ days`}</option>
-              </select>
-            </label>
-            <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Condition</span>
               <select
                 name="condition"
@@ -165,18 +172,18 @@ export function InventoryFilters({
             </label>
           </div>
         </details>
-        <div className="flex gap-3">
-          <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-            Filter
-          </button>
+        <div className="flex flex-wrap items-center gap-4 sm:col-span-2 xl:col-span-4">
+          <ClearFiltersButton className="accent-link text-sm font-semibold">
+            Clear all filters
+          </ClearFiltersButton>
           <Link
-            href="/dashboard/inventory"
-            className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
+            href={`/dashboard/reports?${reportQuery.toString()}`}
+            className="accent-link text-sm font-semibold"
           >
-            Clear
+            Open as report
           </Link>
         </div>
-      </form>
+      </FilterForm>
     </>
   );
 }

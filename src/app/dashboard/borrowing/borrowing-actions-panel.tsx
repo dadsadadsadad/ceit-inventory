@@ -1,6 +1,7 @@
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { manilaDateTimeInput } from "@/lib/borrow-schedule";
+import { borrowPolicyFromEnvironment } from "@/lib/borrow-policy";
+import { isHoldLapsed, manilaDateTimeInput } from "@/lib/borrow-schedule";
 import { borrowStatus } from "@/lib/borrow-status";
 
 import {
@@ -22,28 +23,38 @@ export function BorrowingActions({
   request: BorrowingRecord;
   layout: "mobile" | "desktop";
 }) {
-  const expired = request.expectedReturnDate <= new Date();
+  const now = new Date();
+  const expired = request.expectedReturnDate <= now;
+  const lapsed = isHoldLapsed(request, now, borrowPolicyFromEnvironment());
   if (request.status === borrowStatus.RESERVED) {
     return (
       <div className="space-y-3">
         {expired ? (
           <p className="muted text-xs">Pickup period ended. Cancel this reservation to close it.</p>
-        ) : request.startsAt > new Date() ? (
+        ) : request.startsAt > now ? (
           <p className="muted text-xs">Pickup: {formatDateTime(request.startsAt)}</p>
         ) : (
-          <FeedbackForm
-            action={markBorrowed}
-            optimistic={{ entity: `borrow:${request.id}`, values: { status: "BORROWED" } }}
-            successMessage="Equipment checked out."
-          >
-            <input type="hidden" name="requestId" value={request.id} />
-            <SubmitButton
-              pendingLabel="Checking out…"
-              className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
+          <>
+            {lapsed ? (
+              <p className="muted text-xs">
+                Pickup was missed, so this booking no longer holds the equipment. Check it out if
+                the borrower arrived late, or cancel it to close it.
+              </p>
+            ) : null}
+            <FeedbackForm
+              action={markBorrowed}
+              optimistic={{ entity: `borrow:${request.id}`, values: { status: "BORROWED" } }}
+              successMessage="Equipment checked out."
             >
-              Check out equipment
-            </SubmitButton>
-          </FeedbackForm>
+              <input type="hidden" name="requestId" value={request.id} />
+              <SubmitButton
+                pendingLabel="Checking out…"
+                className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
+              >
+                Check out equipment
+              </SubmitButton>
+            </FeedbackForm>
+          </>
         )}
         <FeedbackForm
           action={cancelReservation}
@@ -96,15 +107,17 @@ export function BorrowingActions({
             placeholder="Optional staff note"
           />
           <SubmitButton
-            disabled={expired}
+            disabled={expired || lapsed}
             pendingLabel={request.isReservation ? "Approving…" : "Checking out…"}
             className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             {expired
               ? "Request expired"
-              : request.isReservation
-                ? "Approve reservation"
-                : "Check out equipment"}
+              : lapsed
+                ? "Not handled in time"
+                : request.isReservation
+                  ? "Approve reservation"
+                  : "Check out equipment"}
           </SubmitButton>
         </FeedbackForm>
         <FeedbackForm

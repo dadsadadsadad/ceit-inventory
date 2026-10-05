@@ -8,7 +8,7 @@ import { deleteInventoryItem, retireInventoryItem } from "../../actions/item";
 import type { ItemRecord } from "./item-record";
 
 // Retire a record (reversible) or delete it permanently.
-export function RecordLifecycle({ item, canDelete }: { item: ItemRecord; canDelete: boolean }) {
+export function RecordLifecycle({ item }: { item: ItemRecord }) {
   return (
     <>
       {/* Retirement and permanent deletion controls. */}
@@ -35,27 +35,25 @@ export function RecordLifecycle({ item, canDelete }: { item: ItemRecord; canDele
           </SubmitButton>
         </FeedbackForm>
 
-        {canDelete ? (
-          <details className="danger-zone mt-4 rounded-lg p-3">
-            {/* Administrator-only permanent deletion. */}
-            <summary className="cursor-pointer text-sm font-semibold">
-              Permanently delete this item
-            </summary>
-            <p className="mt-2 text-xs leading-5">
-              This permanently deletes the record, PC details, photos, and software. The audit trail
-              is retained. Items with borrowing or maintenance history cannot be deleted. Hold the
-              button and release to confirm, or use the click confirmation.
-            </p>
-            <FeedbackForm action={deleteInventoryItem} className="mt-3 space-y-3">
-              <input type="hidden" name="id" value={item.id} />
-              <input type="hidden" name="confirmation" value="DELETE" />
-              <HoldSubmitButton
-                label="Permanently delete"
-                confirmation={`Permanently delete ${item.name}? This cannot be undone.`}
-              />
-            </FeedbackForm>
-          </details>
-        ) : null}
+        <details className="danger-zone mt-4 rounded-lg p-3">
+          {/* Permanent deletion. */}
+          <summary className="cursor-pointer text-sm font-semibold">
+            Permanently delete this item
+          </summary>
+          <p className="mt-2 text-xs leading-5">
+            This permanently deletes the record, PC details, photos, and software. The audit trail
+            is retained. Items with borrowing or maintenance history cannot be deleted. Hold the
+            button and release to confirm, or use the click confirmation.
+          </p>
+          <FeedbackForm action={deleteInventoryItem} className="mt-3 space-y-3">
+            <input type="hidden" name="id" value={item.id} />
+            <input type="hidden" name="confirmation" value="DELETE" />
+            <HoldSubmitButton
+              label="Permanently delete"
+              confirmation={`Permanently delete ${item.name}? This cannot be undone.`}
+            />
+          </FeedbackForm>
+        </details>
       </section>
     </>
   );

@@ -61,7 +61,7 @@ test("unknown routes receive the application not-found page", async ({ page }) =
   ).toBeVisible();
 });
 
-test("audit trail is not available without an authenticated administrator", async ({ page }) => {
+test("audit trail is not available without signing in", async ({ page }) => {
   await page.goto("/dashboard/activity");
   await expect(page).toHaveURL(/\/auth\/login/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
@@ -116,7 +116,7 @@ test("appearance popover stays within a compact viewport", async ({ page }) => {
   expect(layout.pickerScrollWidth).toBeLessThanOrEqual(Math.ceil(layout.pickerWidth));
 });
 
-test("deployed global styles match the appearance controls and neutral themes", async ({
+test("deployed global styles match the appearance controls and paper and ink themes", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -148,7 +148,7 @@ test("deployed global styles match the appearance controls and neutral themes", 
       const label = getComputedStyle(document.querySelector(".login-panel .text-xs")!);
       return { background, captionSize: parseFloat(label.fontSize) };
     });
-    expect(surfaces.background).toBe(mode === "Light" ? "rgb(245, 245, 245)" : "rgb(21, 21, 21)");
+    expect(surfaces.background).toBe(mode === "Light" ? "rgb(242, 237, 225)" : "rgb(19, 17, 16)");
     expect(surfaces.captionSize).toBeGreaterThanOrEqual(14);
   }
   await panel.getByRole("button", { name: "Close appearance panel" }).click();

@@ -1,5 +1,20 @@
-import { BorrowStatus, ItemStatus, type Prisma } from "@prisma/client";
+import {
+  BorrowStatus,
+  ItemCondition,
+  ItemStatus,
+  ItemType,
+  MaintenancePriority,
+  MaintenanceStatus,
+  type Prisma,
+} from "@prisma/client";
 
+import {
+  isHardwareComponent,
+  isLicenseFilter,
+  type HardwareComponent,
+  type LicenseFilter,
+} from "@/lib/computer-directory";
+import { isUuid } from "@/lib/ids";
 import { manilaCalendarDate } from "@/lib/manila-date";
 
 export const exportPeriods = [
@@ -13,6 +28,7 @@ export const exportPeriods = [
 export const borrowingReportStates = [
   "all",
   "currently-borrowed",
+  "overdue",
   "reserved",
   "returned",
   "requested",
@@ -24,13 +40,28 @@ export type ExportPeriod = (typeof exportPeriods)[number];
 export type BorrowingReportState = (typeof borrowingReportStates)[number];
 export type ExportDateRange = { from?: Date; toExclusive?: Date };
 export type ReportExportFilters = {
+  /** Only items that need attention (defective, untested, poor condition, or awaiting repair). */
+  attention: boolean;
   borrowingState: BorrowingReportState;
   borrowingStatus?: BorrowStatus;
+  categoryId?: string;
+  component?: HardwareComponent;
+  condition?: ItemCondition;
   dateRange: ExportDateRange;
+  /** Retired and lost PCs are left out of the hardware and software reports unless asked for. */
+  includeRetired: boolean;
+  /** Only PCs missing a processor, memory, or storage. */
+  incomplete: boolean;
   inventoryStatus?: ItemStatus;
+  itemType?: ItemType;
+  license?: LicenseFilter;
+  locationId?: string;
+  maintenancePriority?: MaintenancePriority;
   maintenanceSource?: "QR" | "STAFF";
+  maintenanceStatus?: MaintenanceStatus;
   pcOnly: boolean;
   period: ExportPeriod;
+  query?: string;
 };
 
 type QueryParameters = Pick<URLSearchParams, "get">;
@@ -78,6 +109,18 @@ function dateRange(from?: string, to?: string): ExportDateRange {
   };
 }
 
+/** A date range from two YYYY-MM-DD values for list pages; anything invalid is ignored. */
+export function lenientDateRange(from?: string, to?: string): ExportDateRange {
+  try {
+    return dateRange(
+      calendarDate(from ?? null, "Start date"),
+      calendarDate(to ?? null, "End date"),
+    );
+  } catch {
+    return {};
+  }
+}
+
 // Convert a timeframe preset into Manila date boundaries.
 function periodRange(period: ExportPeriod, now: Date): ExportDateRange {
   if (period === "all") {
@@ -119,6 +162,35 @@ function optionalBorrowStatus(value: string | null) {
   return value as BorrowStatus;
 }
 
+function optionalEnum<T extends string>(
+  value: string | null,
+  values: Record<string, T>,
+  message: string,
+) {
+  if (!value) {
+    return undefined;
+  }
+  if (!Object.values(values).includes(value as T)) {
+    throw new Error(message);
+  }
+  return value as T;
+}
+
+function optionalId(value: string | null, message: string) {
+  if (!value) {
+    return undefined;
+  }
+  if (!isUuid(value)) {
+    throw new Error(message);
+  }
+  return value;
+}
+
+function searchText(value: string | null) {
+  const text = value?.replace(/\s+/g, " ").trim().slice(0, 120);
+  return text || undefined;
+}
+
 function borrowingReportState(value: string | null) {
   if (!value) {
     return "all" as const;
@@ -147,14 +219,43 @@ export function parseReportExportFilters(
   const to = calendarDate(parameters.get("to"), "End date");
   const hasCustomRange = Boolean(from || to);
 
+  const license = parameters.get("license");
+  if (license && !isLicenseFilter(license)) {
+    throw new Error("Invalid license filter.");
+  }
+  const component = parameters.get("component");
+  if (component && !isHardwareComponent(component)) {
+    throw new Error("Invalid hardware component.");
+  }
+
   return {
+    attention: parameters.get("attention") === "1",
     borrowingState: borrowingReportState(parameters.get("borrowingState")),
     borrowingStatus: optionalBorrowStatus(parameters.get("borrowingStatus")),
+    categoryId: optionalId(parameters.get("category"), "Invalid category."),
+    component: component ? (component as HardwareComponent) : undefined,
+    condition: optionalEnum(parameters.get("condition"), ItemCondition, "Invalid condition."),
     dateRange: hasCustomRange ? dateRange(from, to) : periodRange(requestedPeriod, now),
+    includeRetired: parameters.get("retired") === "1",
+    incomplete: parameters.get("incomplete") === "1",
     inventoryStatus: optionalItemStatus(parameters.get("inventoryStatus")),
+    itemType: optionalEnum(parameters.get("itemType"), ItemType, "Invalid item type."),
+    license: license ? (license as LicenseFilter) : undefined,
+    locationId: optionalId(parameters.get("location"), "Invalid location."),
+    maintenancePriority: optionalEnum(
+      parameters.get("maintenancePriority"),
+      MaintenancePriority,
+      "Invalid maintenance priority.",
+    ),
     ...(source ? { maintenanceSource: source as "QR" | "STAFF" } : {}),
+    maintenanceStatus: optionalEnum(
+      parameters.get("maintenanceStatus"),
+      MaintenanceStatus,
+      "Invalid maintenance status.",
+    ),
     pcOnly: parameters.get("pcOnly") === "1",
     period: requestedPeriod,
+    query: searchText(parameters.get("q")),
   };
 }
 
@@ -164,6 +265,7 @@ export function borrowingReportStatusFilter(
 ) {
   switch (filters.borrowingState) {
     case "currently-borrowed":
+    case "overdue":
       return { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] };
     case "returned":
       return BorrowStatus.RETURNED;
@@ -184,6 +286,8 @@ export function borrowingReportStateLabel(state: BorrowingReportState) {
   switch (state) {
     case "currently-borrowed":
       return "Currently borrowed";
+    case "overdue":
+      return "Overdue";
     case "returned":
       return "Returned items";
     case "reserved":
@@ -220,6 +324,8 @@ export function borrowingReportDateWhere(
     return {};
   }
   switch (filters.borrowingState) {
+    case "overdue":
+      return { expectedReturnDate: range };
     case "currently-borrowed":
       return { processedAt: range };
     case "returned":

@@ -299,10 +299,12 @@ test("both themes use neutral surfaces and accents visibly update controls, link
         };
       });
     const defaults = await colors();
+    // The surfaces are warm paper and ink: dark enough in Dark mode, light enough in Light mode,
+    // and never tinted by the accent color (checked again after the accent changes below).
     for (const surface of [defaults.background, defaults.sidebar, defaults.card]) {
       const channels = surface.match(/[\d.]+/g)!.map(Number);
-      expect(channels[0]).toBe(channels[1]);
-      expect(channels[1]).toBe(channels[2]);
+      const spread = Math.max(...channels.slice(0, 3)) - Math.min(...channels.slice(0, 3));
+      expect(spread).toBeLessThan(24);
       if (mode === "Dark") {
         expect(channels[0]).toBeLessThan(60);
       } else {

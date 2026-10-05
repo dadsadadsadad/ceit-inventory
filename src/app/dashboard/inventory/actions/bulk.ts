@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { FormError, formAction } from "@/lib/form-action";
-import { canManageAdministration, requireWriteAccess } from "@/lib/inventory-auth";
+import { requireWriteAccess } from "@/lib/inventory-auth";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { prisma } from "@/prisma";
 
@@ -27,9 +27,6 @@ export async function bulkUpdateInventory(formData: FormData) {
     const action = requiredText(formData, "bulkAction", 64);
 
     if (action === "delete") {
-      if (!canManageAdministration(actor.role)) {
-        throw new FormError("Only administrators can permanently delete inventory records.");
-      }
       const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
       if (confirmation !== "DELETE") {
         throw new FormError("Type DELETE to permanently remove the selected records.");
