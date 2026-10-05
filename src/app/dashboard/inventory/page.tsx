@@ -12,7 +12,13 @@ import {
   canManageInventory,
   requireInventoryAccess,
 } from "@/lib/inventory-auth";
+import {
+  inspectionIntervalDays,
+  inventoryAttentionWhere,
+  overdueInspectionWhere,
+} from "@/lib/inventory-attention";
 import { formatManilaDate } from "@/lib/manila-date";
+import { everyTermMatches, searchTerms } from "@/lib/search-terms";
 import { prisma } from "@/prisma";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
@@ -24,8 +30,10 @@ import { InventoryRowNavigation } from "./inventory-row-navigation";
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
+  attention?: string;
   bulk?: string;
   category?: string;
+  checked?: string;
   condition?: string;
   direction?: string;
   itemType?: string;
@@ -91,19 +99,34 @@ function safePage(value?: string) {
 
 // Build the inventory query from the active filters.
 function inventoryWhere(search: SearchParams) {
-  const q = search.q?.trim().slice(0, 120);
+  const terms = searchTerms(search.q?.trim().slice(0, 120));
   const where: Prisma.InventoryItemWhereInput = {};
+  const requirements: Prisma.InventoryItemWhereInput[] = [];
 
-  if (q) {
-    where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { assetTag: { contains: q, mode: "insensitive" } },
-      { serialNumber: { contains: q, mode: "insensitive" } },
-      { manufacturer: { contains: q, mode: "insensitive" } },
-      { model: { contains: q, mode: "insensitive" } },
-      { category: { name: { contains: q, mode: "insensitive" } } },
-      { location: { name: { contains: q, mode: "insensitive" } } },
-    ];
+  if (terms.length) {
+    requirements.push(
+      ...everyTermMatches<Prisma.InventoryItemWhereInput>(terms, (term) => [
+        { name: { contains: term, mode: "insensitive" } },
+        { assetTag: { contains: term, mode: "insensitive" } },
+        { serialNumber: { contains: term, mode: "insensitive" } },
+        { manufacturer: { contains: term, mode: "insensitive" } },
+        { model: { contains: term, mode: "insensitive" } },
+        { category: { name: { contains: term, mode: "insensitive" } } },
+        { location: { name: { contains: term, mode: "insensitive" } } },
+        { location: { roomNumber: { contains: term, mode: "insensitive" } } },
+        { computer: { is: { macAddress: { contains: term, mode: "insensitive" } } } },
+        { computer: { is: { ipAddress: { contains: term, mode: "insensitive" } } } },
+      ]),
+    );
+  }
+  if (search.attention === "1") {
+    requirements.push(inventoryAttentionWhere);
+  }
+  if (search.checked === "overdue") {
+    requirements.push(overdueInspectionWhere());
+  }
+  if (requirements.length) {
+    where.AND = requirements;
   }
 
   if (isItemStatus(search.status)) {
@@ -174,6 +197,12 @@ function inventoryFilterParameters(search: SearchParams) {
   }
   if (isItemCondition(search.condition)) {
     parameters.set("condition", search.condition);
+  }
+  if (search.attention === "1") {
+    parameters.set("attention", "1");
+  }
+  if (search.checked === "overdue") {
+    parameters.set("checked", "overdue");
   }
   return parameters;
 }
@@ -409,7 +438,7 @@ export default async function InventoryPage({
               defaultValue={search.q?.slice(0, 120) ?? ""}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Name, asset tag, serial, room…"
+              placeholder="Name, asset tag, serial, room, MAC…"
             />
           </label>
           <label>
@@ -446,10 +475,16 @@ export default async function InventoryPage({
           </label>
           <details
             className="filter-disclosure sm:col-span-2 xl:col-span-3"
-            open={Boolean(search.category || search.itemType || search.condition)}
+            open={Boolean(
+              search.category ||
+              search.itemType ||
+              search.condition ||
+              search.attention === "1" ||
+              search.checked === "overdue",
+            )}
           >
             <summary className="cursor-pointer text-sm font-semibold">More filters</summary>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <label>
                 <span className="muted text-xs font-bold uppercase tracking-wide">Category</span>
                 <select
@@ -480,6 +515,30 @@ export default async function InventoryPage({
                       {enumLabel(itemType)}
                     </option>
                   ))}
+                </select>
+              </label>
+              <label>
+                <span className="muted text-xs font-bold uppercase tracking-wide">Attention</span>
+                <select
+                  name="attention"
+                  defaultValue={search.attention === "1" ? "1" : ""}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  <option value="">Any record</option>
+                  <option value="1">Needs attention (defective, untested, poor)</option>
+                </select>
+              </label>
+              <label>
+                <span className="muted text-xs font-bold uppercase tracking-wide">
+                  Last checked
+                </span>
+                <select
+                  name="checked"
+                  defaultValue={search.checked === "overdue" ? "overdue" : ""}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  <option value="">Any time</option>
+                  <option value="overdue">{`Not checked in ${inspectionIntervalDays}+ days`}</option>
                 </select>
               </label>
               <label>

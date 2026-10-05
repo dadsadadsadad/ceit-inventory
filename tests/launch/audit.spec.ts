@@ -231,7 +231,7 @@ test("mobile quick navigation opens with the sidebar closed and restores focus",
   await page.keyboard.press("Control+k");
   const menu = page.getByRole("dialog", { name: "Where would you like to go?" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("textbox")).toBeFocused();
+  await expect(menu.getByRole("combobox")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
   await expect(navigationButton).toBeFocused();

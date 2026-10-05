@@ -423,6 +423,70 @@ export async function setLocationActive(formData: FormData) {
   });
 }
 
+// Remove an unused category.
+export async function deleteCategory(formData: FormData) {
+  return formAction(async () => {
+    const actor = await requireAdministrator();
+    const id = requiredId(formData);
+    const confirmation = requiredText(formData, "confirmation", 16);
+    if (confirmation !== "DELETE") {
+      throw new FormError("Type DELETE to permanently remove this category.");
+    }
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await prisma.$transaction(
+          async (transaction) => {
+            const category = await transaction.category.findUnique({
+              where: { id },
+              select: { _count: { select: { items: true } }, id: true, name: true },
+            });
+
+            if (!category) {
+              throw new FormError("This category no longer exists.");
+            }
+            if (category._count.items > 0) {
+              throw new FormError(
+                `Reassign or remove the ${category._count.items} inventory record${category._count.items === 1 ? "" : "s"} in this category before deleting it. You can deactivate it instead.`,
+              );
+            }
+
+            await transaction.inventoryAudit.create({
+              data: auditEventData({
+                action: "DELETED",
+                actor,
+                entity: { id: category.id, label: category.name, type: "category" },
+                metadata: { activityKind: "configuration" },
+                summary: "Category permanently deleted.",
+              }),
+            });
+            await transaction.category.delete({ where: { id } });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        refreshSetupPages();
+        return;
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+          throw new FormError(
+            "This category now has an inventory record assigned to it. Reassign or remove that record before deleting the category.",
+          );
+        }
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2034" &&
+          attempt < 2
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new FormError("The category was updated by another request. Please try again.");
+  });
+}
+
 // Remove an unused room.
 export async function deleteLocation(formData: FormData) {
   return formAction(async () => {

@@ -2,10 +2,11 @@ export const metadata = { title: "Users · CEIT Inventory" };
 
 import { UserRole } from "@prisma/client";
 
-import { createUser, updateUser } from "./actions";
+import { createUser, unlockUser, updateUser } from "./actions";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { requireAdministrationPageAccess } from "@/lib/inventory-auth";
+import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,17 @@ export default async function UsersPage() {
   const actor = await requireAdministrationPageAccess();
   const users = await prisma.user.findMany({
     orderBy: [{ isActive: "desc" }, { email: "asc" }],
-    select: { id: true, email: true, username: true, role: true, isActive: true, updatedAt: true },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      role: true,
+      isActive: true,
+      lockedUntil: true,
+      updatedAt: true,
+    },
   });
+  const now = new Date();
 
   return (
     <div className="page users-page">
@@ -127,6 +137,11 @@ export default async function UsersPage() {
                   </span>
                   <span className="flex items-center gap-3">
                     <span className="muted">{roleLabel(user.role)}</span>
+                    {user.lockedUntil && user.lockedUntil > now ? (
+                      <span className="status-pill status-pill-critical rounded-md px-2 py-1 text-xs font-semibold">
+                        Locked
+                      </span>
+                    ) : null}
                     <span className="status-pill rounded-md px-2 py-1 text-xs font-semibold">
                       {user.isActive ? "Active" : "Inactive"}
                     </span>
@@ -216,6 +231,25 @@ export default async function UsersPage() {
                     Save account
                   </SubmitButton>
                 </FeedbackForm>
+                {user.lockedUntil && user.lockedUntil > now ? (
+                  <FeedbackForm
+                    action={unlockUser}
+                    successMessage="Sign-in lock cleared."
+                    className="divider mt-4 flex flex-wrap items-center gap-3 border-t pt-4"
+                  >
+                    <input type="hidden" name="id" value={user.id} />
+                    <p className="muted text-sm">
+                      Too many failed sign-ins locked this account until{" "}
+                      {formatManilaDate(user.lockedUntil, { hour: "numeric", minute: "2-digit" })}.
+                    </p>
+                    <SubmitButton
+                      pendingLabel="Unlocking…"
+                      className="secondary-button rounded-lg px-4 py-2 text-sm font-semibold"
+                    >
+                      Unlock account
+                    </SubmitButton>
+                  </FeedbackForm>
+                ) : null}
               </details>
             ))}
           </div>

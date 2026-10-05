@@ -8,15 +8,15 @@ import {
 import { prisma } from "@/prisma";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { borrowStatusLabel } from "@/lib/borrow-status";
-import { formatReportDate, formatReportDateTime, humanize } from "../format";
+import { formatReportDateTime, humanize } from "../format";
 import { documentResponse, reportDocument, mutedColor } from "../pdf-writer";
+import { inspectionIntervalDays } from "@/lib/inventory-attention";
 import { reportAttentionWhere } from "./attention";
 
 // Current inventory and outstanding work.
 export async function createOverviewPdf(canManage: boolean, calendarDate: string) {
   const today = new Date();
-  const inspectionCutoff = new Date(today);
-  inspectionCutoff.setDate(inspectionCutoff.getDate() - 90);
+  const inspectionCutoff = new Date(today.getTime() - inspectionIntervalDays * 24 * 60 * 60 * 1000);
   const [
     inventorySummary,
     statusCounts,
@@ -283,7 +283,7 @@ export async function createOverviewPdf(canManage: boolean, calendarDate: string
       overdueBorrows.map((request) => [
         [request.inventoryItem.name, request.inventoryItem.assetTag ?? "No asset tag"].join("\n"),
         request.borrowerName,
-        formatReportDate(request.expectedReturnDate),
+        formatReportDateTime(request.expectedReturnDate),
         borrowStatusLabel(request.status),
       ]),
       { widths: [1.6, 1.25, 1.1, 0.8] },

@@ -72,6 +72,12 @@ export async function verifyPassword(password: string, passwordHash: string) {
   return storedHash.length === derivedHash.length && timingSafeEqual(storedHash, derivedHash);
 }
 
+// Spend the same time as a real password check when no account matches, so response time does
+// not reveal which usernames and email addresses exist.
+export async function simulatePasswordCheck(password: string) {
+  await derivePasswordHash(password, "0".repeat(32));
+}
+
 // Create a sign-in session.
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");

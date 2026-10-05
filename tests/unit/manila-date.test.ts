@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   formatManilaDate,
   manilaCalendarDate,
+  manilaDateText,
+  manilaDateTimeText,
   nextManilaCalendarDate,
   startOfManilaDay,
 } from "@/lib/manila-date";
@@ -16,5 +18,12 @@ describe("Philippine calendar helpers", () => {
     expect(formatManilaDate(instant, { day: "numeric", month: "long", year: "numeric" })).toBe(
       "August 28, 2026",
     );
+  });
+
+  it("formats exported dates and times without a formatter", () => {
+    const instant = new Date("2026-08-27T18:30:00.000Z");
+    expect(manilaDateText(instant)).toBe("2026-08-28");
+    expect(manilaDateTimeText(instant)).toBe("2026-08-28 02:30");
+    expect(manilaDateText(instant)).toBe(manilaCalendarDate(instant));
   });
 });

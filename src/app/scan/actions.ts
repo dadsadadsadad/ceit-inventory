@@ -2,6 +2,7 @@
 
 import { AuditAction } from "@prisma/client";
 
+import { auditActorName } from "@/lib/audit-event";
 import { prisma } from "@/prisma";
 import { getCurrentInventoryUser } from "@/lib/inventory-auth";
 
@@ -41,7 +42,7 @@ export async function recordInventoryScan(itemId: string) {
       action: AuditAction.SCANNED,
       summary: actor ? "Item QR code scanned by staff." : "Item QR code opened.",
       actorId: actor?.id ?? null,
-      actorName: actor?.email ?? null,
+      actorName: auditActorName(actor),
       metadata: { source: "qr", scanType: actor ? "staff" : "public" },
     },
   });

@@ -8,7 +8,7 @@ import {
   canManageInventory,
   requireInventoryAccess,
 } from "@/lib/inventory-auth";
-import { manilaCalendarDate } from "@/lib/manila-date";
+import { manilaCalendarDate, manilaDateText } from "@/lib/manila-date";
 import {
   borrowingReportDateWhere as borrowingDateWhere,
   borrowingReportStatusFilter,
@@ -39,6 +39,11 @@ async function download(
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+// Inspection and purchase dates are calendar days, so leave the time of day out.
+function dateOnly(value: Date | null | undefined) {
+  return value ? manilaDateText(value) : "";
 }
 
 function exportLimitReached(recordCount: number) {
@@ -135,10 +140,10 @@ export async function GET(request: Request) {
           item.model,
           item.serialNumber,
           item.createdAt,
-          item.purchaseDate,
-          item.lastCheckedAt,
+          dateOnly(item.purchaseDate),
+          dateOnly(item.lastCheckedAt),
           item.computer?.operatingSystem,
-          item.computer?.lastCheckedAt,
+          dateOnly(item.computer?.lastCheckedAt),
         ]),
       ]),
       filename(
@@ -210,7 +215,7 @@ export async function GET(request: Request) {
           item.location.name,
           inventoryStatusLabel(item.status),
           inventoryStatusLabel(item.condition),
-          item.lastCheckedAt,
+          dateOnly(item.lastCheckedAt),
           item.manufacturer,
           item.model,
           item.serialNumber,

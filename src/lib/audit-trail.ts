@@ -5,6 +5,7 @@ import {
   parseReportExportFilters,
   type ExportPeriod,
 } from "@/lib/report-export-filters";
+import { everyTermMatches, searchTerms } from "@/lib/search-terms";
 
 export const auditActions = Object.values(AuditAction);
 
@@ -92,17 +93,15 @@ export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAud
       },
     });
   }
-  if (filters.query) {
-    conditions.push({
-      OR: [
-        { summary: { contains: filters.query, mode: "insensitive" } },
-        { actorName: { contains: filters.query, mode: "insensitive" } },
-        { entityLabel: { contains: filters.query, mode: "insensitive" } },
-        { item: { is: { name: { contains: filters.query, mode: "insensitive" } } } },
-        { item: { is: { assetTag: { contains: filters.query, mode: "insensitive" } } } },
-      ],
-    });
-  }
+  conditions.push(
+    ...everyTermMatches<Prisma.InventoryAuditWhereInput>(searchTerms(filters.query), (term) => [
+      { summary: { contains: term, mode: "insensitive" } },
+      { actorName: { contains: term, mode: "insensitive" } },
+      { entityLabel: { contains: term, mode: "insensitive" } },
+      { item: { is: { name: { contains: term, mode: "insensitive" } } } },
+      { item: { is: { assetTag: { contains: term, mode: "insensitive" } } } },
+    ]),
+  );
 
   return conditions.length ? { AND: conditions } : {};
 }

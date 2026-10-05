@@ -18,10 +18,16 @@ Production hosting, school account approval, physical printer alignment, and rea
 - Pending requests and approved reservations hold their requested time. Overlapping requests cannot overbook a unit, including simultaneous submissions. Non-overlapping reservations can share that unit on different schedules.
 - Approval reserves the time; it does not check out equipment or change its quantity. Staff check out an approved reservation when its pickup time arrives. Availability is checked again at handoff.
 - An overdue physical loan stays unavailable until staff confirm its return. Future availability still depends on the previous borrower returning on time.
+- Overdue loans show an **Overdue** badge, appear in the dashboard worklist, and can be listed with the Borrowing **Overdue** filter. Use **Set a new return time** (or **Change return time** before the deadline) on a checked-out loan to agree a new time with the borrower. Extending is refused when it would overlap another approved or pending booking; shortening is always allowed. Only the staff-recorded return time changes: the borrower's own details and the original pickup stay as submitted.
 - Cancel an approved reservation with a reason to release its time. Decline a pending request to close it. Expired requests cannot be checked out and remain visible for staff to close.
 - An individual asset stays at quantity 1 during checkout and uses the Deployed status. Staff cannot make it available again through ordinary inventory or maintenance edits while its loan is outstanding.
 - A student's return request does not restore availability. Staff inspect the unit and confirm the return. A defect recorded after checkout is preserved on return.
 - Reports include reservation type, pickup and return times, approval details, cancellation, and checkout/return history. Date filters use pickup for the reserved view, cancellation for cancelled reservations, checkout for borrowed items, and completion for returned items.
+
+## Inventory checks
+
+- **Needs attention** means equipment still in service that is Defective, Not tested, or in Poor / For repair condition. Retired and lost records are excluded. The dashboard tile, the Inventory filter, and the PDF reports all use this one definition.
+- Use the Inventory filter **Last checked: Not checked in 90+ days** to build an inspection round, then select the items and choose **Record inspection (checked today)**. PC profiles are updated together with their records.
 
 ## QR issue reports
 

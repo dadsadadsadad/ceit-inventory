@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
+import { manilaCalendarDate } from "@/lib/manila-date";
 
 import { createInventoryItem } from "../actions";
 
@@ -370,7 +371,7 @@ export function NewInventoryForm({
           <input
             name="lastCheckedAt"
             type="date"
-            defaultValue={new Date().toISOString().slice(0, 10)}
+            defaultValue={manilaCalendarDate()}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
           />
           <span className="muted mt-1 block text-xs">

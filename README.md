@@ -14,8 +14,9 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Item status, condition, and location updates with an audit history
 - Individual QR labels and A4 label sheets for selected items or a room (24 compact or 8 large labels per sheet)
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
-- Search, filters, sorting, and page navigation for status, room, identifiers, category, type, and condition
-- CSV/XLSX import with flexible column headings and row-level feedback
+- Multi-word search (every word must match, across name, tag, serial, room, MAC/IP, and more), filters, sorting, and page navigation for status, room, category, type, condition, items that need attention, and items not checked in 90+ days
+- Bulk status, condition, location, and inspection changes for selected items, including **Record inspection** for a whole room
+- CSV/XLSX import with flexible column headings and row-level feedback. **Validate before importing** checks every row against Settings (missing or inactive categories and rooms) and against records that already exist (asset tags, serial numbers, MAC addresses), so a clean preview matches what the real import will do
 - Filterable inventory, PC/Mac register, borrowing, maintenance, and audit exports in CSV or PDF, plus a detailed operational overview PDF
 - Public borrowing requests from QR codes, including future reservations in the same borrow form, staff approval, checkout, cancellation, and return tracking
 - QR issue reports routed to Maintenance, with a source filter, staff inspection, item history, and CSV/PDF exports
@@ -23,7 +24,11 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
 - Bulk retirement keeps a record and its history, while administrator-only permanent deletion is deliberately blocked for records with borrowing or maintenance history
 - Shared dashboard notes and a paginated activity history that records the responsible user
-- Administrator account management, account deactivation, and password reset
+- Administrator account management, account deactivation, password reset, and unlocking accounts that were temporarily locked after repeated failed sign-ins
+- Overdue loans are flagged in Borrowing and on the dashboard worklist, can be filtered, and staff can change a checked-out item's return time (availability is re-checked against other bookings)
+- The public QR page lists when an item is already booked or in use (times only, never borrower details)
+- Quick navigation (Ctrl/Cmd + K) supports arrow keys and Enter, and finds equipment by name, tag, serial, or room
+- CSV exports use Philippine time, matching the screens and PDF reports
 - Optimistic inventory, borrowing, and maintenance changes with automatic rollback on failed saves
 - Live dashboard and public QR updates across browser sessions, with reconnect and polling fallback
 
@@ -110,7 +115,7 @@ Before any public deployment, replace or remove every temporary development acco
 
 ## Safety and verification
 
-Public borrowing, return, and issue reports are rate-limited using a hashed request fingerprint. Completed, declined, and cancelled requests retain operational history while the borrower's name, student number, contact number, and notes are redacted after their retention deadline. New requests set that deadline to the expected return time plus `BORROWER_DATA_RETENTION_DAYS` (365 days by default). Schedule `npm run db:purge-borrower-data` daily on the school server.
+Public borrowing, return, and issue reports are rate-limited using a hashed request fingerprint. Completed, declined, and cancelled requests retain operational history while the borrower's name, student number, contact number, and notes are redacted after their retention deadline. New requests set that deadline to the expected return time plus `BORROWER_DATA_RETENTION_DAYS` (365 days by default). Expired details are redacted automatically, at most every six hours, whenever staff open the dashboard, so hosting without a scheduler (such as Vercel) still honors the retention period. On a school server you can also schedule `npm run db:purge-borrower-data` daily.
 
 Run `npm run test:unit` for fast logic tests, `npm run test:e2e` for public browser checks, `npm run test:db` against a configured database, and `npm run verify` before deployment. GitHub Actions runs the unit, browser, lint, type, and production-build checks on every push and pull request.
 

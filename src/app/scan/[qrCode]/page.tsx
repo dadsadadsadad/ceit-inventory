@@ -7,6 +7,7 @@ import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-aut
 import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowStatus } from "@/lib/borrow-status";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { formatManilaDate } from "@/lib/manila-date";
 import { isInventoryQrCode } from "@/lib/qr-code";
 import { prisma } from "@/prisma";
 
@@ -79,7 +80,8 @@ export default async function ScannedItemPage({
   const requestSent =
     (Array.isArray(search.request) ? search.request[0] : search.request) === "sent";
   const returnSent = (Array.isArray(search.return) ? search.return[0] : search.return) === "sent";
-  const [activeLoans, activeIndividualLoan] = await Promise.all([
+  const now = new Date();
+  const [activeLoans, activeIndividualLoan, bookedTimes] = await Promise.all([
     prisma.borrowRequest.aggregate({
       where: {
         inventoryItemId: item.id,
@@ -95,6 +97,24 @@ export default async function ScannedItemPage({
         checkedOutItemStatus: { not: null },
       },
     }),
+    // Only the times are public, never who borrowed the equipment.
+    item.itemType === ItemType.ASSET
+      ? prisma.borrowRequest.findMany({
+          where: {
+            inventoryItemId: item.id,
+            OR: [
+              {
+                status: { in: [borrowStatus.REQUESTED, borrowStatus.RESERVED] },
+                expectedReturnDate: { gt: now },
+              },
+              { status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] } },
+            ],
+          },
+          select: { expectedReturnDate: true, startsAt: true, status: true },
+          orderBy: { startsAt: "asc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
   ]);
   const availableQuantity = item.quantity + (activeLoans._sum.requestedQuantity ?? 0);
   const borrowable = isBorrowableItem(item, activeIndividualLoan > 0) && availableQuantity > 0;
@@ -167,6 +187,35 @@ export default async function ScannedItemPage({
             </div>
           </dl>
         </article>
+
+        {bookedTimes.length ? (
+          <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="booked-times-heading">
+            <h2 id="booked-times-heading" className="text-base font-semibold">
+              When this item is not available
+            </h2>
+            <p className="muted mt-1 text-sm leading-6">
+              Choose a pickup and return time outside these periods. All times are Philippine time.
+            </p>
+            <ul className="mt-4 space-y-3 text-sm">
+              {bookedTimes.map((booking, index) => {
+                const inUse =
+                  booking.status === borrowStatus.BORROWED ||
+                  booking.status === borrowStatus.RETURN_REQUESTED;
+                const late = inUse && booking.expectedReturnDate <= now;
+                return (
+                  <li key={index} className="divider border-l pl-3">
+                    <p className="font-semibold">{inUse ? "In use" : "Booked"}</p>
+                    <p className="muted mt-0.5">
+                      {late
+                        ? "Past its return time, waiting for staff to confirm the return."
+                        : `${inUse ? "Until " : `${formatManilaDate(booking.startsAt, { dateStyle: "medium", timeStyle: "short" })} to `}${formatManilaDate(booking.expectedReturnDate, { dateStyle: "medium", timeStyle: "short" })}`}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
 
         {/* Public borrowing, return, and issue-report forms. */}
         <BorrowReturnChooser
