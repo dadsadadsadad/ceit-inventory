@@ -8,7 +8,8 @@ import { auditEventData } from "@/lib/audit-event";
 import { borrowStatus } from "@/lib/borrow-status";
 import { checkLoanAvailability } from "@/lib/loan-availability";
 import { normalizeContactNumber } from "@/lib/contact-number";
-import { parseManilaDateTime, validateBorrowSchedule } from "@/lib/borrow-schedule";
+import { borrowPolicyFromEnvironment, type BorrowPolicy } from "@/lib/borrow-policy";
+import { isHoldLapsed, parseManilaDateTime, validateBorrowSchedule } from "@/lib/borrow-schedule";
 import { FormError, formAction } from "@/lib/form-action";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
@@ -109,6 +110,7 @@ function publicBorrowError(error: unknown) {
 }
 
 type BorrowRequestInput = {
+  policy: BorrowPolicy;
   borrowerName: string;
   contact: string;
   expectedReturnDate: Date;
@@ -148,23 +150,61 @@ async function createBorrowRequest(input: BorrowRequestInput) {
             itemUnavailable();
           }
 
-          const activeStatuses = [
-            borrowStatus.REQUESTED,
-            borrowStatus.RESERVED,
-            borrowStatus.BORROWED,
-            borrowStatus.RETURN_REQUESTED,
-          ];
-          const existingRequest = await transaction.borrowRequest.findFirst({
+          // Requests that nobody acted on in time no longer count against the student,
+          // because a student cannot cancel them.
+          const now = new Date();
+          const studentRequests = await transaction.borrowRequest.findMany({
             where: {
-              inventoryItemId: item.id,
               studentNumber: input.studentNumber,
-              status: { in: activeStatuses },
-              startsAt: { lt: input.expectedReturnDate },
-              expectedReturnDate: { gt: input.startsAt },
+              status: {
+                in: [
+                  borrowStatus.REQUESTED,
+                  borrowStatus.RESERVED,
+                  borrowStatus.BORROWED,
+                  borrowStatus.RETURN_REQUESTED,
+                ],
+              },
             },
-            select: { id: true },
+            select: {
+              inventoryItemId: true,
+              startsAt: true,
+              expectedReturnDate: true,
+              requestedQuantity: true,
+              requestedAt: true,
+              isReservation: true,
+              status: true,
+            },
           });
-          if (existingRequest) {
+          const hasOverdueLoan = studentRequests.some(
+            (request) =>
+              (request.status === borrowStatus.BORROWED ||
+                request.status === borrowStatus.RETURN_REQUESTED) &&
+              request.expectedReturnDate <= now,
+          );
+          if (hasOverdueLoan) {
+            throw new FormError(
+              "You still have equipment that is past its return time. Please return it to CEIT staff before requesting more.",
+            );
+          }
+          const openRequests = studentRequests.filter(
+            (request) =>
+              !isHoldLapsed(request, now, input.policy) &&
+              (request.status === borrowStatus.BORROWED ||
+                request.status === borrowStatus.RETURN_REQUESTED ||
+                request.expectedReturnDate > now),
+          );
+          if (openRequests.length >= input.policy.maximumActiveRequestsPerStudent) {
+            throw new FormError(
+              `You already have ${input.policy.maximumActiveRequestsPerStudent} open requests or loans. Wait for CEIT staff to process them, or return equipment, before requesting more.`,
+            );
+          }
+          const overlapsExisting = openRequests.some(
+            (request) =>
+              request.inventoryItemId === item.id &&
+              request.startsAt < input.expectedReturnDate &&
+              request.expectedReturnDate > input.startsAt,
+          );
+          if (overlapsExisting) {
             throw new FormError("You already have an active request for this item.");
           }
 
@@ -234,6 +274,7 @@ export async function submitBorrowRequest(formData: FormData) {
     }
 
     const qrCode = readQrCode(formData);
+    const policy = borrowPolicyFromEnvironment();
     const now = new Date();
     const isReservation = formData.get("borrowWhen") === "later";
     let startsAt: Date;
@@ -246,11 +287,12 @@ export async function submitBorrowRequest(formData: FormData) {
         readText(formData, "expectedReturnDate", 16),
         "return date and time",
       );
-      validateBorrowSchedule(startsAt, expectedReturnDate, isReservation, now);
+      validateBorrowSchedule(startsAt, expectedReturnDate, isReservation, now, policy);
     } catch (error) {
       throw new FormError(error instanceof Error ? error.message : "Choose valid borrowing dates.");
     }
     const input: BorrowRequestInput = {
+      policy,
       qrCode,
       borrowerName: requiredText(formData, "borrowerName", "Full name", 120, 2),
       studentNumber: readStudentNumber(formData),

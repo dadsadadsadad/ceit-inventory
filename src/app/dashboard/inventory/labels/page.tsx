@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import QRCode from "qrcode";
+import { FilterForm } from "@/app/components/filter-form";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryLabelAppUrl } from "@/lib/inventory-label-url";
 import { labelLayouts, labelPages, maximumLabelCount } from "@/lib/label-sheet";
@@ -79,7 +80,10 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
           {labels.length ? <PrintSheet ids={labels.map((item) => item.id)} /> : null}
         </header>
         {/* Choose the room, items, and label size. */}
-        <form className="no-print card flex flex-wrap items-end gap-4 rounded-lg p-5">
+        <FilterForm
+          label="Label filters"
+          className="no-print card flex flex-wrap items-end gap-4 rounded-lg p-5"
+        >
           {ids.length ? (
             <>
               <input type="hidden" name="ids" value={selection} />
@@ -95,7 +99,6 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               <span className="block text-sm font-semibold">Room</span>
               <select
                 name="location"
-                required
                 defaultValue={location}
                 className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
               >
@@ -125,7 +128,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
           <button className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
             Preview labels
           </button>
-        </form>
+        </FilterForm>
         {invalid || tooMany ? (
           <p className="notice no-print rounded-lg p-4" role="alert">
             Select up to {maximumLabelCount} valid items from Inventory to print a batch.

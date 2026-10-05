@@ -18,8 +18,8 @@ import {
   clearSession,
   hashPassword,
   passwordValidationMessage,
-  requireAdministrator,
   requireInventoryAccess,
+  requireWriteAccess,
   verifyPassword,
 } from "@/lib/inventory-auth";
 
@@ -230,7 +230,7 @@ function setupWriteError(error: unknown, label: string) {
 // Categories and rooms.
 export async function createCategory(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const name = requiredText(formData, "name");
     try {
       const category = await prisma.category.create({
@@ -259,7 +259,7 @@ export async function createCategory(formData: FormData) {
 // Save the category name and tag code.
 export async function updateCategory(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const id = requiredId(formData);
     const name = requiredText(formData, "name");
     try {
@@ -290,7 +290,7 @@ export async function updateCategory(formData: FormData) {
 // Add a room with its asset-tag code.
 export async function createLocation(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     try {
       const location = await prisma.location.create({
         data: {
@@ -323,7 +323,7 @@ export async function createLocation(formData: FormData) {
 // Save room details and its tag code.
 export async function updateLocation(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const id = requiredId(formData);
     try {
       const location = await prisma.location.update({
@@ -358,7 +358,7 @@ export async function updateLocation(formData: FormData) {
 // Enable or disable a category for new assignments.
 export async function setCategoryActive(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const isActive = String(formData.get("isActive")) === "true";
     const category = await prisma.category.update({
       where: { id: requiredId(formData) },
@@ -380,7 +380,7 @@ export async function setCategoryActive(formData: FormData) {
 // Enable or disable a room for new assignments.
 export async function setLocationActive(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const isActive = String(formData.get("isActive")) === "true";
     const location = await prisma.location.update({
       where: { id: requiredId(formData) },
@@ -402,7 +402,7 @@ export async function setLocationActive(formData: FormData) {
 // Remove an unused category.
 export async function deleteCategory(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const id = requiredId(formData);
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "DELETE") {
@@ -466,7 +466,7 @@ export async function deleteCategory(formData: FormData) {
 // Remove an unused room.
 export async function deleteLocation(formData: FormData) {
   return formAction(async () => {
-    const actor = await requireAdministrator();
+    const actor = await requireWriteAccess();
     const id = requiredId(formData);
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "DELETE") {

@@ -9,6 +9,7 @@ export const liveScopeTables = {
     "InventoryAudit",
   ],
   inventory: ["InventoryItem", "Category", "Location", "Computer"],
+  directory: ["InventoryItem", "Location", "Computer", "ComputerSoftware"],
   item: [
     "InventoryItem",
     "Category",
@@ -46,6 +47,9 @@ export function liveUpdateScope(pathname: string): LiveUpdateScope | null {
   }
   if (path === "/dashboard/inventory/labels") {
     return "labels";
+  }
+  if (path === "/dashboard/inventory/hardware" || path === "/dashboard/inventory/software") {
+    return "directory";
   }
   if (/^\/dashboard\/inventory\/[^/]+(?:\/label)?$/.test(path)) {
     return "item";

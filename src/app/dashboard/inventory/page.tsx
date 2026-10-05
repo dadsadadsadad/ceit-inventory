@@ -4,11 +4,7 @@ import Link from "next/link";
 import { ItemCondition, ItemStatus } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
-import {
-  canManageAdministration,
-  canManageInventory,
-  requireInventoryAccess,
-} from "@/lib/inventory-auth";
+import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { humanizeEnum } from "@/lib/labels";
 import { pageParam } from "@/lib/search-params";
@@ -32,6 +28,7 @@ import {
 } from "./inventory-query";
 import { InventoryRecords } from "./inventory-records";
 import { InventoryRowNavigation } from "./inventory-row-navigation";
+import { InventoryTabs } from "./inventory-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -156,6 +153,8 @@ export default async function InventoryPage({
           ) : null}
         </header>
 
+        <InventoryTabs current="inventory" />
+
         <InventoryFilters
           bulkMode={bulkMode}
           categories={categories}
@@ -190,7 +189,6 @@ export default async function InventoryPage({
             {bulkMode ? (
               <InventoryBulkActions
                 allItemIds={allMatchingItemIds}
-                canPermanentlyDelete={canManageAdministration(user.role)}
                 locations={locations.map((location) => ({
                   label: location.name,
                   value: location.id,

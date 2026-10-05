@@ -237,25 +237,34 @@ test("mobile quick navigation opens with the sidebar closed and restores focus",
   await expect(navigationButton).toBeFocused();
 });
 
-test("report reset clears edited and initially selected filters", async ({ page }) => {
+test("the report builder clears filters and only offers controls that fit the report", async ({
+  page,
+}) => {
   await signIn(page);
   await page.goto("/dashboard/reports?kind=maintenance&maintenanceSource=QR&period=today");
-  const form = page.locator(".reports-export-form");
+  const form = page.getByRole("form", { name: "Report builder" });
+  await expect(form.locator('select[name="maintenanceSource"]')).toHaveValue("QR");
+  await expect(form.locator('select[name="period"]')).toHaveValue("today");
+
   await form.getByLabel("From", { exact: true }).fill("2026-09-01");
-  await form.getByRole("button", { name: "Reset filters" }).click();
-  await expect(form.getByRole("combobox", { name: "Report", exact: true })).toHaveValue(
-    "inventory",
-  );
-  await expect(form.getByLabel("Timeframe")).toHaveValue("all");
+  await expect(form.locator('select[name="period"]')).toHaveValue("");
+  await expect(form.getByText("Filters changed", { exact: false })).toBeVisible();
+
+  await form.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/reports\?kind=maintenance$/);
+  await expect(form.locator('select[name="maintenanceSource"]')).toHaveValue("");
+  await expect(form.locator('select[name="period"]')).toHaveValue("");
   await expect(form.getByLabel("From", { exact: true })).toHaveValue("");
-  await expect(form.getByLabel("To", { exact: true })).toHaveValue("");
-  await form.getByLabel("Inventory status").selectOption("DEFECTIVE");
-  await form.getByLabel("PC / Mac only").check();
-  await form.getByRole("button", { name: "Reset filters" }).click();
-  await expect(form.getByLabel("Inventory status")).toHaveValue("");
-  await expect(form.getByLabel("PC / Mac only")).not.toBeChecked();
-  await form.getByRole("combobox", { name: "Report", exact: true }).selectOption("maintenance");
-  await expect(form.getByLabel("Report source")).toHaveValue("");
+
+  await form.getByRole("radio", { name: "Borrowing" }).check({ force: true });
+  await expect(form.locator('select[name="borrowingState"]')).toBeVisible();
+  await expect(form.locator('select[name="maintenanceSource"]')).toHaveCount(0);
+  await form.getByRole("radio", { name: "Software" }).check({ force: true });
+  await expect(form.locator('select[name="license"]')).toBeVisible();
+  await expect(form.locator('select[name="period"]')).toHaveCount(0);
+  await form.getByRole("radio", { name: "Maintenance" }).check({ force: true });
+  await expect(form.locator('select[name="maintenanceSource"]')).toBeVisible();
+  await expect(form.locator('select[name="borrowingState"]')).toHaveCount(0);
 });
 
 test("every route has a readable mobile and desktop view in both themes", async ({ page }) => {

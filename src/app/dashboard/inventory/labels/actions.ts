@@ -26,7 +26,7 @@ export async function recordInventoryLabelPrinted(itemId: string) {
   await prisma.inventoryAudit.create({
     data: {
       itemId: item.id,
-      action: AuditAction.UPDATED,
+      action: AuditAction.EXPORTED,
       summary: "QR label opened for printing.",
       actorId: actor.id,
       actorName: auditActorName(actor),

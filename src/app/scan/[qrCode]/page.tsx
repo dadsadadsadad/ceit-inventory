@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 
 import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
 import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
+import { borrowPolicyFromEnvironment } from "@/lib/borrow-policy";
+import { isHoldLapsed } from "@/lib/borrow-schedule";
 import { borrowStatus } from "@/lib/borrow-status";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
@@ -81,7 +83,8 @@ export default async function ScannedItemPage({
     (Array.isArray(search.request) ? search.request[0] : search.request) === "sent";
   const returnSent = (Array.isArray(search.return) ? search.return[0] : search.return) === "sent";
   const now = new Date();
-  const [activeLoans, activeIndividualLoan, bookedTimes] = await Promise.all([
+  const policy = borrowPolicyFromEnvironment();
+  const [activeLoans, activeIndividualLoan, bookedRows] = await Promise.all([
     prisma.borrowRequest.aggregate({
       where: {
         inventoryItemId: item.id,
@@ -110,12 +113,23 @@ export default async function ScannedItemPage({
               { status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] } },
             ],
           },
-          select: { expectedReturnDate: true, startsAt: true, status: true },
+          select: {
+            expectedReturnDate: true,
+            isReservation: true,
+            requestedAt: true,
+            requestedQuantity: true,
+            startsAt: true,
+            status: true,
+          },
           orderBy: { startsAt: "asc" },
-          take: 6,
+          take: 12,
         })
       : Promise.resolve([]),
   ]);
+  // Bookings nobody collected or handled in time no longer hold the item.
+  const bookedTimes = bookedRows
+    .filter((booking) => !isHoldLapsed(booking, now, policy))
+    .slice(0, 6);
   const availableQuantity = item.quantity + (activeLoans._sum.requestedQuantity ?? 0);
   const borrowable = isBorrowableItem(item, activeIndividualLoan > 0) && availableQuantity > 0;
   const issueSent = (Array.isArray(search.issue) ? search.issue[0] : search.issue) === "sent";
@@ -219,6 +233,10 @@ export default async function ScannedItemPage({
 
         {/* Public borrowing, return, and issue-report forms. */}
         <BorrowReturnChooser
+          policy={{
+            maximumAdvanceDays: policy.maximumAdvanceDays,
+            maximumLoanDays: policy.maximumLoanDays,
+          }}
           key={`${qrCode}-${requestSent}-${returnSent}-${issueSent}`}
           qrCode={item.qrCode}
           itemName={item.name}

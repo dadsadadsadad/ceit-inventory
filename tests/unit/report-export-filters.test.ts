@@ -5,7 +5,6 @@ import {
   borrowingReportDateWhere,
   parseReportExportFilters,
 } from "@/lib/report-export-filters";
-import { hasFilters } from "@/lib/reports/format";
 
 describe("report export filters", () => {
   const now = new Date("2026-09-01T05:30:00.000Z");
@@ -97,6 +96,7 @@ describe("report export filters", () => {
 
   it.each([
     ["currently-borrowed", "processedAt"],
+    ["overdue", "expectedReturnDate"],
     ["returned", "returnedAt"],
     ["reserved", "startsAt"],
     ["cancelled", "cancelledAt"],
@@ -121,9 +121,68 @@ describe("report export filters", () => {
     expect(borrowingReportDateWhere(filters)).toEqual({});
   });
 
-  it("marks maintenance source exports as filtered", () => {
-    const filters = parseReportExportFilters(new URLSearchParams({ maintenanceSource: "QR" }), now);
-    expect(hasFilters(filters, { maintenance: true })).toBe(true);
-    expect(hasFilters(filters, { inventory: true })).toBe(false);
+  it("reads the filters the report builder adds", () => {
+    const id = "6f1c2f0e-8f6a-4a43-9d1b-0a8f4e5c9b11";
+    const filters = parseReportExportFilters(
+      new URLSearchParams({
+        q: "  dell   lab ",
+        category: id,
+        location: id,
+        condition: "POOR",
+        itemType: "SUPPLY",
+        attention: "1",
+        incomplete: "1",
+        retired: "1",
+        license: "expiring",
+        component: "memory",
+        maintenanceStatus: "OPEN",
+        maintenancePriority: "URGENT",
+      }),
+      now,
+    );
+    expect(filters).toMatchObject({
+      query: "dell lab",
+      categoryId: id,
+      locationId: id,
+      condition: "POOR",
+      itemType: "SUPPLY",
+      attention: true,
+      incomplete: true,
+      includeRetired: true,
+      license: "expiring",
+      component: "memory",
+      maintenanceStatus: "OPEN",
+      maintenancePriority: "URGENT",
+    });
+  });
+
+  it("leaves the new filters off by default", () => {
+    const filters = parseReportExportFilters(new URLSearchParams(), now);
+    expect(filters).toMatchObject({ attention: false, incomplete: false, includeRetired: false });
+    expect(filters.query).toBeUndefined();
+    expect(filters.license).toBeUndefined();
+  });
+
+  it.each([
+    ["category", "nope", "Invalid category."],
+    ["location", "nope", "Invalid location."],
+    ["condition", "BROKEN", "Invalid condition."],
+    ["itemType", "THING", "Invalid item type."],
+    ["license", "forever", "Invalid license filter."],
+    ["component", "fan", "Invalid hardware component."],
+    ["maintenanceStatus", "DONE", "Invalid maintenance status."],
+    ["maintenancePriority", "SOON", "Invalid maintenance priority."],
+  ])("rejects an invalid %s", (key, value, message) => {
+    expect(() => parseReportExportFilters(new URLSearchParams({ [key]: value }), now)).toThrow(
+      message,
+    );
+  });
+
+  it("treats overdue like currently borrowed for the status check", () => {
+    const filters = parseReportExportFilters(
+      new URLSearchParams({ borrowingState: "overdue" }),
+      now,
+    );
+    expect(borrowingReportStatusFilter(filters)).toEqual({ in: ["BORROWED", "RETURN_REQUESTED"] });
   });
 });

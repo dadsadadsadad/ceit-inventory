@@ -1,301 +1,186 @@
 export const metadata = { title: "Reports · CEIT Inventory" };
 
 import Link from "next/link";
-import { ReportExportForm } from "./report-export-form";
 
-import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
+import { AuditAction, ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 
+import { auditActionLabel, auditViewLabel, auditViews } from "@/lib/audit-trail";
+import { hardwareComponents, licenseFilters } from "@/lib/computer-directory";
+import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { requireInventoryAccess } from "@/lib/inventory-auth";
 import {
-  canManageAdministration,
-  canManageInventory,
-  requireInventoryAccess,
-} from "@/lib/inventory-auth";
-import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
-import { borrowingReportStates, exportPeriods } from "@/lib/report-export-filters";
-import { firstParam } from "@/lib/search-params";
+  borrowingReportStateLabel,
+  borrowingReportStates,
+  exportPeriods,
+} from "@/lib/report-export-filters";
+import { buildReport } from "@/lib/reports/build";
+import { humanize } from "@/lib/reports/format";
+import { quickReports } from "@/lib/reports/kinds";
+import { ReportRequestError, type ReportModel } from "@/lib/reports/model";
+import { firstParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
+
+import { ReportBuilder, type ReportBuilderOptions } from "./report-builder";
+import { ReportSheet } from "./report-sheet";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = {
-  borrowingState?: string | string[];
-  borrowingStatus?: string | string[];
-  from?: string | string[];
-  inventoryStatus?: string | string[];
-  kind?: string | string[];
-  maintenanceSource?: string | string[];
-  pcOnly?: string | string[];
-  period?: string | string[];
-  to?: string | string[];
+type SearchParams = Record<string, RawParam>;
+
+const periodLabels: Record<(typeof exportPeriods)[number], string> = {
+  all: "All time",
+  today: "Today",
+  "last-7-days": "Last 7 days",
+  "last-30-days": "Last 30 days",
+  "this-month": "This month",
+  "this-year": "This year",
 };
 
-const philippinePeso = new Intl.NumberFormat("en-PH", {
-  currency: "PHP",
-  minimumFractionDigits: 2,
-  style: "currency",
-});
+const licenseLabels: Record<(typeof licenseFilters)[number], string> = {
+  expired: "Expired",
+  expiring: "Ending within 30 days",
+  dated: "Has a license date",
+  none: "No license date",
+};
 
-function displayPurchasePrice(value?: { toString: () => string } | null) {
-  return philippinePeso.format(Number(value?.toString() ?? 0));
+function options<T extends string>(values: readonly T[], label: (value: T) => string) {
+  return values.map((value) => ({ value, label: label(value) }));
 }
 
-function validValue<T extends string>(value: string | undefined, values: readonly T[]) {
-  return value && values.includes(value as T) ? (value as T) : "";
-}
-
-// Load report totals and export options.
+// Choose a report, narrow it down, generate it here, then download it as PDF or CSV.
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const [user, search] = await Promise.all([requireInventoryAccess(), searchParams]);
-  const canManage = canManageInventory(user.role);
-  const canAdmin = canManageAdministration(user.role);
-  const today = new Date();
-  const [
-    statusCounts,
-    categoryCounts,
-    locationCounts,
-    openTicketCount,
-    activeBorrowCount,
-    overdueBorrowCount,
-    acquisitionSummary,
-  ] = await Promise.all([
-    prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.category.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, _count: { select: { items: true } } },
-    }),
-    prisma.location.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, _count: { select: { items: true } } },
-    }),
-    canManage
-      ? prisma.maintenanceTicket.count({ where: { status: { not: MaintenanceStatus.RESOLVED } } })
-      : Promise.resolve(0),
-    canManage
-      ? prisma.borrowRequest.count({
-          where: { status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] } },
-        })
-      : Promise.resolve(0),
-    canManage
-      ? prisma.borrowRequest.count({
-          where: {
-            status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
-            expectedReturnDate: { lt: today },
-          },
-        })
-      : Promise.resolve(0),
-    canManage
-      ? prisma.inventoryItem.aggregate({
-          _count: { purchasePrice: true },
-          _sum: { purchasePrice: true },
-        })
-      : Promise.resolve({ _count: { purchasePrice: 0 }, _sum: { purchasePrice: null } }),
+  await requireInventoryAccess();
+  const search = await searchParams;
+  const parameters = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    const selected = firstParam(value);
+    if (selected) {
+      parameters.set(key, selected);
+    }
+  }
+  const generate = parameters.get("generate") === "1";
+  parameters.delete("generate");
+
+  const [categories, locations] = await Promise.all([
+    prisma.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.location.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
-  const itemCount = statusCounts.reduce((total, entry) => total + entry._count._all, 0);
-  const statusMap = new Map(statusCounts.map((entry) => [entry.status, entry._count._all]));
-  const populatedCategories = categoryCounts
-    .filter((category) => category._count.items > 0)
-    .sort((left, right) => right._count.items - left._count.items)
-    .slice(0, 8);
-  const populatedLocations = locationCounts
-    .filter((location) => location._count.items > 0)
-    .sort((left, right) => right._count.items - left._count.items)
-    .slice(0, 8);
-  const availableReportKinds = [
-    "inventory",
-    ...(canManage ? ["pcs", "borrowings", "maintenance"] : []),
-    ...(canAdmin ? ["activity"] : []),
-  ] as const;
-  const selectedKind = validValue(firstParam(search.kind), availableReportKinds) || "inventory";
-  const selectedPeriod = validValue(firstParam(search.period), exportPeriods) || "all";
-  const selectedInventoryStatus = validValue(
-    firstParam(search.inventoryStatus),
-    Object.values(ItemStatus),
-  );
-  const selectedBorrowingState =
-    validValue(firstParam(search.borrowingState), borrowingReportStates) || "all";
-  const selectedFrom = firstParam(search.from)?.slice(0, 10) ?? "";
-  const selectedTo = firstParam(search.to)?.slice(0, 10) ?? "";
-  const pcOnly = firstParam(search.pcOnly) === "1";
-  const maintenanceSource = validValue(firstParam(search.maintenanceSource), [
-    "QR",
-    "STAFF",
-  ] as const);
+  const builderOptions: ReportBuilderOptions = {
+    actions: options(Object.values(AuditAction), auditActionLabel),
+    auditViews: options(auditViews, auditViewLabel),
+    borrowingStates: options(borrowingReportStates, borrowingReportStateLabel).filter(
+      (entry) => entry.value !== "all",
+    ),
+    categories: categories.map((entry) => ({ value: entry.id, label: entry.name })),
+    components: options(
+      hardwareComponents.map((entry) => entry.value),
+      (value) => hardwareComponents.find((entry) => entry.value === value)?.label ?? value,
+    ),
+    conditions: options(Object.values(ItemCondition), humanize),
+    inventoryStatuses: options(Object.values(ItemStatus), inventoryStatusLabel),
+    itemTypes: options(Object.values(ItemType), (value) =>
+      value === "ASSET" ? "Equipment" : "Supplies",
+    ),
+    licenses: options(licenseFilters, (value) => licenseLabels[value]),
+    locations: locations.map((entry) => ({ value: entry.id, label: entry.name })),
+    maintenancePriorities: options(["LOW", "NORMAL", "HIGH", "URGENT"], humanize),
+    maintenanceSources: [
+      { value: "QR", label: "QR issue reports" },
+      { value: "STAFF", label: "Staff" },
+    ],
+    maintenanceStatuses: [
+      { value: "OPEN", label: "Needs attention" },
+      { value: "RESOLVED", label: "Resolved" },
+    ],
+    periods: options(exportPeriods, (value) => periodLabels[value]),
+  };
+
+  let report: ReportModel | null = null;
+  let problem: string | null = null;
+  if (generate) {
+    try {
+      report = await buildReport(parameters, "preview");
+    } catch (error) {
+      if (error instanceof ReportRequestError) {
+        problem = error.message;
+      } else {
+        console.error("Unable to build report", error);
+        problem = "The report could not be built. Check the database connection and try again.";
+      }
+    }
+  }
+
+  const query = parameters.toString();
+  const downloads = (path: string) => (query ? `${path}?${query}` : path);
+  const initial = Object.fromEntries(parameters.entries());
 
   return (
     <div className="page reports-page">
       <div className="page-inner space-y-6">
-        {/* Report title and overview download. */}
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow">Department records</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Reports</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Review inventory totals and download reports for your department.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="/dashboard/reports/export/pdf"
-              className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
-            >
-              Download overview PDF
-            </a>
-          </div>
+        <header>
+          <p className="eyebrow">Department records</p>
+          <h1 className="title mt-3 text-3xl sm:text-4xl">Reports</h1>
+          <p className="muted mt-2 max-w-2xl text-sm leading-6">
+            Pick a report, narrow it down, and generate it right here. When it looks right, download
+            it as a PDF to share or a CSV for a spreadsheet.
+          </p>
         </header>
 
-        {/* Current inventory and request totals. */}
-        <section
-          className={`grid gap-4 sm:grid-cols-2 ${canManage ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
-        >
-          <article className="card rounded-lg p-5">
-            <p className="muted text-xs font-bold uppercase tracking-wide">Inventory records</p>
-            <p className="mt-3 text-3xl font-semibold">{itemCount.toLocaleString()}</p>
-          </article>
-          {canManage ? (
-            <>
-              <article className="card rounded-lg p-5">
-                <p className="muted text-xs font-bold uppercase tracking-wide">Acquisition value</p>
-                <p className="mt-3 text-3xl font-semibold">
-                  {displayPurchasePrice(acquisitionSummary._sum.purchasePrice)}
-                </p>
-                <p className="muted mt-2 text-sm">
-                  {acquisitionSummary._count.purchasePrice.toLocaleString()} priced record
-                  {acquisitionSummary._count.purchasePrice === 1 ? "" : "s"}
-                </p>
-              </article>
-              <article className="card rounded-lg p-5">
-                <p className="muted text-xs font-bold uppercase tracking-wide">Open maintenance</p>
-                <p className="mt-3 text-3xl font-semibold">{openTicketCount}</p>
-                <Link
-                  href="/dashboard/maintenance"
-                  className="accent-link mt-3 inline-block text-sm font-semibold"
-                >
-                  View requests
-                </Link>
-              </article>
-              <article className="card rounded-lg p-5">
-                <p className="muted text-xs font-bold uppercase tracking-wide">
-                  Currently borrowed
-                </p>
-                <p className="mt-3 text-3xl font-semibold">{activeBorrowCount}</p>
-                <p className="muted mt-2 text-sm">
-                  {overdueBorrowCount ? (
-                    <Link
-                      href="/dashboard/borrowing?status=OVERDUE"
-                      className="accent-link font-semibold"
-                    >
-                      {overdueBorrowCount} overdue
-                    </Link>
-                  ) : (
-                    "0 overdue"
-                  )}
-                </p>
-              </article>
-            </>
-          ) : null}
-        </section>
+        <ReportBuilder key={JSON.stringify(initial)} initial={initial} options={builderOptions} />
 
-        {/* Filtered CSV and PDF downloads. */}
-        <section className="card rounded-lg p-5 sm:p-6" aria-labelledby="filtered-export-heading">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="eyebrow">Filtered exports</p>
-              <h2 id="filtered-export-heading" className="mt-1 text-lg font-semibold">
-                Download a report
-              </h2>
-              <p className="muted mt-1 max-w-3xl text-sm leading-6">
-                Choose a report and date range, then download a CSV or PDF.
-              </p>
-            </div>
-            {canAdmin ? (
-              <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
-                Open audit trail
-              </Link>
-            ) : null}
+        {problem ? (
+          <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
+            {problem}
           </div>
-          <ReportExportForm
-            key={JSON.stringify([
-              selectedKind,
-              selectedPeriod,
-              selectedFrom,
-              selectedTo,
-              selectedInventoryStatus,
-              selectedBorrowingState,
-              maintenanceSource,
-              pcOnly,
-            ])}
-            canAdmin={canAdmin}
-            initial={{
-              kind: selectedKind,
-              period: selectedPeriod,
-              from: selectedFrom,
-              to: selectedTo,
-              inventoryStatus: selectedInventoryStatus,
-              borrowingState: selectedBorrowingState,
-              maintenanceSource,
-              pcOnly,
-            }}
+        ) : null}
+
+        {report ? (
+          <ReportSheet
+            report={report}
+            actions={
+              <>
+                <a
+                  href={downloads("/dashboard/reports/export/pdf")}
+                  className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                >
+                  Download PDF
+                </a>
+                <a
+                  href={downloads("/dashboard/reports/export")}
+                  className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                >
+                  Download CSV
+                </a>
+              </>
+            }
           />
-        </section>
-
-        {/* Record counts for each equipment status. */}
-        <section className="card rounded-lg p-5 sm:p-6">
-          <h2 className="text-lg font-semibold">Status distribution</h2>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {Object.values(ItemStatus).map((status) => (
-              <div
-                key={status}
-                className="card-muted flex items-center justify-between rounded-lg px-4 py-3"
-              >
-                <span
-                  className={`${inventoryStatusClass(status)} rounded-md px-2 py-1 text-xs font-semibold`}
-                >
-                  {inventoryStatusLabel(status)}
-                </span>
-                <strong>{statusMap.get(status) ?? 0}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-2">
-          {/* Inventory grouped by category. */}
-          <article className="card rounded-lg p-5 sm:p-6">
-            <h2 className="text-lg font-semibold">Largest categories</h2>
-            {populatedCategories.length ? (
-              <ul className="mt-4 divide-y">
-                {populatedCategories.map((category) => (
-                  <li key={category.id} className="flex items-center justify-between py-3 text-sm">
-                    <span>{category.name}</span>
-                    <strong>{category._count.items}</strong>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted mt-4 text-sm">No categorized inventory records yet.</p>
-            )}
-          </article>
-          {/* Inventory grouped by location. */}
-          <article className="card rounded-lg p-5 sm:p-6">
-            <h2 className="text-lg font-semibold">Largest locations</h2>
-            {populatedLocations.length ? (
-              <ul className="mt-4 divide-y">
-                {populatedLocations.map((location) => (
-                  <li key={location.id} className="flex items-center justify-between py-3 text-sm">
-                    <span>{location.name}</span>
-                    <strong>{location._count.items}</strong>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted mt-4 text-sm">No location assignments yet.</p>
-            )}
-          </article>
-        </section>
+        ) : !problem ? (
+          <section aria-labelledby="quick-reports-heading" className="space-y-3">
+            <div>
+              <h2 id="quick-reports-heading" className="text-lg font-semibold">
+                Quick reports
+              </h2>
+              <p className="muted text-sm">Common questions, ready to generate in one click.</p>
+            </div>
+            <ul className="quick-reports">
+              {quickReports.map((quick) => (
+                <li key={quick.label}>
+                  <Link
+                    href={`/dashboard/reports?${new URLSearchParams({ ...quick.query, generate: "1" })}`}
+                    className="quick-report card card-link"
+                  >
+                    <strong>{quick.label}</strong>
+                    <span className="muted text-sm">{quick.description}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </div>
     </div>
   );

@@ -8,11 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { auditEventData } from "@/lib/audit-event";
-import {
-  hashPassword,
-  passwordValidationMessage,
-  requireAdministrator,
-} from "@/lib/inventory-auth";
+import { hashPassword, passwordValidationMessage, requireUserManager } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
 const roles = Object.values(UserRole);
@@ -71,7 +67,7 @@ function knownWriteError(error: unknown) {
 // Staff account management.
 export async function createUser(formData: FormData) {
   return formAction(async () => {
-    const administrator = await requireAdministrator();
+    const administrator = await requireUserManager();
     const password = passwordFrom(formData, true);
     if (!password) {
       throw new FormError("A password is required for a new account.");
@@ -114,7 +110,7 @@ export async function createUser(formData: FormData) {
 // Save account changes and protect the last administrator.
 export async function updateUser(formData: FormData) {
   return formAction(async () => {
-    const administrator = await requireAdministrator();
+    const administrator = await requireUserManager();
     const id = idFrom(formData);
     const role = roleFrom(formData);
     const isActive = formData.get("isActive") === "on";
@@ -222,7 +218,7 @@ export async function updateUser(formData: FormData) {
 // Let an administrator end a temporary sign-in lock without changing the password.
 export async function unlockUser(formData: FormData) {
   return formAction(async () => {
-    const administrator = await requireAdministrator();
+    const administrator = await requireUserManager();
     const id = idFrom(formData);
     try {
       const account = await prisma.user.update({

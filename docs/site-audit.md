@@ -1,3 +1,44 @@
+# Website audit — 6 October 2026
+
+A larger release than the earlier passes: new features, a new look, and a structural cleanup.
+
+**Features.** Hardware and Software views in Inventory. Reports rebuilt around one data model, with
+eight reports, filters for each, an in-page preview with a Generate step, and PDF and CSV downloads
+drawn from the same data. Two account types (Administrator and Faculty staff). Borrowing limits
+(3 days ahead, 7-day loans, 14 with an extension, 3 open requests, overdue block, missed pickups
+released). An audit trail that opens on important changes and groups events by day. Filters that
+apply as you choose them on every list.
+
+**Look.** The charcoal-and-orange look was replaced by a paper-and-ink "ledger" look, with the
+details in [design-system.md](design-system.md). The two overlapping stylesheets (about 5,900
+lines) became six ordered files under `src/app/styles/`.
+
+**Structure.** Large pages and action files were split into modules, repeated helpers were
+merged, and sign-in is checked centrally as well as on each page.
+
+Comparable products were reviewed for ideas that were not built; see
+[research-notes.md](research-notes.md).
+
+## Verification
+
+- Format check, ESLint, and TypeScript checks passed.
+- All 152 unit tests passed (including the report builders, the PDF renderer, audit views, borrowing
+  limits, and the hardware and software grouping).
+- Production build passed.
+- The full launch suite (75 browser tests, including the public-page checks) ran against a
+  production build in an isolated `ceit_test_launch_*` schema. All passed; one appearance-panel
+  check first reported a button 0.00002px under 44px, so those buttons now have a small margin
+  above the minimum, and that file was re-run and passed.
+- Reports were generated in every format and every PDF was rendered to images and inspected.
+- The interface was reviewed in both themes at desktop and phone widths.
+
+Tests that encoded the old look were updated to the new one: the page backgrounds are now paper
+and ink instead of neutral grays, and light is the default theme. The expectations that mattered
+stayed the same: readable text of at least 14px, 44px touch targets, an accent that never tints the
+page, a sidebar that stays in view, and the same hover and press behaviour.
+
+---
+
 # Website audit — 3 October 2026
 
 Implemented a calmer CEIT equipment-register visual system, grouped navigation,

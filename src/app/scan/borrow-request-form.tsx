@@ -3,17 +3,30 @@
 import { useState } from "react";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
-import { manilaDateTimeInput } from "@/lib/borrow-schedule";
+import { dayCount } from "@/lib/borrow-policy";
+import { borrowInputLimits } from "@/lib/borrow-schedule";
 import { submitBorrowRequest } from "./borrow-actions";
 
-type BorrowRequestFormProps = { itemName: string; maximumQuantity: number; qrCode: string };
+type BorrowRequestFormProps = {
+  itemName: string;
+  maximumQuantity: number;
+  /** The borrowing rules, shown to the student and used to limit the date pickers. */
+  policy: { maximumAdvanceDays: number; maximumLoanDays: number };
+  qrCode: string;
+};
 const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
 
 // Collect an immediate loan or a future reservation.
-export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowRequestFormProps) {
+export function BorrowRequestForm({
+  itemName,
+  maximumQuantity,
+  policy,
+  qrCode,
+}: BorrowRequestFormProps) {
   const [when, setWhen] = useState("now");
   const [pickup, setPickup] = useState("");
   const maximum = Math.min(Math.max(Math.trunc(maximumQuantity), 1), 1_000);
+  const limits = borrowInputLimits(policy, when === "later" ? pickup : undefined);
   return (
     <FeedbackForm action={submitBorrowRequest} className="card request-form rounded-lg p-5 sm:p-7">
       {/* Link this request to the scanned item. */}
@@ -26,6 +39,11 @@ export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowR
       <p className="muted mt-2 text-sm leading-6">
         Borrow today or reserve a time later. Wait for staff confirmation before collecting the
         equipment.
+      </p>
+      <p className="notice mt-3 rounded-lg px-4 py-3 text-sm leading-6">
+        Reservations can be made up to {dayCount(policy.maximumAdvanceDays)} ahead, and equipment
+        can be kept for up to {dayCount(policy.maximumLoanDays)}. Return it on time so others can
+        use it.
       </p>
       {/* Choose borrowing now or reserving for later. */}
       <fieldset className="mt-6">
@@ -61,7 +79,8 @@ export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowR
               name="startsAt"
               type="datetime-local"
               required
-              min={manilaDateTimeInput()}
+              min={limits.pickupMin}
+              max={limits.pickupMax}
               value={pickup}
               onChange={(event) => setPickup(event.target.value)}
               className={field}
@@ -74,7 +93,8 @@ export function BorrowRequestForm({ itemName, maximumQuantity, qrCode }: BorrowR
             name="expectedReturnDate"
             type="datetime-local"
             required
-            min={when === "later" && pickup ? pickup : manilaDateTimeInput()}
+            min={limits.returnMin}
+            max={limits.returnMax}
             className={field}
           />
         </label>

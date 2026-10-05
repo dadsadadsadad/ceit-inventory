@@ -1,38 +1,24 @@
 export const metadata = { title: "Audit trail · CEIT Inventory" };
 
-import Link from "next/link";
-
-import { AuditAction, Prisma } from "@prisma/client";
-
+import { Pager } from "@/app/components/pager";
 import {
-  auditActionLabel,
-  auditActions,
-  auditActorLabel,
-  auditCategory,
-  auditChangedFields,
-  auditEventDetail,
-  auditMetadataPreview,
   auditTrailSearchParameters,
   auditTrailWhere,
-  exportPeriods,
   parseAuditTrailFilters,
-  type AuditTrailEvent,
   type AuditTrailFilters,
 } from "@/lib/audit-trail";
-import { Pager } from "@/app/components/pager";
-import { firstParam, pageParam } from "@/lib/search-params";
-import { requireAdministrationPageAccess } from "@/lib/inventory-auth";
-import { formatManilaDate } from "@/lib/manila-date";
+import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
+import { firstParam, pageParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
+
+import { AuditEventList, type ActivityEvent } from "./audit-event-list";
+import { AuditFilters } from "./audit-filters";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Record<string, string | string[] | undefined>;
-type ActivityEvent = Prisma.InventoryAuditGetPayload<{
-  include: { item: { select: { assetTag: true; id: true; name: true } } };
-}>;
+type SearchParams = Record<string, RawParam>;
 
-const pageSize = 50;
+const pageSize = 40;
 
 function searchParameters(search: SearchParams) {
   const parameters = new URLSearchParams();
@@ -46,45 +32,17 @@ function searchParameters(search: SearchParams) {
 }
 
 function pageLink(filters: AuditTrailFilters, page: number) {
-  const parameters = auditTrailSearchParameters(filters, page);
-  const query = parameters.toString();
+  const query = auditTrailSearchParameters(filters, page).toString();
   return query ? `/dashboard/activity?${query}` : "/dashboard/activity";
 }
 
-function periodLabel(period: (typeof exportPeriods)[number]) {
-  const labels: Record<(typeof exportPeriods)[number], string> = {
-    all: "All time",
-    today: "Today",
-    "last-7-days": "Last 7 days",
-    "last-30-days": "Last 30 days",
-    "this-month": "This month",
-    "this-year": "This year",
-  };
-  return labels[period];
-}
-
-function formattedTimestamp(value: Date) {
-  return formatManilaDate(value, { dateStyle: "medium", timeStyle: "short" });
-}
-
-function eventReference(event: ActivityEvent) {
-  return `AUD-${event.id.slice(0, 8).toUpperCase()}`;
-}
-
-function subjectTypeLabel(event: ActivityEvent) {
-  if (event.item) {
-    return "Inventory record";
-  }
-  return event.entityType?.replaceAll("-", " ") ?? "System activity";
-}
-
-// Load the administrator's activity history.
+// Who changed what, and when: the important events first, everything else a click away.
 export default async function AuditTrailPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireAdministrationPageAccess();
+  await requireInventoryManagementPageAccess();
   const search = await searchParams;
   const requestedPage = pageParam(search.page);
   let filters: AuditTrailFilters;
@@ -102,7 +60,6 @@ export default async function AuditTrailPage({
   let totalRecords = 0;
   let currentPage = requestedPage;
   let activity: ActivityEvent[] = [];
-  let actionCounts = new Map<AuditAction, number>();
   const loadPage = (page: number) =>
     prisma.inventoryAudit.findMany({
       where,
@@ -113,12 +70,11 @@ export default async function AuditTrailPage({
     });
 
   try {
-    const [requestedRows, groupedCounts] = await Promise.all([
+    const [requestedRows, count] = await Promise.all([
       loadPage(requestedPage),
-      prisma.inventoryAudit.groupBy({ by: ["action"], where, _count: { _all: true } }),
+      prisma.inventoryAudit.count({ where }),
     ]);
-    totalRecords = groupedCounts.reduce((total, entry) => total + entry._count._all, 0);
-    actionCounts = new Map(groupedCounts.map((entry) => [entry.action, entry._count._all]));
+    totalRecords = count;
     const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
     currentPage = Math.min(requestedPage, totalPages);
     activity = currentPage === requestedPage ? requestedRows : await loadPage(currentPage);
@@ -128,10 +84,6 @@ export default async function AuditTrailPage({
   }
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const updateCount =
-    (actionCounts.get(AuditAction.UPDATED) ?? 0) +
-    (actionCounts.get(AuditAction.MOVED) ?? 0) +
-    (actionCounts.get(AuditAction.STATUS_CHANGED) ?? 0);
   const exportParameters = auditTrailSearchParameters(filters);
   exportParameters.set("kind", "activity");
   const exportHref = `/dashboard/reports/export?${exportParameters.toString()}`;
@@ -140,18 +92,18 @@ export default async function AuditTrailPage({
   return (
     <div className="page activity-page">
       <div className="page-inner space-y-6">
-        {/* Audit title and export links. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Administration</p>
+            <p className="eyebrow">Activity</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Audit trail</h1>
-            <p className="muted mt-2 max-w-3xl text-sm leading-6">
-              See who changed what and when. Search by item, user, or activity.
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">
+              A record of who changed what, and when. Routine activity such as QR scans is tucked
+              away until you ask for it.
             </p>
           </div>
           <details className="secondary-actions">
             <summary className="secondary-button cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold">
-              Export history
+              Export this view
             </summary>
             <div className="secondary-actions-menu">
               <a href={exportHref}>Export CSV</a>
@@ -160,137 +112,12 @@ export default async function AuditTrailPage({
           </details>
         </header>
 
-        {/* Activity search and filters. */}
-        <section className="card rounded-lg p-5 sm:p-6" aria-labelledby="audit-filters-heading">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="eyebrow">Find an event</p>
-              <h2 id="audit-filters-heading" className="mt-1 text-lg font-semibold">
-                Filter the audit history
-              </h2>
-              <p className="muted mt-1 text-sm leading-6">
-                Custom dates override the selected timeframe. Search covers the event description,
-                user, subject, item name, and asset tag.
-              </p>
-            </div>
-            <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
-              Clear filters
-            </Link>
-          </div>
-          <form
-            className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
-            aria-label="Audit trail filters"
-          >
-            <label className="sm:col-span-2 xl:col-span-2">
-              <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
-              <input
-                name="q"
-                defaultValue={filters.query ?? ""}
-                maxLength={120}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                placeholder="Event, user, item, or asset tag"
-              />
-            </label>
-            <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">System action</span>
-              <select
-                name="action"
-                defaultValue={filters.action ?? ""}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              >
-                <option value="">All actions</option>
-                {auditActions.map((action) => (
-                  <option key={action} value={action}>
-                    {auditActionLabel(action)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">User</span>
-              <input
-                name="actor"
-                defaultValue={filters.actor ?? ""}
-                maxLength={120}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                placeholder="Name or email"
-              />
-            </label>
-            <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">Timeframe</span>
-              <select
-                name="period"
-                defaultValue={filters.period}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              >
-                {exportPeriods.map((period) => (
-                  <option key={period} value={period}>
-                    {periodLabel(period)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">Start date</span>
-              <input
-                type="date"
-                name="from"
-                defaultValue={filters.from ?? ""}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              />
-            </label>
-            <label>
-              <span className="muted text-xs font-bold uppercase tracking-wide">End date</span>
-              <input
-                type="date"
-                name="to"
-                defaultValue={filters.to ?? ""}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              />
-            </label>
-            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-              Apply filters
-            </button>
-          </form>
-        </section>
+        <AuditFilters filters={filters} />
 
         {filterError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            {filterError} Showing the unfiltered audit trail instead.
+            {filterError} Showing the default view instead.
           </div>
-        ) : null}
-
-        {!databaseError ? (
-          <section
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label="Audit trail summary"
-          >
-            {/* Totals for the filtered activity. */}
-            <article className="card rounded-lg p-5">
-              <p className="muted text-xs font-bold uppercase tracking-wide">Matching events</p>
-              <p className="mt-3 text-3xl font-semibold">{totalRecords.toLocaleString()}</p>
-              <p className="muted mt-2 text-sm">Across the selected filters</p>
-            </article>
-            <article className="card rounded-lg p-5">
-              <p className="muted text-xs font-bold uppercase tracking-wide">Updates</p>
-              <p className="mt-3 text-3xl font-semibold">{updateCount.toLocaleString()}</p>
-              <p className="muted mt-2 text-sm">Updated, moved, or status changed</p>
-            </article>
-            <article className="card rounded-lg p-5">
-              <p className="muted text-xs font-bold uppercase tracking-wide">QR code scans</p>
-              <p className="mt-3 text-3xl font-semibold">
-                {(actionCounts.get(AuditAction.SCANNED) ?? 0).toLocaleString()}
-              </p>
-              <p className="muted mt-2 text-sm">Staff and public QR code openings</p>
-            </article>
-            <article className="card rounded-lg p-5">
-              <p className="muted text-xs font-bold uppercase tracking-wide">Created events</p>
-              <p className="mt-3 text-3xl font-semibold">
-                {(actionCounts.get(AuditAction.CREATED) ?? 0).toLocaleString()}
-              </p>
-              <p className="muted mt-2 text-sm">Records, accounts, notes, and setup</p>
-            </article>
-          </section>
         ) : null}
 
         {databaseError ? (
@@ -299,108 +126,17 @@ export default async function AuditTrailPage({
           </div>
         ) : activity.length === 0 ? (
           <div className="notice rounded-lg px-5 py-4 text-sm">
-            No audit events match these filters. Try a broader search or clear the date range.
+            Nothing matches these filters. Try another view, a wider timeframe, or fewer words.
           </div>
         ) : (
-          <section className="card overflow-hidden rounded-lg" aria-label="Filtered audit events">
-            {/* Matching audit entries. */}
-            <div className="divider flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="eyebrow">Recorded events</p>
-                <h2 className="mt-1 text-lg font-semibold">Complete audit history</h2>
-              </div>
+          <section className="card overflow-hidden rounded-lg" aria-label="Audit events">
+            <div className="divider flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3">
               <p className="muted text-sm">
-                {totalRecords.toLocaleString()} event{totalRecords === 1 ? "" : "s"} · Page{" "}
-                {currentPage} of {totalPages}
+                {totalRecords.toLocaleString()} event{totalRecords === 1 ? "" : "s"}
+                {totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ""}
               </p>
             </div>
-            <ol className="divide-y">
-              {activity.map((event) => {
-                const details = auditEventDetail(event as AuditTrailEvent);
-                const changes = auditChangedFields(event as AuditTrailEvent);
-                const metadata = auditMetadataPreview(event as AuditTrailEvent);
-                return (
-                  <li key={event.id} className="px-5 py-5 sm:px-6">
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(12rem,0.72fr)_minmax(12rem,0.78fr)] xl:items-start">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="status-pill rounded-md px-2.5 py-1 text-xs font-semibold">
-                            {auditCategory(event as AuditTrailEvent)}
-                          </span>
-                          <span className="card-muted rounded-md px-2.5 py-1 text-xs font-semibold">
-                            {auditActionLabel(event.action)}
-                          </span>
-                          <code className="muted rounded-md border border-[var(--border)] px-2 py-1 text-xs">
-                            {eventReference(event)}
-                          </code>
-                        </div>
-                        <p className="mt-3 text-sm font-semibold leading-6">{event.summary}</p>
-                        {details ? <p className="muted mt-1 text-sm leading-6">{details}</p> : null}
-                        {changes.length ? (
-                          <div className="mt-3 flex flex-wrap gap-2" aria-label="Captured changes">
-                            {changes.map((change) => (
-                              <span
-                                key={change.label}
-                                className="card-muted max-w-full rounded-md px-2.5 py-1 text-xs"
-                              >
-                                <strong>{change.label}:</strong>{" "}
-                                <span className="break-all">{change.value}</span>
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {metadata !== "{}" ? (
-                          <details className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2">
-                            {/* Expand the event's recorded field values. */}
-                            <summary className="cursor-pointer text-sm font-semibold">
-                              View event metadata
-                            </summary>
-                            <pre className="muted mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs leading-5">
-                              {metadata}
-                            </pre>
-                          </details>
-                        ) : null}
-                      </div>
-                      <div className="text-sm">
-                        <p className="muted text-xs font-bold uppercase tracking-wide">
-                          {subjectTypeLabel(event)}
-                        </p>
-                        {event.item ? (
-                          <Link
-                            href={`/dashboard/inventory/${event.item.id}`}
-                            className="accent-link mt-1 inline-block break-words font-semibold"
-                          >
-                            {event.item.name}
-                          </Link>
-                        ) : (
-                          <p className="mt-1 break-words font-semibold">
-                            {event.entityLabel ?? "System operation"}
-                          </p>
-                        )}
-                        <p className="muted mt-1 break-all text-xs">
-                          {event.item?.assetTag ?? event.entityId ?? "No linked record"}
-                        </p>
-                      </div>
-                      <div className="text-sm xl:text-right">
-                        <p className="muted text-xs font-bold uppercase tracking-wide">
-                          Recorded by
-                        </p>
-                        <p className="mt-1 break-words font-medium">
-                          {auditActorLabel(event as AuditTrailEvent)}
-                        </p>
-                        <p className="muted mt-3 text-xs font-bold uppercase tracking-wide">When</p>
-                        <time
-                          className="mt-1 block font-medium"
-                          dateTime={event.createdAt.toISOString()}
-                        >
-                          {formattedTimestamp(event.createdAt)}
-                        </time>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
+            <AuditEventList events={activity} />
             <Pager
               label="Audit trail"
               currentPage={currentPage}

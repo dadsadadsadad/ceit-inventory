@@ -1,12 +1,23 @@
 import type { BorrowStatus, Prisma } from "@prisma/client";
 
+import { borrowPolicyFromEnvironment } from "@/lib/borrow-policy";
+import { isHoldLapsed } from "@/lib/borrow-schedule";
 import { borrowStatus, borrowStatuses } from "@/lib/borrow-status";
 import { firstParam, textParam, type RawParam } from "@/lib/search-params";
-import { everyTermMatches, searchTerms } from "@/lib/search-terms";
+import { borrowSearchWhere } from "@/lib/record-search";
+import { lenientDateRange, reportDateFilter } from "@/lib/report-export-filters";
+import { searchTerms } from "@/lib/search-terms";
 
 export const pageSize = 25;
 
-export type SearchParams = { page?: RawParam; q?: RawParam; status?: RawParam };
+export type SearchParams = {
+  from?: RawParam;
+  page?: RawParam;
+  q?: RawParam;
+  status?: RawParam;
+  to?: RawParam;
+  type?: RawParam;
+};
 export type BorrowingRecord = Prisma.BorrowRequestGetPayload<{
   include: {
     inventoryItem: {
@@ -29,6 +40,14 @@ export function isOverdueFilter(value?: string | string[]) {
   return firstParam(value) === overdueFilter;
 }
 
+// A short reason a pending or reserved request no longer holds the equipment.
+export function lapsedLabel(request: BorrowingRecord, now = new Date()) {
+  if (!isHoldLapsed(request, now, borrowPolicyFromEnvironment())) {
+    return null;
+  }
+  return request.status === borrowStatus.RESERVED ? "Pickup missed" : "Not handled in time";
+}
+
 export function isOverdue(request: BorrowingRecord, now = new Date()) {
   return (
     (request.status === borrowStatus.BORROWED ||
@@ -49,13 +68,17 @@ export function borrowRequestWhere(search: SearchParams): Prisma.BorrowRequestWh
   }
   const terms = searchTerms(query);
   if (terms.length) {
-    where.AND = everyTermMatches<Prisma.BorrowRequestWhereInput>(terms, (term) => [
-      { borrowerName: { contains: term, mode: "insensitive" } },
-      { studentNumber: { contains: term, mode: "insensitive" } },
-      { contact: { contains: term, mode: "insensitive" } },
-      { inventoryItem: { is: { name: { contains: term, mode: "insensitive" } } } },
-      { inventoryItem: { is: { assetTag: { contains: term, mode: "insensitive" } } } },
-    ]);
+    where.AND = borrowSearchWhere(query);
+  }
+  const requested = reportDateFilter(
+    lenientDateRange(textParam(search.from), textParam(search.to)),
+  );
+  if (requested) {
+    where.requestedAt = requested;
+  }
+  const type = firstParam(search.type);
+  if (type === "reservation" || type === "now") {
+    where.isReservation = type === "reservation";
   }
   return where;
 }
@@ -70,9 +93,47 @@ export function pageLink(search: SearchParams, page: number) {
   if (status && (isBorrowStatus(status) || status === overdueFilter)) {
     parameters.set("status", status);
   }
+  for (const key of ["from", "to"] as const) {
+    const value = textParam(search[key]);
+    if (value) {
+      parameters.set(key, value);
+    }
+  }
+  const type = firstParam(search.type);
+  if (type === "reservation" || type === "now") {
+    parameters.set("type", type);
+  }
   if (page > 1) {
     parameters.set("page", String(page));
   }
   const queryString = parameters.toString();
   return queryString ? `/dashboard/borrowing?${queryString}` : "/dashboard/borrowing";
 }
+
+// The report that matches the filters on screen.
+export function reportHref(search: SearchParams) {
+  const parameters = new URLSearchParams({ kind: "borrowing" });
+  const status = firstParam(search.status);
+  const state =
+    status === overdueFilter ? "overdue" : isBorrowStatus(status) ? reportStates[status] : "";
+  if (state) {
+    parameters.set("borrowingState", state);
+  }
+  for (const key of ["q", "from", "to"] as const) {
+    const value = textParam(search[key]);
+    if (value) {
+      parameters.set(key, value);
+    }
+  }
+  return `/dashboard/reports?${parameters.toString()}&generate=1`;
+}
+
+const reportStates: Record<BorrowStatus, string> = {
+  REQUESTED: "requested",
+  RESERVED: "reserved",
+  BORROWED: "currently-borrowed",
+  RETURN_REQUESTED: "currently-borrowed",
+  RETURNED: "returned",
+  DECLINED: "declined",
+  CANCELLED: "cancelled",
+};

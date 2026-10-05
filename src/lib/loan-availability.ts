@@ -1,6 +1,7 @@
 import "server-only";
 import { BorrowStatus, ItemStatus, ItemType, type Prisma } from "@prisma/client";
 import { canBorrowInventoryStatus } from "./borrow-availability";
+import { borrowPolicyFromEnvironment } from "./borrow-policy";
 import { availableScheduledQuantity } from "./borrow-schedule";
 import { FormError } from "./form-action";
 
@@ -45,6 +46,8 @@ export async function checkLoanAvailability(
       requestedQuantity: true,
       status: true,
       checkedOutItemStatus: true,
+      requestedAt: true,
+      isReservation: true,
     },
   });
   const checkedOut = loans.filter(
@@ -67,7 +70,17 @@ export async function checkLoanAvailability(
       "This item is still with another borrower. Confirm its return before checking it out again.",
     );
   }
-  if (quantity > availableScheduledQuantity(capacity, loans, startsAt, endsAt)) {
+  if (
+    quantity >
+    availableScheduledQuantity(
+      capacity,
+      loans,
+      startsAt,
+      endsAt,
+      new Date(),
+      borrowPolicyFromEnvironment(),
+    )
+  ) {
     throw new FormError(
       "This item is already requested or reserved during those times. Choose a different pickup or return time.",
     );
@@ -106,6 +119,8 @@ export async function checkLoanExtension(
       requestedQuantity: true,
       status: true,
       checkedOutItemStatus: true,
+      requestedAt: true,
+      isReservation: true,
     },
   });
   // Older quantity-based loans removed their units from stock; add those units back to get the
@@ -121,7 +136,10 @@ export async function checkLoanExtension(
     item.quantity +
     otherQuantityLoans +
     (request.checkedOutItemStatus ? 0 : request.requestedQuantity);
-  if (request.requestedQuantity > availableScheduledQuantity(capacity, others, now, endsAt, now)) {
+  if (
+    request.requestedQuantity >
+    availableScheduledQuantity(capacity, others, now, endsAt, now, borrowPolicyFromEnvironment())
+  ) {
     throw new FormError(
       "This equipment is requested or reserved by someone else during that time. Choose an earlier return time.",
     );

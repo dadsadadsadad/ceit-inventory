@@ -7,11 +7,14 @@ import Link from "next/link";
 import { ItemStatus, MaintenancePriority, MaintenanceStatus, type Prisma } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
+import { ClearFiltersButton, FilterForm } from "@/app/components/filter-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
-import { everyTermMatches, searchTerms } from "@/lib/search-terms";
+import { maintenanceSearchWhere } from "@/lib/record-search";
+import { lenientDateRange, reportDateFilter } from "@/lib/report-export-filters";
+import { searchTerms } from "@/lib/search-terms";
 import { firstParam, pageParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
@@ -25,6 +28,9 @@ type SearchParams = {
   created?: string | string[];
   source?: string | string[];
   q?: string | string[];
+  priority?: string | string[];
+  from?: string | string[];
+  to?: string | string[];
   page?: string | string[];
   report?: string | string[];
   itemSearch?: string | string[];
@@ -73,20 +79,22 @@ export default async function MaintenancePage({
     ? firstParam(search.source)
     : undefined;
   const query = firstParam(search.q)?.trim().slice(0, 120) ?? "";
+  const requestedPriority = firstParam(search.priority);
+  const priority = Object.values(MaintenancePriority).includes(
+    requestedPriority as MaintenancePriority,
+  )
+    ? (requestedPriority as MaintenancePriority)
+    : undefined;
+  const fromDate = firstParam(search.from)?.slice(0, 10) ?? "";
+  const toDate = firstParam(search.to)?.slice(0, 10) ?? "";
+  const opened = reportDateFilter(lenientDateRange(fromDate, toDate));
   const where: Prisma.MaintenanceTicketWhereInput = {
     ...(status ? { status } : {}),
     ...(source ? { source } : {}),
+    ...(priority ? { priority } : {}),
+    ...(opened ? { openedAt: opened } : {}),
     ...(selectedItem ? { inventoryItemId: selectedItem } : {}),
-    ...(searchTerms(query).length
-      ? {
-          AND: everyTermMatches<Prisma.MaintenanceTicketWhereInput>(searchTerms(query), (term) => [
-            { title: { contains: term, mode: "insensitive" } },
-            { description: { contains: term, mode: "insensitive" } },
-            { inventoryItem: { name: { contains: term, mode: "insensitive" } } },
-            { inventoryItem: { assetTag: { contains: term, mode: "insensitive" } } },
-          ]),
-        }
-      : {}),
+    ...(searchTerms(query).length ? { AND: maintenanceSearchWhere(query) } : {}),
   };
   const requestedPage = pageParam(search.page);
   function pageHref(next: number) {
@@ -99,6 +107,15 @@ export default async function MaintenancePage({
     }
     if (query) {
       params.set("q", query);
+    }
+    if (priority) {
+      params.set("priority", priority);
+    }
+    if (fromDate) {
+      params.set("from", fromDate);
+    }
+    if (toDate) {
+      params.set("to", toDate);
     }
     if (selectedItem) {
       params.set("item", selectedItem);
@@ -159,7 +176,18 @@ export default async function MaintenancePage({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={`/dashboard/reports?kind=maintenance${source ? `&maintenanceSource=${source}` : ""}`}
+              href={`/dashboard/reports?${new URLSearchParams(
+                Object.entries({
+                  kind: "maintenance",
+                  q: query,
+                  maintenanceSource: source ?? "",
+                  maintenanceStatus: status ?? "",
+                  maintenancePriority: priority ?? "",
+                  from: fromDate,
+                  to: toDate,
+                  generate: "1",
+                }).filter(([, value]) => value),
+              )}`}
               className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
             >
               Maintenance reports
@@ -302,10 +330,10 @@ export default async function MaintenancePage({
           </section>
         ) : null}
 
-        {/* Filter issues by status, priority, and source. */}
-        <form
+        {/* Filter issues by status, priority, source, and date. Choices apply at once. */}
+        <FilterForm
           className="maintenance-filters card grid items-end gap-3 rounded-lg p-4"
-          aria-label="Maintenance filters"
+          label="Maintenance filters"
         >
           {selectedItem ? <input type="hidden" name="item" value={selectedItem} /> : null}
           <label className="min-w-0 flex-1">
@@ -345,16 +373,43 @@ export default async function MaintenancePage({
               ))}
             </select>
           </label>
-          <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-            Filter
-          </button>
-          <Link
-            href="/dashboard/maintenance"
-            className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
-          >
-            Clear
-          </Link>
-        </form>
+          <label>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Priority</span>
+            <select
+              name="priority"
+              defaultValue={priority ?? ""}
+              className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
+            >
+              <option value="">Any priority</option>
+              {Object.values(MaintenancePriority).map((value) => (
+                <option key={value} value={value}>
+                  {priorityLabel(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Reported from</span>
+            <input
+              type="date"
+              name="from"
+              defaultValue={fromDate}
+              className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
+            />
+          </label>
+          <label>
+            <span className="muted text-xs font-bold uppercase tracking-wide">Reported to</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={toDate}
+              className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
+            />
+          </label>
+          <ClearFiltersButton className="accent-link text-sm font-semibold">
+            Clear all filters
+          </ClearFiltersButton>
+        </FilterForm>
 
         {/* Matching maintenance requests. */}
         <section className="space-y-4" aria-label="Maintenance requests">

@@ -20,7 +20,6 @@ type SelectOption = { label: string; value: string };
 // Choose an action for the selected inventory.
 export function InventoryBulkActions({
   allItemIds,
-  canPermanentlyDelete,
   clearSelectionOnLoad = false,
   conditions,
   locations,
@@ -28,7 +27,6 @@ export function InventoryBulkActions({
   statuses,
 }: {
   allItemIds: string[];
-  canPermanentlyDelete: boolean;
   clearSelectionOnLoad?: boolean;
   conditions: SelectOption[];
   locations: SelectOption[];
@@ -145,9 +143,7 @@ export function InventoryBulkActions({
             <option value="inspect">Record inspection (checked today)</option>
             <option value="location">Move to location</option>
             <option value="remove">Retire (keep record and history)</option>
-            {canPermanentlyDelete ? (
-              <option value="delete">Permanently delete (administrator)</option>
-            ) : null}
+            <option value="delete">Permanently delete</option>
           </select>
         </label>
 

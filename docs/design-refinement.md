@@ -1,5 +1,9 @@
 # Tactile workspace refinement — 4–5 October 2026
 
+> This describes the earlier charcoal-and-orange look. It was replaced by the paper-and-ink look in
+> [design-system.md](design-system.md); the behaviours listed here (hold-to-confirm, reduced motion,
+> 14px text, sticky sidebar) still apply.
+
 This pass follows the nine user-supplied references through layout, hierarchy,
 spacing, surface depth, and interaction behavior. It does not copy their brands,
 artwork, layouts, or page content.

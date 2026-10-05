@@ -14,6 +14,23 @@ Production hosting, school account approval, physical printer alignment, and rea
 
 ## Borrowing and reservations
 
+### Limits that keep equipment moving
+
+These defaults live in `src/lib/borrow-policy.ts` and can be changed with environment variables (see `.env.example`) without touching the code.
+
+| Rule                                                           | Default  | Variable                     |
+| -------------------------------------------------------------- | -------- | ---------------------------- |
+| A reservation can start at most this many days ahead           | 3        | `BORROW_MAX_ADVANCE_DAYS`    |
+| The longest a student can keep equipment                       | 7 days   | `BORROW_MAX_LOAN_DAYS`       |
+| The longest a loan can run once staff extend it                | 14 days  | `BORROW_MAX_TOTAL_LOAN_DAYS` |
+| Open requests or loans per student number                      | 3        | `BORROW_MAX_ACTIVE_REQUESTS` |
+| An uncollected reservation releases the item after             | 2 hours  | `BORROW_PICKUP_GRACE_HOURS`  |
+| An unhandled "borrow now" request stops holding the item after | 24 hours | `BORROW_PENDING_HOLD_HOURS`  |
+
+A student with equipment still out past its return time cannot make new requests until staff confirm the return. A reservation or pending request that has lapsed shows a **Pickup missed** or **Not handled in time** label for staff, stops blocking other bookings, and is checked the next time anyone books or looks at the item (no background job is needed). The borrow form states the rules and limits its date pickers to them, and the server enforces them as well.
+
+### How it works
+
 - Students choose **Borrow now** or **Reserve for later** inside **Borrow equipment** on the QR page. Pickup and return use Philippine time. Same-day loans are supported.
 - Pending requests and approved reservations hold their requested time. Overlapping requests cannot overbook a unit, including simultaneous submissions. Non-overlapping reservations can share that unit on different schedules.
 - Approval reserves the time; it does not check out equipment or change its quantity. Staff check out an approved reservation when its pickup time arrives. Availability is checked again at handoff.
@@ -42,6 +59,23 @@ Select items in Inventory and choose **Print QR labels**, or choose a room on th
 Use A4 paper, 100% scale, and no browser headers/footers. Compact labels are 62 × 32 mm, arranged 3 × 8 with 2 mm gaps; large labels are 92 × 64 mm, arranged 2 × 4 with 4 mm gaps. Both layouts use 10 mm page margins. Print on plain label paper or stock with matching dimensions. Long names are shortened to fit, so use the large layout when more detail is needed.
 
 The permanent website address is embedded in each QR. A browser print request is recorded in the audit trail; the app cannot confirm whether a physical printer completed the job.
+
+## Other safety limits
+
+These are enforced by the server, not just the forms.
+
+| Where            | Limit                                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Staff sign-in    | 5 failed attempts lock an account for about 15 minutes (an administrator can unlock it)                                                                                               |
+| Staff sessions   | 7 days, and at most 5 signed-in devices per account                                                                                                                                   |
+| Public requests  | Borrow, return, and issue forms are rate-limited per device                                                                                                                           |
+| Borrower details | Redacted after the retention period (365 days by default)                                                                                                                             |
+| Reports          | The page previews 100 rows per table; a PDF holds up to 2,000 rows and a CSV up to 10,000. Larger requests are refused with a message to narrow the filters, never silently cut short |
+| Imports          | 10 MB and 1,000 rows per file                                                                                                                                                         |
+| Photos           | 4 per item, 3 MB each                                                                                                                                                                 |
+| QR labels        | 100 per batch                                                                                                                                                                         |
+| Bulk changes     | Up to 10,000 selected records                                                                                                                                                         |
+| Borrowing        | The rules in the table above, plus a cap on the quantity of supplies in one request                                                                                                   |
 
 ## Database connections
 

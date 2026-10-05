@@ -50,6 +50,18 @@ const commands: CommandItem[] = [
     Icon: Package,
   },
   {
+    label: "Browse hardware",
+    description: "Which PCs have which processor, memory, storage, and graphics",
+    href: "/dashboard/inventory/hardware",
+    Icon: Package,
+  },
+  {
+    label: "Browse software",
+    description: "Installed programs, the PCs they are on, and license dates",
+    href: "/dashboard/inventory/software",
+    Icon: Package,
+  },
+  {
     label: "Print QR labels",
     description: "Print labels for a room or selected items",
     href: "/dashboard/inventory/labels",
@@ -101,7 +113,7 @@ const commands: CommandItem[] = [
     description: "Find changes by item, user, or date",
     href: "/dashboard/activity",
     Icon: ScrollText,
-    requires: "administrator",
+    requires: "inventory-manager",
   },
   {
     label: "Open reports",
@@ -125,7 +137,7 @@ const commands: CommandItem[] = [
 ];
 
 type CommandMenuProps = {
-  canManageAdministration: boolean;
+  canManageUsers: boolean;
   canManageInventory: boolean;
   embedded?: boolean;
 };
@@ -143,7 +155,7 @@ const focusableSelector =
 
 // Search and open common dashboard actions.
 export function CommandMenu({
-  canManageAdministration,
+  canManageUsers,
   canManageInventory,
   embedded = false,
 }: CommandMenuProps) {
@@ -162,7 +174,7 @@ export function CommandMenu({
   const router = useRouter();
 
   const visibleCommands = commands.filter((command) => {
-    if (command.requires === "administrator" && !canManageAdministration) {
+    if (command.requires === "administrator" && !canManageUsers) {
       return false;
     }
     if (command.requires === "inventory-manager" && !canManageInventory) {

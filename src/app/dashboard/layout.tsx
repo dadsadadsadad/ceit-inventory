@@ -1,9 +1,5 @@
 import { DashboardNavigation } from "./dashboard-navigation";
-import {
-  canManageAdministration,
-  canManageInventory,
-  requireInventoryAccess,
-} from "@/lib/inventory-auth";
+import { canManageUsers, canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <DashboardNavigation
           email={user.email}
           username={user.username}
-          canManageAdministration={canManageAdministration(user.role)}
+          canManageUsers={canManageUsers(user.role)}
           canManageInventory={canManageInventory(user.role)}
         />
         {/* The current dashboard page. */}

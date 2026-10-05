@@ -5,7 +5,10 @@ import { auditActorName, auditEventData } from "@/lib/audit-event";
 import {
   auditCategory,
   auditChangedFields,
+  auditTrailSearchParameters,
   auditTrailWhere,
+  auditViewWhere,
+  groupEventsByDay,
   parseAuditTrailFilters,
 } from "@/lib/audit-trail";
 
@@ -94,5 +97,58 @@ describe("audit trail filters", () => {
         metadata: { activityKind: "account", role: "STAFF" },
       }),
     ).toBe("Accounts");
+  });
+});
+
+describe("audit trail views", () => {
+  const now = new Date("2026-09-01T05:30:00.000Z");
+
+  it("shows the important view by default and hides routine activity from it", () => {
+    const filters = parseAuditTrailFilters(new URLSearchParams(), now);
+    expect(filters.view).toBe("important");
+    const where = auditTrailWhere(filters);
+    expect(JSON.stringify(where)).toContain('"NOT"');
+    expect(JSON.stringify(where)).toContain("SCANNED");
+  });
+
+  it("searches every kind of event when a specific action is chosen", () => {
+    const filters = parseAuditTrailFilters(new URLSearchParams({ action: "SCANNED" }), now);
+    expect(filters.view).toBe("all");
+    expect(auditViewWhere("all")).toEqual({});
+  });
+
+  it("keeps the chosen view in links only when it differs from the default", () => {
+    const standard = parseAuditTrailFilters(new URLSearchParams(), now);
+    expect(auditTrailSearchParameters(standard).has("view")).toBe(false);
+    const routine = parseAuditTrailFilters(new URLSearchParams({ view: "routine" }), now);
+    expect(auditTrailSearchParameters(routine).get("view")).toBe("routine");
+  });
+
+  it("rejects an unknown view", () => {
+    expect(() => parseAuditTrailFilters(new URLSearchParams({ view: "secret" }), now)).toThrow(
+      "Invalid audit view.",
+    );
+  });
+
+  it("scopes quick views by what the event is about", () => {
+    expect(auditViewWhere("borrowing")).toEqual({ entityType: "borrow-request" });
+    expect(auditViewWhere("maintenance")).toEqual({ entityType: "maintenance-ticket" });
+    expect(auditViewWhere("setup")).toEqual({
+      entityType: { in: ["account", "category", "location", "dashboard-note"] },
+    });
+  });
+
+  it("groups events by Philippine day with friendly headings", () => {
+    const today = new Date("2026-09-01T02:00:00.000Z");
+    const earlierToday = new Date("2026-08-31T17:00:00.000Z");
+    const yesterday = new Date("2026-08-31T10:00:00.000Z");
+    const groups = groupEventsByDay(
+      [{ createdAt: today }, { createdAt: earlierToday }, { createdAt: yesterday }],
+      now,
+    );
+    expect(groups.map((group) => [group.label, group.events.length])).toEqual([
+      ["Today", 2],
+      ["Yesterday", 1],
+    ]);
   });
 });

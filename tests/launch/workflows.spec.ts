@@ -488,9 +488,19 @@ test("item creation, stale edits, and import preview keep records and inputs con
   ).toBe(1);
 });
 
-test("all report formats download and report filters stay relevant", async ({ page }) => {
+test("every report downloads as CSV and PDF and can be generated on the page", async ({ page }) => {
   await signIn(page);
-  for (const kind of ["inventory", "pcs", "borrowings", "maintenance", "activity"]) {
+  const kinds = [
+    "overview",
+    "inventory",
+    "pcs",
+    "hardware",
+    "software",
+    "borrowing",
+    "maintenance",
+    "activity",
+  ];
+  for (const kind of kinds) {
     const csv = await download(page, `/dashboard/reports/export?kind=${kind}`);
     expect(csv.status(), kind).toBe(200);
     expect(csv.headers()["content-type"]).toContain("text/csv");
@@ -499,44 +509,65 @@ test("all report formats download and report filters stay relevant", async ({ pa
     expect((await PDFDocument.load(await pdf.body())).getPageCount()).toBeGreaterThan(0);
     writeFileSync(`test-results/${kind}.pdf`, await pdf.body());
   }
-  const overview = await download(page, "/dashboard/reports/export/pdf?kind=overview");
-  expect(overview.status()).toBe(200);
-  writeFileSync("test-results/overview.pdf", await overview.body());
   const invalid = await download(
     page,
     "/dashboard/reports/export?kind=maintenance&maintenanceSource=invalid",
   );
   expect(invalid.status()).toBe(400);
+  expect((await download(page, "/dashboard/reports/export/pdf?kind=nothing")).status()).toBe(400);
+  expect(
+    (await download(page, "/dashboard/reports/export?kind=inventory&category=not-an-id")).status(),
+  ).toBe(400);
+
+  // Pick a report, narrow it, generate it in the page, and download the same filters.
   await page.goto("/dashboard/reports");
-  const form = page.locator(".reports-export-form");
-  await form.getByRole("combobox", { name: "Report", exact: true }).selectOption("borrowings");
-  await expect(form.getByLabel("Borrowing status")).toBeVisible();
-  await expect(form.getByLabel("Report source")).toHaveCount(0);
-  await form.getByRole("combobox", { name: "Report", exact: true }).selectOption("maintenance");
-  await expect(form.getByLabel("Report source")).toBeVisible();
-  await expect(form.getByLabel("Borrowing status")).toHaveCount(0);
-  await form.getByLabel("From", { exact: true }).fill("2026-09-01");
-  await form.getByLabel("Timeframe").selectOption("today");
-  await expect(form.getByLabel("From", { exact: true })).toHaveValue("");
+  const form = page.getByRole("form", { name: "Report builder" });
+  await expect(page.getByRole("article")).toHaveCount(0);
+  await form.getByRole("radio", { name: "Inventory" }).check({ force: true });
+  await form.locator('select[name="inventoryStatus"]').selectOption("OK");
+  await form.getByRole("button", { name: "Generate report" }).click();
+  await expect(page).toHaveURL(/kind=inventory/);
+  const sheet = page.getByRole("article", { name: "Inventory report" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("Status: OK", { exact: true })).toBeVisible();
+  await expect(sheet.getByRole("table").first()).toBeVisible();
+  await expect(sheet.getByRole("link", { name: "Download PDF" })).toHaveAttribute(
+    "href",
+    /export\/pdf\?.*inventoryStatus=OK/,
+  );
+  await expect(sheet.getByRole("link", { name: "Download CSV" })).toHaveAttribute(
+    "href",
+    /export\?.*kind=inventory/,
+  );
+
+  // A quick report opens already generated.
+  await page.goto("/dashboard/reports");
+  await page.getByRole("link", { name: /Licenses ending soon/ }).click();
+  await expect(page.getByRole("article", { name: "Software report" })).toBeVisible();
 });
 
-test("staff can use daily pages but cannot open administrator pages", async ({ page }) => {
+test("faculty staff can use every page except account management", async ({ page }) => {
   await signIn(page, "launch.staff");
-  for (const path of ["/dashboard/users", "/dashboard/activity"]) {
-    await page.goto(path);
-    await expect(page).toHaveURL(/\/dashboard$/);
-  }
+  await page.goto("/dashboard/users");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  const navigation = page.getByRole("navigation", { name: "Dashboard navigation" });
+  await expect(navigation.getByRole("link", { name: "Users", exact: true })).toHaveCount(0);
+  await expect(navigation.getByRole("link", { name: "Audit trail", exact: true })).toBeVisible();
   for (const path of [
     "/dashboard/inventory",
     "/dashboard/borrowing",
     "/dashboard/maintenance",
     "/dashboard/reports",
     "/dashboard/settings",
+    "/dashboard/activity",
   ]) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: /Something went wrong/i })).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`${path}$`));
   }
+  await page.goto("/dashboard/settings");
+  await expect(page.getByRole("heading", { name: "Locations and categories" })).toBeVisible();
 });
 
 test("all main pages fit mobile and desktop without page errors", async ({ page }) => {
