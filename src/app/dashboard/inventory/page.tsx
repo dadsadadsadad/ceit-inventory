@@ -2,6 +2,7 @@ export const metadata = { title: "Inventory · CEIT Inventory" };
 
 import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import Link from "next/link";
+import { Monitor, Package } from "lucide-react";
 
 import { ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 
@@ -682,17 +683,27 @@ export default async function InventoryPage({
                             {item.assetTag ?? "–"}
                           </td>
                           <td className="px-5 py-4 text-sm">
-                            <Link
-                              href={`/dashboard/inventory/${item.id}`}
-                              className="accent-link record-name font-semibold"
-                            >
-                              <OptimisticText entity={`item:${item.id}`} field="name">
-                                {item.name}
-                              </OptimisticText>
-                            </Link>
-                            <div className="muted mt-1 text-xs">
-                              {item.category.name}
-                              {item.computer ? " · PC" : ""}
+                            <div className="record-identity">
+                              <span
+                                className={`record-symbol ${item.computer ? "is-computer" : ""}`}
+                                aria-hidden="true"
+                              >
+                                {item.computer ? <Monitor size={21} /> : <Package size={21} />}
+                              </span>
+                              <div>
+                                <Link
+                                  href={`/dashboard/inventory/${item.id}`}
+                                  className="accent-link record-name font-semibold"
+                                >
+                                  <OptimisticText entity={`item:${item.id}`} field="name">
+                                    {item.name}
+                                  </OptimisticText>
+                                </Link>
+                                <div className="muted mt-1 text-xs">
+                                  {item.category.name}
+                                  {item.computer ? " · PC" : ""}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="muted px-5 py-4 text-sm">

@@ -167,3 +167,43 @@ Validation:
   QR item details, appearance, and mobile layouts were visually reviewed.
 
 All data-changing browser tests used the isolated test schema, not production.
+
+## Reference-led workspace and hold controls — 4–5 October 2026
+
+Reviewed all nine supplied references and additional interface/motion guidance.
+The resulting refinement uses a rounded workspace frame, compact page headings,
+soft card layers, equipment symbols, and a status breakdown driven by the existing
+dashboard aggregation. Hover, press, focus, and panel transitions are consistent;
+reduced-motion preferences are respected. See [design-refinement.md](design-refinement.md).
+
+Permanent single-item deletion and photo removal now offer a 1.1-second hold and
+release interaction, plus an untimed click/keyboard confirmation. Moving away,
+Escape, pointer cancellation, or loss of focus cancels holding. Server permissions,
+history protection, and bulk typed confirmation remain intact. Buttons keep stable
+bounds while their labels change and never submit just because the timer finishes.
+
+Validation and corrections:
+
+- All 76 unit tests passed. The isolated and normal production builds passed;
+  final ESLint, TypeScript, formatting, and whitespace checks passed.
+- The full 56-scenario browser run passed 55 checks. The remaining keyboard test
+  attempted to focus hidden streamed markup before it became visible. After adding
+  visibility, enabled-state, and focus assertions, it passed six consecutive runs.
+- Browser coverage includes 17 routes in both themes at desktop/mobile widths,
+  borrowing/returns, reservations and concurrency, imports, reports, permissions,
+  live updates, fonts, appearance pointer access, and sticky-sidebar scrolling.
+- All five hold tests passed: mouse release/cancellation, untimed keyboard
+  confirmation, actual touch events, reduced motion, and retry after a protected
+  history rejection. Successful deletion produces exactly one audit event.
+- Mixed-status counts and the corresponding inventory-filter links passed,
+  including 390px and 320px layout checks.
+- Visual review caught shrinking appearance targets during entry, weak filled-hold
+  contrast, and cramped desktop photo metadata. These were corrected. The final
+  photo test checks filename fit and row height at desktop/mobile widths, and its
+  resulting screenshots were reviewed again.
+- The final print override and two-sheet label output passed a targeted browser
+  check. Photo upload, viewing, focus restoration, and removal passed again after
+  the last layout correction.
+
+No dependencies, external image requests, or dashboard queries were added. All
+data-changing checks used isolated schemas, which were removed after testing.

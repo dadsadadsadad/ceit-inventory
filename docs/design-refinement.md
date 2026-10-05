@@ -1,66 +1,61 @@
-# Equipment studio — 4 October 2026
+# Tactile workspace refinement — 4–5 October 2026
 
-The previous refinement changed small details but left the same repeated-card
-composition. This pass changes the visual hierarchy and layout: an open work
-surface, a typographic introduction, original equipment artwork, and a compact
-team memo. The daily controls remain straightforward.
+This pass follows the nine user-supplied references through layout, hierarchy,
+spacing, surface depth, and interaction behavior. It does not copy their brands,
+artwork, layouts, or page content.
 
-## Reference review
+## Reading the references
 
-The earlier review browsed the large [Siteinspire](https://www.siteinspire.com/)
-and [Mobbin](https://mobbin.com/) collections and selected references from
-[Linear](https://linear.app/now/behind-the-latest-design-refresh),
-[Things](https://culturedcode.com/things/), and [Raycast](https://www.raycast.com/).
-This was a focused review, not an individual audit of thousands of websites.
+| Reference                    | Principle applied to CEIT                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Asset-management table       | A framed workspace, grouped filters, clear record identities, and readable status information.              |
+| Bagel landing page           | Restraint in the surrounding space, with small moments of color and tactile controls.                       |
+| Green dashboard presentation | Soft panel boundaries and a clear active navigation state; CEIT retains neutral surfaces.                   |
+| School calendar              | Predictable heading/action placement and clear information groups. No unrelated calendar feature was added. |
+| Finance dashboard            | Compact summaries, quiet card boundaries, and deliberate control hierarchy.                                 |
+| Walking widget               | Strong numeric hierarchy and visible progress inside the hold control.                                      |
+| Fountn dark interface        | Layered charcoal surfaces and a single identifying accent.                                                  |
+| Mobile habit screens         | Rounded touch targets, stacked groups, and clear primary actions on narrow screens.                         |
+| Hover animation reference    | Brief, localized feedback on the element being used.                                                        |
 
-This pass also examined:
+Additional research:
 
-- [Teenage Engineering](https://teenage.engineering/): restrained color,
-  equipment-led identity, and confident typography. The application uses its own
-  illustration of a monitor, projector, and asset tag, drawn directly in SVG.
-- [Pentagram's MIT Media Lab identity](https://www.pentagram.com/work/mit-media-lab):
-  a consistent identity can support varied compositions. CEIT's existing monogram
-  now appears consistently on sign-in and navigation.
-- [Carbon's motion guidance](https://www.carbondesignsystem.com/building-blocks/foundations/motion/choreography):
-  preserve consistent, brief interaction feedback without decorative movement.
+- [Linear's interface refresh](https://linear.app/now/behind-the-latest-design-refresh)
+  informed consistent hierarchy, spacing, and action placement.
+- [Material motion](https://m3.material.io/styles/motion/overview/how-it-works)
+  was reviewed for purposeful state transitions.
+- [W3C pointer cancellation](https://www.w3.org/WAI/WCAG22/Understanding/pointer-cancellation.html)
+  informed release-to-submit, move-away cancellation, and the untimed confirmation
+  alternative for destructive actions.
 
-No reference layout, logo, or illustration was copied.
+## Changes
 
-## Implementation
+- Desktop pages sit in a rounded workspace frame, with soft neutral card layers.
+  Headers are more compact and forms, buttons, tables, and navigation share the
+  same corner and spacing language. The dashboard's large decorative opening is
+  replaced by a direct heading and primary action.
+- The inventory mix uses the existing dashboard aggregation, with an accessible
+  text legend linking to the corresponding inventory filters. Counts describe
+  records, not physical supply quantities. There is no extra database query or
+  chart dependency.
+- Inventory rows gain quiet equipment/computer symbols without fetching photos
+  or adding image requests. Summary icons use small semantic color accents.
+- Hover states move icons slightly, reveal row emphasis, and tint selections.
+  Buttons distinguish hover and press. Panels and page content enter briefly;
+  the status bar reveals once. There are no continuous decorative animations.
+- The existing neutral light/charcoal themes, customizable accent, 14px minimum
+  ordinary text, sticky sidebar, and portal-based appearance controls remain.
+- Single-record deletion and photo removal support a 1.1-second hold. Holding
+  only arms the control; release inside its bounds submits. Moving away, Escape,
+  pointer cancellation, losing focus, or hiding the page cancels the gesture.
+  A click or keyboard activation opens an untimed Confirm/Cancel alternative.
+  Bulk deletion retains its existing typed confirmation.
+- Reduced-motion preferences disable decorative movement. The hold control uses
+  a static ready state instead of a sweeping fill. Existing server permissions,
+  protected-history checks, error messages, and pending-submit protection remain.
 
-- Manrope establishes a consistent type system across platforms. Large,
-  medium-weight headings pair with quieter monospaced labels and asset codes.
-  Ordinary interface text retains the 14px minimum; primary navigation and queue
-  labels remain 16px. Physical print-label dimensions are preserved.
-- The dashboard pairs its introduction with an original equipment line drawing.
-  Summary counts have clearer hierarchy. Requests and activity share an open left
-  column, with the memo on the right when space allows; narrow screens stack them.
-- Repeated outer boxes and title decorations were removed where they added noise.
-  Inventory filters sit directly above the records; item names use neutral type
-  with accent and underline feedback on interaction. Reports use quieter metrics.
-- The shared note has a contrasting neutral paper surface, accent edge, ruled
-  writing area, and visible saving feedback. Its contents and permissions are
-  unchanged.
-- Sign-in uses the same identity, original illustration, and typography, with a
-  direct unboxed form. Mobile keeps the form compact and omits decorative artwork.
-- Existing hover, press, keyboard focus, selected, open, and pending states remain
-  visible. Reduced-motion preferences suppress moving controls and spinners.
-- Dark mode remains charcoal and light mode remains white/gray. Custom accents
-  affect actions, selections, focus, and identifying details rather than tinting
-  the page. Appearance layering and sidebar scrolling fixes are preserved.
-
-## Asset and performance budget
-
-The self-hosted variable font is **24,836 bytes**, uses `next/font/local` with
-`display: swap`, and is served from the application's own origin. Its
-[SIL Open Font License](../src/app/fonts/OFL-Manrope.txt) is included. Source:
-[Google Fonts' Manrope distribution](https://fonts.google.com/specimen/Manrope).
-The browser regression verifies local delivery and usable 320px sign-in when the
-font request is blocked.
-
-The equipment illustration is server-rendered inline SVG. This pass adds no
-animation libraries, raster images, database queries, or third-party runtime
-requests. Existing server-rendered data, permission checks, and business actions
-are retained.
+The previously self-hosted Manrope font (24,836 bytes) and its
+[SIL Open Font License](../src/app/fonts/OFL-Manrope.txt) remain unchanged. This
+pass adds no library dependencies, external runtime services, or raster assets.
 
 Validation is recorded in [site-audit.md](site-audit.md).

@@ -1,4 +1,4 @@
-/* CEIT equipment studio: open work surfaces, precise type, and useful contrast. */
+/* CEIT workspace: soft layers, clear groups, and restrained tactile feedback. */
 :root {
   --background: #151515;
   --foreground: #f2f2f2;
@@ -10,12 +10,13 @@
   --muted-strong: #dedede;
   --border: rgb(255 255 255 / 15%);
   --surface-highlight: rgb(255 255 255 / 5%);
-  --panel-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  --panel-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  --workspace-canvas: #1b1b1b;
   --panel-tint: color-mix(in srgb, var(--accent) 7%, var(--surface));
   --sidebar-base: #1b1b1b;
   --interaction-duration: 160ms;
   --interaction-ease: cubic-bezier(0.2, 0, 0.2, 1);
-  --control-radius: 0.45rem;
+  --control-radius: 0.75rem;
 }
 html[data-theme="light"] {
   --background: #f5f5f5;
@@ -28,7 +29,8 @@ html[data-theme="light"] {
   --border: rgb(0 0 0 / 16%);
   --sidebar-base: #fafafa;
   --surface-highlight: rgb(255 255 255 / 85%);
-  --panel-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+  --panel-shadow: 0 2px 8px rgb(0 0 0 / 3%);
+  --workspace-canvas: #fafafa;
   --panel-tint: color-mix(in srgb, var(--accent) 6%, var(--surface));
 }
 body {
@@ -657,7 +659,7 @@ summary:focus-visible {
 /* Shared sizing is based on available workspace width, including the sidebar. */
 .dashboard-shell > main {
   container: workspace / inline-size;
-  background: var(--surface);
+  background: var(--workspace-canvas);
 }
 .page {
   overflow-x: visible;
@@ -1159,10 +1161,10 @@ input[type="file"].field {
 .page-narrow > header:not(.card) .title,
 .dashboard-overview-page .dashboard-header .title {
   color: var(--foreground);
-  font-size: clamp(2rem, 3.5vw, 3rem);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.8rem, 2.8vw, 2.35rem);
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
 }
 .page-inner > header:not(.card) .eyebrow,
 .page-narrow > header:not(.card) .eyebrow,
@@ -1195,8 +1197,8 @@ input[type="file"].field {
 }
 .page .page-inner .card,
 .page .page-narrow .card {
-  box-shadow: none;
-  border-radius: 0.65rem;
+  box-shadow: var(--panel-shadow);
+  border-radius: 1.1rem;
 }
 .page .page-inner form.card {
   background: var(--surface);
@@ -1504,13 +1506,18 @@ input[type="file"].field {
 }
 .overview-metrics {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  border-bottom: 1px solid var(--border);
-  padding-block: 0.5rem 1.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0;
+  border: 0;
 }
 .overview-metrics > div {
   position: relative;
-  padding: 0.3rem 1.5rem;
+  padding: 1.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  box-shadow: var(--panel-shadow);
 }
 .overview-metrics p {
   padding-right: 2.75rem;
@@ -1525,17 +1532,17 @@ input[type="file"].field {
   }
 }
 .overview-metrics > div:first-child {
-  padding-left: 0;
+  padding-left: 1.4rem;
 }
 .overview-metrics > div + div {
   border-left: 1px solid var(--border);
 }
 .overview-metrics strong {
   display: block;
-  font-size: clamp(2.2rem, 4.5vw, 4rem);
-  font-weight: 450;
-  line-height: 1.3;
-  letter-spacing: -0.075em;
+  font-size: clamp(2rem, 3.6vw, 3.1rem);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.06em;
   font-variant-numeric: tabular-nums;
 }
 .metric-symbol {
@@ -1543,12 +1550,13 @@ input[type="file"].field {
   place-items: center;
   position: absolute;
   right: 1rem;
-  top: 0.3rem;
+  top: 1rem;
   width: 2.25rem;
   height: 2.25rem;
   border: 0;
-  background: transparent;
-  color: var(--muted);
+  border-radius: 0.7rem;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .metric-detail {
   color: var(--muted);
@@ -1692,9 +1700,9 @@ input[type="file"].field {
   min-height: 0;
   align-self: start;
   border: 1px solid var(--border);
-  border-top: 3px solid var(--accent);
+  border-top: 1px solid var(--border);
   background: var(--surface-soft);
-  padding: 1.5rem;
+  padding: 1.4rem;
 }
 .dashboard-note-card textarea {
   min-height: 10rem;
@@ -1772,24 +1780,20 @@ input[type="file"].field {
   border-top: 1px solid var(--border);
 }
 
-/* A distinctive opening composition; the everyday work remains within reach. */
+/* The overview keeps the work above the fold, with useful visual summaries. */
 .dashboard-overview-page .dashboard-header {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 1.5rem;
   padding-bottom: 0.75rem;
 }
 .dashboard-overview-page .dashboard-header .title {
-  font-size: clamp(2.3rem, 4.1vw, 3.6rem);
-  max-width: 12ch;
+  font-size: clamp(1.8rem, 2.8vw, 2.35rem);
+  max-width: none;
 }
-.overview-intro .overview-browse {
-  margin-top: 1.25rem;
-}
-.overview-study {
-  width: min(100%, 23rem);
-  justify-self: end;
+.overview-header-actions {
+  align-self: center;
 }
 .equipment-study {
   display: block;
@@ -1824,18 +1828,19 @@ input[type="file"].field {
 }
 .overview-workspace {
   display: grid;
-  gap: 2.5rem;
+  gap: 1.25rem;
 }
 .page .overview-workspace :is(.work-queue, .activity-ledger) {
-  border: 0;
-  border-radius: 0;
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
   background: var(--surface);
-  box-shadow: none;
+  box-shadow: var(--panel-shadow);
+  padding: 1.4rem;
 }
 @container workspace (min-width: 56rem) {
   .overview-workspace.has-queue {
     grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 1fr);
-    column-gap: 2.5rem;
+    column-gap: 1.25rem;
     align-items: start;
   }
   .overview-workspace.has-queue .dashboard-note-card {
@@ -1847,11 +1852,10 @@ input[type="file"].field {
   }
 }
 .page .page-inner form.card[aria-label$="filters"] {
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  padding: 0 0 1.5rem;
-  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  padding: 1.2rem;
+  background: var(--surface);
   box-shadow: none;
 }
 .asset-code {
@@ -1885,6 +1889,310 @@ input[type="file"].field {
   letter-spacing: 0;
 }
 
+/* Small data graphics use actual record counts and keep a readable text legend. */
+.inventory-mix {
+  padding: 1.3rem 1.4rem;
+  background: var(--surface-soft);
+  border-radius: 1.1rem;
+  border: 1px solid var(--border);
+}
+.mix-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+}
+.mix-heading h2 {
+  font-size: 1rem;
+}
+.mix-track {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  margin: 1rem 0 0.8rem;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+.mix-segment {
+  flex: var(--share) 1 0;
+  min-width: 3px;
+  background: var(--mix-color);
+}
+.mix-ok {
+  --mix-color: #42b89b;
+}
+.mix-working {
+  --mix-color: #57a3d9;
+}
+.mix-deployed {
+  --mix-color: #9b86df;
+}
+.mix-defective {
+  --mix-color: #e78178;
+}
+.mix-not_tested {
+  --mix-color: #d6ab62;
+}
+.mix-retired {
+  --mix-color: #93939e;
+}
+.mix-lost {
+  --mix-color: #c480a1;
+}
+.mix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+}
+.mix-legend a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+  border-radius: 4px;
+  color: var(--muted-strong);
+}
+.mix-legend a:is(:hover, :focus-visible) {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.mix-legend b {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.mix-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mix-color);
+  flex: 0 0 auto;
+}
+.record-identity {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+.record-identity > div {
+  min-width: 0;
+}
+.record-symbol {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.record-symbol.is-computer {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.page .record-table {
+  border-radius: 1.1rem;
+}
+.queue-row {
+  border-radius: 0;
+}
+.queue-row:hover .queue-icon,
+.queue-row:focus-visible .queue-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.overview-metrics > div:nth-child(2) .metric-symbol {
+  color: var(--status-deployed);
+  background: var(--status-deployed-bg);
+}
+.overview-metrics > div:nth-child(3) .metric-symbol {
+  color: var(--status-pending);
+  background: var(--status-pending-bg);
+}
+.page :is(.primary-button, .secondary-button, .danger-button),
+.login-page :is(.primary-button, .secondary-button) {
+  border-radius: var(--control-radius);
+  font-weight: 600;
+}
+.page .primary-button,
+.login-page .primary-button {
+  background-image: linear-gradient(rgb(255 255 255 / 8%), transparent);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 18%),
+    0 2px 3px rgb(0 0 0 / 12%);
+}
+.dashboard-nav-list .nav-link {
+  border-radius: 0.8rem;
+}
+.dashboard-nav-list .nav-link svg,
+.queue-icon,
+.record-symbol,
+:is(.primary-button, .secondary-button) svg {
+  transition:
+    transform 180ms var(--interaction-ease),
+    background-color 180ms,
+    color 180ms;
+}
+
+/* Hold interaction: progress is local to the control, never a page overlay. */
+.hold-action {
+  max-width: 100%;
+}
+.hold-button {
+  display: inline-grid;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--foreground);
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hold-button:is(:hover, :active) {
+  transform: none !important;
+}
+.hold-fill {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--status-critical) 24%, transparent);
+  transform: scaleX(var(--hold-progress, 0));
+  transform-origin: left;
+  pointer-events: none;
+}
+.hold-label {
+  grid-area: 1 / 1;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.hold-sizing {
+  grid-area: 1 / 1;
+  display: grid;
+  visibility: hidden;
+  pointer-events: none;
+}
+.hold-sizing > span {
+  grid-area: 1 / 1;
+  padding-inline-start: calc(17px + 0.5rem);
+}
+.hold-button[data-phase="ready"] {
+  border-color: var(--status-critical);
+  box-shadow: 0 0 0 2px var(--status-critical-bg);
+}
+.hold-hint {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-top: 0.45rem;
+}
+.hold-confirmation {
+  margin-top: 0.8rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  font-size: 0.875rem;
+}
+.hold-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+.hold-confirmation-actions button {
+  min-height: 44px;
+  padding: 0.6rem 0.85rem;
+}
+.photo-editor-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+.photo-editor-row > form {
+  grid-column: 1 / -1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-inner {
+    animation: workspace-arrive 220ms ease-out backwards;
+  }
+  .appearance-popover,
+  .command-menu-panel,
+  .hold-confirmation,
+  .secondary-actions[open] .secondary-actions-menu {
+    animation: control-arrive 160ms ease-out backwards;
+  }
+  .dashboard-nav-list .nav-link:hover > svg:first-child {
+    transform: translateY(-1px) rotate(-5deg);
+  }
+  .primary-button:hover > svg:last-child {
+    transform: translateX(2px);
+  }
+  .queue-row:hover .queue-icon,
+  .table-row:hover .record-symbol {
+    transform: scale(1.06);
+  }
+  .mix-segment {
+    animation: mix-arrive 400ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+    transform-origin: left;
+  }
+  .mix-segment:nth-child(2) {
+    animation-delay: 35ms;
+  }
+  .mix-segment:nth-child(3) {
+    animation-delay: 70ms;
+  }
+}
+@keyframes workspace-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes control-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes mix-arrive {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hold-fill {
+    transform: none;
+    opacity: 0;
+  }
+  .hold-button[data-phase="ready"] .hold-fill {
+    opacity: 1;
+  }
+}
+@media (max-width: 639px) {
+  .inventory-mix {
+    padding: 1rem;
+  }
+}
 /* Secondary actions stay nearby without competing with the main task. */
 .secondary-actions {
   position: relative;
@@ -2070,6 +2378,12 @@ input[type="file"].field {
 }
 
 @media (min-width: 1024px) {
+  .dashboard-shell > main {
+    margin: 0.75rem 0.75rem 0.75rem 0;
+    border: 1px solid var(--border);
+    border-radius: 1.5rem;
+    min-height: calc(100dvh - 1.5rem);
+  }
   .login-mobile-brand {
     display: none;
   }
@@ -2104,7 +2418,7 @@ input[type="file"].field {
     display: none;
   }
   .dashboard-shell .page {
-    padding: 2.5rem clamp(1.5rem, 3vw, 3.5rem) 3rem;
+    padding: 1.75rem clamp(1.25rem, 2.4vw, 2.5rem) 2.5rem;
   }
 }
 @media (max-width: 1023px) {
@@ -2131,20 +2445,23 @@ input[type="file"].field {
     display: none;
   }
   .overview-metrics > div {
-    padding: 0.3rem 0.75rem;
+    padding: 0.85rem 0.65rem;
+    box-shadow: none;
+    border-radius: 0.85rem;
+  }
+  .overview-metrics > div:first-child {
+    padding-left: 0.65rem;
   }
   .overview-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
   }
   .dashboard-overview-page .dashboard-header {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-  .overview-study {
-    display: none;
+    gap: 1rem;
   }
   .dashboard-overview-page .dashboard-header .title {
-    font-size: 2.6rem;
+    font-size: 1.85rem;
   }
   .overview-metrics p {
     font-size: 0.875rem;
@@ -2162,7 +2479,7 @@ input[type="file"].field {
     display: block;
   }
   .queue-row {
-    padding-inline: 1rem;
+    padding-inline: 0;
   }
   .queue-row small {
     font-size: 0.875rem;
@@ -2188,8 +2505,16 @@ input[type="file"].field {
   .activity-timeline {
     margin-inline: 0;
   }
+  .page .overview-workspace :is(.work-queue, .activity-ledger, .dashboard-note-card) {
+    padding: 1rem;
+  }
 }
 @media print {
+  .dashboard-shell > main {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
   .appearance-popover,
   .sidebar-content,
   .overview-footer {
