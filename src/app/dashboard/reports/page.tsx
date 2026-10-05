@@ -12,6 +12,7 @@ import {
 } from "@/lib/inventory-auth";
 import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { borrowingReportStates, exportPeriods } from "@/lib/report-export-filters";
+import { firstParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -36,10 +37,6 @@ const philippinePeso = new Intl.NumberFormat("en-PH", {
 
 function displayPurchasePrice(value?: { toString: () => string } | null) {
   return philippinePeso.format(Number(value?.toString() ?? 0));
-}
-
-function first(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function validValue<T extends string>(value: string | undefined, values: readonly T[]) {
@@ -112,18 +109,21 @@ export default async function ReportsPage({
     ...(canManage ? ["pcs", "borrowings", "maintenance"] : []),
     ...(canAdmin ? ["activity"] : []),
   ] as const;
-  const selectedKind = validValue(first(search.kind), availableReportKinds) || "inventory";
-  const selectedPeriod = validValue(first(search.period), exportPeriods) || "all";
+  const selectedKind = validValue(firstParam(search.kind), availableReportKinds) || "inventory";
+  const selectedPeriod = validValue(firstParam(search.period), exportPeriods) || "all";
   const selectedInventoryStatus = validValue(
-    first(search.inventoryStatus),
+    firstParam(search.inventoryStatus),
     Object.values(ItemStatus),
   );
   const selectedBorrowingState =
-    validValue(first(search.borrowingState), borrowingReportStates) || "all";
-  const selectedFrom = first(search.from)?.slice(0, 10) ?? "";
-  const selectedTo = first(search.to)?.slice(0, 10) ?? "";
-  const pcOnly = first(search.pcOnly) === "1";
-  const maintenanceSource = validValue(first(search.maintenanceSource), ["QR", "STAFF"] as const);
+    validValue(firstParam(search.borrowingState), borrowingReportStates) || "all";
+  const selectedFrom = firstParam(search.from)?.slice(0, 10) ?? "";
+  const selectedTo = firstParam(search.to)?.slice(0, 10) ?? "";
+  const pcOnly = firstParam(search.pcOnly) === "1";
+  const maintenanceSource = validValue(firstParam(search.maintenanceSource), [
+    "QR",
+    "STAFF",
+  ] as const);
 
   return (
     <div className="page reports-page">

@@ -1,300 +1,39 @@
 export const metadata = { title: "Inventory · CEIT Inventory" };
 
-import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import Link from "next/link";
-import { Monitor, Package } from "lucide-react";
+import { ItemCondition, ItemStatus } from "@prisma/client";
 
-import { ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
-
-import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { FeedbackForm } from "@/app/components/feedback-form";
 import {
   canManageAdministration,
   canManageInventory,
   requireInventoryAccess,
 } from "@/lib/inventory-auth";
-import {
-  inspectionIntervalDays,
-  inventoryAttentionWhere,
-  overdueInspectionWhere,
-} from "@/lib/inventory-attention";
-import { formatManilaDate } from "@/lib/manila-date";
-import { everyTermMatches, searchTerms } from "@/lib/search-terms";
+import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { humanizeEnum } from "@/lib/labels";
+import { pageParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
-import { FeedbackForm } from "@/app/components/feedback-form";
-import { bulkUpdateInventory } from "./actions";
-import { BulkSelectionToggle, ClearInventorySelection } from "./bulk-selection-toggle";
+import { bulkUpdateInventory } from "./actions/bulk";
+import { ClearInventorySelection } from "./bulk-selection-toggle";
 import { InventoryBulkActions } from "./inventory-bulk-actions";
+import { InventoryFilters } from "./inventory-filters";
+import {
+  currentSort,
+  inventoryListSelect,
+  inventoryOrderBy,
+  inventoryWhere,
+  maximumBulkSelection,
+  normalizeSearch,
+  pageSize,
+  selectionKey,
+  type InventoryListItem,
+  type RawSearchParams,
+} from "./inventory-query";
+import { InventoryRecords } from "./inventory-records";
 import { InventoryRowNavigation } from "./inventory-row-navigation";
 
 export const dynamic = "force-dynamic";
-
-type SearchParams = {
-  attention?: string;
-  bulk?: string;
-  category?: string;
-  checked?: string;
-  condition?: string;
-  direction?: string;
-  itemType?: string;
-  location?: string;
-  page?: string;
-  q?: string;
-  sort?: string;
-  status?: string;
-};
-type RawSearchParams = { [Key in keyof SearchParams]?: string | string[] };
-type InventoryListItem = Prisma.InventoryItemGetPayload<{
-  select: typeof inventoryListSelect;
-}>;
-type SortDirection = "asc" | "desc";
-type SortField = "assetTag" | "item" | "location" | "stock" | "status";
-
-const pageSize = 25;
-const maximumBulkSelection = 10_000;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const sortableFields: SortField[] = ["assetTag", "item", "location", "stock", "status"];
-const inventoryListSelect = {
-  id: true,
-  name: true,
-  assetTag: true,
-  quantity: true,
-  status: true,
-  lastCheckedAt: true,
-  category: { select: { name: true } },
-  computer: { select: { id: true } },
-  location: { select: { name: true } },
-} satisfies Prisma.InventoryItemSelect;
-
-function isItemStatus(value?: string): value is ItemStatus {
-  return Boolean(value && Object.values(ItemStatus).includes(value as ItemStatus));
-}
-
-function isItemType(value?: string): value is ItemType {
-  return Boolean(value && Object.values(ItemType).includes(value as ItemType));
-}
-
-function isItemCondition(value?: string): value is ItemCondition {
-  return Boolean(value && Object.values(ItemCondition).includes(value as ItemCondition));
-}
-
-function enumLabel(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function lastCheckedLabel(value: Date | null) {
-  return value
-    ? formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" })
-    : "Not checked";
-}
-
-function safePage(value?: string) {
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(parsed, 10_000) : 1;
-}
-
-// Build the inventory query from the active filters.
-function inventoryWhere(search: SearchParams) {
-  const terms = searchTerms(search.q?.trim().slice(0, 120));
-  const where: Prisma.InventoryItemWhereInput = {};
-  const requirements: Prisma.InventoryItemWhereInput[] = [];
-
-  if (terms.length) {
-    requirements.push(
-      ...everyTermMatches<Prisma.InventoryItemWhereInput>(terms, (term) => [
-        { name: { contains: term, mode: "insensitive" } },
-        { assetTag: { contains: term, mode: "insensitive" } },
-        { serialNumber: { contains: term, mode: "insensitive" } },
-        { manufacturer: { contains: term, mode: "insensitive" } },
-        { model: { contains: term, mode: "insensitive" } },
-        { category: { name: { contains: term, mode: "insensitive" } } },
-        { location: { name: { contains: term, mode: "insensitive" } } },
-        { location: { roomNumber: { contains: term, mode: "insensitive" } } },
-        { computer: { is: { macAddress: { contains: term, mode: "insensitive" } } } },
-        { computer: { is: { ipAddress: { contains: term, mode: "insensitive" } } } },
-      ]),
-    );
-  }
-  if (search.attention === "1") {
-    requirements.push(inventoryAttentionWhere);
-  }
-  if (search.checked === "overdue") {
-    requirements.push(overdueInspectionWhere());
-  }
-  if (requirements.length) {
-    where.AND = requirements;
-  }
-
-  if (isItemStatus(search.status)) {
-    where.status = search.status;
-  }
-  if (search.location && uuidPattern.test(search.location)) {
-    where.locationId = search.location;
-  }
-  if (search.category && uuidPattern.test(search.category)) {
-    where.categoryId = search.category;
-  }
-  if (isItemType(search.itemType)) {
-    where.itemType = search.itemType;
-  }
-  if (isItemCondition(search.condition)) {
-    where.condition = search.condition;
-  }
-  return where;
-}
-
-function currentSort(search: SearchParams): { direction: SortDirection; field: SortField } | null {
-  const field = sortableFields.find((candidate) => candidate === search.sort);
-  if (!field) {
-    return null;
-  }
-  return { field, direction: search.direction === "desc" ? "desc" : "asc" };
-}
-
-// Apply the selected sort with a stable fallback order.
-function inventoryOrderBy(
-  sort: ReturnType<typeof currentSort>,
-): Prisma.InventoryItemOrderByWithRelationInput[] {
-  if (!sort) {
-    return [{ updatedAt: "desc" }, { id: "asc" }];
-  }
-
-  switch (sort.field) {
-    case "assetTag":
-      return [{ assetTag: sort.direction }, { id: "asc" }];
-    case "item":
-      return [{ name: sort.direction }, { id: "asc" }];
-    case "location":
-      return [{ location: { name: sort.direction } }, { id: "asc" }];
-    case "stock":
-      return [{ quantity: sort.direction }, { id: "asc" }];
-    case "status":
-      return [{ status: sort.direction }, { id: "asc" }];
-  }
-}
-
-// Keep active filters when building links.
-function inventoryFilterParameters(search: SearchParams) {
-  const parameters = new URLSearchParams();
-  if (search.q?.trim()) {
-    parameters.set("q", search.q.trim().slice(0, 120));
-  }
-  if (isItemStatus(search.status)) {
-    parameters.set("status", search.status);
-  }
-  if (search.location && uuidPattern.test(search.location)) {
-    parameters.set("location", search.location);
-  }
-  if (search.category && uuidPattern.test(search.category)) {
-    parameters.set("category", search.category);
-  }
-  if (isItemType(search.itemType)) {
-    parameters.set("itemType", search.itemType);
-  }
-  if (isItemCondition(search.condition)) {
-    parameters.set("condition", search.condition);
-  }
-  if (search.attention === "1") {
-    parameters.set("attention", "1");
-  }
-  if (search.checked === "overdue") {
-    parameters.set("checked", "overdue");
-  }
-  return parameters;
-}
-
-// Keep a separate selection for each set of filters.
-function selectionKey(search: SearchParams) {
-  return inventoryFilterParameters(search).toString() || "all";
-}
-
-function pageLink(search: SearchParams, page: number) {
-  const parameters = inventoryFilterParameters(search);
-  if (search.bulk === "1") {
-    parameters.set("bulk", "1");
-  }
-  const sort = currentSort(search);
-  if (sort) {
-    parameters.set("sort", sort.field);
-    parameters.set("direction", sort.direction);
-  }
-  if (page > 1) {
-    parameters.set("page", String(page));
-  }
-  const query = parameters.toString();
-  return query ? `/dashboard/inventory?${query}` : "/dashboard/inventory";
-}
-
-function sortLink(search: SearchParams, field: SortField) {
-  const activeSort = currentSort(search);
-  const direction: SortDirection =
-    activeSort?.field === field && activeSort.direction === "asc" ? "desc" : "asc";
-  return pageLink({ ...search, direction, sort: field }, 1);
-}
-
-// Link a table heading to its next sort order.
-function SortableHeader({
-  field,
-  label,
-  search,
-}: {
-  field: SortField;
-  label: string;
-  search: SearchParams;
-}) {
-  const activeSort = currentSort(search);
-  const isActive = activeSort?.field === field;
-  const direction = activeSort?.direction === "desc" ? "descending" : "ascending";
-  const marker = isActive ? (activeSort?.direction === "desc" ? "↓" : "↑") : "↕";
-
-  return (
-    <th
-      scope="col"
-      aria-sort={isActive ? direction : "none"}
-      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-    >
-      <Link
-        href={sortLink(search, field)}
-        className="inline-flex items-center gap-1.5 hover:text-[var(--accent)]"
-        aria-label={`Sort by ${label}${isActive ? `, currently ${direction}` : ""}`}
-      >
-        {label}
-        <span className={isActive ? "text-[var(--accent)]" : "opacity-45"} aria-hidden="true">
-          {marker}
-        </span>
-      </Link>
-    </th>
-  );
-}
-
-// Choose page numbers and gaps for the pager.
-function paginationEntries(totalPages: number, currentPage: number) {
-  const pages = new Set<number>([1, totalPages]);
-
-  if (totalPages <= 9) {
-    for (let page = 1; page <= totalPages; page += 1) {
-      pages.add(page);
-    }
-  } else {
-    const start =
-      currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
-    const end = currentPage <= 3 ? 5 : currentPage >= totalPages - 2 ? totalPages : currentPage + 2;
-    for (let page = start; page <= end; page += 1) {
-      pages.add(page);
-    }
-  }
-
-  const sortedPages = [...pages]
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right);
-  return sortedPages.flatMap((page, index) =>
-    index > 0 && page - sortedPages[index - 1] > 1 ? [null, page] : [page],
-  );
-}
 
 // Wrap bulk changes in a form when editing is allowed.
 function InventoryFormContainer({
@@ -321,14 +60,12 @@ export default async function InventoryPage({
   searchParams: Promise<RawSearchParams>;
 }) {
   const [user, rawSearch] = await Promise.all([requireInventoryAccess(), searchParams]);
-  const search: SearchParams = Object.fromEntries(
-    Object.entries(rawSearch).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
-  );
+  const search = normalizeSearch(rawSearch);
   const canManage = canManageInventory(user.role);
   const bulkMode = canManage && search.bulk === "1";
   const where = inventoryWhere(search);
   const sort = currentSort(search);
-  const requestedPage = safePage(search.page);
+  const requestedPage = pageParam(search.page);
   let databaseError = false;
   let locations: { id: string; name: string }[] = [];
   let categories: { id: string; name: string }[] = [];
@@ -419,157 +156,12 @@ export default async function InventoryPage({
           ) : null}
         </header>
 
-        {/* Search, filter, and sort the inventory. */}
-        <form
-          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
-          aria-label="Inventory filters"
-        >
-          {bulkMode ? <input type="hidden" name="bulk" value="1" /> : null}
-          {sort ? (
-            <>
-              <input type="hidden" name="sort" value={sort.field} />
-              <input type="hidden" name="direction" value={sort.direction} />
-            </>
-          ) : null}
-          <label className="sm:col-span-2">
-            <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
-            <input
-              name="q"
-              defaultValue={search.q?.slice(0, 120) ?? ""}
-              maxLength={120}
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Name, asset tag, serial, room, MAC…"
-            />
-          </label>
-          <label>
-            <span className="muted text-xs font-bold uppercase tracking-wide">Status</span>
-            <select
-              name="status"
-              defaultValue={isItemStatus(search.status) ? search.status : ""}
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            >
-              <option value="">All statuses</option>
-              {Object.values(ItemStatus).map((status) => (
-                <option key={status} value={status}>
-                  {inventoryStatusLabel(status)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="muted text-xs font-bold uppercase tracking-wide">Location</span>
-            <select
-              name="location"
-              defaultValue={
-                search.location && uuidPattern.test(search.location) ? search.location : ""
-              }
-              className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            >
-              <option value="">All locations</option>
-              {locations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <details
-            className="filter-disclosure sm:col-span-2 xl:col-span-3"
-            open={Boolean(
-              search.category ||
-              search.itemType ||
-              search.condition ||
-              search.attention === "1" ||
-              search.checked === "overdue",
-            )}
-          >
-            <summary className="cursor-pointer text-sm font-semibold">More filters</summary>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <label>
-                <span className="muted text-xs font-bold uppercase tracking-wide">Category</span>
-                <select
-                  name="category"
-                  defaultValue={
-                    search.category && uuidPattern.test(search.category) ? search.category : ""
-                  }
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                >
-                  <option value="">All categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="muted text-xs font-bold uppercase tracking-wide">Item type</span>
-                <select
-                  name="itemType"
-                  defaultValue={isItemType(search.itemType) ? search.itemType : ""}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                >
-                  <option value="">All item types</option>
-                  {Object.values(ItemType).map((itemType) => (
-                    <option key={itemType} value={itemType}>
-                      {enumLabel(itemType)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="muted text-xs font-bold uppercase tracking-wide">Attention</span>
-                <select
-                  name="attention"
-                  defaultValue={search.attention === "1" ? "1" : ""}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                >
-                  <option value="">Any record</option>
-                  <option value="1">Needs attention (defective, untested, poor)</option>
-                </select>
-              </label>
-              <label>
-                <span className="muted text-xs font-bold uppercase tracking-wide">
-                  Last checked
-                </span>
-                <select
-                  name="checked"
-                  defaultValue={search.checked === "overdue" ? "overdue" : ""}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                >
-                  <option value="">Any time</option>
-                  <option value="overdue">{`Not checked in ${inspectionIntervalDays}+ days`}</option>
-                </select>
-              </label>
-              <label>
-                <span className="muted text-xs font-bold uppercase tracking-wide">Condition</span>
-                <select
-                  name="condition"
-                  defaultValue={isItemCondition(search.condition) ? search.condition : ""}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                >
-                  <option value="">All conditions</option>
-                  {Object.values(ItemCondition).map((condition) => (
-                    <option key={condition} value={condition}>
-                      {enumLabel(condition)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </details>
-          <div className="flex gap-3">
-            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-              Filter
-            </button>
-            <Link
-              href="/dashboard/inventory"
-              className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
-            >
-              Clear
-            </Link>
-          </div>
-        </form>
+        <InventoryFilters
+          bulkMode={bulkMode}
+          categories={categories}
+          locations={locations}
+          search={search}
+        />
 
         {search.bulk === "updated" ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
@@ -608,248 +200,22 @@ export default async function InventoryPage({
                   .filter((status) => status !== ItemStatus.RETIRED)
                   .map((status) => ({ label: inventoryStatusLabel(status), value: status }))}
                 conditions={Object.values(ItemCondition).map((condition) => ({
-                  label: enumLabel(condition),
+                  label: humanizeEnum(condition),
                   value: condition,
                 }))}
               />
             ) : null}
-            {/* Matching inventory records. */}
-            <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
-              <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
-                <p className="muted text-sm">
-                  {totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} · Page{" "}
-                  {currentPage} of {totalPages}
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  {bulkMode ? (
-                    <BulkSelectionToggle
-                      allItemIds={allMatchingItemIds}
-                      selectionKey={persistentSelectionKey}
-                      totalRecords={totalRecords}
-                    />
-                  ) : null}
-                  {canManage ? (
-                    <Link
-                      href={pageLink({ ...search, bulk: bulkMode ? undefined : "1" }, currentPage)}
-                      className="accent-link text-sm font-semibold"
-                    >
-                      {bulkMode ? "Done selecting" : "Select items"}
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="record-cards divide-y xl:hidden">
-                {inventoryItems.map((item) => {
-                  return (
-                    <article
-                      key={item.id}
-                      data-inventory-row-url={`/dashboard/inventory/${item.id}`}
-                      tabIndex={0}
-                      aria-label={`Open ${item.name}`}
-                      className="cursor-pointer space-y-3 p-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
-                    >
-                      {/* Compact item cards for mobile. */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <Link
-                            href={`/dashboard/inventory/${item.id}`}
-                            className="accent-link record-name font-semibold"
-                          >
-                            <OptimisticText entity={`item:${item.id}`} field="name">
-                              {item.name}
-                            </OptimisticText>
-                          </Link>
-                          <p className="muted mt-1 text-xs">
-                            {item.category.name}
-                            {item.computer ? " · PC" : ""}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
-                          {bulkMode ? (
-                            <input
-                              value={item.id}
-                              type="checkbox"
-                              data-bulk-selection-item="true"
-                              className="h-4 w-4"
-                              aria-label={`Select ${item.name}`}
-                            />
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p className="muted asset-code">{item.assetTag ?? "No asset tag"}</p>
-                        <p className="text-right">
-                          <OptimisticText entity={`item:${item.id}`} field="location">
-                            {item.location.name}
-                          </OptimisticText>
-                        </p>
-                        <p className="muted">
-                          {item.quantity} · {lastCheckedLabel(item.lastCheckedAt)}
-                        </p>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-
-              <div className="record-table hidden overflow-x-auto xl:block">
-                {/* Inventory table for wider screens. */}
-                <table className="w-full">
-                  <thead>
-                    <tr className="table-heading divider border-b">
-                      {bulkMode ? (
-                        <th scope="col" className="w-12 px-3 py-4">
-                          <span className="sr-only">Select</span>
-                        </th>
-                      ) : null}
-                      <SortableHeader field="assetTag" label="Asset tag" search={search} />
-                      <SortableHeader field="item" label="Item" search={search} />
-                      <SortableHeader field="location" label="Location" search={search} />
-                      <SortableHeader field="stock" label="Stock" search={search} />
-                      <SortableHeader field="status" label="Status" search={search} />
-                      <th
-                        scope="col"
-                        className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                      >
-                        Last checked
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inventoryItems.map((item) => {
-                      return (
-                        <tr
-                          key={item.id}
-                          data-inventory-row-url={`/dashboard/inventory/${item.id}`}
-                          tabIndex={0}
-                          aria-label={`Open ${item.name}`}
-                          className="table-row cursor-pointer border-b last:border-0 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
-                        >
-                          {bulkMode ? (
-                            <td className="px-3 py-4">
-                              <input
-                                value={item.id}
-                                type="checkbox"
-                                data-bulk-selection-item="true"
-                                className="h-4 w-4"
-                                aria-label={`Select ${item.name}`}
-                              />
-                            </td>
-                          ) : null}
-                          <td className="muted asset-code px-5 py-4 text-sm">
-                            {item.assetTag ?? "–"}
-                          </td>
-                          <td className="px-5 py-4 text-sm">
-                            <div className="record-identity">
-                              <span
-                                className={`record-symbol ${item.computer ? "is-computer" : ""}`}
-                                aria-hidden="true"
-                              >
-                                {item.computer ? <Monitor size={21} /> : <Package size={21} />}
-                              </span>
-                              <div>
-                                <Link
-                                  href={`/dashboard/inventory/${item.id}`}
-                                  className="accent-link record-name font-semibold"
-                                >
-                                  <OptimisticText entity={`item:${item.id}`} field="name">
-                                    {item.name}
-                                  </OptimisticText>
-                                </Link>
-                                <div className="muted mt-1 text-xs">
-                                  {item.category.name}
-                                  {item.computer ? " · PC" : ""}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="muted px-5 py-4 text-sm">
-                            <OptimisticText entity={`item:${item.id}`} field="location">
-                              {item.location.name}
-                            </OptimisticText>
-                          </td>
-                          <td className="muted px-5 py-4 text-sm">{item.quantity}</td>
-                          <td className="px-5 py-4">
-                            <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
-                          </td>
-                          <td className="muted px-5 py-4 text-sm">
-                            {lastCheckedLabel(item.lastCheckedAt)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {totalPages > 1 ? (
-                <nav
-                  className="divider flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3"
-                  aria-label="Inventory pages"
-                >
-                  {/* Inventory page navigation. */}
-                  {currentPage > 1 ? (
-                    <Link
-                      href={pageLink(search, currentPage - 1)}
-                      className="pagination-link px-3 text-sm font-semibold"
-                    >
-                      ← Previous
-                    </Link>
-                  ) : (
-                    <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
-                      ← Previous
-                    </span>
-                  )}
-                  <div
-                    className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto pb-1 sm:order-none sm:w-auto sm:pb-0"
-                    aria-label="Choose inventory page"
-                  >
-                    {paginationEntries(totalPages, currentPage).map((entry, index) =>
-                      entry === null ? (
-                        <span
-                          key={`gap-${index}`}
-                          className="muted px-1 text-sm"
-                          aria-hidden="true"
-                        >
-                          …
-                        </span>
-                      ) : entry === currentPage ? (
-                        <span
-                          key={entry}
-                          className="pagination-current text-sm font-semibold"
-                          aria-current="page"
-                        >
-                          {entry}
-                        </span>
-                      ) : (
-                        <Link
-                          key={entry}
-                          href={pageLink(search, entry)}
-                          className="pagination-link text-sm font-semibold"
-                          aria-label={`Go to page ${entry}`}
-                        >
-                          {entry}
-                        </Link>
-                      ),
-                    )}
-                  </div>
-                  {currentPage < totalPages ? (
-                    <Link
-                      href={pageLink(search, currentPage + 1)}
-                      className="pagination-link px-3 text-sm font-semibold"
-                    >
-                      Next →
-                    </Link>
-                  ) : (
-                    <span className="card-muted rounded-lg px-3 py-2 text-sm font-semibold opacity-50">
-                      Next →
-                    </span>
-                  )}
-                </nav>
-              ) : null}
-            </section>
+            <InventoryRecords
+              allMatchingItemIds={allMatchingItemIds}
+              bulkMode={bulkMode}
+              canManage={canManage}
+              currentPage={currentPage}
+              items={inventoryItems}
+              persistentSelectionKey={persistentSelectionKey}
+              search={search}
+              totalPages={totalPages}
+              totalRecords={totalRecords}
+            />
           </InventoryFormContainer>
         )}
       </div>

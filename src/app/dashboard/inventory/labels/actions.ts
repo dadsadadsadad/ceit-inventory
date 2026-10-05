@@ -1,8 +1,39 @@
 "use server";
+
+import { AuditAction } from "@prisma/client";
+
+import { auditActorName, auditEventData } from "@/lib/audit-event";
+import { isUuid } from "@/lib/ids";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
-import { auditEventData } from "@/lib/audit-event";
 import { maximumLabelCount } from "@/lib/label-sheet";
 import { prisma } from "@/prisma";
+
+// Add one printed QR label to the audit trail.
+export async function recordInventoryLabelPrinted(itemId: string) {
+  const actor = await requireInventoryAccess();
+  if (!isUuid(itemId)) {
+    return;
+  }
+
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: itemId },
+    select: { id: true },
+  });
+  if (!item) {
+    return;
+  }
+
+  await prisma.inventoryAudit.create({
+    data: {
+      itemId: item.id,
+      action: AuditAction.UPDATED,
+      summary: "QR label opened for printing.",
+      actorId: actor.id,
+      actorName: auditActorName(actor),
+      metadata: { activityKind: "qr-code-print", source: "qr-code" },
+    },
+  });
+}
 
 // Record every item included in a label sheet.
 export async function recordLabelSheetPrinted(ids: string[]) {
@@ -11,7 +42,7 @@ export async function recordLabelSheetPrinted(ids: string[]) {
     !Array.isArray(ids) ||
     !ids.length ||
     ids.length > maximumLabelCount ||
-    ids.some((id) => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id))
+    ids.some((id) => !isUuid(id))
   ) {
     throw new Error("Invalid label selection.");
   }
