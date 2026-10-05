@@ -207,3 +207,46 @@ Validation and corrections:
 
 No dependencies, external image requests, or dashboard queries were added. All
 data-changing checks used isolated schemas, which were removed after testing.
+
+## Code review and workflow improvements — 6 October 2026
+
+A full read-through of the application found the following problems, which are now fixed:
+
+- **Import messages and preview.** Common row errors (an unknown category or location, an
+  invalid date) were replaced by a generic "could not be imported" message. All row problems
+  now explain themselves. The validate-only mode also missed problems the real import would hit:
+  it now checks every field, Settings (missing or inactive categories and rooms), and
+  identifiers that already exist, and reports "…and N more" when more than 20 rows need work.
+- **Last-checked date drift.** The record edit form and the new-item form used the UTC calendar
+  day while screens use Philippine time, so saving an edit made between midnight and 8 AM
+  moved the inspection date back a day, discarded the recorded time, and logged a false
+  `lastCheckedAt` change in the audit trail. The form now uses the Philippine day and keeps the
+  recorded time when the day is unchanged.
+- **Audit names.** Audit entries recorded a username, an email address, or both depending on
+  the action. All new entries use the same `username | email` format.
+- **CSV timestamps.** Exports contained UTC ISO timestamps (for example `2026-10-04T16:00:00.000Z`)
+  that disagreed with the PDF reports. They now use Philippine time, and inspection and purchase
+  dates are date-only.
+- **Locked accounts.** The sign-in page tells staff to ask an administrator for help, but an
+  administrator could neither see that an account was locked nor clear the lock (even a
+  password reset left it locked). The Users page now shows "Locked", offers **Unlock account**,
+  and a password reset clears the lock. Sign-in for unknown accounts now spends the same time as
+  a real password check, so response time does not reveal which usernames exist.
+- **Inconsistent "needs attention".** The dashboard counted only Defective items while the PDF
+  reports also counted Not tested and poor condition (including retired and lost records). They
+  now share one definition and the dashboard links to the matching Inventory filter.
+- **Borrower data retention.** Redaction only ran when someone scheduled a script, which cannot
+  happen on Vercel. It now also runs automatically from the dashboard, at most every six hours.
+- **Photos** were re-read from the database on every view (`no-store`); they are now cached
+  privately in the browser for an hour.
+- **Smaller fixes.** The Delete location button used a fixed red that was hard to read on the
+  light theme; the overview PDF's overdue list now shows the return time; unused categories
+  can be deleted; an open maintenance request on a Defective item reminds staff to restore the
+  equipment status.
+
+Workflow additions: overdue tracking and return-time changes, public availability times,
+multi-word search with MAC/IP matching, "needs attention" and "not checked in 90+ days" filters,
+bulk inspection, and keyboard navigation plus equipment search in quick navigation.
+See [launch-checklist.md](launch-checklist.md) for the staff-facing rules.
+
+No database migration is required for this release.

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { searchInventoryQuickly, type QuickSearchItem } from "./quick-search";
 
 type CommandItem = {
   description: string;
@@ -129,6 +130,14 @@ type CommandMenuProps = {
   embedded?: boolean;
 };
 
+type MenuEntry = {
+  description: string;
+  href: string;
+  Icon: LucideIcon;
+  key: string;
+  label: string;
+};
+
 const focusableSelector =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -140,7 +149,13 @@ export function CommandMenu({
 }: CommandMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [itemSearch, setItemSearch] = useState<{ items: QuickSearchItem[]; query: string }>({
+    items: [],
+    query: "",
+  });
   const dialogRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -158,11 +173,30 @@ export function CommandMenu({
       .includes(query.trim().toLowerCase());
   });
 
+  // Equipment matches for the typed words. Results are kept with their query so an older answer
+  // is never shown for newer text.
+  const trimmedQuery = query.trim();
+  const equipmentMatches =
+    trimmedQuery.length >= 2 && itemSearch.query === trimmedQuery ? itemSearch.items : [];
+  const entries: MenuEntry[] = [
+    ...visibleCommands.map((command) => ({ ...command, key: command.href })),
+    ...equipmentMatches.map((item) => ({
+      key: `item-${item.id}`,
+      label: item.name,
+      description: [item.assetTag, item.location].filter(Boolean).join(" · "),
+      href: `/dashboard/inventory/${item.id}`,
+      Icon: Package,
+    })),
+  ];
+  const firstEquipmentIndex = visibleCommands.length;
+  const selectedIndex = Math.min(activeIndex, Math.max(entries.length - 1, 0));
+
   // Open the command list with a fresh search.
   function openMenu() {
     returnFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : triggerRef.current;
     setQuery("");
+    setActiveIndex(0);
     setIsOpen(true);
   }
 
@@ -170,6 +204,7 @@ export function CommandMenu({
   function closeMenu(restoreFocus = true) {
     setIsOpen(false);
     setQuery("");
+    setActiveIndex(0);
 
     if (restoreFocus) {
       window.requestAnimationFrame(() => returnFocusRef.current?.focus());
@@ -206,14 +241,62 @@ export function CommandMenu({
     return () => window.clearTimeout(focusTimer);
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || query.trim().length < 2) {
+      return;
+    }
+    const term = query.trim();
+    let current = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        const items = await searchInventoryQuickly(term);
+        if (current) {
+          setItemSearch({ items, query: term });
+        }
+      } catch {
+        if (current) {
+          setItemSearch({ items: [], query: term });
+        }
+      }
+    }, 200);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [isOpen, query]);
+
+  useEffect(() => {
+    listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex, entries.length]);
+
   // Close the menu and open the selected destination.
-  function openCommand(command: CommandItem) {
-    closeMenu(false);
+  function openCommand(command: { href: string }) {
+    setIsOpen(false);
+    setQuery("");
+    setActiveIndex(0);
     router.push(command.href);
+  }
+
+  // Move through the results with the arrow keys and open the highlighted one with Enter.
+  function handleListKeys(event: React.KeyboardEvent<HTMLElement>) {
+    if (!entries.length) {
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((selectedIndex + 1) % entries.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((selectedIndex - 1 + entries.length) % entries.length);
+    } else if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+      event.preventDefault();
+      openCommand(entries[selectedIndex]);
+    }
   }
 
   // Handle keyboard navigation inside the command menu.
   function handleDialogKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    handleListKeys(event);
     if (event.key !== "Tab") {
       return;
     }
@@ -301,40 +384,67 @@ export function CommandMenu({
                   <input
                     ref={inputRef}
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search pages and actions…"
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setActiveIndex(0);
+                    }}
+                    role="combobox"
+                    aria-expanded="true"
+                    aria-controls="command-menu-results"
+                    aria-activedescendant={
+                      entries.length ? `command-menu-option-${selectedIndex}` : undefined
+                    }
+                    autoComplete="off"
+                    placeholder="Search pages, actions, or equipment…"
                   />
                 </label>
-                <div className="command-menu-list">
-                  {visibleCommands.length ? (
-                    visibleCommands.map((command) => (
-                      <button
-                        key={command.href}
-                        type="button"
-                        className="command-menu-item"
-                        onClick={() => openCommand(command)}
-                      >
-                        <span className="command-menu-icon">
-                          <command.Icon className="h-4 w-4" aria-hidden="true" />
-                        </span>
-                        <span className="min-w-0 flex-1 text-left">
-                          <span className="block text-sm font-semibold">{command.label}</span>
-                          <span className="muted mt-0.5 block text-xs">{command.description}</span>
-                        </span>
-                        <span className="command-menu-arrow" aria-hidden="true">
-                          ↗
-                        </span>
-                      </button>
+                <div
+                  ref={listRef}
+                  id="command-menu-results"
+                  role="listbox"
+                  aria-label="Quick navigation results"
+                  className="command-menu-list"
+                >
+                  {entries.length ? (
+                    entries.map((entry, index) => (
+                      <div key={entry.key} className="contents">
+                        {index === firstEquipmentIndex && equipmentMatches.length ? (
+                          <p className="command-menu-group muted">Equipment</p>
+                        ) : null}
+                        <button
+                          id={`command-menu-option-${index}`}
+                          type="button"
+                          role="option"
+                          aria-selected={index === selectedIndex}
+                          data-active={index === selectedIndex}
+                          className="command-menu-item"
+                          onClick={() => openCommand({ href: entry.href })}
+                          onMouseMove={() => setActiveIndex(index)}
+                        >
+                          <span className="command-menu-icon">
+                            <entry.Icon className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                          <span className="min-w-0 flex-1 text-left">
+                            <span className="block text-sm font-semibold">{entry.label}</span>
+                            <span className="muted mt-0.5 block text-xs">{entry.description}</span>
+                          </span>
+                          <span className="command-menu-arrow" aria-hidden="true">
+                            ↗
+                          </span>
+                        </button>
+                      </div>
                     ))
                   ) : (
                     <p className="muted px-3 py-8 text-center text-sm">
-                      No pages match that search.
+                      {trimmedQuery.length >= 2
+                        ? "No pages or equipment match that search."
+                        : "No pages match that search."}
                     </p>
                   )}
                 </div>
                 <p className="command-menu-footer">
-                  <kbd>Esc</kbd> to close <span aria-hidden="true">·</span> choose a destination to
-                  continue
+                  <kbd>↑</kbd> <kbd>↓</kbd> to move <span aria-hidden="true">·</span>{" "}
+                  <kbd>Enter</kbd> to open <span aria-hidden="true">·</span> <kbd>Esc</kbd> to close
                 </p>
               </section>
             </div>,

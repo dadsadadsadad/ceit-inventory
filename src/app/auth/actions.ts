@@ -8,6 +8,7 @@ import {
   clearSession,
   createSession,
   getCurrentInventoryUser,
+  simulatePasswordCheck,
   verifyPassword,
 } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
@@ -67,6 +68,7 @@ export async function signIn(formData: FormData) {
   });
   const now = new Date();
   if (!user || !user.isActive) {
+    await simulatePasswordCheck(password);
     redirect("/auth/login?error=invalid-credentials");
   }
   if (user.lockedUntil && user.lockedUntil > now) {

@@ -74,3 +74,56 @@ export async function checkLoanAvailability(
   }
   return item;
 }
+
+// Check that keeping an outstanding loan longer does not collide with someone else's booking.
+export async function checkLoanExtension(
+  transaction: Prisma.TransactionClient,
+  request: {
+    checkedOutItemStatus: ItemStatus | null;
+    id: string;
+    inventoryItemId: string;
+    requestedQuantity: number;
+  },
+  endsAt: Date,
+  now = new Date(),
+) {
+  const item = await transaction.inventoryItem.findUnique({
+    where: { id: request.inventoryItemId },
+    select: { quantity: true },
+  });
+  if (!item) {
+    throw new FormError("This item no longer exists.");
+  }
+  const others = await transaction.borrowRequest.findMany({
+    where: {
+      inventoryItemId: request.inventoryItemId,
+      status: { in: activeLoanStatuses },
+      id: { not: request.id },
+    },
+    select: {
+      startsAt: true,
+      expectedReturnDate: true,
+      requestedQuantity: true,
+      status: true,
+      checkedOutItemStatus: true,
+    },
+  });
+  // Older quantity-based loans removed their units from stock; add those units back to get the
+  // physical total. An individually tracked loan never changes the stock quantity.
+  const otherQuantityLoans = others
+    .filter(
+      (loan) =>
+        (loan.status === BorrowStatus.BORROWED || loan.status === BorrowStatus.RETURN_REQUESTED) &&
+        !loan.checkedOutItemStatus,
+    )
+    .reduce((sum, loan) => sum + loan.requestedQuantity, 0);
+  const capacity =
+    item.quantity +
+    otherQuantityLoans +
+    (request.checkedOutItemStatus ? 0 : request.requestedQuantity);
+  if (request.requestedQuantity > availableScheduledQuantity(capacity, others, now, endsAt, now)) {
+    throw new FormError(
+      "This equipment is requested or reserved by someone else during that time. Choose an earlier return time.",
+    );
+  }
+}

@@ -32,3 +32,15 @@ export function nextManilaCalendarDate(date = new Date()) {
 export function startOfManilaDay(date = new Date()) {
   return new Date(`${manilaCalendarDate(date)}T00:00:00+08:00`);
 }
+
+// The Philippines does not observe daylight saving time, so a fixed UTC+8 offset is exact.
+// This avoids creating a formatter for every cell of a large export.
+const manilaOffsetMs = 8 * 60 * 60 * 1000;
+
+export function manilaDateText(value: Date) {
+  return new Date(value.getTime() + manilaOffsetMs).toISOString().slice(0, 10);
+}
+
+export function manilaDateTimeText(value: Date) {
+  return new Date(value.getTime() + manilaOffsetMs).toISOString().slice(0, 16).replace("T", " ");
+}

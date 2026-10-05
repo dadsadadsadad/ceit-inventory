@@ -168,7 +168,21 @@ export async function updateUser(formData: FormData) {
 
             const account = await transaction.user.update({
               where: { id },
-              data: { email, username, role, isActive, ...(passwordHash ? { passwordHash } : {}) },
+              data: {
+                email,
+                username,
+                role,
+                isActive,
+                // A reset is how an administrator helps someone who is locked out.
+                ...(passwordHash
+                  ? {
+                      passwordHash,
+                      failedSignInCount: 0,
+                      firstFailedSignInAt: null,
+                      lockedUntil: null,
+                    }
+                  : {}),
+              },
             });
             if (passwordHash || !isActive) {
               await transaction.userSession.deleteMany({ where: { userId: id } });
@@ -217,5 +231,38 @@ export async function updateUser(formData: FormData) {
     }
 
     throw new FormError("The account was updated by another request. Please try again.");
+  });
+}
+
+// Let an administrator end a temporary sign-in lock without changing the password.
+export async function unlockUser(formData: FormData) {
+  return formAction(async () => {
+    const administrator = await requireAdministrator();
+    const id = idFrom(formData);
+    try {
+      const account = await prisma.user.update({
+        where: { id },
+        data: { failedSignInCount: 0, firstFailedSignInAt: null, lockedUntil: null },
+      });
+      await prisma.inventoryAudit.create({
+        data: auditEventData({
+          action: "UPDATED",
+          actor: administrator,
+          entity: {
+            id: account.id,
+            label: `${account.username} | ${account.email}`,
+            type: "account",
+          },
+          metadata: { activityKind: "account", changes: { signInLockCleared: true } },
+          summary: "Account sign-in lock cleared.",
+        }),
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new FormError("This account no longer exists.");
+      }
+      throw error;
+    }
+    revalidatePath("/dashboard/users");
   });
 }

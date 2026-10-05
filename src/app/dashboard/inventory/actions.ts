@@ -13,7 +13,7 @@ import {
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { redirect } from "next/navigation";
 
-import { auditEventData } from "@/lib/audit-event";
+import { auditActorName, auditEventData } from "@/lib/audit-event";
 import {
   canManageAdministration,
   requireAdministrator,
@@ -22,6 +22,7 @@ import {
 } from "@/lib/inventory-auth";
 import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
 import { canHaveComputerDetails, isSingleTrackedAsset } from "@/lib/inventory-pc";
+import { manilaCalendarDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 const statuses = Object.values(ItemStatus);
@@ -57,7 +58,7 @@ export async function recordInventoryLabelPrinted(itemId: string) {
       action: AuditAction.UPDATED,
       summary: "QR label opened for printing.",
       actorId: actor.id,
-      actorName: actor.username,
+      actorName: auditActorName(actor),
       metadata: { activityKind: "qr-code-print", source: "qr-code" },
     },
   });
@@ -123,8 +124,21 @@ function identifier(formData: FormData, key: string) {
   return optionalText(formData, key, 255)?.toUpperCase() ?? null;
 }
 
+// A date field only carries the calendar day. Keep the recorded time of day when the day is
+// unchanged, and use the real time when the chosen day is today (Philippine time).
+function checkedAtFromDate(chosen: Date | null, current?: Date | null) {
+  if (!chosen) {
+    return null;
+  }
+  const day = chosen.toISOString().slice(0, 10);
+  if (current && manilaCalendarDate(current) === day) {
+    return current;
+  }
+  return manilaCalendarDate() === day ? new Date() : chosen;
+}
+
 function checkedDate(formData: FormData) {
-  return optionalDate(formData, "lastCheckedAt") ?? new Date();
+  return checkedAtFromDate(optionalDate(formData, "lastCheckedAt")) ?? new Date();
 }
 
 // Keep one record per individually tagged asset.
@@ -353,7 +367,7 @@ export async function createInventoryItem(formData: FormData) {
                   action: AuditAction.CREATED,
                   summary: "Inventory item created.",
                   actorId: actor.id,
-                  actorName: actor.username,
+                  actorName: auditActorName(actor),
                   metadata: {
                     source: "manual",
                     activityKind: "record-create",
@@ -422,7 +436,10 @@ export async function updateInventoryItem(formData: FormData) {
       purchaseDate: optionalDate(formData, "purchaseDate"),
       purchasePrice: optionalPurchasePrice(formData),
       notes: optionalText(formData, "notes", 5_000),
-      lastCheckedAt: optionalDate(formData, "lastCheckedAt"),
+      lastCheckedAt: checkedAtFromDate(
+        optionalDate(formData, "lastCheckedAt"),
+        existing.lastCheckedAt,
+      ),
     };
     try {
       await prisma.$transaction(
@@ -485,7 +502,7 @@ export async function updateInventoryItem(formData: FormData) {
                     ? `Updated ${Object.keys(changes).join(", ")}.`
                     : "Inventory record saved with no field changes.",
                   actorId: actor.id,
-                  actorName: actor.username,
+                  actorName: auditActorName(actor),
                   metadata: { changes, activityKind: "record-edit" },
                 },
               },
@@ -534,7 +551,7 @@ export async function retireInventoryItem(formData: FormData) {
                   action: AuditAction.STATUS_CHANGED,
                   summary: "Inventory item removed from active inventory.",
                   actorId: actor.id,
-                  actorName: actor.username,
+                  actorName: auditActorName(actor),
                   metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
                 },
               },
@@ -600,7 +617,7 @@ export async function splitGroupedAsset(formData: FormData) {
                   action: AuditAction.UPDATED,
                   summary: `Grouped asset split into ${unitCount} individually tracked units.`,
                   actorId: actor.id,
-                  actorName: actor.username,
+                  actorName: auditActorName(actor),
                   metadata: {
                     source: "grouped-asset-split",
                     originalQuantity: unitCount,
@@ -638,7 +655,7 @@ export async function splitGroupedAsset(formData: FormData) {
                     action: AuditAction.CREATED,
                     summary: `Individual asset created from grouped record: unit ${unitNumber} of ${unitCount}.`,
                     actorId: actor.id,
-                    actorName: actor.username,
+                    actorName: auditActorName(actor),
                     metadata: {
                       source: "grouped-asset-split",
                       sourceItemId: item.id,
@@ -679,7 +696,7 @@ export async function markInventoryItemChecked(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: "Item inspection recorded.",
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { source: "inspection", checkedAt: checkedAt.toISOString() },
         },
       }),
@@ -782,6 +799,7 @@ export async function bulkUpdateInventory(formData: FormData) {
     let data: Prisma.InventoryItemUncheckedUpdateManyInput;
     let summary: string;
     let targetLocationId: string | null = null;
+    let inspectedAt: Date | null = null;
     const isRetirement = action === "remove" || action === "retire";
 
     if (action === "location") {
@@ -800,6 +818,10 @@ export async function bulkUpdateInventory(formData: FormData) {
       const condition = enumValue(formData, "bulkCondition", conditions, ItemCondition.GOOD);
       data = { condition };
       summary = `Bulk update: condition changed to ${condition}.`;
+    } else if (action === "inspect") {
+      inspectedAt = new Date();
+      data = { lastCheckedAt: inspectedAt };
+      summary = "Bulk update: inspection recorded.";
     } else if (isRetirement) {
       const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
       if (confirmation !== "RETIRE") {
@@ -857,6 +879,13 @@ export async function bulkUpdateInventory(formData: FormData) {
         }
 
         await transaction.inventoryItem.updateMany({ where: { id: { in: ids } }, data });
+        if (inspectedAt) {
+          // Keep the PC profile's own inspection date in step with the record.
+          await transaction.computer.updateMany({
+            where: { itemId: { in: ids } },
+            data: { lastCheckedAt: inspectedAt },
+          });
+        }
         await transaction.inventoryAudit.createMany({
           data: ids.map((itemId) => ({
             itemId,
@@ -868,7 +897,7 @@ export async function bulkUpdateInventory(formData: FormData) {
                   : AuditAction.UPDATED,
             summary,
             actorId: actor.id,
-            actorName: actor.username,
+            actorName: auditActorName(actor),
             metadata: { bulkAction: action, itemCount: ids.length },
           })),
         });
@@ -1033,7 +1062,7 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: "Item photo added.",
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { source: "photo-upload", contentType: file.type, byteSize: bytes.byteLength },
         },
       });
@@ -1065,7 +1094,7 @@ export async function deleteInventoryItemPhoto(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: `Item photo removed: ${photo.fileName}.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { source: "photo-delete" },
         },
       }),
@@ -1100,7 +1129,7 @@ export async function addComputerDetails(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: "PC hardware record added.",
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { source: "manual" },
         },
       }),
@@ -1133,7 +1162,7 @@ export async function updateComputerDetails(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: "PC hardware details updated.",
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { changes },
         },
       }),
@@ -1170,7 +1199,7 @@ export async function addComputerSoftware(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: `Software record added: ${name}.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { software: name },
         },
       }),
@@ -1209,7 +1238,7 @@ export async function updateComputerSoftware(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: `Software record updated: ${data.name}.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { changes: updatedFields(software, data) },
         },
       }),
@@ -1241,7 +1270,7 @@ export async function removeComputerSoftware(formData: FormData) {
           action: AuditAction.UPDATED,
           summary: `Software record removed: ${software.name}.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           metadata: { software: software.name },
         },
       }),

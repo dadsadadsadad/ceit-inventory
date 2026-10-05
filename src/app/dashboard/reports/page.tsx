@@ -182,7 +182,18 @@ export default async function ReportsPage({
                   Currently borrowed
                 </p>
                 <p className="mt-3 text-3xl font-semibold">{activeBorrowCount}</p>
-                <p className="muted mt-2 text-sm">{overdueBorrowCount} overdue</p>
+                <p className="muted mt-2 text-sm">
+                  {overdueBorrowCount ? (
+                    <Link
+                      href="/dashboard/borrowing?status=OVERDUE"
+                      className="accent-link font-semibold"
+                    >
+                      {overdueBorrowCount} overdue
+                    </Link>
+                  ) : (
+                    "0 overdue"
+                  )}
+                </p>
               </article>
             </>
           ) : null}

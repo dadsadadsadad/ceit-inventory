@@ -10,6 +10,7 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
+import { everyTermMatches, searchTerms } from "@/lib/search-terms";
 import { prisma } from "@/prisma";
 
 import { createMaintenanceTicket, updateMaintenanceTicket } from "./actions";
@@ -78,13 +79,14 @@ export default async function MaintenancePage({
     ...(status ? { status } : {}),
     ...(source ? { source } : {}),
     ...(selectedItem ? { inventoryItemId: selectedItem } : {}),
-    ...(query
+    ...(searchTerms(query).length
       ? {
-          OR: [
-            { title: { contains: query, mode: "insensitive" } },
-            { inventoryItem: { name: { contains: query, mode: "insensitive" } } },
-            { inventoryItem: { assetTag: { contains: query, mode: "insensitive" } } },
-          ],
+          AND: everyTermMatches<Prisma.MaintenanceTicketWhereInput>(searchTerms(query), (term) => [
+            { title: { contains: term, mode: "insensitive" } },
+            { description: { contains: term, mode: "insensitive" } },
+            { inventoryItem: { name: { contains: term, mode: "insensitive" } } },
+            { inventoryItem: { assetTag: { contains: term, mode: "insensitive" } } },
+          ]),
         }
       : {}),
   };
@@ -316,7 +318,7 @@ export default async function MaintenancePage({
               name="q"
               defaultValue={query}
               maxLength={120}
-              placeholder="Issue, item, or asset tag"
+              placeholder="Issue, details, item, or asset tag"
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
@@ -492,7 +494,10 @@ export default async function MaintenancePage({
                           ))}
                         </select>
                         <span className="muted mt-1 block text-xs leading-5">
-                          Update after inspecting the equipment, or keep its current status.
+                          {ticket.inventoryItem.status === ItemStatus.DEFECTIVE &&
+                          ticket.status === MaintenanceStatus.OPEN
+                            ? "This equipment is still marked Defective. Choose Working or OK once it has been repaired, otherwise it stays on the needs-attention list."
+                            : "Update after inspecting the equipment, or keep its current status."}
                         </span>
                       </label>
                       <SubmitButton

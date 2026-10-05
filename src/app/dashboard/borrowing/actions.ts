@@ -1,8 +1,12 @@
 "use server";
 
 import { AuditAction, ItemStatus, ItemType } from "@prisma/client";
+import { auditActorName } from "@/lib/audit-event";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
-import { checkLoanAvailability } from "@/lib/loan-availability";
+import { checkLoanAvailability, checkLoanExtension } from "@/lib/loan-availability";
+import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
+import { parseManilaDateTime } from "@/lib/borrow-schedule";
+import { formatManilaDate } from "@/lib/manila-date";
 import { runTransaction } from "@/lib/database-transaction";
 
 import { FormError, formAction } from "@/lib/form-action";
@@ -144,7 +148,7 @@ export async function markBorrowed(formData: FormData) {
             ? "Borrow request approved: individual tagged asset checked out."
             : `Borrow request approved: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} checked out.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           entityId: request.id,
           entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
           entityType: "borrow-request",
@@ -199,7 +203,7 @@ export async function declineBorrowRequest(formData: FormData) {
           action: AuditAction.DECLINED,
           summary: `Borrow request declined for ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)}.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           entityId: request.id,
           entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
           entityType: "borrow-request",
@@ -283,7 +287,7 @@ export async function returnBorrowRequest(formData: FormData) {
               : "Borrowed individual tagged asset returned; its staff-updated status was preserved."
             : `Borrowed item returned: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} restored.`,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           entityId: request.id,
           entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
           entityType: "borrow-request",
@@ -342,7 +346,7 @@ export async function approveReservation(formData: FormData) {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           entityId: id,
           entityType: "borrow-request",
           entityLabel: `Reservation ${id.slice(0, 8).toUpperCase()}`,
@@ -385,7 +389,7 @@ export async function cancelReservation(formData: FormData) {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,
           actorId: actor.id,
-          actorName: actor.username,
+          actorName: auditActorName(actor),
           entityId: id,
           entityType: "borrow-request",
           entityLabel: `Reservation ${id.slice(0, 8).toUpperCase()}`,
@@ -395,6 +399,90 @@ export async function cancelReservation(formData: FormData) {
       });
       return request.inventoryItemId;
     });
+    refreshInventoryViews(itemId);
+  });
+}
+
+// Move the agreed return time of equipment that is still checked out.
+export async function extendBorrowRequest(formData: FormData) {
+  return formAction(async () => {
+    const actor = await requireWriteAccess();
+    const id = requestId(formData);
+    const notes = staffNotes(formData);
+    let newReturn: Date;
+    try {
+      newReturn = parseManilaDateTime(
+        String(formData.get("expectedReturnDate") ?? "").trim(),
+        "return date and time",
+      );
+    } catch (error) {
+      throw new FormError(error instanceof Error ? error.message : "Choose a valid return time.");
+    }
+    const now = new Date();
+    if (newReturn <= now) {
+      throw new FormError("Choose a return time in the future.");
+    }
+    if (newReturn.getTime() > now.getTime() + 366 * 24 * 60 * 60 * 1000) {
+      throw new FormError("Choose a return time within the next year.");
+    }
+
+    const itemId = await runTransaction(async (transaction) => {
+      const request = await transaction.borrowRequest.findUnique({ where: { id } });
+      if (!request) {
+        throw new FormError("This borrowing request no longer exists.");
+      }
+      if (request.status !== borrowStatus.BORROWED) {
+        throw new FormError(
+          "Only equipment that is currently checked out can have its return time changed.",
+        );
+      }
+      if (newReturn.getTime() === request.expectedReturnDate.getTime()) {
+        throw new FormError("Choose a different return time to save a change.");
+      }
+      if (newReturn > request.expectedReturnDate) {
+        await checkLoanExtension(transaction, request, newReturn, now);
+      }
+
+      const retentionDeadline = borrowerDataExpiresAt(newReturn);
+      await transaction.borrowRequest.update({
+        where: { id },
+        data: {
+          expectedReturnDate: newReturn,
+          // Borrower details are kept until the retention period after the agreed return.
+          ...(retentionDeadline > request.personalDataExpiresAt
+            ? { personalDataExpiresAt: retentionDeadline }
+            : {}),
+          // Keep the earlier note (such as the approval note) and add the reason beside it.
+          ...(notes
+            ? {
+                staffNotes: [request.staffNotes, `Return time changed: ${notes}`]
+                  .filter(Boolean)
+                  .join("\n"),
+              }
+            : {}),
+        },
+      });
+      await transaction.inventoryAudit.create({
+        data: {
+          itemId: request.inventoryItemId,
+          action: AuditAction.UPDATED,
+          summary: `Return time changed to ${formatManilaDate(newReturn, { dateStyle: "medium", timeStyle: "short" })}.`,
+          actorId: actor.id,
+          actorName: auditActorName(actor),
+          entityId: id,
+          entityLabel: `Borrow request ${id.slice(0, 8).toUpperCase()}`,
+          entityType: "borrow-request",
+          metadata: {
+            borrowRequestId: id,
+            transition: "RETURN_TIME_CHANGED",
+            previousReturn: request.expectedReturnDate.toISOString(),
+            newReturn: newReturn.toISOString(),
+          },
+        },
+      });
+      return request.inventoryItemId;
+    });
+
     refreshInventoryViews(itemId);
   });
 }

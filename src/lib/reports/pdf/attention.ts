@@ -1,12 +1,6 @@
-import { ItemCondition, ItemStatus, type Prisma } from "@prisma/client";
+import { inventoryAttentionWhere, needsInventoryAttention } from "@/lib/inventory-attention";
 
-const attentionStatuses: ItemStatus[] = [ItemStatus.DEFECTIVE, ItemStatus.NOT_TESTED];
-const attentionConditions: ItemCondition[] = [ItemCondition.POOR, ItemCondition.FOR_REPAIR];
+// Reports, the dashboard, and the inventory filter all share one definition of "needs attention".
+export const reportAttentionWhere = inventoryAttentionWhere;
 
-export const reportAttentionWhere: Prisma.InventoryItemWhereInput = {
-  OR: [{ status: { in: attentionStatuses } }, { condition: { in: attentionConditions } }],
-};
-
-export function needsReportAttention(item: { status: ItemStatus; condition: ItemCondition }) {
-  return attentionStatuses.includes(item.status) || attentionConditions.includes(item.condition);
-}
+export const needsReportAttention = needsInventoryAttention;

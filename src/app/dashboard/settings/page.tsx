@@ -4,6 +4,7 @@ import { OptimisticText } from "@/app/components/optimistic-state";
 import {
   createCategory,
   createLocation,
+  deleteCategory,
   deleteLocation,
   setCategoryActive,
   setLocationActive,
@@ -108,6 +109,38 @@ function CategoryEditor({
         {category.isActive && category._count.items > 0 ? (
           <span className="muted ml-2 text-xs">Existing records keep this category.</span>
         ) : null}
+      </FeedbackForm>
+      {/* Delete an unused category. */}
+      <FeedbackForm action={deleteCategory} className="divider mt-4 border-t pt-4">
+        <input type="hidden" name="id" value={category.id} />
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="min-w-52 flex-1">
+            <span className="muted text-xs font-bold uppercase tracking-wide">
+              Type DELETE to remove this category
+            </span>
+            <input
+              required
+              disabled={category._count.items > 0}
+              name="confirmation"
+              maxLength={16}
+              className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
+              placeholder="DELETE"
+              aria-label={`Type DELETE to remove ${category.name}`}
+            />
+          </label>
+          <SubmitButton
+            disabled={category._count.items > 0}
+            pendingLabel="Deleting…"
+            className="danger-button rounded-lg px-4 py-2 text-sm font-semibold"
+          >
+            Delete category
+          </SubmitButton>
+        </div>
+        <p className="muted mt-2 text-xs">
+          {category._count.items > 0
+            ? `This category has ${category._count.items} linked inventory record${category._count.items === 1 ? "" : "s"} and cannot be deleted yet.`
+            : "Deletion is permanent and is only available while no inventory records use this category."}
+        </p>
       </FeedbackForm>
     </details>
   );
@@ -237,7 +270,7 @@ function LocationEditor({
           <SubmitButton
             disabled={hasAssignedItems}
             pendingLabel="Deleting…"
-            className="rounded-lg border border-red-500/50 px-4 py-2 text-sm font-semibold text-red-400 hover:border-red-400 hover:text-red-300"
+            className="danger-button rounded-lg px-4 py-2 text-sm font-semibold"
           >
             Delete location
           </SubmitButton>

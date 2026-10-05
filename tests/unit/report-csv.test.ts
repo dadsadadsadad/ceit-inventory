@@ -16,7 +16,11 @@ describe("CSV downloads", () => {
 
   it("exports dates, quantities, and empty values without changing column positions", () => {
     expect(createCsv([[new Date("2026-09-01T08:00:00Z"), 0, null, undefined], ["Next row"]])).toBe(
-      '"2026-09-01T08:00:00.000Z","0","",""\r\n"Next row"',
+      '"2026-09-01 16:00","0","",""\r\n"Next row"',
     );
+  });
+
+  it("writes dates in Philippine time across UTC midnight", () => {
+    expect(createCsv([[new Date("2026-09-10T18:30:00Z")]])).toBe('"2026-09-11 02:30"');
   });
 });

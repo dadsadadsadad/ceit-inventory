@@ -31,7 +31,9 @@ export async function GET(
   new Uint8Array(body).set(photo.data);
   return new Response(body, {
     headers: {
-      "Cache-Control": "private, no-store",
+      // A photo's bytes never change for its id, and it is removed by deleting the record. Let the
+      // browser reuse it instead of reading the image from the database on every page view.
+      "Cache-Control": "private, max-age=3600",
       "Content-Disposition": `inline; filename="${photo.fileName.replaceAll('"', "")}"`,
       "Content-Type": photo.contentType,
       "X-Content-Type-Options": "nosniff",

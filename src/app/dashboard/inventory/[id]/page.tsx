@@ -30,7 +30,7 @@ import {
   canManageInventory,
   requireInventoryAccess,
 } from "@/lib/inventory-auth";
-import { formatManilaDate } from "@/lib/manila-date";
+import { formatManilaDate, manilaCalendarDate } from "@/lib/manila-date";
 import { canHaveComputerDetails } from "@/lib/inventory-pc";
 import { prisma } from "@/prisma";
 
@@ -64,6 +64,11 @@ function label(value: string) {
 
 function dateValue(value?: Date | null) {
   return value ? value.toISOString().slice(0, 10) : "";
+}
+
+// The inspection date is shown in Philippine time, so the edit field must use that day as well.
+function manilaDateValue(value?: Date | null) {
+  return value ? manilaCalendarDate(value) : "";
 }
 
 function displayDate(value?: Date | null) {
@@ -925,7 +930,7 @@ export default async function InventoryItemPage({
                 <TextField
                   name="lastCheckedAt"
                   label="Last checked"
-                  value={dateValue(item.lastCheckedAt)}
+                  value={manilaDateValue(item.lastCheckedAt)}
                   type="date"
                 />
                 <div>

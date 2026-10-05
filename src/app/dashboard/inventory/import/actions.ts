@@ -6,8 +6,9 @@ import * as yauzl from "yauzl";
 import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { auditEventData } from "@/lib/audit-event";
-import { requireWriteAccess } from "@/lib/inventory-auth";
+import { auditActorName, auditEventData } from "@/lib/audit-event";
+import { requireWriteAccess, type InventoryUser } from "@/lib/inventory-auth";
+import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import {
   isInventoryAssetTag,
   nextCategoryAssetTagCode,
@@ -26,6 +27,10 @@ const emptyImportResult: ImportResult = { errors: [], imported: 0, previewed: fa
 
 type ColumnMap = Record<string, number | undefined>;
 type SetupRecord = { id: string; isActive: boolean };
+type ValueReader = (column: string) => string;
+
+/** A problem with one spreadsheet row that is safe and useful to show to staff. */
+class ImportRowError extends Error {}
 
 const maximumFileBytes = 10 * 1024 * 1024;
 const maximumRows = 1_000;
@@ -113,7 +118,7 @@ function formText(formData: FormData, key: string) {
 function boundedText(value: string, field: string, maximumLength = 2_000) {
   const result = value.trim();
   if (result.length > maximumLength) {
-    throw new Error(`${field} is too long.`);
+    throw new ImportRowError(`${field} is too long.`);
   }
   return result;
 }
@@ -128,11 +133,11 @@ function parseNumber(value: string, fallback: number | null, field: string, maxi
     return fallback;
   }
   if (!/^\d+$/.test(value)) {
-    throw new Error(`${field} must be a non-negative whole number.`);
+    throw new ImportRowError(`${field} must be a non-negative whole number.`);
   }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed > maximum) {
-    throw new Error(`${field} is outside the allowed range.`);
+    throw new ImportRowError(`${field} is outside the allowed range.`);
   }
   return parsed;
 }
@@ -144,7 +149,7 @@ function parsePurchasePrice(value: string) {
     return null;
   }
   if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(amount)) {
-    throw new Error(
+    throw new ImportRowError(
       "purchase price must be a non-negative Philippine peso amount with up to two decimal places.",
     );
   }
@@ -158,11 +163,11 @@ function parseDate(value: string, field: string) {
     return null;
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new Error(`${field} must use YYYY-MM-DD.`);
+    throw new ImportRowError(`${field} must use YYYY-MM-DD.`);
   }
   const parsed = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-    throw new Error(`${field} is not a valid date.`);
+    throw new ImportRowError(`${field} is not a valid date.`);
   }
   return parsed;
 }
@@ -183,7 +188,7 @@ function enumValue<T extends string>(
   if (values.includes(normalized as T)) {
     return normalized as T;
   }
-  throw new Error(
+  throw new ImportRowError(
     `${field} must be one of: ${values.map((entry) => entry.replaceAll("_", " ")).join(", ")}.`,
   );
 }
@@ -279,10 +284,10 @@ async function validateXlsxArchive(data: Buffer) {
 
 // Explain why an import row could not be saved.
 function messageForImportError(error: unknown) {
-  if (
-    error instanceof Error &&
-    /required|must|too long|active|single tracked|already exists/i.test(error.message)
-  ) {
+  if (error instanceof ImportRowError) {
+    return error.message;
+  }
+  if (error instanceof Error && /asset-tag/i.test(error.message)) {
     return error.message;
   }
   if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
@@ -290,6 +295,336 @@ function messageForImportError(error: unknown) {
   }
   return "could not be imported. Check the required fields and data format.";
 }
+
+type ParsedRow = {
+  categoryName: string;
+  computer: Prisma.ComputerCreateWithoutItemInput | null;
+  item: Pick<
+    Prisma.InventoryItemUncheckedCreateInput,
+    | "condition"
+    | "description"
+    | "isComputer"
+    | "itemType"
+    | "lastCheckedAt"
+    | "manufacturer"
+    | "model"
+    | "name"
+    | "notes"
+    | "purchaseDate"
+    | "purchasePrice"
+    | "quantity"
+    | "serialNumber"
+    | "status"
+  >;
+  locationName: string;
+  roomNumber: string | null;
+  suppliedAssetTag: string | null;
+};
+
+// Read and validate one spreadsheet row before anything is written.
+function parseImportRow(
+  valueAt: ValueReader,
+  names: { categoryName: string; locationName: string; locationIsRoomNumber: boolean },
+  defaults: { roomNumber: string | null },
+): ParsedRow {
+  const safeName = boundedText(valueAt("name"), "name", 255);
+  const categoryName = boundedText(names.categoryName, "category", 120);
+  const locationName = boundedText(names.locationName, "location", 160);
+  const roomNumber = names.locationIsRoomNumber
+    ? locationName
+    : optionalText(valueAt("roomNumber") || defaults.roomNumber || "", "room number", 80);
+  const itemType = enumValue(valueAt("itemType"), Object.values(ItemType), ItemType.ASSET, "type");
+  const quantity = parseNumber(valueAt("quantity"), 1, "quantity") ?? 1;
+  const hasComputerDetails =
+    isTrue(valueAt("isComputer")) ||
+    [
+      "operatingSystem",
+      "processor",
+      "memoryGb",
+      "macAddress",
+      "hardwareDescription",
+      "softwareDescription",
+    ].some((column) => valueAt(column) !== "");
+  if (itemType === ItemType.ASSET && quantity !== 1) {
+    throw new ImportRowError(
+      "each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR code. Import each unit as a separate row, or use a supply record for stock.",
+    );
+  }
+  if (hasComputerDetails && (itemType !== ItemType.ASSET || quantity !== 1)) {
+    throw new ImportRowError("a PC must be a single tracked asset, not a supply record.");
+  }
+  const legacyChecked = valueAt("legacyChecked");
+  const legacyState = legacyInspectionState(legacyChecked);
+  const explicitStatus = valueAt("status");
+  const explicitCondition = valueAt("condition");
+  const legacyAcquisitionDate = valueAt("legacyAcquisitionDate");
+  const sourcePurchaseDate = valueAt("purchaseDate");
+  const purchaseDate = sourcePurchaseDate
+    ? parseDate(sourcePurchaseDate, "purchase date")
+    : /^\d{4}-\d{2}-\d{2}$/.test(legacyAcquisitionDate)
+      ? parseDate(legacyAcquisitionDate, "known acquisition date")
+      : null;
+  const status = explicitStatus
+    ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK, "status")
+    : (legacyState?.status ?? ItemStatus.OK);
+  const condition = explicitCondition
+    ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD, "condition")
+    : (legacyState?.condition ?? ItemCondition.GOOD);
+  const suppliedAssetTag =
+    optionalText(valueAt("assetTag"), "asset tag", 255)?.toUpperCase() ?? null;
+  if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
+    throw new ImportRowError(
+      "asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.",
+    );
+  }
+  const lastCheckedAt = parseDate(valueAt("lastCheckedAt"), "last checked date") ?? new Date();
+  const notes = legacyNotes(valueAt("notes"), [
+    ["Original unit", valueAt("legacyUnit")],
+    ["Legacy counter", valueAt("legacyCounter")],
+    ["Original checked value", legacyChecked],
+    ["Known acquisition", legacyAcquisitionDate && !purchaseDate ? legacyAcquisitionDate : ""],
+    ["Year encoded", valueAt("legacyYearEncoded")],
+    ["Comments", valueAt("legacyComments")],
+  ]);
+
+  return {
+    categoryName,
+    locationName,
+    roomNumber,
+    suppliedAssetTag,
+    item: {
+      name: safeName,
+      serialNumber:
+        optionalText(valueAt("serialNumber"), "serial number", 255)?.toUpperCase() ?? null,
+      description: optionalText(valueAt("description"), "description", 5_000),
+      manufacturer: optionalText(valueAt("manufacturer"), "manufacturer", 255),
+      model: optionalText(valueAt("model"), "model", 255),
+      notes,
+      purchaseDate,
+      purchasePrice: parsePurchasePrice(valueAt("purchasePrice")),
+      itemType,
+      isComputer: hasComputerDetails,
+      quantity,
+      status,
+      condition,
+      lastCheckedAt,
+    },
+    computer: hasComputerDetails
+      ? {
+          operatingSystem: optionalText(valueAt("operatingSystem"), "operating system", 255),
+          osVersion: optionalText(valueAt("osVersion"), "OS version", 255),
+          processor: optionalText(valueAt("processor"), "processor", 255),
+          memoryGb: parseNumber(valueAt("memoryGb"), null, "memory (GB)", 16_384),
+          storageGb: parseNumber(valueAt("storageGb"), null, "storage (GB)"),
+          storageType: optionalText(valueAt("storageType"), "storage type", 255),
+          graphics: optionalText(valueAt("graphics"), "graphics", 255),
+          macAddress:
+            optionalText(valueAt("macAddress"), "MAC address", 255)?.toUpperCase() ?? null,
+          ipAddress: optionalText(valueAt("ipAddress"), "IP address", 255),
+          hardwareDescription: optionalText(
+            valueAt("hardwareDescription"),
+            "hardware description",
+            5_000,
+          ),
+          softwareDescription: optionalText(
+            valueAt("softwareDescription"),
+            "software description",
+            5_000,
+          ),
+          lastCheckedAt,
+        }
+      : null,
+  };
+}
+
+function missingSetupMessage(kind: "category" | "location", name: string) {
+  return `${kind} “${name}” does not exist. Enable setup creation or add it in Settings first.`;
+}
+
+function inactiveSetupMessage(kind: "category" | "location", name: string) {
+  return `${kind} “${name}” is inactive. Reactivate it in Settings first.`;
+}
+
+// Find the category, creating it only when the import is allowed to.
+async function resolveCategory(
+  transaction: Prisma.TransactionClient,
+  name: string,
+  actor: InventoryUser,
+  allowCreate: boolean,
+): Promise<SetupRecord> {
+  let category: SetupRecord | null = await transaction.category.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    select: { id: true, isActive: true },
+  });
+  if (!category) {
+    if (!allowCreate) {
+      throw new ImportRowError(missingSetupMessage("category", name));
+    }
+    const codes = await transaction.category.findMany({ select: { assetTagCode: true } });
+    category = await transaction.category.create({
+      data: {
+        name,
+        assetTagCode: nextCategoryAssetTagCode(
+          name,
+          codes.map((entry) => entry.assetTagCode),
+        ),
+      },
+      select: { id: true, isActive: true },
+    });
+    await transaction.inventoryAudit.create({
+      data: auditEventData({
+        action: "CREATED",
+        actor,
+        entity: { id: category.id, label: name, type: "category" },
+        metadata: { activityKind: "configuration", source: "import" },
+        summary: "Category created while importing inventory.",
+      }),
+    });
+  }
+  if (!category.isActive) {
+    throw new ImportRowError(inactiveSetupMessage("category", name));
+  }
+  return category;
+}
+
+// Find the location, creating it only when the import is allowed to.
+async function resolveLocation(
+  transaction: Prisma.TransactionClient,
+  name: string,
+  roomNumber: string | null,
+  actor: InventoryUser,
+  allowCreate: boolean,
+): Promise<SetupRecord> {
+  let location: SetupRecord | null = await transaction.location.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    select: { id: true, isActive: true },
+  });
+  if (!location) {
+    if (!allowCreate) {
+      throw new ImportRowError(missingSetupMessage("location", name));
+    }
+    const codes = await transaction.location.findMany({ select: { assetTagCode: true } });
+    location = await transaction.location.create({
+      data: {
+        name,
+        assetTagCode: nextLocationAssetTagCode(codes.map((entry) => entry.assetTagCode)),
+        roomNumber,
+      },
+      select: { id: true, isActive: true },
+    });
+    await transaction.inventoryAudit.create({
+      data: auditEventData({
+        action: "CREATED",
+        actor,
+        entity: { id: location.id, label: name, type: "location" },
+        metadata: { activityKind: "configuration", source: "import" },
+        summary: "Location created while importing inventory.",
+      }),
+    });
+  }
+  if (!location.isActive) {
+    throw new ImportRowError(inactiveSetupMessage("location", name));
+  }
+  return location;
+}
+
+// Save one validated row with its generated tag, computer profile, and audit entry.
+async function saveImportedRow(
+  client: Prisma.TransactionClient,
+  row: ParsedRow,
+  category: SetupRecord,
+  location: SetupRecord,
+  source: { actor: InventoryUser; rowNumber: number; sheetName: string },
+) {
+  const assetTag =
+    row.item.itemType === ItemType.ASSET
+      ? (row.suppliedAssetTag ??
+        (await nextInventoryAssetTag(client, {
+          categoryId: category.id,
+          locationId: location.id,
+          status: row.item.status ?? ItemStatus.OK,
+        })))
+      : row.suppliedAssetTag;
+  await client.inventoryItem.create({
+    data: {
+      ...row.item,
+      assetTag,
+      categoryId: category.id,
+      locationId: location.id,
+      computer: row.computer ? { create: row.computer } : undefined,
+      auditEvents: {
+        create: {
+          action: AuditAction.CREATED,
+          summary: "Inventory item imported from file.",
+          actorId: source.actor.id,
+          actorName: auditActorName(source.actor),
+          metadata: {
+            source: "import",
+            sheet: source.sheetName,
+            row: source.rowNumber,
+            activityKind: "record-create",
+          },
+        },
+      },
+    },
+  });
+}
+
+type PreviewRow = {
+  assetTag: string | null;
+  macAddress: string | null;
+  rowNumber: number;
+  serialNumber: string | null;
+};
+
+// Compare validated preview rows with records that already exist.
+async function existingIdentifierProblems(rows: PreviewRow[]) {
+  const assetTags = rows.flatMap((row) => (row.assetTag ? [row.assetTag] : []));
+  const serials = rows.flatMap((row) => (row.serialNumber ? [row.serialNumber] : []));
+  const macs = rows.flatMap((row) => (row.macAddress ? [row.macAddress] : []));
+  const [items, computers] = await Promise.all([
+    assetTags.length || serials.length
+      ? prisma.inventoryItem.findMany({
+          where: {
+            OR: [
+              ...(assetTags.length ? [{ assetTag: { in: assetTags } }] : []),
+              ...(serials.length ? [{ serialNumber: { in: serials } }] : []),
+            ],
+          },
+          select: { assetTag: true, serialNumber: true },
+        })
+      : Promise.resolve([]),
+    macs.length
+      ? prisma.computer.findMany({
+          where: { macAddress: { in: macs } },
+          select: { macAddress: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const knownTags = new Set(items.flatMap((item) => (item.assetTag ? [item.assetTag] : [])));
+  const knownSerials = new Set(
+    items.flatMap((item) => (item.serialNumber ? [item.serialNumber] : [])),
+  );
+  const knownMacs = new Set(
+    computers.flatMap((computer) => (computer.macAddress ? [computer.macAddress] : [])),
+  );
+  const problems = new Map<number, string>();
+  for (const row of rows) {
+    if (row.assetTag && knownTags.has(row.assetTag)) {
+      problems.set(row.rowNumber, `asset tag ${row.assetTag} is already assigned to a record.`);
+    } else if (row.serialNumber && knownSerials.has(row.serialNumber)) {
+      problems.set(
+        row.rowNumber,
+        `serial number ${row.serialNumber} is already assigned to a record.`,
+      );
+    } else if (row.macAddress && knownMacs.has(row.macAddress)) {
+      problems.set(row.rowNumber, `MAC address ${row.macAddress} is already assigned to a PC.`);
+    }
+  }
+  return problems;
+}
+
+const maximumReportedProblems = 20;
 
 // Validate the file before writing records.
 export async function importInventory(
@@ -392,383 +727,119 @@ export async function importInventory(
     return { ...emptyImportResult, errors: [`Missing required column(s): ${missing.join(", ")}.`] };
   }
 
-  const valueAt = (row: ExcelJS.Row, column: string) => {
-    const columnNumber = columns[column];
-    return columnNumber ? cellText(row.getCell(columnNumber).value) : "";
-  };
   const categoryCache = new Map<string, SetupRecord>();
   const locationCache = new Map<string, SetupRecord>();
-  const errors: string[] = [];
+  // A preview reads setup records once so every row is checked against Settings.
+  const [knownCategories, knownLocations] = previewOnly
+    ? await Promise.all([
+        prisma.category.findMany({ select: { name: true, isActive: true } }),
+        prisma.location.findMany({ select: { name: true, isActive: true } }),
+      ])
+    : [[], []];
+  const categoryStatus = new Map(
+    knownCategories.map((entry) => [normalizedValue(entry.name), entry.isActive]),
+  );
+  const locationStatus = new Map(
+    knownLocations.map((entry) => [normalizedValue(entry.name), entry.isActive]),
+  );
+  const problems: { message: string; rowNumber: number }[] = [];
   const previewIdentifiers = new Set<string>();
+  const previewRows: PreviewRow[] = [];
   let imported = 0;
   let skipped = 0;
 
   for (let rowNumber = headerRowNumber + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
-    const name = valueAt(row, "name");
-    const categoryName = valueAt(row, "category");
-    const sourceLocationName = valueAt(row, "location");
+    const valueAt: ValueReader = (column) => {
+      const columnNumber = columns[column];
+      return columnNumber ? cellText(row.getCell(columnNumber).value) : "";
+    };
+    const name = valueAt("name");
+    const categoryName = valueAt("category");
+    const sourceLocationName = valueAt("location");
     if (!name && !categoryName && !sourceLocationName) {
       continue;
     }
     const locationName = sourceLocationName || defaultLocationName || "";
     if (!name || !categoryName || !locationName) {
       skipped += 1;
-      errors.push(`Row ${rowNumber}: name, category, and location are required.`);
+      problems.push({ rowNumber, message: "name, category, and location are required." });
       continue;
     }
 
     try {
-      const safeName = boundedText(name, "name", 255);
-      const safeCategoryName = boundedText(categoryName, "category", 120);
-      const safeLocationName = boundedText(locationName, "location", 160);
-      const locationColumnIsRoomNumber =
-        columns.location !== undefined && columns.location === columns.roomNumber;
-      const roomNumber = locationColumnIsRoomNumber
-        ? safeLocationName
-        : optionalText(valueAt(row, "roomNumber") || defaultRoomNumber || "", "room number", 80);
-      const categoryKey = normalizedValue(safeCategoryName);
-      const locationKey = normalizedValue(safeLocationName);
-      const itemType = enumValue(
-        valueAt(row, "itemType"),
-        Object.values(ItemType),
-        ItemType.ASSET,
-        "type",
+      const parsed = parseImportRow(
+        valueAt,
+        {
+          categoryName,
+          locationName,
+          locationIsRoomNumber:
+            columns.location !== undefined && columns.location === columns.roomNumber,
+        },
+        { roomNumber: defaultRoomNumber },
       );
-      const quantity = parseNumber(valueAt(row, "quantity"), 1, "quantity") ?? 1;
-      const hasComputerDetails =
-        isTrue(valueAt(row, "isComputer")) ||
-        [
-          "operatingSystem",
-          "processor",
-          "memoryGb",
-          "macAddress",
-          "hardwareDescription",
-          "softwareDescription",
-        ].some((column) => valueAt(row, column) !== "");
-      if (itemType === ItemType.ASSET && quantity !== 1) {
-        throw new Error(
-          "each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR code. Import each unit as a separate row, or use a supply record for stock.",
-        );
-      }
-      if (hasComputerDetails && (itemType !== ItemType.ASSET || quantity !== 1)) {
-        throw new Error("a PC must be a single tracked asset, not a supply record.");
-      }
-      const legacyChecked = valueAt(row, "legacyChecked");
-      const legacyState = legacyInspectionState(legacyChecked);
-      const explicitStatus = valueAt(row, "status");
-      const explicitCondition = valueAt(row, "condition");
-      const legacyAcquisitionDate = valueAt(row, "legacyAcquisitionDate");
-      const sourcePurchaseDate = valueAt(row, "purchaseDate");
-      const purchaseDate = sourcePurchaseDate
-        ? parseDate(sourcePurchaseDate, "purchase date")
-        : /^\d{4}-\d{2}-\d{2}$/.test(legacyAcquisitionDate)
-          ? parseDate(legacyAcquisitionDate, "known acquisition date")
-          : null;
-      const purchasePrice = parsePurchasePrice(valueAt(row, "purchasePrice"));
-      const status = explicitStatus
-        ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK, "status")
-        : (legacyState?.status ?? ItemStatus.OK);
-      const condition = explicitCondition
-        ? enumValue(
-            explicitCondition,
-            Object.values(ItemCondition),
-            ItemCondition.GOOD,
-            "condition",
-          )
-        : (legacyState?.condition ?? ItemCondition.GOOD);
-      const suppliedAssetTag =
-        optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase() ?? null;
-      if (
-        itemType === ItemType.ASSET &&
-        suppliedAssetTag &&
-        !isInventoryAssetTag(suppliedAssetTag)
-      ) {
-        throw new Error(
-          "asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.",
-        );
-      }
-      const lastCheckedAt =
-        parseDate(valueAt(row, "lastCheckedAt"), "last checked date") ?? new Date();
-      const notes = legacyNotes(valueAt(row, "notes"), [
-        ["Original unit", valueAt(row, "legacyUnit")],
-        ["Legacy counter", valueAt(row, "legacyCounter")],
-        ["Original checked value", legacyChecked],
-        ["Known acquisition", legacyAcquisitionDate && !purchaseDate ? legacyAcquisitionDate : ""],
-        ["Year encoded", valueAt(row, "legacyYearEncoded")],
-        ["Comments", valueAt(row, "legacyComments")],
-      ]);
+      const categoryKey = normalizedValue(parsed.categoryName);
+      const locationKey = normalizedValue(parsed.locationName);
 
       if (previewOnly) {
+        const categoryActive = categoryStatus.get(categoryKey);
+        if (categoryActive === undefined && !allowCreateSetup) {
+          throw new ImportRowError(missingSetupMessage("category", parsed.categoryName));
+        }
+        if (categoryActive === false) {
+          throw new ImportRowError(inactiveSetupMessage("category", parsed.categoryName));
+        }
+        const locationActive = locationStatus.get(locationKey);
+        if (locationActive === undefined && !allowCreateSetup) {
+          throw new ImportRowError(missingSetupMessage("location", parsed.locationName));
+        }
+        if (locationActive === false) {
+          throw new ImportRowError(inactiveSetupMessage("location", parsed.locationName));
+        }
         const identifiers = [
-          optionalText(valueAt(row, "assetTag"), "asset tag", 255)?.toUpperCase(),
-          optionalText(valueAt(row, "serialNumber"), "serial number", 255)?.toUpperCase(),
-          hasComputerDetails
-            ? optionalText(valueAt(row, "macAddress"), "MAC address", 255)?.toUpperCase()
-            : null,
+          parsed.suppliedAssetTag,
+          parsed.item.serialNumber,
+          parsed.computer?.macAddress,
         ].filter(Boolean) as string[];
         if (identifiers.some((identifier) => previewIdentifiers.has(identifier))) {
-          throw new Error(
+          throw new ImportRowError(
             "a repeated asset tag, serial number, or PC MAC address appears in this file.",
           );
         }
         identifiers.forEach((identifier) => previewIdentifiers.add(identifier));
+        previewRows.push({
+          rowNumber,
+          assetTag: parsed.suppliedAssetTag,
+          serialNumber: parsed.item.serialNumber ?? null,
+          macAddress: parsed.computer?.macAddress ?? null,
+        });
         imported += 1;
         continue;
       }
 
+      const savedSource = { actor, rowNumber, sheetName: sheet.name };
       const cachedCategory = categoryCache.get(categoryKey);
       const cachedLocation = locationCache.get(locationKey);
       if (cachedCategory && cachedLocation) {
-        await prisma.inventoryItem.create({
-          data: {
-            name: safeName,
-            assetTag:
-              itemType === ItemType.ASSET
-                ? (suppliedAssetTag ??
-                  (await nextInventoryAssetTag(prisma, {
-                    categoryId: cachedCategory.id,
-                    locationId: cachedLocation.id,
-                    status,
-                  })))
-                : suppliedAssetTag,
-            serialNumber:
-              optionalText(valueAt(row, "serialNumber"), "serial number", 255)?.toUpperCase() ??
-              null,
-            description: optionalText(valueAt(row, "description"), "description", 5_000),
-            manufacturer: optionalText(valueAt(row, "manufacturer"), "manufacturer", 255),
-            model: optionalText(valueAt(row, "model"), "model", 255),
-            notes,
-            purchaseDate,
-            purchasePrice,
-            itemType,
-            isComputer: hasComputerDetails,
-            quantity,
-            status,
-            condition,
-            lastCheckedAt,
-            categoryId: cachedCategory.id,
-            locationId: cachedLocation.id,
-            computer: hasComputerDetails
-              ? {
-                  create: {
-                    operatingSystem: optionalText(
-                      valueAt(row, "operatingSystem"),
-                      "operating system",
-                      255,
-                    ),
-                    osVersion: optionalText(valueAt(row, "osVersion"), "OS version", 255),
-                    processor: optionalText(valueAt(row, "processor"), "processor", 255),
-                    memoryGb: parseNumber(valueAt(row, "memoryGb"), null, "memory (GB)", 16_384),
-                    storageGb: parseNumber(valueAt(row, "storageGb"), null, "storage (GB)"),
-                    storageType: optionalText(valueAt(row, "storageType"), "storage type", 255),
-                    graphics: optionalText(valueAt(row, "graphics"), "graphics", 255),
-                    macAddress:
-                      optionalText(valueAt(row, "macAddress"), "MAC address", 255)?.toUpperCase() ??
-                      null,
-                    ipAddress: optionalText(valueAt(row, "ipAddress"), "IP address", 255),
-                    hardwareDescription: optionalText(
-                      valueAt(row, "hardwareDescription"),
-                      "hardware description",
-                      5_000,
-                    ),
-                    softwareDescription: optionalText(
-                      valueAt(row, "softwareDescription"),
-                      "software description",
-                      5_000,
-                    ),
-                    lastCheckedAt,
-                  },
-                }
-              : undefined,
-            auditEvents: {
-              create: {
-                action: AuditAction.CREATED,
-                summary: "Inventory item imported from file.",
-                actorId: actor.id,
-                actorName: actor.email,
-                metadata: {
-                  source: "import",
-                  sheet: sheet.name,
-                  row: rowNumber,
-                  activityKind: "record-create",
-                },
-              },
-            },
-          },
-        });
+        await saveImportedRow(prisma, parsed, cachedCategory, cachedLocation, savedSource);
         imported += 1;
         continue;
       }
 
       const result = await prisma.$transaction(async (transaction) => {
-        let category = categoryCache.get(categoryKey);
-        if (!category) {
-          const existingCategory = await transaction.category.findFirst({
-            where: { name: { equals: safeCategoryName, mode: "insensitive" } },
-            select: { id: true, isActive: true },
-          });
-          if (existingCategory) {
-            category = existingCategory;
-          } else if (allowCreateSetup) {
-            const categoryCodes = await transaction.category.findMany({
-              select: { assetTagCode: true },
-            });
-            const createdCategory = await transaction.category.create({
-              data: {
-                name: safeCategoryName,
-                assetTagCode: nextCategoryAssetTagCode(
-                  safeCategoryName,
-                  categoryCodes.map((entry) => entry.assetTagCode),
-                ),
-              },
-              select: { id: true, isActive: true },
-            });
-            await transaction.inventoryAudit.create({
-              data: auditEventData({
-                action: "CREATED",
-                actor,
-                entity: { id: createdCategory.id, label: safeCategoryName, type: "category" },
-                metadata: { activityKind: "configuration", source: "import" },
-                summary: "Category created while importing inventory.",
-              }),
-            });
-            category = createdCategory;
-          } else {
-            throw new Error(
-              `category “${safeCategoryName}” does not exist. Enable setup creation or add it in Settings first.`,
-            );
-          }
-        }
-        if (!category.isActive) {
-          throw new Error(
-            `category “${safeCategoryName}” is inactive. Reactivate it in Settings first.`,
-          );
-        }
-
-        let location = locationCache.get(locationKey);
-        if (!location) {
-          const existingLocation = await transaction.location.findFirst({
-            where: { name: { equals: safeLocationName, mode: "insensitive" } },
-            select: { id: true, isActive: true },
-          });
-          if (existingLocation) {
-            location = existingLocation;
-          }
-          if (!location && allowCreateSetup) {
-            const locationCodes = await transaction.location.findMany({
-              select: { assetTagCode: true },
-            });
-            const createdLocation = await transaction.location.create({
-              data: {
-                name: safeLocationName,
-                assetTagCode: nextLocationAssetTagCode(
-                  locationCodes.map((entry) => entry.assetTagCode),
-                ),
-                roomNumber,
-              },
-              select: { id: true, isActive: true },
-            });
-            await transaction.inventoryAudit.create({
-              data: auditEventData({
-                action: "CREATED",
-                actor,
-                entity: { id: createdLocation.id, label: safeLocationName, type: "location" },
-                metadata: { activityKind: "configuration", source: "import" },
-                summary: "Location created while importing inventory.",
-              }),
-            });
-            location = createdLocation;
-          }
-          if (!location) {
-            throw new Error(
-              `location “${safeLocationName}” does not exist. Enable setup creation or add it in Settings first.`,
-            );
-          }
-        }
-        if (!location.isActive) {
-          throw new Error(
-            `location “${safeLocationName}” is inactive. Reactivate it in Settings first.`,
-          );
-        }
-
-        await transaction.inventoryItem.create({
-          data: {
-            name: safeName,
-            assetTag:
-              itemType === ItemType.ASSET
-                ? (suppliedAssetTag ??
-                  (await nextInventoryAssetTag(transaction, {
-                    categoryId: category.id,
-                    locationId: location.id,
-                    status,
-                  })))
-                : suppliedAssetTag,
-            serialNumber:
-              optionalText(valueAt(row, "serialNumber"), "serial number", 255)?.toUpperCase() ??
-              null,
-            description: optionalText(valueAt(row, "description"), "description", 5_000),
-            manufacturer: optionalText(valueAt(row, "manufacturer"), "manufacturer", 255),
-            model: optionalText(valueAt(row, "model"), "model", 255),
-            notes,
-            purchaseDate,
-            purchasePrice,
-            itemType,
-            isComputer: hasComputerDetails,
-            quantity,
-            status,
-            condition,
-            lastCheckedAt,
-            categoryId: category.id,
-            locationId: location.id,
-            computer: hasComputerDetails
-              ? {
-                  create: {
-                    operatingSystem: optionalText(
-                      valueAt(row, "operatingSystem"),
-                      "operating system",
-                      255,
-                    ),
-                    osVersion: optionalText(valueAt(row, "osVersion"), "OS version", 255),
-                    processor: optionalText(valueAt(row, "processor"), "processor", 255),
-                    memoryGb: parseNumber(valueAt(row, "memoryGb"), null, "memory (GB)", 16_384),
-                    storageGb: parseNumber(valueAt(row, "storageGb"), null, "storage (GB)"),
-                    storageType: optionalText(valueAt(row, "storageType"), "storage type", 255),
-                    graphics: optionalText(valueAt(row, "graphics"), "graphics", 255),
-                    macAddress:
-                      optionalText(valueAt(row, "macAddress"), "MAC address", 255)?.toUpperCase() ??
-                      null,
-                    ipAddress: optionalText(valueAt(row, "ipAddress"), "IP address", 255),
-                    hardwareDescription: optionalText(
-                      valueAt(row, "hardwareDescription"),
-                      "hardware description",
-                      5_000,
-                    ),
-                    softwareDescription: optionalText(
-                      valueAt(row, "softwareDescription"),
-                      "software description",
-                      5_000,
-                    ),
-                    lastCheckedAt,
-                  },
-                }
-              : undefined,
-            auditEvents: {
-              create: {
-                action: AuditAction.CREATED,
-                summary: "Inventory item imported from file.",
-                actorId: actor.id,
-                actorName: actor.email,
-                metadata: {
-                  source: "import",
-                  sheet: sheet.name,
-                  row: rowNumber,
-                  activityKind: "record-create",
-                },
-              },
-            },
-          },
-        });
+        const category =
+          categoryCache.get(categoryKey) ??
+          (await resolveCategory(transaction, parsed.categoryName, actor, allowCreateSetup));
+        const location =
+          locationCache.get(locationKey) ??
+          (await resolveLocation(
+            transaction,
+            parsed.locationName,
+            parsed.roomNumber,
+            actor,
+            allowCreateSetup,
+          ));
+        await saveImportedRow(transaction, parsed, category, location, savedSource);
         return { category, location };
       });
 
@@ -777,13 +848,31 @@ export async function importInventory(
       imported += 1;
     } catch (error) {
       skipped += 1;
-      errors.push(`Row ${rowNumber}: ${messageForImportError(error)}`);
+      problems.push({ rowNumber, message: messageForImportError(error) });
     }
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/inventory");
-  revalidatePath("/dashboard/reports");
-  revalidatePath("/dashboard/settings");
-  return { imported, skipped, errors: errors.slice(0, 20), previewed: previewOnly };
+  if (previewOnly && previewRows.length) {
+    const conflicts = await existingIdentifierProblems(previewRows);
+    for (const [rowNumber, message] of conflicts) {
+      imported -= 1;
+      skipped += 1;
+      problems.push({ rowNumber, message });
+    }
+  }
+
+  if (!previewOnly) {
+    refreshInventoryViews();
+    revalidatePath("/dashboard/settings");
+  }
+  problems.sort((left, right) => left.rowNumber - right.rowNumber);
+  const errors = problems
+    .slice(0, maximumReportedProblems)
+    .map((problem) => `Row ${problem.rowNumber}: ${problem.message}`);
+  if (problems.length > maximumReportedProblems) {
+    errors.push(
+      `…and ${problems.length - maximumReportedProblems} more rows need correction. Fix these first, then validate again.`,
+    );
+  }
+  return { imported, skipped, errors, previewed: previewOnly };
 }

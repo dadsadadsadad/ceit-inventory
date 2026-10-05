@@ -12,12 +12,16 @@ import { borrowStatus, borrowStatuses, borrowStatusLabel } from "@/lib/borrow-st
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
+import { everyTermMatches, searchTerms } from "@/lib/search-terms";
 import { prisma } from "@/prisma";
+
+import { manilaDateTimeInput } from "@/lib/borrow-schedule";
 
 import {
   approveReservation,
   cancelReservation,
   declineBorrowRequest,
+  extendBorrowRequest,
   markBorrowed,
   returnBorrowRequest,
 } from "./actions";
@@ -50,6 +54,21 @@ function isBorrowStatus(value?: string | string[]): value is BorrowStatus {
   return Boolean(candidate && statuses.includes(candidate as BorrowStatus));
 }
 
+// "Overdue" is not a stored status: it is equipment still out past its return time.
+const overdueFilter = "OVERDUE";
+
+function isOverdueFilter(value?: string | string[]) {
+  return firstSearchValue(value) === overdueFilter;
+}
+
+function isOverdue(request: BorrowingRecord, now = new Date()) {
+  return (
+    (request.status === borrowStatus.BORROWED ||
+      request.status === borrowStatus.RETURN_REQUESTED) &&
+    request.expectedReturnDate < now
+  );
+}
+
 function shortSearch(value?: string | string[]) {
   return firstSearchValue(value)?.trim().slice(0, 120) ?? "";
 }
@@ -60,14 +79,19 @@ function borrowRequestWhere(search: SearchParams): Prisma.BorrowRequestWhereInpu
   const where: Prisma.BorrowRequestWhereInput = {};
   if (isBorrowStatus(search.status)) {
     where.status = firstSearchValue(search.status) as BorrowStatus;
+  } else if (isOverdueFilter(search.status)) {
+    where.status = { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] };
+    where.expectedReturnDate = { lt: new Date() };
   }
-  if (query) {
-    where.OR = [
-      { borrowerName: { contains: query, mode: "insensitive" } },
-      { studentNumber: { contains: query, mode: "insensitive" } },
-      { inventoryItem: { is: { name: { contains: query, mode: "insensitive" } } } },
-      { inventoryItem: { is: { assetTag: { contains: query, mode: "insensitive" } } } },
-    ];
+  const terms = searchTerms(query);
+  if (terms.length) {
+    where.AND = everyTermMatches<Prisma.BorrowRequestWhereInput>(terms, (term) => [
+      { borrowerName: { contains: term, mode: "insensitive" } },
+      { studentNumber: { contains: term, mode: "insensitive" } },
+      { contact: { contains: term, mode: "insensitive" } },
+      { inventoryItem: { is: { name: { contains: term, mode: "insensitive" } } } },
+      { inventoryItem: { is: { assetTag: { contains: term, mode: "insensitive" } } } },
+    ]);
   }
   return where;
 }
@@ -79,7 +103,7 @@ function pageLink(search: SearchParams, page: number) {
   if (query) {
     parameters.set("q", query);
   }
-  if (status && isBorrowStatus(status)) {
+  if (status && (isBorrowStatus(status) || status === overdueFilter)) {
     parameters.set("status", status);
   }
   if (page > 1) {
@@ -258,30 +282,79 @@ function BorrowingActions({
     request.status === borrowStatus.BORROWED ||
     request.status === borrowStatus.RETURN_REQUESTED
   ) {
+    const now = new Date();
+    const suggestedReturn = new Date(
+      Math.max(request.expectedReturnDate.getTime(), now.getTime()) + 24 * 60 * 60 * 1000,
+    );
     return (
-      <FeedbackForm
-        action={returnBorrowRequest}
-        optimistic={{ entity: `borrow:${request.id}`, values: { status: "RETURNED" } }}
-        className="flex flex-wrap gap-2"
-      >
-        <input type="hidden" name="requestId" value={request.id} />
-        <label className="sr-only" htmlFor={`return-note-${layout}-${request.id}`}>
-          Return note
-        </label>
-        <input
-          id={`return-note-${layout}-${request.id}`}
-          name="staffNotes"
-          maxLength={2_000}
-          className="field min-w-48 flex-1 rounded-lg px-3 py-2 text-sm"
-          placeholder="Optional return note"
-        />
-        <SubmitButton
-          pendingLabel="Recording…"
-          className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+      <div className="space-y-3">
+        <FeedbackForm
+          action={returnBorrowRequest}
+          optimistic={{ entity: `borrow:${request.id}`, values: { status: "RETURNED" } }}
+          className="flex flex-wrap gap-2"
         >
-          {request.status === borrowStatus.RETURN_REQUESTED ? "Confirm returned" : "Mark returned"}
-        </SubmitButton>
-      </FeedbackForm>
+          <input type="hidden" name="requestId" value={request.id} />
+          <label className="sr-only" htmlFor={`return-note-${layout}-${request.id}`}>
+            Return note
+          </label>
+          <input
+            id={`return-note-${layout}-${request.id}`}
+            name="staffNotes"
+            maxLength={2_000}
+            className="field min-w-48 flex-1 rounded-lg px-3 py-2 text-sm"
+            placeholder="Optional return note"
+          />
+          <SubmitButton
+            pendingLabel="Recording…"
+            className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+          >
+            {request.status === borrowStatus.RETURN_REQUESTED
+              ? "Confirm returned"
+              : "Mark returned"}
+          </SubmitButton>
+        </FeedbackForm>
+        {request.status === borrowStatus.BORROWED ? (
+          <details className="section-disclosure">
+            <summary className="accent-link cursor-pointer text-xs font-semibold">
+              {isOverdue(request, now) ? "Set a new return time" : "Change return time"}
+            </summary>
+            <FeedbackForm
+              action={extendBorrowRequest}
+              successMessage="Return time updated."
+              resetOnSuccess={false}
+              className="mt-3 space-y-3"
+            >
+              <input type="hidden" name="requestId" value={request.id} />
+              <label className="block text-xs font-semibold">
+                <span className="block">New return date and time</span>
+                <input
+                  required
+                  type="datetime-local"
+                  name="expectedReturnDate"
+                  min={manilaDateTimeInput(now)}
+                  defaultValue={manilaDateTimeInput(suggestedReturn)}
+                  className="field mt-1 w-full rounded-lg px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="block text-xs font-semibold">
+                <span className="block">Reason (optional)</span>
+                <input
+                  name="staffNotes"
+                  maxLength={2_000}
+                  className="field mt-1 w-full rounded-lg px-3 py-2 text-sm"
+                  placeholder="e.g. Approved by the instructor"
+                />
+              </label>
+              <SubmitButton
+                pendingLabel="Saving…"
+                className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
+              >
+                Save return time
+              </SubmitButton>
+            </FeedbackForm>
+          </details>
+        ) : null}
+      </div>
     );
   }
 
@@ -402,17 +475,22 @@ export default async function BorrowingPage({
               defaultValue={shortSearch(search.q)}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Borrower, student number, item, or asset tag"
+              placeholder="Borrower, student number, contact, item, or asset tag"
             />
           </label>
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Request status</span>
             <select
               name="status"
-              defaultValue={isBorrowStatus(search.status) ? firstSearchValue(search.status) : ""}
+              defaultValue={
+                isBorrowStatus(search.status) || isOverdueFilter(search.status)
+                  ? firstSearchValue(search.status)
+                  : ""
+              }
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             >
               <option value="">All statuses</option>
+              <option value={overdueFilter}>Overdue (past return time)</option>
               {statuses.map((status) => (
                 <option key={status} value={status}>
                   {borrowStatusLabel(status)}
@@ -462,11 +540,18 @@ export default async function BorrowingPage({
                     >
                       {request.inventoryItem.name}
                     </Link>
-                    <OptimisticStatus
-                      entity={`borrow:${request.id}`}
-                      value={request.status}
-                      kind="borrowing"
-                    />
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {isOverdue(request) ? (
+                        <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
+                          Overdue
+                        </span>
+                      ) : null}
+                      <OptimisticStatus
+                        entity={`borrow:${request.id}`}
+                        value={request.status}
+                        kind="borrowing"
+                      />
+                    </div>
                   </div>
                   <BorrowerDetails request={request} />
                   <BorrowSchedule request={request} />
@@ -600,11 +685,18 @@ export default async function BorrowingPage({
                         ) : null}
                       </td>
                       <td className="px-5 py-4">
-                        <OptimisticStatus
-                          entity={`borrow:${request.id}`}
-                          value={request.status}
-                          kind="borrowing"
-                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <OptimisticStatus
+                            entity={`borrow:${request.id}`}
+                            value={request.status}
+                            kind="borrowing"
+                          />
+                          {isOverdue(request) ? (
+                            <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
+                              Overdue
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="muted mt-3 max-w-48 text-xs leading-5">
                           Requested {formatDateTime(request.requestedAt)}
                         </p>

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
+import { after } from "next/server";
+import { BorrowStatus, MaintenanceStatus } from "@prisma/client";
 import {
   ArrowRight,
   CheckCheck,
   ClipboardCheck,
+  Clock3,
   MapPin,
   Package,
   PackagePlus,
@@ -18,6 +20,8 @@ import {
   canManageInventory,
   requireInventoryAccess,
 } from "@/lib/inventory-auth";
+import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
+import { inventoryAttentionWhere } from "@/lib/inventory-attention";
 import { formatManilaDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
@@ -26,47 +30,66 @@ export const metadata: Metadata = { title: "Dashboard · CEIT Inventory" };
 
 async function getDashboardData(includeAuditTrail: boolean) {
   const now = new Date();
-  const [inventory, locationCount, recentActivity, dashboardNote, maintenance, borrowing] =
-    await Promise.all([
-      prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
-      prisma.location.count({ where: { isActive: true } }),
-      includeAuditTrail
-        ? prisma.inventoryAudit.findMany({
-            select: {
-              id: true,
-              summary: true,
-              entityLabel: true,
-              createdAt: true,
-              item: { select: { id: true, name: true } },
+  const [
+    inventory,
+    locationCount,
+    recentActivity,
+    dashboardNote,
+    maintenance,
+    borrowing,
+    overdueLoans,
+    attentionCount,
+  ] = await Promise.all([
+    prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.location.count({ where: { isActive: true } }),
+    includeAuditTrail
+      ? prisma.inventoryAudit.findMany({
+          select: {
+            id: true,
+            summary: true,
+            entityLabel: true,
+            createdAt: true,
+            item: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        })
+      : Promise.resolve([]),
+    prisma.dashboardNote.findUnique({ where: { scope: "shared-dashboard" } }),
+    prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
+    prisma.borrowRequest.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+      where: {
+        OR: [
+          {
+            status: {
+              in: [BorrowStatus.REQUESTED, BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED],
             },
-            orderBy: { createdAt: "desc" },
-            take: 5,
-          })
-        : Promise.resolve([]),
-      prisma.dashboardNote.findUnique({ where: { scope: "shared-dashboard" } }),
-      prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
-      prisma.borrowRequest.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-        where: {
-          OR: [
-            {
-              status: {
-                in: [BorrowStatus.REQUESTED, BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED],
-              },
-            },
-            { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: now } },
-          ],
-        },
-      }),
-    ]);
+          },
+          { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: now } },
+        ],
+      },
+    }),
+    // Equipment that is still out after its agreed return time.
+    prisma.borrowRequest.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+      where: {
+        status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
+        expectedReturnDate: { lt: now },
+      },
+    }),
+    prisma.inventoryItem.count({ where: inventoryAttentionWhere }),
+  ]);
   const count = (status: BorrowStatus) =>
     borrowing.find((entry) => entry.status === status)?._count._all ?? 0;
+  const overdueCount = (status: BorrowStatus) =>
+    overdueLoans.find((entry) => entry.status === status)?._count._all ?? 0;
   return {
     statusCounts: inventory.map((entry) => ({ status: entry.status, count: entry._count._all })),
     itemCount: inventory.reduce((total, entry) => total + entry._count._all, 0),
-    attentionCount:
-      inventory.find((entry) => entry.status === ItemStatus.DEFECTIVE)?._count._all ?? 0,
+    attentionCount,
     locationCount,
     recentActivity,
     dashboardNote,
@@ -75,11 +98,15 @@ async function getDashboardData(includeAuditTrail: boolean) {
     checkedOutCount: count(BorrowStatus.BORROWED) + count(BorrowStatus.RETURN_REQUESTED),
     reservationCount: count(BorrowStatus.RESERVED),
     returnCount: count(BorrowStatus.RETURN_REQUESTED),
+    overdueCount: overdueCount(BorrowStatus.BORROWED) + overdueCount(BorrowStatus.RETURN_REQUESTED),
+    // A late loan with a pending return request is already listed under returns to confirm.
+    overdueUnreturnedCount: overdueCount(BorrowStatus.BORROWED),
   };
 }
 
 export default async function DashboardPage() {
   const user = await requireInventoryAccess();
+  after(() => purgeExpiredBorrowerDataIfDue());
   const canAdmin = canManageAdministration(user.role);
   const canManage = canManageInventory(user.role);
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
@@ -89,7 +116,10 @@ export default async function DashboardPage() {
     console.error("Unable to load dashboard", error);
   }
   const waiting = dashboard
-    ? dashboard.pendingBorrowCount + dashboard.returnCount + dashboard.openTicketCount
+    ? dashboard.pendingBorrowCount +
+      dashboard.returnCount +
+      dashboard.openTicketCount +
+      dashboard.overdueUnreturnedCount
     : 0;
   const queue = dashboard
     ? [
@@ -99,6 +129,13 @@ export default async function DashboardPage() {
           count: dashboard.pendingBorrowCount,
           href: "/dashboard/borrowing?status=REQUESTED",
           Icon: ClipboardCheck,
+        },
+        {
+          label: "Overdue loans",
+          detail: "Equipment still out past its return time",
+          count: dashboard.overdueCount,
+          href: "/dashboard/borrowing?status=OVERDUE",
+          Icon: Clock3,
         },
         {
           label: "Returns to confirm",
@@ -176,7 +213,11 @@ export default async function DashboardPage() {
                 >
                   {dashboard.attentionCount.toLocaleString()}
                 </strong>
-                <span className="metric-detail">Defective items</span>
+                <span className="metric-detail">
+                  <Link href="/dashboard/inventory?attention=1">
+                    Defective, untested, or poor condition
+                  </Link>
+                </span>
               </div>
             </section>
 

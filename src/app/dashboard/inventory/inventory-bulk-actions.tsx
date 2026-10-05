@@ -14,7 +14,7 @@ import {
   syncVisibleItemSelection,
 } from "./inventory-selection";
 
-type BulkAction = "condition" | "delete" | "location" | "remove" | "status";
+type BulkAction = "condition" | "delete" | "inspect" | "location" | "remove" | "status";
 type SelectOption = { label: string; value: string };
 
 // Choose an action for the selected inventory.
@@ -83,9 +83,11 @@ export function InventoryBulkActions({
         ? "Apply one status to every selected item."
         : action === "condition"
           ? "Apply one condition to every selected item."
-          : action === "delete"
-            ? "Permanently delete selected records that have no borrowing or maintenance history, including their tags, QR codes, technical details, and photos. The audit trail is retained."
-            : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
+          : action === "inspect"
+            ? "Record an inspection today for every selected item, including its PC profile when it has one."
+            : action === "delete"
+              ? "Permanently delete selected records that have no borrowing or maintenance history, including their tags, QR codes, technical details, and photos. The audit trail is retained."
+              : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
 
   return (
     <section
@@ -140,6 +142,7 @@ export function InventoryBulkActions({
           >
             <option value="status">Edit status</option>
             <option value="condition">Edit condition</option>
+            <option value="inspect">Record inspection (checked today)</option>
             <option value="location">Move to location</option>
             <option value="remove">Retire (keep record and history)</option>
             {canPermanentlyDelete ? (
@@ -195,6 +198,10 @@ export function InventoryBulkActions({
                 </option>
               ))}
             </select>
+          ) : action === "inspect" ? (
+            <p className="bulk-action-remove-note mt-2 rounded-lg px-3 py-2.5 text-sm leading-5">
+              {actionDetails}
+            </p>
           ) : (
             <div className="mt-2 space-y-3">
               <p className="bulk-action-remove-note rounded-lg px-3 py-2.5 text-sm leading-5">
