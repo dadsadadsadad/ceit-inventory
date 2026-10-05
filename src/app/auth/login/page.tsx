@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { SubmitButton } from "@/app/components/submit-button";
-import { EquipmentStudy } from "@/app/components/equipment-study";
 import { BrandMark } from "@/app/components/brand-mark";
 
 import { signIn } from "../actions";
@@ -42,9 +41,6 @@ export default async function LoginPage({
             </strong>
             <span className="brand-caption text-xs">Inventory workspace</span>
           </div>
-        </div>
-        <div className="login-study">
-          <EquipmentStudy />
         </div>
         <div className="max-w-xl">
           <p className="eyebrow">A place for everything.</p>
