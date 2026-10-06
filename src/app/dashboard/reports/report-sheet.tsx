@@ -17,8 +17,15 @@ function Cell({ text, primary }: { primary?: boolean; text: string }) {
   );
 }
 
+// Column widths follow the PDF's proportions, so every table in a report lines up the same way.
+function columnShares(table: ReportTable) {
+  const total = table.columns.reduce((sum, column) => sum + column.width, 0);
+  return table.columns.map((column) => `${((column.width / total) * 100).toFixed(2)}%`);
+}
+
 function Table({ table }: { table: ReportTable }) {
   const trimmed = table.rows.length < table.total;
+  const shares = columnShares(table);
   return (
     <section className="report-section" aria-label={table.heading}>
       <div className="report-section-head">
@@ -31,6 +38,11 @@ function Table({ table }: { table: ReportTable }) {
       {table.rows.length ? (
         <div className="report-table-wrap">
           <table className="report-table">
+            <colgroup>
+              {shares.map((share, index) => (
+                <col key={index} style={{ width: share }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 {table.columns.map((column) => (

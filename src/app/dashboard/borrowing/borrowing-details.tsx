@@ -2,6 +2,7 @@ import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowStatus } from "@/lib/borrow-status";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
+import { personName } from "@/lib/person";
 
 import type { BorrowingRecord } from "./borrowing-query";
 
@@ -53,7 +54,7 @@ export function BorrowSchedule({ request }: { request: BorrowingRecord }) {
       </p>
       {request.approvedAt ? (
         <p className="muted">
-          Approved by {request.approvedByName} · {formatDateTime(request.approvedAt)}
+          Approved by {personName(request.approvedByName)} · {formatDateTime(request.approvedAt)}
         </p>
       ) : null}
       {request.cancelledAt ? (

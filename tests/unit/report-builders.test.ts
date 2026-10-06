@@ -2,8 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { database, computers } = vi.hoisted(() => ({
   database: {
-    inventoryItem: { aggregate: vi.fn(), count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
+    inventoryItem: {
+      aggregate: vi.fn(),
+      count: vi.fn(),
+      fields: { lowStockThreshold: { name: "lowStockThreshold" } },
+      findMany: vi.fn(),
+      groupBy: vi.fn(),
+    },
     category: { findUnique: vi.fn() },
+    customField: { findMany: vi.fn() },
     location: { findUnique: vi.fn() },
     borrowRequest: { count: vi.fn(), findMany: vi.fn() },
     maintenanceTicket: { count: vi.fn(), findMany: vi.fn() },
@@ -48,7 +55,10 @@ const run = (query: string, purpose: "csv" | "pdf" | "preview" = "preview") =>
   buildReport(new URLSearchParams(query), purpose, now);
 
 describe("report builders", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    database.customField.findMany.mockResolvedValue([]);
+  });
 
   it("refuses an unknown report and accepts the old name for borrowing", async () => {
     await expect(run("kind=nothing")).rejects.toThrow(ReportRequestError);
@@ -205,7 +215,7 @@ describe("report builders", () => {
 
     it("reads one page for a preview but a download looks for one row more than it allows", async () => {
       await run("kind=inventory", "preview");
-      expect(database.inventoryItem.findMany.mock.calls[0][0].take).toBe(100);
+      expect(database.inventoryItem.findMany.mock.calls[0][0].take).toBe(500);
       database.inventoryItem.findMany.mockClear();
       await run("kind=inventory", "pdf");
       expect(database.inventoryItem.findMany.mock.calls[0][0].take).toBe(2_001);
@@ -261,12 +271,113 @@ describe("report builders", () => {
       expect(report.filters).toEqual(["Showing: Overdue"]);
     });
 
+    it("lists what is due back today", async () => {
+      database.borrowRequest.findMany.mockResolvedValue([
+        request({ expectedReturnDate: new Date("2026-10-06T09:00:00Z") }),
+      ]);
+      const report = await run("kind=borrowing&borrowingState=due-today");
+      expect(report.filters).toEqual(["Showing: Due back today"]);
+      const where = JSON.stringify(database.borrowRequest.findMany.mock.calls[0][0].where);
+      expect(where).toContain("expectedReturnDate");
+    });
+
     it("notes late returns", async () => {
       database.borrowRequest.findMany.mockResolvedValue([
         request({ status: "RETURNED", returnedAt: new Date("2026-10-05T04:00:00Z") }),
       ]);
       const report = await run("kind=borrowing&borrowingState=returned");
       expect(report.tables[0].rows[0][2]).toContain("(2 days late)");
+    });
+  });
+
+  describe("stock", () => {
+    const stock = (name: string, quantity: number, lowStockThreshold: number | null = null) => ({
+      name,
+      quantity,
+      lowStockThreshold,
+      itemType: "SUPPLY",
+      status: "OK",
+      assetTag: null,
+      qrCode: `qr-${name}`,
+      lastCheckedAt: null,
+      category: { name: "Cables" },
+      location: { name: "Store room" },
+    });
+
+    beforeEach(() => {
+      database.inventoryItem.findMany.mockResolvedValue([
+        stock("HDMI cable", 0),
+        stock("Batteries", 3),
+        stock("Markers", 8, 10),
+        stock("Chalk", 40),
+      ]);
+      database.inventoryItem.count.mockResolvedValue(4);
+      database.inventoryItem.aggregate.mockResolvedValue({ _sum: { quantity: 51 } });
+      database.category.findUnique.mockResolvedValue(null);
+      database.location.findUnique.mockResolvedValue(null);
+    });
+
+    it("labels each record by its own alert level, with 5 as the default", async () => {
+      const report = await run("kind=stock");
+      const levels = report.tables[0].rows.map((row) => [row[0].split("\n")[0], row[2], row[3]]);
+      expect(levels).toEqual([
+        ["HDMI cable", "5", "Out of stock\nOK"],
+        ["Batteries", "5", "Running low\nOK"],
+        ["Markers", "10", "Running low\nOK"],
+        ["Chalk", "5", "In stock\nOK"],
+      ]);
+      expect(report.metrics).toContainEqual(
+        expect.objectContaining({ label: "Units in stock", value: "51" }),
+      );
+    });
+
+    it("only reads stock records, whatever other filters are set", async () => {
+      const report = await run("kind=stock&stock=low");
+      const where = JSON.stringify(database.inventoryItem.findMany.mock.calls[0][0].where);
+      expect(where).toContain('"itemType":"SUPPLY"');
+      expect(report.filters).toContain("Running low or out");
+    });
+  });
+
+  describe("warranty", () => {
+    const warranted = (name: string, warrantyEndsAt: string | null) => ({
+      name,
+      assetTag: `TAG-${name}`,
+      warrantyEndsAt: warrantyEndsAt ? new Date(`${warrantyEndsAt}T00:00:00.000Z`) : null,
+      purchaseDate: null,
+      status: "OK",
+      category: { name: "Computers" },
+      location: { name: "Lab A" },
+    });
+
+    beforeEach(() => {
+      database.inventoryItem.findMany.mockResolvedValue([
+        warranted("Old PC", "2026-09-01"),
+        warranted("New PC", "2026-11-15"),
+        warranted("Newer PC", "2028-01-01"),
+      ]);
+      database.inventoryItem.count.mockResolvedValue(1);
+      database.category.findUnique.mockResolvedValue(null);
+      database.location.findUnique.mockResolvedValue(null);
+    });
+
+    it("says where each warranty stands on the report day", async () => {
+      const report = await run("kind=warranty");
+      const states = report.tables[0].rows.map((row) => row[1].split("\n")[1]);
+      expect(states).toEqual(["Warranty ended", "Ends within 60 days", "Under warranty"]);
+      expect(report.metrics.map((metric) => metric.label)).toEqual([
+        "With a warranty",
+        "Ending soon",
+        "Warranty ended",
+        "Still covered",
+      ]);
+    });
+
+    it("describes the chosen state and includes it in the query", async () => {
+      const report = await run("kind=warranty&warranty=ending");
+      expect(report.filters).toEqual(["Ending within 60 days"]);
+      const where = JSON.stringify(database.inventoryItem.findMany.mock.calls[0][0].where);
+      expect(where).toContain("warrantyEndsAt");
     });
   });
 

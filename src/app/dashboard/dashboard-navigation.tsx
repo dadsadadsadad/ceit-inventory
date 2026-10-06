@@ -21,7 +21,6 @@ import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
 import { roleLabel } from "@/lib/roles";
 import { LiveUpdates } from "@/app/components/live-updates";
-import { CommandMenu } from "@/app/components/command-menu";
 import { ThemeToggle } from "@/app/components/theme-toggle";
 import { BrandMark } from "@/app/components/brand-mark";
 
@@ -150,11 +149,6 @@ export function DashboardNavigation({
           ))}
         </nav>
         <div className="sidebar-utilities">
-          <CommandMenu
-            canManageUsers={canManageUsers}
-            canManageInventory={canManageInventory}
-            embedded
-          />
           <ThemeToggle embedded />
         </div>
         <div className="sidebar-account">

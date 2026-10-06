@@ -4,6 +4,7 @@ import { borrowPolicyFromEnvironment } from "@/lib/borrow-policy";
 import { isHoldLapsed } from "@/lib/borrow-schedule";
 import { borrowStatus, borrowStatuses } from "@/lib/borrow-status";
 import { firstParam, textParam, type RawParam } from "@/lib/search-params";
+import { dueTodayWhere } from "@/lib/loan-due";
 import { borrowSearchWhere } from "@/lib/record-search";
 import { lenientDateRange, reportDateFilter } from "@/lib/report-export-filters";
 import { searchTerms } from "@/lib/search-terms";
@@ -40,6 +41,13 @@ export function isOverdueFilter(value?: string | string[]) {
   return firstParam(value) === overdueFilter;
 }
 
+// Loans due back later today, so staff can remind borrowers before they are late.
+export const dueTodayFilter = "DUE_TODAY";
+
+export function isDueTodayFilter(value?: string | string[]) {
+  return firstParam(value) === dueTodayFilter;
+}
+
 // A short reason a pending or reserved request no longer holds the equipment.
 export function lapsedLabel(request: BorrowingRecord, now = new Date()) {
   if (!isHoldLapsed(request, now, borrowPolicyFromEnvironment())) {
@@ -65,6 +73,8 @@ export function borrowRequestWhere(search: SearchParams): Prisma.BorrowRequestWh
   } else if (isOverdueFilter(search.status)) {
     where.status = { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] };
     where.expectedReturnDate = { lt: new Date() };
+  } else if (isDueTodayFilter(search.status)) {
+    Object.assign(where, dueTodayWhere());
   }
   const terms = searchTerms(query);
   if (terms.length) {
@@ -90,7 +100,7 @@ export function pageLink(search: SearchParams, page: number) {
   if (query) {
     parameters.set("q", query);
   }
-  if (status && (isBorrowStatus(status) || status === overdueFilter)) {
+  if (status && (isBorrowStatus(status) || status === overdueFilter || status === dueTodayFilter)) {
     parameters.set("status", status);
   }
   for (const key of ["from", "to"] as const) {
@@ -115,7 +125,13 @@ export function reportHref(search: SearchParams) {
   const parameters = new URLSearchParams({ kind: "borrowing" });
   const status = firstParam(search.status);
   const state =
-    status === overdueFilter ? "overdue" : isBorrowStatus(status) ? reportStates[status] : "";
+    status === overdueFilter
+      ? "overdue"
+      : status === dueTodayFilter
+        ? "due-today"
+        : isBorrowStatus(status)
+          ? reportStates[status]
+          : "";
   if (state) {
     parameters.set("borrowingState", state);
   }

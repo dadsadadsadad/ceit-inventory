@@ -3,6 +3,7 @@ import Script from "next/script";
 import localFont from "next/font/local";
 
 import { appearanceBootstrap } from "@/lib/appearance-bootstrap";
+import { NavigationFeedback } from "./components/navigation-feedback";
 import { GlobalAppearance } from "./components/theme-toggle";
 import { OptimisticProvider } from "./components/optimistic-state";
 import "./styles/tokens.css";
@@ -21,10 +22,8 @@ const workspaceFont = localFont({
 });
 
 const displayFont = localFont({
-  src: [
-    { path: "./fonts/fraunces-latin-standard-normal.woff2", style: "normal" },
-    { path: "./fonts/fraunces-latin-standard-italic.woff2", style: "italic" },
-  ],
+  src: "./fonts/fraunces-latin-standard-normal.woff2",
+  style: "normal",
   variable: "--font-fraunces",
   weight: "100 900",
   display: "swap",
@@ -66,6 +65,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OptimisticProvider>
           <div id="main-content">{children}</div>
         </OptimisticProvider>
+        {/* Instant cue when a link to another page is pressed. */}
+        <NavigationFeedback />
         {/* Appearance controls shared by every page. */}
         <GlobalAppearance />
       </body>

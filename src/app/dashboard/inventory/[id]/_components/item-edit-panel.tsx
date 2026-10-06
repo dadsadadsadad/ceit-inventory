@@ -2,9 +2,13 @@ import type { Category, Location } from "@prisma/client";
 import { humanizeEnum } from "@/lib/labels";
 import { ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 
+import { CustomFieldInputs } from "@/app/components/custom-field-inputs";
 import { FeedbackForm } from "@/app/components/feedback-form";
+import { FormSection } from "@/app/components/form-section";
 import { SubmitButton } from "@/app/components/submit-button";
+import { customFieldsFor, readCustomValues, type CustomFieldDefinition } from "@/lib/custom-fields";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { defaultLowStockThreshold } from "@/lib/stock-level";
 
 import {
   markInventoryItemChecked,
@@ -20,15 +24,18 @@ import { RecordLifecycle } from "./record-lifecycle";
 export function ItemEditPanel({
   item,
   categories,
+  customFields,
   locations,
   open,
 }: {
   item: ItemRecord;
   categories: Category[];
+  customFields: CustomFieldDefinition[];
   locations: Location[];
   open: boolean;
 }) {
   const computer = item.computer;
+  const applicableFields = customFieldsFor(customFields, item);
   const selectableCategories = categories.filter(
     (category) => category.isActive || category.id === item.categoryId,
   );
@@ -71,7 +78,6 @@ export function ItemEditPanel({
         <input type="hidden" name="id" value={item.id} />
         <input type="hidden" name="updatedAt" value={item.updatedAt.toISOString()} />
         <TextField name="name" label="Name" value={item.name} required maxLength={255} />
-        <TextField name="assetTag" label="Asset tag" value={item.assetTag} maxLength={255} />
         <label>
           <span className="text-sm font-semibold">Category</span>
           <select
@@ -88,7 +94,7 @@ export function ItemEditPanel({
           </select>
         </label>
         <label>
-          <span className="text-sm font-semibold">Location</span>
+          <span className="text-sm font-semibold">Room</span>
           <select
             name="locationId"
             defaultValue={item.locationId}
@@ -102,52 +108,6 @@ export function ItemEditPanel({
             ))}
           </select>
         </label>
-        {computer ? (
-          <div>
-            <span className="text-sm font-semibold">Record type</span>
-            <p className="muted mt-2 text-sm">Tracked asset (locked while PC details exist)</p>
-            <input type="hidden" name="itemType" value={ItemType.ASSET} />
-            <input type="hidden" name="isComputer" value="on" />
-          </div>
-        ) : (
-          <>
-            <label>
-              <span className="text-sm font-semibold">Record type</span>
-              <select
-                name="itemType"
-                defaultValue={item.itemType}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              >
-                {Object.values(ItemType).map((value) => (
-                  <option key={value} value={value}>
-                    {value === ItemType.ASSET ? "Tracked asset" : "Supply / stock"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {item.itemType === ItemType.ASSET ? (
-              <label className="card-muted flex items-start gap-3 rounded-lg p-3 text-sm font-semibold">
-                <input
-                  name="isComputer"
-                  type="checkbox"
-                  defaultChecked={item.isComputer}
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                />
-                <span>
-                  This tracked asset is a PC
-                  <span className="muted mt-1 block text-xs font-normal leading-5">
-                    Only PC-designated single tracked assets can have hardware and software details.
-                  </span>
-                </span>
-              </label>
-            ) : (
-              <p className="muted text-xs leading-5">
-                Supply records cannot be designated as PCs. Change the record type to a tracked
-                asset first.
-              </p>
-            )}
-          </>
-        )}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
           <label>
             <span className="text-sm font-semibold">Status</span>
@@ -182,76 +142,165 @@ export function ItemEditPanel({
             </select>
           </label>
         </div>
-        <div className="grid gap-4">
-          <TextField
-            name="quantity"
-            label="Quantity"
-            type="number"
-            value={item.quantity}
-            min={0}
-            readOnly={Boolean(computer)}
-          />
+        {item.itemType === ItemType.SUPPLY ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <TextField
+              name="quantity"
+              label="Quantity in stock"
+              type="number"
+              value={item.quantity}
+              min={0}
+            />
+            <div>
+              <TextField
+                name="lowStockThreshold"
+                label="Warn me when it falls to"
+                type="number"
+                value={item.lowStockThreshold}
+                min={0}
+                placeholder={String(defaultLowStockThreshold)}
+              />
+              <p className="muted mt-1 text-xs leading-5">
+                Leave blank to use {defaultLowStockThreshold}. Use the Stock card to add or use
+                some.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <input type="hidden" name="quantity" value={item.quantity} />
+        )}
+
+        <div className="space-y-3">
+          <FormSection title="More details" hint="Tag, model, serial number, notes, record type">
+            <div className="space-y-4">
+              <TextField name="assetTag" label="Asset tag" value={item.assetTag} maxLength={255} />
+              {computer ? (
+                <div>
+                  <span className="text-sm font-semibold">Record type</span>
+                  <p className="muted mt-2 text-sm">Equipment (locked while PC details exist)</p>
+                  <input type="hidden" name="itemType" value={ItemType.ASSET} />
+                  <input type="hidden" name="isComputer" value="on" />
+                </div>
+              ) : (
+                <>
+                  <label>
+                    <span className="text-sm font-semibold">Record type</span>
+                    <select
+                      name="itemType"
+                      defaultValue={item.itemType}
+                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                    >
+                      {Object.values(ItemType).map((value) => (
+                        <option key={value} value={value}>
+                          {value === ItemType.ASSET
+                            ? "Equipment (one unit)"
+                            : "Stock (by quantity)"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {item.itemType === ItemType.ASSET ? (
+                    <label className="card-muted flex items-start gap-3 rounded-lg p-3 text-sm font-semibold">
+                      <input
+                        name="isComputer"
+                        type="checkbox"
+                        defaultChecked={item.isComputer}
+                        className="mt-0.5 h-4 w-4 shrink-0"
+                      />
+                      <span>
+                        This is a PC or Mac
+                        <span className="muted mt-1 block text-xs font-normal leading-5">
+                          Only single pieces of equipment can have hardware and software details.
+                        </span>
+                      </span>
+                    </label>
+                  ) : null}
+                </>
+              )}
+              <TextField
+                name="manufacturer"
+                label="Manufacturer"
+                value={item.manufacturer}
+                maxLength={255}
+              />
+              <TextField name="model" label="Model" value={item.model} maxLength={255} />
+              <TextField
+                name="serialNumber"
+                label="Serial number"
+                value={item.serialNumber}
+                maxLength={255}
+              />
+              <TextField
+                name="lastCheckedAt"
+                label="Last checked"
+                value={manilaDateValue(item.lastCheckedAt)}
+                type="date"
+              />
+              <label className="block">
+                <span className="text-sm font-semibold">Description</span>
+                <textarea
+                  name="description"
+                  rows={3}
+                  defaultValue={item.description ?? ""}
+                  maxLength={5_000}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold">Notes</span>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={item.notes ?? ""}
+                  maxLength={5_000}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                />
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Purchase and warranty"
+            hint="Date, price, warranty end"
+            defaultOpen={Boolean(item.purchaseDate || item.purchasePrice || item.warrantyEndsAt)}
+          >
+            <div className="space-y-4">
+              <TextField
+                name="purchaseDate"
+                label="Purchase date"
+                value={dateValue(item.purchaseDate)}
+                type="date"
+              />
+              <TextField
+                name="purchasePrice"
+                label="Purchase price (PHP)"
+                value={item.purchasePrice?.toString()}
+                type="number"
+                min={0}
+                max={99_999_999.99}
+                step={0.01}
+              />
+              <TextField
+                name="warrantyEndsAt"
+                label="Warranty ends"
+                value={dateValue(item.warrantyEndsAt)}
+                type="date"
+              />
+              <p className="muted text-xs leading-5">
+                The price stays off the inventory list and is included in the reports.
+              </p>
+            </div>
+          </FormSection>
+
+          {applicableFields.length ? (
+            <FormSection title="Extra details" hint="Fields added in Settings">
+              <CustomFieldInputs
+                fields={applicableFields}
+                values={readCustomValues(item.customFields)}
+              />
+            </FormSection>
+          ) : null}
         </div>
-        <TextField
-          name="manufacturer"
-          label="Manufacturer"
-          value={item.manufacturer}
-          maxLength={255}
-        />
-        <TextField name="model" label="Model" value={item.model} maxLength={255} />
-        <TextField
-          name="serialNumber"
-          label="Serial number"
-          value={item.serialNumber}
-          maxLength={255}
-        />
-        <TextField
-          name="purchaseDate"
-          label="Purchase date"
-          value={dateValue(item.purchaseDate)}
-          type="date"
-        />
-        <TextField
-          name="lastCheckedAt"
-          label="Last checked"
-          value={manilaDateValue(item.lastCheckedAt)}
-          type="date"
-        />
-        <div>
-          <TextField
-            name="purchasePrice"
-            label="Purchase price (PHP)"
-            value={item.purchasePrice?.toString()}
-            type="number"
-            min={0}
-            max={99_999_999.99}
-            step={0.01}
-          />
-          <p className="muted mt-1 text-xs leading-5">
-            Optional total paid for this record. It stays off the inventory list and is included in
-            the acquisition report.
-          </p>
-        </div>
-        <label className="block">
-          <span className="text-sm font-semibold">Description</span>
-          <textarea
-            name="description"
-            rows={3}
-            defaultValue={item.description ?? ""}
-            maxLength={5_000}
-            className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-semibold">Notes</span>
-          <textarea
-            name="notes"
-            rows={3}
-            defaultValue={item.notes ?? ""}
-            maxLength={5_000}
-            className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-          />
-        </label>
         <SubmitButton
           pendingLabel="Saving update…"
           className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold"

@@ -14,6 +14,7 @@ import {
   computerData,
   optionalDate,
   optionalText,
+  optionalYesNo,
   requireComputerForItem,
   requiredId,
   requiredText,
@@ -107,6 +108,7 @@ export async function addComputerSoftware(formData: FormData) {
           version: optionalText(formData, "version", 255),
           licenseKeyHint: optionalText(formData, "licenseKeyHint", 255),
           licenseExpiresAt: optionalDate(formData, "licenseExpiresAt"),
+          isLicensed: optionalYesNo(formData, "isLicensed"),
           installedAt: optionalDate(formData, "installedAt"),
         },
       }),
@@ -144,6 +146,7 @@ export async function updateComputerSoftware(formData: FormData) {
       version: optionalText(formData, "version", 255),
       licenseKeyHint: optionalText(formData, "licenseKeyHint", 255),
       licenseExpiresAt: optionalDate(formData, "licenseExpiresAt"),
+      isLicensed: optionalYesNo(formData, "isLicensed"),
       installedAt: optionalDate(formData, "installedAt"),
     };
 

@@ -192,7 +192,7 @@ test("staff cannot extend a loan beyond the total limit", async ({ page }) => {
   });
   await signIn(page);
   await page.goto("/dashboard/borrowing");
-  const row = page.locator("tbody tr").filter({ visible: true }).first();
+  const row = page.locator(".request-card").first();
   await row.locator("summary", { hasText: "Change return time" }).click();
   const field = row.getByLabel("New return date and time");
   await field.fill(hours(3 * 24));

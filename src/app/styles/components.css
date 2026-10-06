@@ -322,7 +322,7 @@ input[type="datetime-local"] {
   border-radius: var(--radius-control);
 }
 
-.loading-page .skeleton:first-child {
+.loading-page .skeleton.h-4 {
   border-radius: 999px;
 }
 
@@ -709,14 +709,6 @@ a.pc-chip:hover {
 
 .inventory-page .record-table td:last-child {
   min-width: 9rem;
-}
-
-.borrowing-page .record-table table {
-  min-width: 82rem;
-}
-
-.borrowing-page .record-table td:last-child {
-  min-width: 21rem;
 }
 
 .record-table td:last-child .accent-link,
@@ -1109,17 +1101,8 @@ a.pc-chip:hover {
   gap: 1.5rem;
 }
 
-.maintenance-filters {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 .account-create-grid > button {
   align-self: start;
-}
-
-.maintenance-filters > button {
-  grid-column: 1 / -1;
-  justify-self: start;
 }
 
 .settings-page .page-inner > .grid > section.card {
@@ -1129,10 +1112,6 @@ a.pc-chip:hover {
 @container workspace (min-width: 38rem) {
   .account-create-grid {
     align-items: start;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .maintenance-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1149,10 +1128,6 @@ a.pc-chip:hover {
   .account-create-grid > button {
     grid-column: 1 / -1;
     justify-self: start;
-  }
-
-  .maintenance-filters {
-    grid-template-columns: minmax(10rem, 1fr) repeat(4, minmax(8rem, 0.6fr)) auto;
   }
 
   .account-editor-grid {
@@ -1178,4 +1153,310 @@ a.pc-chip:hover {
   .category-editor-grid button {
     justify-self: start;
   }
+}
+
+/* ------------------------------------------------------------------ optional form sections */
+.form-section {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.form-section[open] {
+  background: var(--surface);
+}
+
+.form-section-summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  list-style: none;
+  min-height: 3.25rem;
+  padding: 0.7rem 1rem;
+}
+
+.form-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.form-section-summary::before {
+  border-bottom: 2px solid var(--muted);
+  border-right: 2px solid var(--muted);
+  content: "";
+  height: 0.5rem;
+  transform: rotate(-45deg);
+  transition: transform var(--interaction-duration) var(--interaction-ease);
+  width: 0.5rem;
+}
+
+.form-section[open] > .form-section-summary::before {
+  transform: rotate(45deg);
+}
+
+.form-section-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.form-section-tag {
+  background: var(--surface-muted);
+  border-radius: var(--radius-chip);
+  color: var(--muted);
+  font-family: var(--font-tag);
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.form-section-hint {
+  color: var(--muted);
+  flex-basis: 100%;
+  font-size: 0.875rem;
+  padding-left: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .form-section-hint {
+    flex-basis: auto;
+    margin-left: auto;
+    padding-left: 0;
+  }
+}
+
+.form-section-body {
+  border-top: 1px dashed var(--border-input);
+  margin: 0 1rem;
+  padding: 1rem 0 1.1rem;
+}
+
+/* ------------------------------------------------------------------ stock */
+.stock-count {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-variation-settings: "opsz" 96;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.stock-count .muted {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------ borrowing request cards */
+.request-list {
+  display: grid;
+}
+
+.request-card {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.request-card:first-child {
+  border-top: 0;
+}
+
+.request-card-head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+}
+
+.request-card-grid {
+  display: grid;
+  gap: 1.25rem 2rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.request-label {
+  color: var(--muted);
+  font-family: var(--font-tag);
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+}
+
+.request-history {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.9375rem;
+  gap: 0.35rem;
+  line-height: 1.45;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.request-card-actions {
+  border-top: 1px dashed var(--border-input);
+  padding-top: 1rem;
+}
+
+.request-actions {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.request-actions > p {
+  flex-basis: 100%;
+}
+
+.request-action-form {
+  align-items: center;
+  display: flex;
+  flex: 1 1 22rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.request-action-form > .field {
+  flex: 1 1 12rem;
+}
+
+.request-actions > details {
+  flex: 1 1 100%;
+}
+
+.id-check {
+  align-items: center;
+  color: var(--muted-strong);
+  cursor: pointer;
+  display: inline-flex;
+  flex-basis: 100%;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  gap: 0.55rem;
+}
+
+.reminder-message {
+  background: var(--surface-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-control);
+  color: var(--muted-strong);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  padding: 0.7rem 0.9rem;
+}
+
+@container workspace (min-width: 56rem) {
+  .request-card-grid {
+    grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1.5fr) minmax(12rem, 0.9fr);
+  }
+}
+
+/* ------------------------------------------------------------------ availability and scan shortcuts */
+.notice-warning {
+  background: var(--status-pending-bg);
+  border-color: color-mix(in srgb, var(--status-pending) 45%, transparent);
+  border-left-color: var(--status-pending);
+  color: var(--status-pending);
+}
+
+.availability-banner {
+  align-items: flex-start;
+  animation: feedback-in 180ms ease-out both;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  display: flex;
+  gap: 0.85rem;
+  padding: 1rem 1.2rem;
+}
+
+.availability-banner svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.availability-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.availability-detail {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-top: 0.2rem;
+}
+
+.availability-now {
+  background: var(--status-positive-bg);
+  border-color: color-mix(in srgb, var(--status-positive) 45%, transparent);
+  border-left-color: var(--status-positive);
+  color: var(--status-positive);
+}
+
+.availability-later {
+  background: var(--status-pending-bg);
+  border-color: color-mix(in srgb, var(--status-pending) 45%, transparent);
+  border-left-color: var(--status-pending);
+  color: var(--status-pending);
+}
+
+.availability-closed {
+  background: var(--status-critical-bg);
+  border-color: color-mix(in srgb, var(--status-critical) 45%, transparent);
+  border-left-color: var(--status-critical);
+  color: var(--status-critical);
+}
+
+.choice-option.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.scan-strip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  justify-content: space-between;
+  padding: 0.8rem 1.1rem;
+}
+
+.scan-strip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.scan-strip-actions a {
+  font-size: 0.875rem;
+  min-height: 2.4rem;
+  padding: 0.4rem 0.85rem;
+}
+
+/* ------------------------------------------------------------------ filter bars with many controls */
+/* The search takes its own row; the selects and dates share the rest, wrapping instead of being
+   squeezed until their text is cut off. */
+.filter-spread {
+  align-items: end;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr));
+}
+
+.filter-spread > label:first-of-type,
+.filter-spread > :is(button, p, div, a):not(label) {
+  grid-column: 1 / -1;
+}
+
+.filter-spread > button {
+  justify-self: start;
 }

@@ -88,6 +88,7 @@ export default async function AuditTrailPage({
   exportParameters.set("kind", "activity");
   const exportHref = `/dashboard/reports/export?${exportParameters.toString()}`;
   const pdfExportHref = `/dashboard/reports/export/pdf?${exportParameters.toString()}`;
+  const printHref = `/dashboard/reports?${exportParameters.toString()}&generate=1`;
 
   return (
     <div className="page activity-page">
@@ -106,8 +107,9 @@ export default async function AuditTrailPage({
               Export this view
             </summary>
             <div className="secondary-actions-menu">
-              <a href={exportHref}>Export CSV</a>
+              <a href={printHref}>Open to print</a>
               <a href={pdfExportHref}>Export PDF</a>
+              <a href={exportHref}>Export CSV</a>
             </div>
           </details>
         </header>

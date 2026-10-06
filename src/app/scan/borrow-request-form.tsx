@@ -6,8 +6,11 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { dayCount } from "@/lib/borrow-policy";
 import { borrowInputLimits } from "@/lib/borrow-schedule";
 import { submitBorrowRequest } from "./borrow-actions";
+import type { ItemAvailability } from "./borrow-return-chooser";
 
 type BorrowRequestFormProps = {
+  availability: ItemAvailability;
+  formToken: string;
   itemName: string;
   maximumQuantity: number;
   /** The borrowing rules, shown to the student and used to limit the date pickers. */
@@ -18,19 +21,28 @@ const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
 
 // Collect an immediate loan or a future reservation.
 export function BorrowRequestForm({
+  availability,
+  formToken,
   itemName,
   maximumQuantity,
   policy,
   qrCode,
 }: BorrowRequestFormProps) {
-  const [when, setWhen] = useState("now");
+  // An item that is in use right now can only be reserved, for after it is back.
+  const inUse = availability.state === "later";
+  const [when, setWhen] = useState(inUse ? "later" : "now");
   const [pickup, setPickup] = useState("");
   const maximum = Math.min(Math.max(Math.trunc(maximumQuantity), 1), 1_000);
   const limits = borrowInputLimits(policy, when === "later" ? pickup : undefined);
+  const pickupMin =
+    inUse && availability.freeFrom && availability.freeFrom > limits.pickupMin
+      ? availability.freeFrom
+      : limits.pickupMin;
   return (
     <FeedbackForm action={submitBorrowRequest} className="card request-form rounded-lg p-5 sm:p-7">
       {/* Link this request to the scanned item. */}
       <input type="hidden" name="qrCode" value={qrCode} />
+      <input type="hidden" name="formToken" value={formToken} />
       <div className="honeypot" aria-hidden="true">
         <label htmlFor="borrow-website">Leave this field blank</label>
         <input id="borrow-website" name="website" tabIndex={-1} autoComplete="off" />
@@ -49,15 +61,22 @@ export function BorrowRequestForm({
       <fieldset className="mt-6">
         <legend className="text-sm font-semibold">When do you need it?</legend>
         <div className="choice-group mt-2 grid grid-cols-2 gap-2">
-          <label className={"choice-option " + (when === "now" ? "is-selected" : "")}>
+          <label
+            className={
+              "choice-option " +
+              (when === "now" ? "is-selected " : "") +
+              (inUse ? "is-disabled" : "")
+            }
+          >
             <input
               type="radio"
               name="borrowWhen"
               value="now"
               checked={when === "now"}
+              disabled={inUse}
               onChange={() => setWhen("now")}
             />
-            <span>Borrow now</span>
+            <span>{inUse ? "Borrow now (in use)" : "Borrow now"}</span>
           </label>
           <label className={"choice-option " + (when === "later" ? "is-selected" : "")}>
             <input
@@ -79,7 +98,7 @@ export function BorrowRequestForm({
               name="startsAt"
               type="datetime-local"
               required
-              min={limits.pickupMin}
+              min={pickupMin}
               max={limits.pickupMax}
               value={pickup}
               onChange={(event) => setPickup(event.target.value)}

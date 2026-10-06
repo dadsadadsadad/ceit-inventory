@@ -79,6 +79,8 @@ try {
     NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3101",
     REQUEST_RATE_LIMIT_SECRET: randomBytes(32).toString("hex"),
     CEIT_TEST_PASSWORD: password,
+    // Browser tests submit forms as fast as a script, which the public forms normally refuse.
+    FORM_TOKEN_MIN_AGE_MS: "0",
   };
   writeFileSync(
     ".env.e2e.local",

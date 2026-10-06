@@ -4,7 +4,15 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { submitIssueReport } from "./issue-actions";
 
 // Send an equipment problem to maintenance.
-export function IssueReportForm({ qrCode, itemName }: { qrCode: string; itemName: string }) {
+export function IssueReportForm({
+  formToken,
+  itemName,
+  qrCode,
+}: {
+  formToken: string;
+  itemName: string;
+  qrCode: string;
+}) {
   return (
     <FeedbackForm
       action={submitIssueReport}
@@ -12,6 +20,7 @@ export function IssueReportForm({ qrCode, itemName }: { qrCode: string; itemName
       className="card request-form space-y-4 rounded-lg p-5 sm:p-7"
     >
       <input type="hidden" name="qrCode" value={qrCode} />
+      <input type="hidden" name="formToken" value={formToken} />
       <div className="honeypot" aria-hidden="true">
         {/* Hidden field used to catch automated submissions. */}
         <label htmlFor="issue-website">Leave this field blank</label>
@@ -24,7 +33,19 @@ export function IssueReportForm({ qrCode, itemName }: { qrCode: string; itemName
           repairs.
         </p>
       </div>
-      {/* Issue title and what happened. */}
+      {/* Who is reporting, the issue title, and what happened. */}
+      <label className="block">
+        <span className="text-sm font-semibold">Your name *</span>
+        <input
+          name="reporterName"
+          required
+          minLength={2}
+          maxLength={120}
+          autoComplete="name"
+          className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+          placeholder="So staff know who to ask about it"
+        />
+      </label>
       <label className="block">
         <span className="text-sm font-semibold">Issue title *</span>
         <input
@@ -49,7 +70,7 @@ export function IssueReportForm({ qrCode, itemName }: { qrCode: string; itemName
         />
       </label>
       <p className="muted text-xs leading-5">
-        Please leave out passwords, student numbers, and other personal details.
+        Staff will see your name with the report. Please leave out passwords and student numbers.
       </p>
       <SubmitButton
         pendingLabel="Sending…"

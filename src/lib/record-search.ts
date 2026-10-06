@@ -3,6 +3,8 @@ import { ItemCondition, ItemStatus, ItemType, type Prisma } from "@prisma/client
 import { isUuid } from "./ids";
 import { inventoryAttentionWhere, overdueInspectionWhere } from "./inventory-attention";
 import { everyTermMatches, searchTerms } from "./search-terms";
+import { lowStockWhere, outOfStockWhere } from "./stock-queries";
+import { isWarrantyFilter, warrantyWhere } from "./warranty";
 
 /** The searches behind the inventory, borrowing, and maintenance lists and their reports. */
 
@@ -14,7 +16,11 @@ export type InventorySearch = {
   itemType?: string;
   location?: string;
   q?: string;
+  /** "low" for stock at or below its alert level, "out" for stock with none left. */
+  stock?: string;
   status?: string;
+  /** A warranty state: expired, ending, active, or none. */
+  warranty?: string;
 };
 
 export function isItemStatus(value?: string): value is ItemStatus {
@@ -56,6 +62,14 @@ export function inventoryWhere(search: InventorySearch) {
   }
   if (search.checked === "overdue") {
     requirements.push(overdueInspectionWhere());
+  }
+  if (search.stock === "low") {
+    requirements.push(lowStockWhere());
+  } else if (search.stock === "out") {
+    requirements.push(outOfStockWhere());
+  }
+  if (isWarrantyFilter(search.warranty)) {
+    requirements.push(warrantyWhere(search.warranty));
   }
   if (requirements.length) {
     where.AND = requirements;

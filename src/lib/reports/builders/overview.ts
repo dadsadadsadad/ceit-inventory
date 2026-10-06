@@ -11,6 +11,10 @@ import { groupSoftware, sortSoftwareGroups } from "@/lib/computer-directory";
 import { loadSoftware } from "@/lib/computer-queries";
 import { inventoryAttentionWhere } from "@/lib/inventory-attention";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { dueTodayWhere } from "@/lib/loan-due";
+import { lowStockLevelFor } from "@/lib/stock-level";
+import { lowStockWhere } from "@/lib/stock-queries";
+import { warrantyWhere } from "@/lib/warranty";
 import { prisma } from "@/prisma";
 
 import { formatReportDateTime, formatReportDay, humanize, plural } from "../format";
@@ -64,6 +68,11 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
     reservations,
     expiring,
     expired,
+    lowStockCount,
+    lowStockItems,
+    warrantyEndingCount,
+    warrantyEndingItems,
+    dueToday,
   ] = await Promise.all([
     prisma.inventoryItem.aggregate({
       _count: { _all: true },
@@ -116,6 +125,26 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
     }),
     loadSoftware({ license: "expiring" }, now),
     loadSoftware({ license: "expired" }, now),
+    prisma.inventoryItem.count({ where: lowStockWhere() }),
+    prisma.inventoryItem.findMany({
+      where: lowStockWhere(),
+      include: { category: true, location: true },
+      orderBy: [{ quantity: "asc" }, { name: "asc" }],
+      take: 20,
+    }),
+    prisma.inventoryItem.count({ where: warrantyWhere("ending", now) }),
+    prisma.inventoryItem.findMany({
+      where: warrantyWhere("ending", now),
+      include: { category: true, location: true },
+      orderBy: { warrantyEndsAt: "asc" },
+      take: 20,
+    }),
+    prisma.borrowRequest.findMany({
+      where: dueTodayWhere(now),
+      include: { inventoryItem: { select: { assetTag: true, name: true } } },
+      orderBy: { expectedReturnDate: "asc" },
+      take: 20,
+    }),
   ]);
 
   const statusMap = new Map(statusCounts.map((entry) => [entry.status, entry._count._all]));
@@ -163,6 +192,16 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
           : undefined,
         tone: urgentTicketCount ? "alert" : undefined,
       },
+      {
+        label: "Low stock",
+        value: lowStockCount.toLocaleString(),
+        tone: lowStockCount ? "alert" : undefined,
+      },
+      {
+        label: "Warranty ending soon",
+        value: warrantyEndingCount.toLocaleString(),
+        tone: warrantyEndingCount ? "alert" : undefined,
+      },
       { label: "Acquisition value", value: peso.format(acquisition) },
     ],
     tables: [
@@ -201,6 +240,51 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
         ]),
         total: overdueCount,
         emptyText: "No loans are overdue.",
+      },
+      {
+        heading: "Due back today",
+        columns: [
+          { label: "Item", width: 1.6, primary: true },
+          { label: "Borrower", width: 1.25 },
+          { label: "Return by", width: 1.1 },
+        ],
+        rows: dueToday.map((request) => [
+          `${request.inventoryItem.name}\n${request.inventoryItem.assetTag ?? "No asset tag"}`,
+          request.borrowerName,
+          formatReportDateTime(request.expectedReturnDate),
+        ]),
+        total: dueToday.length,
+        emptyText: "Nothing is due back later today.",
+      },
+      {
+        heading: "Low stock",
+        note: firstOf("Low stock", lowStockItems.length, lowStockCount),
+        columns: [
+          { label: "Item", width: 2, primary: true },
+          { label: "Left", width: 0.6, align: "right" },
+          { label: "Alert at", width: 0.7, align: "right" },
+        ],
+        rows: lowStockItems.map((item) => [
+          `${item.name}\n${item.category.name} · ${item.location.name}`,
+          item.quantity.toLocaleString(),
+          lowStockLevelFor(item).toLocaleString(),
+        ]),
+        total: lowStockCount,
+        emptyText: "No stock is running low.",
+      },
+      {
+        heading: "Warranty ending soon",
+        note: firstOf("Warranty ending soon", warrantyEndingItems.length, warrantyEndingCount),
+        columns: [
+          { label: "Item", width: 2, primary: true },
+          { label: "Warranty ends", width: 1.2 },
+        ],
+        rows: warrantyEndingItems.map((item) => [
+          `${item.name}\n${item.category.name} · ${item.location.name}`,
+          formatReportDay(item.warrantyEndsAt),
+        ]),
+        total: warrantyEndingCount,
+        emptyText: "No warranties end within 60 days.",
       },
       {
         heading: "Open repairs",

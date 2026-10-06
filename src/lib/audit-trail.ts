@@ -1,5 +1,6 @@
 import { AuditAction, Prisma } from "@prisma/client";
 
+import { personName } from "./person";
 import { manilaDateText, manilaDayLabel } from "@/lib/manila-date";
 import {
   exportPeriods,
@@ -146,6 +147,7 @@ const nonInventoryEntities = [
   "account",
   "category",
   "location",
+  "custom-field",
   "dashboard-note",
   "session",
   "report-export",
@@ -172,7 +174,9 @@ export function auditViewWhere(view: AuditView): Prisma.InventoryAuditWhereInput
     case "maintenance":
       return { entityType: "maintenance-ticket" };
     case "setup":
-      return { entityType: { in: ["account", "category", "location", "dashboard-note"] } };
+      return {
+        entityType: { in: ["account", "category", "location", "custom-field", "dashboard-note"] },
+      };
     case "inventory":
       return {
         AND: [
@@ -282,7 +286,7 @@ export function groupEventsByDay<T extends { createdAt: Date }>(events: T[], now
 
 // Show the staff account or public source of an event.
 export function auditActorLabel(event: Pick<AuditTrailEvent, "actorId" | "actorName">) {
-  const savedName = event.actorName?.trim();
+  const savedName = personName(event.actorName);
   if (savedName) {
     return savedName;
   }
@@ -320,6 +324,7 @@ export function auditCategory(event: AuditTrailEvent) {
   if (
     event.entityType === "category" ||
     event.entityType === "location" ||
+    event.entityType === "custom-field" ||
     activityKind === "configuration"
   ) {
     return "Configuration";
@@ -376,11 +381,15 @@ export function auditFieldLabel(key: string) {
   const labels: Record<string, string> = {
     assetTag: "Asset tag",
     categoryId: "Category",
+    customFields: "Custom fields",
     itemType: "Item type",
+    lastCheckedAt: "Last checked",
     locationId: "Location",
+    lowStockThreshold: "Low stock alert",
     purchaseDate: "Purchase date",
     purchasePrice: "Purchase price",
     serialNumber: "Serial number",
+    warrantyEndsAt: "Warranty end date",
   };
   return (
     labels[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())

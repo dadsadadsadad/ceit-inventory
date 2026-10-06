@@ -11,6 +11,7 @@ import {
 import { redirect } from "next/navigation";
 
 import { auditActorName, auditEventData } from "@/lib/audit-event";
+import { auditFieldLabel } from "@/lib/audit-trail";
 import { nextInventoryAssetTag } from "@/lib/asset-tag";
 import { FormError, formAction } from "@/lib/form-action";
 import { requireWriteAccess } from "@/lib/inventory-auth";
@@ -31,82 +32,113 @@ import {
   identifier,
   inventoryWriteError,
   itemTypes,
+  maximumNewUnits,
   optionalDate,
   optionalInteger,
   optionalPurchasePrice,
   optionalText,
+  readItemCustomFields,
+  readLowStockThreshold,
   requiredId,
   requiredText,
   statuses,
   updatedFields,
 } from "./shared";
 
-// Create and update inventory.
+// Create inventory: one stock record, one piece of equipment, or several identical units, each
+// of which gets its own asset tag and QR code.
 export async function createInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const categoryId = requiredId(formData, "categoryId");
     const locationId = requiredId(formData, "locationId");
     const itemType = enumValue(formData, "itemType", itemTypes, ItemType.ASSET);
-    const quantity = optionalInteger(formData, "quantity") ?? 1;
-    const isComputer = formData.get("isComputer") === "on";
+    const isEquipment = itemType === ItemType.ASSET;
+    // Equipment is always one physical unit per record; stock carries a quantity.
+    const quantity = isEquipment ? 1 : (optionalInteger(formData, "quantity") ?? 0);
+    const units = isEquipment
+      ? Math.max(1, optionalInteger(formData, "units", maximumNewUnits) ?? 1)
+      : 1;
+    const isComputer = isEquipment && formData.get("isComputer") === "on";
     const status = enumValue(formData, "status", statuses, ItemStatus.OK);
     const condition = enumValue(formData, "condition", conditions, ItemCondition.GOOD);
     const suppliedAssetTag = identifier(formData, "assetTag");
+    const serialNumber = identifier(formData, "serialNumber");
     const lastCheckedAt = checkedDate(formData);
     assertTrackedAssetQuantity(itemType, quantity);
     assertAssetTag(suppliedAssetTag, itemType);
     if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) {
       throw new FormError("A PC must be a single tracked asset, not a supply record.");
     }
+    if (units > 1) {
+      if (isComputer) {
+        throw new FormError(
+          "Add PCs one at a time so each keeps its own name, hardware profile, and network details.",
+        );
+      }
+      if (suppliedAssetTag || serialNumber) {
+        throw new FormError(
+          "A custom asset tag or serial number belongs to one unit. Add the units one at a time, or leave both blank to generate tags.",
+        );
+      }
+    }
     await assertActiveAssignments(categoryId, locationId);
+    const customFields = await readItemCustomFields(formData, { categoryId, itemType });
+    const baseName = requiredText(formData, "name", 255);
 
-    let item;
+    const created: string[] = [];
     try {
-      item = await prisma.$transaction(
+      await prisma.$transaction(
         async (transaction) => {
-          const assetTag =
-            itemType === ItemType.ASSET
+          for (let unit = 1; unit <= units; unit += 1) {
+            const assetTag = isEquipment
               ? (suppliedAssetTag ??
                 (await nextInventoryAssetTag(transaction, { categoryId, locationId, status })))
               : suppliedAssetTag;
-          return transaction.inventoryItem.create({
-            data: {
-              name: requiredText(formData, "name", 255),
-              assetTag,
-              categoryId,
-              locationId,
-              itemType,
-              isComputer,
-              quantity,
-              status,
-              condition,
-              description: optionalText(formData, "description", 5_000),
-              manufacturer: optionalText(formData, "manufacturer", 255),
-              model: optionalText(formData, "model", 255),
-              serialNumber: identifier(formData, "serialNumber"),
-              purchaseDate: optionalDate(formData, "purchaseDate"),
-              purchasePrice: optionalPurchasePrice(formData),
-              notes: optionalText(formData, "notes", 5_000),
-              lastCheckedAt,
-              computer: isComputer
-                ? { create: { ...computerData(formData), lastCheckedAt } }
-                : undefined,
-              auditEvents: {
-                create: {
-                  action: AuditAction.CREATED,
-                  summary: "Inventory item created.",
-                  actorId: actor.id,
-                  actorName: auditActorName(actor),
-                  metadata: {
-                    source: "manual",
-                    activityKind: "record-create",
-                    assetTagGenerated: !suppliedAssetTag,
+            const item = await transaction.inventoryItem.create({
+              data: {
+                name: units > 1 ? `${baseName} #${unit}`.slice(0, 255) : baseName,
+                assetTag,
+                categoryId,
+                locationId,
+                itemType,
+                isComputer,
+                quantity,
+                lowStockThreshold: readLowStockThreshold(formData, itemType),
+                status,
+                condition,
+                description: optionalText(formData, "description", 5_000),
+                manufacturer: optionalText(formData, "manufacturer", 255),
+                model: optionalText(formData, "model", 255),
+                serialNumber,
+                purchaseDate: optionalDate(formData, "purchaseDate"),
+                purchasePrice: optionalPurchasePrice(formData),
+                warrantyEndsAt: optionalDate(formData, "warrantyEndsAt"),
+                customFields,
+                notes: optionalText(formData, "notes", 5_000),
+                lastCheckedAt,
+                computer: isComputer
+                  ? { create: { ...computerData(formData), lastCheckedAt } }
+                  : undefined,
+                auditEvents: {
+                  create: {
+                    action: AuditAction.CREATED,
+                    summary: "Inventory item created.",
+                    actorId: actor.id,
+                    actorName: auditActorName(actor),
+                    metadata: {
+                      source: "manual",
+                      activityKind: "record-create",
+                      assetTagGenerated: !suppliedAssetTag,
+                      ...(units > 1 ? { unit, units } : {}),
+                    },
                   },
                 },
               },
-            },
-          });
+              select: { id: true },
+            });
+            created.push(item.id);
+          }
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -115,7 +147,11 @@ export async function createInventoryItem(formData: FormData) {
     }
 
     refreshInventoryViews();
-    redirect(`/dashboard/inventory/${item.id}`);
+    if (created.length > 1) {
+      // Several new tags are usually printed straight away.
+      redirect(`/dashboard/inventory/labels?ids=${created.join(",")}&created=${created.length}`);
+    }
+    redirect(`/dashboard/inventory/${created[0]}`);
   });
 }
 
@@ -165,6 +201,13 @@ export async function updateInventoryItem(formData: FormData) {
       serialNumber: identifier(formData, "serialNumber"),
       purchaseDate: optionalDate(formData, "purchaseDate"),
       purchasePrice: optionalPurchasePrice(formData),
+      lowStockThreshold: readLowStockThreshold(formData, itemType),
+      warrantyEndsAt: optionalDate(formData, "warrantyEndsAt"),
+      customFields: await readItemCustomFields(
+        formData,
+        { categoryId, itemType },
+        existing.customFields,
+      ),
       notes: optionalText(formData, "notes", 5_000),
       lastCheckedAt: checkedAtFromDate(
         optionalDate(formData, "lastCheckedAt"),
@@ -229,7 +272,9 @@ export async function updateInventoryItem(formData: FormData) {
                 create: {
                   action,
                   summary: Object.keys(changes).length
-                    ? `Updated ${Object.keys(changes).join(", ")}.`
+                    ? `Updated ${Object.keys(changes)
+                        .map((key) => auditFieldLabel(key).toLowerCase())
+                        .join(", ")}.`
                     : "Inventory record saved with no field changes.",
                   actorId: actor.id,
                   actorName: auditActorName(actor),
@@ -244,6 +289,62 @@ export async function updateInventoryItem(formData: FormData) {
     } catch (error) {
       throw inventoryWriteError(error);
     }
+
+    refreshInventoryViews(id);
+  });
+}
+
+// Add to or use up stock, keeping a note of why.
+export async function adjustStockQuantity(formData: FormData) {
+  return formAction(async () => {
+    const actor = await requireWriteAccess();
+    const id = requiredId(formData, "id");
+    const direction = enumValue(formData, "direction", ["add", "use"] as const, "add");
+    const amount = optionalInteger(formData, "amount", 1_000_000);
+    if (!amount || amount < 1) {
+      throw new FormError("Enter how many to add or use.");
+    }
+    const note = optionalText(formData, "note", 200);
+
+    await prisma.$transaction(
+      async (transaction) => {
+        const item = await transaction.inventoryItem.findUnique({
+          where: { id },
+          select: { itemType: true, quantity: true },
+        });
+        if (!item || item.itemType !== ItemType.SUPPLY) {
+          throw new FormError("Only stock records have a quantity to adjust.");
+        }
+        const next = direction === "add" ? item.quantity + amount : item.quantity - amount;
+        if (next < 0) {
+          throw new FormError(`Only ${item.quantity} left, so ${amount} cannot be used.`);
+        }
+        if (next > 1_000_000) {
+          throw new FormError("That would be more than the largest quantity a record can hold.");
+        }
+        await transaction.inventoryItem.update({
+          where: { id },
+          data: {
+            quantity: next,
+            auditEvents: {
+              create: {
+                action: AuditAction.UPDATED,
+                summary: `Stock ${direction === "add" ? "added" : "used"}: ${item.quantity} to ${next}${note ? `. ${note}` : "."}`,
+                actorId: actor.id,
+                actorName: auditActorName(actor),
+                metadata: {
+                  activityKind: "stock-adjust",
+                  changes: { quantity: next },
+                  previousQuantity: item.quantity,
+                  ...(note ? { note } : {}),
+                },
+              },
+            },
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     refreshInventoryViews(id);
   });

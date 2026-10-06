@@ -11,6 +11,7 @@ import { normalizeContactNumber } from "@/lib/contact-number";
 import { borrowPolicyFromEnvironment, type BorrowPolicy } from "@/lib/borrow-policy";
 import { isHoldLapsed, parseManilaDateTime, validateBorrowSchedule } from "@/lib/borrow-schedule";
 import { FormError, formAction } from "@/lib/form-action";
+import { assertFormToken } from "@/lib/form-token";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
 import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
@@ -274,6 +275,7 @@ export async function submitBorrowRequest(formData: FormData) {
     }
 
     const qrCode = readQrCode(formData);
+    assertFormToken(`borrow:${qrCode}`, readText(formData, "formToken", 200));
     const policy = borrowPolicyFromEnvironment();
     const now = new Date();
     const isReservation = formData.get("borrowWhen") === "later";
@@ -322,6 +324,7 @@ export async function submitReturnRequest(formData: FormData) {
     }
 
     const qrCode = readQrCode(formData);
+    assertFormToken(`return:${qrCode}`, readText(formData, "formToken", 200));
     const studentNumber = readStudentNumber(formData);
     const contact = readContact(formData);
     const returnRequestNotes = readText(formData, "returnRequestNotes", 1_000);

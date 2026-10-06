@@ -30,7 +30,7 @@ This replaces the earlier charcoal-and-orange look described in
 | ------------------------------- | -------------------------------------------------------------------------------- |
 | `src/app/styles/tokens.css`     | Colours for both themes, accent defaults, status colours, type families, radii   |
 | `src/app/styles/base.css`       | The page paper (with a faint grain), typography, focus, motion preferences       |
-| `src/app/styles/shell.css`      | Sidebar, navigation, page frame and headers, appearance picker, command menu     |
+| `src/app/styles/shell.css`      | Sidebar, navigation, page frame and headers, appearance picker                   |
 | `src/app/styles/components.css` | Cards, buttons, fields, pills, chips, tables, tabs, disclosures, hold-to-confirm |
 | `src/app/styles/pages.css`      | Overview, item records, public scan pages, sign-in, QR labels, print rules       |
 | `src/app/styles/views.css`      | Hardware and software directories, audit trail, reports                          |

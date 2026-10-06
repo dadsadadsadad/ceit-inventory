@@ -1,3 +1,66 @@
+# Website audit, second pass — 7 October 2026
+
+Stock and warranty tracking, a smarter import, faster and more responsive pages, and a rebuilt
+QR scan flow, with a pass over the whole site for consistency.
+
+**Inventory.** Stock records now warn when they run low: each record has its own alert level (5
+by default), and the alert shows on the Inventory list, the item page, the dashboard, the
+overview report, and a new Stock report. Equipment can be added as several identical units at
+once, each with its own asset tag and QR code. A warranty end date is optional on any item, with
+a Warranty report and an "ending soon" alert. Staff can add their own extra fields in Settings.
+The add and edit forms now show only what is needed to start; everything else sits in optional
+sections. Installed software can be marked licensed or not.
+
+**QR codes.** The decision: one QR code per physical unit of equipment (so each can be borrowed,
+reported, and found on its own), and one QR code per stock record (a box of markers is one
+thing). That was already how the data worked; the change is that adding several units, or
+importing a quantity, now creates a record and code for each. A signed-in phone that scans any
+label goes straight to the record, with small Borrow, Return, and Report shortcuts. Anyone else
+sees first, in plain colours, whether the item is available, in use until a time, or not
+available, and then the three forms.
+
+**Borrowing.** A "due today" list and ready-written return reminders; staff confirm the
+borrower's school ID at check-out; the public forms are signed to the item and the moment they
+were opened, so scripted or instant submissions are refused; the issue form asks for a name,
+which staff see in Maintenance and reports. The Borrowing page no longer scrolls sideways.
+
+**Import.** Headings are matched flexibly (many alternative names, any order, any row near the
+top), missing columns fall back to defaults, extra columns fill matching extra fields or are kept
+in the notes, empty and total rows are skipped, odd values (`₱1,200`, `8GB`, `1/15/2026`,
+`broken`) are understood, and a value that cannot be understood is left blank and reported
+instead of rejecting the row. **Check file** shows exactly what would happen before **Import**.
+
+**Speed and feel.** The largest cause of slow pages was distance: the functions ran in the
+default region while the database is in Singapore, so every query crossed the world. They are now
+pinned to Singapore (`vercel.json`). A saved change re-rendered its page twice (once from the save,
+once from the live-update refresh); now once. Every section has a page-shaped loading placeholder,
+a progress bar appears the moment a link is pressed, the destination lights up in the sidebar at
+once, an unused 80 KB font was removed, and a full-screen blend layer that slowed scrolling was
+replaced.
+
+**Consistency.** Quick navigation and the dashboard footer were removed. Reports can be printed
+on the spot, and the audit trail has an "Open to print" link. Report columns, audit entries, and
+the notepad lines were realigned, and the notepad shows the username. Card titles, form labels
+for the same field, and people's names (always the username) now match across pages.
+
+## Verification
+
+- Format check, ESLint, and TypeScript checks passed.
+- Unit tests cover the new logic: stock levels, warranty boundaries (Philippine calendar days),
+  due-today windows, reminders, signed form tokens, the import's heading matching and value
+  reading, and the new report builders.
+- The launch suite runs the new flows in a browser against an isolated schema: low stock and
+  per-record levels, adding several units, optional warranty and extra fields, a messy import,
+  the in-use and unavailable public page, the staff scan shortcut, the issue form's name, due
+  today with an ID check, and a readable layout of every page at phone and desktop widths in
+  both themes.
+
+## Database
+
+One additive migration, `20261007000000_stock_alerts_warranty_custom_fields`: new optional
+columns, one new table, and indexes. Nothing existing is changed or removed. It must be applied
+**before** this version is deployed, because the new code reads the new columns.
+
 # Website audit — 6 October 2026
 
 A larger release than the earlier passes: new features, a new look, and a structural cleanup.

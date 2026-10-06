@@ -27,7 +27,8 @@ export default async function ScanPage() {
           <p className="eyebrow mt-5">Mobile inventory</p>
           <h1 className="title mt-3 text-3xl">Scan a QR code</h1>
           <p className="muted mt-2 text-sm leading-6">
-            Scan an equipment label to view its details, borrow it, or report a problem.
+            Scan an equipment label to open its record for editing. Borrowing, returning, and
+            reporting a problem are one tap away.
           </p>
         </header>
         {/* Camera scanner and manual lookup. */}

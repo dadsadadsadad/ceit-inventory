@@ -5,10 +5,12 @@
 1. Back up the target database and confirm that the backup can be restored separately.
 2. Run `npm ci`, `npm run test:unit`, `npm run test:e2e`, and `npm run verify`.
 3. On a development database, run `npm run test:launch:setup` and `npm run test:launch`. This covers authenticated borrowing, reservations, issue reporting, imports, inventory edits, report downloads, permissions, mobile layouts, and label pagination.
-4. Apply `npm run db:migrate:deploy` with the migration-owner connection, then run `npm run test:db`. The `20260911000000_reservations_and_qr_issues` migration is additive. It preserves existing requests as immediate borrowing and existing maintenance as staff reports.
+4. Apply `npm run db:migrate:deploy` with the migration-owner connection, then run `npm run test:db`. The `20260911000000_reservations_and_qr_issues` migration is additive. It preserves existing requests as immediate borrowing and existing maintenance as staff reports. The `20261007000000_stock_alerts_warranty_custom_fields` migration is also additive (new optional columns, one new table for extra fields, and indexes). Run it **before** the release that uses it goes live: the new code reads those columns, so deploying the code first would break the inventory pages until the migration is applied. The previous release keeps working against the migrated database.
 5. Set the permanent HTTPS `NEXT_PUBLIC_APP_URL`, a random `REQUEST_RATE_LIMIT_SECRET`, and the borrower retention period. Run `npm run build` with the deployment environment, then start the app with the runtime database role. Do not deploy new application code against the old schema or reuse a test build.
 6. Replace temporary administrator accounts, schedule daily retention cleanup, and enable routine backups.
 7. From a student phone, scan one printed label on the actual school network. Confirm the public page, camera permission, request forms, and staff sign-in. Print one sheet at actual size before printing labels in bulk.
+
+Choose the hosting region next to the database: this project's `vercel.json` pins the functions to Singapore (`sin1`) because the Supabase database is in Singapore. A function in another region pays a full round trip across the world for every query, which is the largest single cause of slow pages. If the database ever moves, change `regions` to match.
 
 Production hosting, school account approval, physical printer alignment, and real-device camera permissions need checks in the deployment environment; automated tests do not replace these.
 
@@ -41,6 +43,25 @@ A student with equipment still out past its return time cannot make new requests
 - A student's return request does not restore availability. Staff inspect the unit and confirm the return. A defect recorded after checkout is preserved on return.
 - Reports include reservation type, pickup and return times, approval details, cancellation, and checkout/return history. Date filters use pickup for the reserved view, cancellation for cancelled reservations, checkout for borrowed items, and completion for returned items.
 
+## Stock, warranty, and extra fields
+
+- **Low stock** applies to stock records only. A record is "running low" when its quantity is at or below its alert level and "out of stock" at zero. The alert level is set per record (empty means the default of 5; 0 turns the alert off). Retired and lost records never alert. Low stock shows on the Inventory list (and its **Low stock** filter), the item page, the dashboard, the overview report, and the **Stock** report. Change a count from the item page with **Add stock** or **Use stock** (with an optional note); every change is in the audit trail.
+- **Warranty** is optional on any item. "Ending soon" means within 60 days, counted in Philippine calendar days (a warranty runs through its last day). The **Warranty** report and the Inventory filter use the same rule.
+- **Extra fields** are defined in Settings and shown on every item (or only those of one type or category). **Hide this field** removes it from forms but keeps what was entered. Spreadsheet columns whose heading matches a field fill it during import.
+- A new equipment record can create several identical units at once (up to 50). Each gets its own asset tag and QR code, so each can be borrowed, reported, and located on its own. Stock is one record with one QR code, however many units it holds.
+
+## Return reminders and due today
+
+- **Due today** lists loans whose return time falls later today (Philippine time) and that are not yet late. It appears on the dashboard, as a Borrowing filter, and as a report.
+- **Remind the borrower** on a loan offers a ready-written message (due soon, or late) to **Copy message** and send; it never includes private details beyond the item name. Noting the reminder records when, so two staff do not both chase the same borrower.
+- Checking out equipment asks staff to confirm the borrower's ID was checked.
+
+## Scanning a QR code
+
+- A **signed-in staff phone** that scans any label goes straight to that item's record, ready to edit, with small **Borrow**, **Return**, and **Report a problem** shortcuts. The scan is recorded in the audit trail.
+- **Anyone else** sees the public page: first, in plain colours, whether the item is available now, in use until a time (reservations only), or not available; then the details and the borrow, return, and report forms.
+- Each public form carries a signed note for that item. It is checked on submission: forms posted without it, instantly after loading, or after being open for six hours are refused with a message to reload.
+
 ## Inventory checks
 
 - **Needs attention** means equipment still in service that is Defective, Not tested, or in Poor / For repair condition. Retired and lost records are excluded. The dashboard tile, the Inventory filter, and the PDF reports all use this one definition.
@@ -48,7 +69,7 @@ A student with equipment still out past its return time cannot make new requests
 
 ## QR issue reports
 
-- The public **Report a problem** form creates a normal-priority maintenance request marked **QR issue report**. It does not expose other reports or change the equipment's status automatically.
+- The public **Report a problem** form asks for the reporter's name and creates a normal-priority maintenance request marked **QR issue report**, with that name shown beside it. It does not expose other reports or change the equipment's status automatically.
 - Staff review the report, adjust priority, inspect equipment, record notes, and resolve it in Maintenance. Identical open QR reports are deduplicated.
 - QR issues appear on the dashboard, the item record, maintenance filters, the audit trail, and CSV/PDF reports. The overview PDF includes open QR issue and reservation counts.
 
@@ -70,8 +91,10 @@ These are enforced by the server, not just the forms.
 | Staff sessions   | 7 days, and at most 5 signed-in devices per account                                                                                                                                   |
 | Public requests  | Borrow, return, and issue forms are rate-limited per device                                                                                                                           |
 | Borrower details | Redacted after the retention period (365 days by default)                                                                                                                             |
-| Reports          | The page previews 100 rows per table; a PDF holds up to 2,000 rows and a CSV up to 10,000. Larger requests are refused with a message to narrow the filters, never silently cut short |
+| Reports          | The page previews 500 rows per table; a PDF holds up to 2,000 rows and a CSV up to 10,000. Larger requests are refused with a message to narrow the filters, never silently cut short |
 | Imports          | 10 MB and 1,000 rows per file                                                                                                                                                         |
+| New units        | Up to 50 identical equipment units created at once                                                                                                                                    |
+| Extra fields     | Up to 40 fields, 500 characters per text answer                                                                                                                                       |
 | Photos           | 4 per item, 3 MB each                                                                                                                                                                 |
 | QR labels        | 100 per batch                                                                                                                                                                         |
 | Bulk changes     | Up to 10,000 selected records                                                                                                                                                         |
@@ -80,6 +103,8 @@ These are enforced by the server, not just the forms.
 ## Database connections
 
 The app reuses one Prisma client per process. `DB_POOL_MAX` defaults to 5 and accepts 1–20; database connection and idle timeouts are bounded. Keep the sum of connection limits for all running instances, maintenance tools, and test servers below the database provider's limit. For serverless hosting, use the provider's transaction-pool endpoint for runtime connections and a separate migration connection.
+
+Speed comes first from keeping the app and database in the same region (see above), then from fewer round trips: pages run their queries together, a saved change re-renders its page once (the live-update refresh skips the change this tab just made), every section has a page-shaped loading placeholder, and a progress bar shows the moment a link is pressed.
 
 Session lookups are shared only within a React server render, so the layout and page do not duplicate the same lookup. Private page data is not cached across users. Live-update revision checks run every five seconds against the current page's relevant tables; overlapping reads are coalesced and results are reused for two seconds. Test `/api/live` through the deployed proxy, including automatic reconnection, polling fallback, and a deactivated staff session. Background tabs should disconnect, and remote changes should wait while a form has unsaved edits.
 

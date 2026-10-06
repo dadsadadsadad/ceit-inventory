@@ -6,10 +6,19 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { submitReturnRequest } from "./borrow-actions";
 
 // Match the borrower to an item being returned.
-export function ReturnRequestForm({ itemName, qrCode }: { itemName: string; qrCode: string }) {
+export function ReturnRequestForm({
+  formToken,
+  itemName,
+  qrCode,
+}: {
+  formToken: string;
+  itemName: string;
+  qrCode: string;
+}) {
   return (
     <FeedbackForm action={submitReturnRequest} className="card request-form rounded-lg p-5 sm:p-7">
       <input type="hidden" name="qrCode" value={qrCode} />
+      <input type="hidden" name="formToken" value={formToken} />
       <div className="honeypot" aria-hidden="true">
         <label htmlFor="return-website">Leave this field blank</label>
         <input id="return-website" name="website" type="text" tabIndex={-1} autoComplete="off" />

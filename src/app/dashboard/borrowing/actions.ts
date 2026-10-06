@@ -50,6 +50,13 @@ export async function markBorrowed(formData: FormData) {
     const actor = await requireWriteAccess();
     const id = requestId(formData);
     const notes = staffNotes(formData);
+    // Anyone can type a student number into the public form, so staff confirm who is
+    // standing at the desk before equipment leaves.
+    if (formData.get("idChecked") !== "on") {
+      throw new FormError(
+        "Confirm that you checked the borrower's school ID before handing over the equipment.",
+      );
+    }
 
     const itemId = await runTransaction(async (transaction) => {
       const request = await transaction.borrowRequest.findUnique({
@@ -159,6 +166,7 @@ export async function markBorrowed(formData: FormData) {
             borrowRequestId: request.id,
             transition: borrowStatus.BORROWED,
             quantity: request.requestedQuantity,
+            idChecked: true,
             checkoutMode: individualAssetCheckout ? "asset-status" : "quantity",
             previousItemStatus: individualAssetCheckout ? request.inventoryItem.status : null,
           },
@@ -490,6 +498,50 @@ export async function extendBorrowRequest(formData: FormData) {
             previousReturn: request.expectedReturnDate.toISOString(),
             newReturn: newReturn.toISOString(),
           },
+        },
+      });
+      return request.inventoryItemId;
+    });
+
+    refreshInventoryViews(itemId);
+  });
+}
+
+// Note that the borrower was reminded about the return time.
+export async function markReminded(formData: FormData) {
+  return formAction(async () => {
+    const actor = await requireWriteAccess();
+    const id = requestId(formData);
+
+    const itemId = await runTransaction(async (transaction) => {
+      const request = await transaction.borrowRequest.findUnique({
+        where: { id },
+        select: { id: true, inventoryItemId: true, status: true },
+      });
+      if (!request) {
+        throw new FormError("This borrowing request no longer exists.");
+      }
+      if (
+        request.status !== borrowStatus.BORROWED &&
+        request.status !== borrowStatus.RETURN_REQUESTED
+      ) {
+        throw new FormError("Only equipment that is still out can be reminded about.");
+      }
+      await transaction.borrowRequest.update({
+        where: { id: request.id },
+        data: { remindedAt: new Date() },
+      });
+      await transaction.inventoryAudit.create({
+        data: {
+          itemId: request.inventoryItemId,
+          action: AuditAction.UPDATED,
+          summary: "Borrower reminded about the return time.",
+          actorId: actor.id,
+          actorName: auditActorName(actor),
+          entityId: request.id,
+          entityLabel: `Borrow request ${request.id.slice(0, 8).toUpperCase()}`,
+          entityType: "borrow-request",
+          metadata: { borrowRequestId: request.id, activityKind: "borrow-reminder" },
         },
       });
       return request.inventoryItemId;

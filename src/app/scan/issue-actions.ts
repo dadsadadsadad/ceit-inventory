@@ -4,6 +4,7 @@ import { ItemStatus, PublicRequestKind } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auditEventData } from "@/lib/audit-event";
 import { FormError, formAction } from "@/lib/form-action";
+import { assertFormToken } from "@/lib/form-token";
 import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
 import { isInventoryQrCode } from "@/lib/qr-code";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
@@ -13,6 +14,7 @@ import { runTransaction } from "@/lib/database-transaction";
 export async function submitIssueReport(formData: FormData) {
   return formAction(async () => {
     const qrCode = String(formData.get("qrCode") ?? "").trim();
+    const reporterName = String(formData.get("reporterName") ?? "").trim();
     const title = String(formData.get("title") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
     if (formData.get("website")) {
@@ -20,6 +22,10 @@ export async function submitIssueReport(formData: FormData) {
     }
     if (!isInventoryQrCode(qrCode)) {
       throw new FormError("This QR code is not valid.");
+    }
+    assertFormToken(`issue:${qrCode}`, String(formData.get("formToken") ?? ""));
+    if (reporterName.length < 2 || reporterName.length > 120) {
+      throw new FormError("Enter your name so staff know who reported the problem.");
     }
     if (title.length < 3 || title.length > 120) {
       throw new FormError("Use between 3 and 120 characters for the issue title.");
@@ -50,7 +56,13 @@ export async function submitIssueReport(formData: FormData) {
       });
       if (!duplicate) {
         const ticket = await transaction.maintenanceTicket.create({
-          data: { inventoryItemId: item.id, title, description, source: "QR" },
+          data: {
+            inventoryItemId: item.id,
+            title,
+            description,
+            source: "QR",
+            reportedByName: reporterName,
+          },
         });
         await transaction.inventoryAudit.create({
           data: auditEventData({
@@ -61,8 +73,8 @@ export async function submitIssueReport(formData: FormData) {
               label: title,
               type: "maintenance-ticket",
             },
-            metadata: { source: "public-qr", priority: "NORMAL" },
-            summary: `Issue reported from a QR code: ${title}.`,
+            metadata: { source: "public-qr", priority: "NORMAL", reportedBy: reporterName },
+            summary: `Issue reported from a QR code by ${reporterName}: ${title}.`,
           }),
         });
       }

@@ -62,7 +62,7 @@ export type ReportPurpose = "csv" | "pdf" | "preview";
 export const reportRowLimits: Record<ReportPurpose, number> = {
   csv: 10_000,
   pdf: 2_000,
-  preview: 100,
+  preview: 500,
 };
 
 /** Cut a long list to what this purpose can hold. Downloads refuse instead of silently cutting. */

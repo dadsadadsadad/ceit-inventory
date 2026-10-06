@@ -15,69 +15,74 @@ import {
   nextInventoryAssetTag,
   nextLocationAssetTagCode,
 } from "@/lib/asset-tag";
+import { customFieldsFor, type CustomFieldDefinition } from "@/lib/custom-fields";
+import { loadCustomFields } from "@/lib/custom-field-queries";
+import {
+  fieldLabels,
+  matchHeaders,
+  normalizeHeader,
+  type HeaderCell,
+  type HeaderMatch,
+  type ImportField,
+} from "@/lib/import/columns";
+import { importedCustomValues } from "@/lib/import/custom";
+import {
+  ImportRowError,
+  isSummaryName,
+  isYes,
+  looseCondition,
+  looseItemType,
+  loosePrice,
+  looseSizeGb,
+  looseStatus,
+  looseWholeNumber,
+  optionalDate,
+  type Warn,
+} from "@/lib/import/values";
+import { maximumNewUnits } from "../actions/shared";
 import { prisma } from "@/prisma";
 
 export type ImportResult = {
   errors: string[];
+  /** Things that were adjusted so a row could still be imported. */
+  warnings: string[];
+  /** What was done with the file as a whole: sheet used, extra columns, blank rows. */
+  notices: string[];
+  /** Columns that were understood, as "heading in the file" and the field it fills. */
+  matched: { header: string; label: string }[];
+  /** Rows read from the file. */
   imported: number;
+  /** Records made from those rows (a row of five identical units makes five). */
+  records: number;
   previewed: boolean;
   skipped: number;
 };
-const emptyImportResult: ImportResult = { errors: [], imported: 0, previewed: false, skipped: 0 };
+const emptyImportResult: ImportResult = {
+  errors: [],
+  imported: 0,
+  matched: [],
+  notices: [],
+  previewed: false,
+  records: 0,
+  skipped: 0,
+  warnings: [],
+};
 
-type ColumnMap = Record<string, number | undefined>;
 type SetupRecord = { id: string; isActive: boolean };
-type ValueReader = (column: string) => string;
-
-/** A problem with one spreadsheet row that is safe and useful to show to staff. */
-class ImportRowError extends Error {}
+type ValueReader = (column: ImportField) => string;
 
 const maximumFileBytes = 10 * 1024 * 1024;
 const maximumRows = 1_000;
-const maximumColumns = 40;
+// Rows scanned past the heading; a sheet padded with formatting can report far more than it holds.
+const maximumScannedRows = 25_000;
 const maximumXlsxArchiveEntries = 2_000;
 const maximumXlsxUncompressedBytes = 50 * 1024 * 1024;
-
-const columnAliases: Record<string, string[]> = {
-  name: ["name", "itemname"],
-  category: ["category", "categoryname", "classification"],
-  location: ["location", "room", "roomname", "roomnumber"],
-  roomNumber: ["roomnumber"],
-  assetTag: ["assettag", "assetnumber", "inventorycode"],
-  serialNumber: ["serialnumber", "serial"],
-  itemType: ["type", "itemtype"],
-  quantity: ["quantity", "qty"],
-  isComputer: ["iscomputer", "computer", "ispc"],
-  operatingSystem: ["operatingsystem", "os"],
-  osVersion: ["osversion"],
-  processor: ["processor", "cpu"],
-  memoryGb: ["memorygb", "ramgb", "ram"],
-  storageGb: ["storagegb", "diskgb", "storage"],
-  storageType: ["storagetype", "disktype"],
-  macAddress: ["macaddress", "mac"],
-  ipAddress: ["ipaddress", "ip"],
-  hardwareDescription: ["hardwaredescription", "hardwarenotes", "pcdescription"],
-  softwareDescription: ["softwaredescription", "softwarenotes", "pcsoftwarenotes"],
-  lastCheckedAt: ["lastcheckedat", "lastchecked", "lastdatechecked"],
-  status: ["status"],
-  condition: ["condition"],
-  description: ["description"],
-  manufacturer: ["manufacturer", "brand"],
-  model: ["model", "productinfo"],
-  purchaseDate: ["purchasedate", "datepurchased"],
-  purchasePrice: ["purchaseprice", "price", "acquisitionvalue", "acquisitioncost", "cost"],
-  notes: ["notes", "remarks"],
-  graphics: ["graphics", "gpu"],
-  legacyChecked: ["checked"],
-  legacyAcquisitionDate: ["knownacquisitiondate"],
-  legacyYearEncoded: ["yearencoded"],
-  legacyUnit: ["unit"],
-  legacyCounter: ["ctr"],
-  legacyComments: ["comments"],
-};
+const maximumReported = 20;
+const fallbackCategoryName = "Uncategorized";
+const fallbackLocationName = "Unassigned";
 
 // Read a spreadsheet cell, including rich text and formula results.
-function cellText(value: ExcelJS.CellValue | undefined) {
+function cellText(value: ExcelJS.CellValue | undefined): string {
   if (value === null || value === undefined) {
     return "";
   }
@@ -85,6 +90,9 @@ function cellText(value: ExcelJS.CellValue | undefined) {
     return value.toISOString().slice(0, 10);
   }
   if (typeof value === "object") {
+    if ("error" in value) {
+      return "";
+    }
     if ("result" in value && value.result !== null && value.result !== undefined) {
       return cellText(value.result as ExcelJS.CellValue);
     }
@@ -99,11 +107,6 @@ function cellText(value: ExcelJS.CellValue | undefined) {
     }
   }
   return String(value).trim();
-}
-
-// Match spreadsheet headings despite punctuation and spacing.
-function normalizedKey(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function normalizedValue(value: string) {
@@ -127,75 +130,9 @@ function optionalText(value: string, field: string, maximumLength = 2_000) {
   return boundedText(value, field, maximumLength) || null;
 }
 
-// Validate imported whole-number fields.
-function parseNumber(value: string, fallback: number | null, field: string, maximum = 1_000_000) {
-  if (!value) {
-    return fallback;
-  }
-  if (!/^\d+$/.test(value)) {
-    throw new ImportRowError(`${field} must be a non-negative whole number.`);
-  }
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
-    throw new ImportRowError(`${field} is outside the allowed range.`);
-  }
-  return parsed;
-}
-
-// Validate a price from the spreadsheet.
-function parsePurchasePrice(value: string) {
-  const amount = boundedText(value, "purchase price", 32);
-  if (!amount) {
-    return null;
-  }
-  if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(amount)) {
-    throw new ImportRowError(
-      "purchase price must be a non-negative Philippine peso amount with up to two decimal places.",
-    );
-  }
-  const [whole, decimal = ""] = amount.split(".");
-  return new Prisma.Decimal(`${whole}.${decimal.padEnd(2, "0")}`).toString();
-}
-
-// Convert a spreadsheet date into a valid date value.
-function parseDate(value: string, field: string) {
-  if (!value) {
-    return null;
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new ImportRowError(`${field} must use YYYY-MM-DD.`);
-  }
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-    throw new ImportRowError(`${field} is not a valid date.`);
-  }
-  return parsed;
-}
-
-function enumValue<T extends string>(
-  value: string,
-  values: readonly T[],
-  fallback: T,
-  field: string,
-) {
-  if (!value.trim()) {
-    return fallback;
-  }
-  const normalized = value
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
-  if (values.includes(normalized as T)) {
-    return normalized as T;
-  }
-  throw new ImportRowError(
-    `${field} must be one of: ${values.map((entry) => entry.replaceAll("_", " ")).join(", ")}.`,
-  );
-}
-
 // Map older inspection labels to current status values.
 function legacyInspectionState(value: string) {
-  switch (normalizedKey(value)) {
+  switch (normalizeHeader(value)) {
     case "defective":
       return { status: ItemStatus.DEFECTIVE, condition: ItemCondition.FOR_REPAIR };
     case "nottested":
@@ -211,44 +148,54 @@ function legacyInspectionState(value: string) {
   }
 }
 
-// Keep useful details from older spreadsheet columns.
-function legacyNotes(primaryNotes: string, values: Array<[string, string]>) {
+// Keep useful details from older spreadsheet columns and from columns we have no field for.
+function combinedNotes(primaryNotes: string, values: Array<[string, string]>) {
   const context = values.filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
   return optionalText([primaryNotes, ...context].filter(Boolean).join("\n"), "notes", 5_000);
 }
 
-// Match a header row to supported inventory fields.
-function columnMapForRow(row: ExcelJS.Row): ColumnMap {
-  const headers = new Map<string, number>();
-  row.eachCell((cell, columnNumber) =>
-    headers.set(normalizedKey(cellText(cell.value)), columnNumber),
-  );
-  return Object.fromEntries(
-    Object.entries(columnAliases).map(([name, aliases]) => [
-      name,
-      aliases
-        .map(normalizedKey)
-        .map((alias) => headers.get(alias))
-        .find(Boolean),
-    ]),
-  );
+function rowCells(row: ExcelJS.Row): HeaderCell[] {
+  const cells: HeaderCell[] = [];
+  row.eachCell((cell, column) => {
+    const text = cellText(cell.value);
+    if (text) {
+      cells.push({ column, text });
+    }
+  });
+  return cells;
 }
 
-// Find the worksheet with inventory column headings.
+/**
+ * The heading row: whichever of the first rows (on any sheet) names the most inventory fields,
+ * provided it names the item. Title rows above the table and several sheets are both fine.
+ */
 function findInventorySheet(workbook: ExcelJS.Workbook) {
+  let best: { headerRowNumber: number; match: HeaderMatch; sheet: ExcelJS.Worksheet } | null = null;
   for (const sheet of workbook.worksheets) {
     for (let rowNumber = 1; rowNumber <= Math.min(sheet.rowCount, 25); rowNumber += 1) {
-      const columns = columnMapForRow(sheet.getRow(rowNumber));
-      if (columns.name && columns.category) {
-        return { sheet, columns, headerRowNumber: rowNumber };
+      const match = matchHeaders(rowCells(sheet.getRow(rowNumber)));
+      if (match.columns.name && (!best || match.score > best.match.score)) {
+        best = { headerRowNumber: rowNumber, match, sheet };
       }
     }
   }
-  return null;
+  return best;
 }
 
-function isTrue(value: string) {
-  return ["true", "yes", "1", "y"].includes(value.toLowerCase());
+// The headings of the first sheet, to show when nothing in the file looks like an item name.
+function foundHeadings(workbook: ExcelJS.Workbook) {
+  const sheet = workbook.worksheets[0];
+  if (!sheet) {
+    return [];
+  }
+  let widest: HeaderCell[] = [];
+  for (let rowNumber = 1; rowNumber <= Math.min(sheet.rowCount, 25); rowNumber += 1) {
+    const cells = rowCells(sheet.getRow(rowNumber));
+    if (cells.length > widest.length) {
+      widest = cells;
+    }
+  }
+  return widest.slice(0, 12).map((cell) => cell.text);
 }
 
 function isXlsxFile(data: Buffer) {
@@ -293,12 +240,13 @@ function messageForImportError(error: unknown) {
   if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
     return "a unique asset tag, serial number, or PC MAC address already exists.";
   }
-  return "could not be imported. Check the required fields and data format.";
+  return "could not be imported. Check the data in this row.";
 }
 
 type ParsedRow = {
   categoryName: string;
   computer: Prisma.ComputerCreateWithoutItemInput | null;
+  customValues: Record<string, string | number | boolean>;
   item: Pick<
     Prisma.InventoryItemUncheckedCreateInput,
     | "condition"
@@ -306,6 +254,7 @@ type ParsedRow = {
     | "isComputer"
     | "itemType"
     | "lastCheckedAt"
+    | "lowStockThreshold"
     | "manufacturer"
     | "model"
     | "name"
@@ -315,76 +264,143 @@ type ParsedRow = {
     | "quantity"
     | "serialNumber"
     | "status"
+    | "warrantyEndsAt"
   >;
   locationName: string;
   roomNumber: string | null;
   suppliedAssetTag: string | null;
+  /** How many identical tracked units this row makes. */
+  units: number;
 };
 
-// Read and validate one spreadsheet row before anything is written.
+type RowSettings = {
+  customColumns: { column: number; field: CustomFieldDefinition }[];
+  defaultCategory: string | null;
+  defaultLocation: string | null;
+  defaultRoomNumber: string | null;
+  keptColumns: { column: number; header: string }[];
+  locationIsRoomNumber: boolean;
+};
+
+// Read one spreadsheet row. Only the item name is required; everything else has a sensible default.
 function parseImportRow(
   valueAt: ValueReader,
-  names: { categoryName: string; locationName: string; locationIsRoomNumber: boolean },
-  defaults: { roomNumber: string | null },
+  cellAt: (column: number) => string,
+  settings: RowSettings,
+  warn: Warn,
+  fallbacks: { category: number; location: number },
 ): ParsedRow {
-  const safeName = boundedText(valueAt("name"), "name", 255);
-  const categoryName = boundedText(names.categoryName, "category", 120);
-  const locationName = boundedText(names.locationName, "location", 160);
-  const roomNumber = names.locationIsRoomNumber
+  const name = boundedText(valueAt("name"), "Item name", 255);
+  const categoryCell = valueAt("category");
+  const locationCell = valueAt("location");
+  if (!categoryCell && !settings.defaultCategory) {
+    fallbacks.category += 1;
+  }
+  if (!locationCell && !settings.defaultLocation) {
+    fallbacks.location += 1;
+  }
+  const categoryName = boundedText(
+    categoryCell || settings.defaultCategory || fallbackCategoryName,
+    "Category",
+    120,
+  );
+  const locationName = boundedText(
+    locationCell || settings.defaultLocation || fallbackLocationName,
+    "Location",
+    160,
+  );
+  const roomNumber = settings.locationIsRoomNumber
     ? locationName
-    : optionalText(valueAt("roomNumber") || defaults.roomNumber || "", "room number", 80);
-  const itemType = enumValue(valueAt("itemType"), Object.values(ItemType), ItemType.ASSET, "type");
-  const quantity = parseNumber(valueAt("quantity"), 1, "quantity") ?? 1;
+    : optionalText(valueAt("roomNumber") || settings.defaultRoomNumber || "", "Room number", 80);
+
+  const itemType = looseItemType(valueAt("itemType"), warn);
   const hasComputerDetails =
-    isTrue(valueAt("isComputer")) ||
-    [
-      "operatingSystem",
-      "processor",
-      "memoryGb",
-      "macAddress",
-      "hardwareDescription",
-      "softwareDescription",
-    ].some((column) => valueAt(column) !== "");
-  if (itemType === ItemType.ASSET && quantity !== 1) {
+    isYes(valueAt("isComputer")) ||
+    (
+      [
+        "operatingSystem",
+        "processor",
+        "memoryGb",
+        "macAddress",
+        "hardwareDescription",
+        "softwareDescription",
+      ] as const
+    ).some((column) => valueAt(column) !== "");
+
+  let quantity = looseWholeNumber(valueAt("quantity"), 1, "Quantity", warn) ?? 1;
+  let units = 1;
+  if (itemType === ItemType.ASSET) {
+    if (quantity === 0) {
+      warn("Quantity 0 was changed to 1 because equipment is tracked one unit at a time.");
+    }
+    units = Math.max(quantity, 1);
+    quantity = 1;
+    if (units > maximumNewUnits) {
+      throw new ImportRowError(
+        `a quantity above ${maximumNewUnits} is too many tracked units for one row. Split it into several rows, or mark the row as stock.`,
+      );
+    }
+  }
+  const suppliedAssetTagText =
+    optionalText(valueAt("assetTag"), "Asset tag", 255)?.toUpperCase() ?? null;
+  const serialNumber =
+    optionalText(valueAt("serialNumber"), "Serial number", 255)?.toUpperCase() ?? null;
+  const macAddress = hasComputerDetails
+    ? (optionalText(valueAt("macAddress"), "MAC address", 255)?.toUpperCase() ?? null)
+    : null;
+  if (units > 1 && (suppliedAssetTagText || serialNumber || macAddress)) {
     throw new ImportRowError(
-      "each physical equipment asset must use quantity 1 so it can receive its own asset tag and QR code. Import each unit as a separate row, or use a supply record for stock.",
+      `has quantity ${units} but only one asset tag, serial number, or MAC address. Each unit needs its own, so use one row per unit, or leave them blank to generate tags.`,
     );
   }
-  if (hasComputerDetails && (itemType !== ItemType.ASSET || quantity !== 1)) {
-    throw new ImportRowError("a PC must be a single tracked asset, not a supply record.");
+  if (units > 1 && hasComputerDetails) {
+    throw new ImportRowError("a PC must be one row per computer, not a quantity.");
   }
+  if (hasComputerDetails && itemType !== ItemType.ASSET) {
+    throw new ImportRowError("a PC must be a tracked equipment item, not stock.");
+  }
+
   const legacyChecked = valueAt("legacyChecked");
   const legacyState = legacyInspectionState(legacyChecked);
-  const explicitStatus = valueAt("status");
-  const explicitCondition = valueAt("condition");
-  const legacyAcquisitionDate = valueAt("legacyAcquisitionDate");
-  const sourcePurchaseDate = valueAt("purchaseDate");
-  const purchaseDate = sourcePurchaseDate
-    ? parseDate(sourcePurchaseDate, "purchase date")
-    : /^\d{4}-\d{2}-\d{2}$/.test(legacyAcquisitionDate)
-      ? parseDate(legacyAcquisitionDate, "known acquisition date")
-      : null;
-  const status = explicitStatus
-    ? enumValue(explicitStatus, Object.values(ItemStatus), ItemStatus.OK, "status")
+  const status = valueAt("status")
+    ? looseStatus(valueAt("status"), legacyState?.status ?? ItemStatus.OK, warn)
     : (legacyState?.status ?? ItemStatus.OK);
-  const condition = explicitCondition
-    ? enumValue(explicitCondition, Object.values(ItemCondition), ItemCondition.GOOD, "condition")
+  const condition = valueAt("condition")
+    ? looseCondition(valueAt("condition"), legacyState?.condition ?? ItemCondition.GOOD, warn)
     : (legacyState?.condition ?? ItemCondition.GOOD);
-  const suppliedAssetTag =
-    optionalText(valueAt("assetTag"), "asset tag", 255)?.toUpperCase() ?? null;
+
+  const legacyAcquisition = valueAt("legacyAcquisitionDate");
+  const purchaseDate =
+    optionalDate(valueAt("purchaseDate"), "Purchase date", warn) ??
+    optionalDate(legacyAcquisition, "Known acquisition date", warn);
+  const lastCheckedAt =
+    optionalDate(valueAt("lastCheckedAt"), "Last checked date", warn) ?? new Date();
+
+  // A tag that does not follow this system's format is replaced by a generated one; the original
+  // is kept in the notes so nothing is lost.
+  let suppliedAssetTag = suppliedAssetTagText;
+  let originalTag = "";
   if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
-    throw new ImportRowError(
-      "asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.",
+    warn(
+      `Asset tag “${suppliedAssetTag.slice(0, 40)}” is not in the INV-… format, so a new tag was generated and the old one was kept in the notes.`,
     );
+    originalTag = suppliedAssetTag;
+    suppliedAssetTag = null;
   }
-  const lastCheckedAt = parseDate(valueAt("lastCheckedAt"), "last checked date") ?? new Date();
-  const notes = legacyNotes(valueAt("notes"), [
+
+  const customValues = importedCustomValues(
+    settings.customColumns.map(({ column, field }) => ({ field, raw: cellAt(column) })),
+    warn,
+  );
+  const notes = combinedNotes(valueAt("notes"), [
+    ["Original asset tag", originalTag],
     ["Original unit", valueAt("legacyUnit")],
     ["Legacy counter", valueAt("legacyCounter")],
     ["Original checked value", legacyChecked],
-    ["Known acquisition", legacyAcquisitionDate && !purchaseDate ? legacyAcquisitionDate : ""],
+    ["Known acquisition", legacyAcquisition && !purchaseDate ? legacyAcquisition : ""],
     ["Year encoded", valueAt("legacyYearEncoded")],
     ["Comments", valueAt("legacyComments")],
+    ...settings.keptColumns.map(({ column, header }): [string, string] => [header, cellAt(column)]),
   ]);
 
   return {
@@ -392,43 +408,48 @@ function parseImportRow(
     locationName,
     roomNumber,
     suppliedAssetTag,
+    units,
+    customValues,
     item: {
-      name: safeName,
-      serialNumber:
-        optionalText(valueAt("serialNumber"), "serial number", 255)?.toUpperCase() ?? null,
-      description: optionalText(valueAt("description"), "description", 5_000),
-      manufacturer: optionalText(valueAt("manufacturer"), "manufacturer", 255),
-      model: optionalText(valueAt("model"), "model", 255),
+      name,
+      serialNumber,
+      description: optionalText(valueAt("description"), "Description", 5_000),
+      manufacturer: optionalText(valueAt("manufacturer"), "Manufacturer", 255),
+      model: optionalText(valueAt("model"), "Model", 255),
       notes,
       purchaseDate,
-      purchasePrice: parsePurchasePrice(valueAt("purchasePrice")),
+      purchasePrice: loosePrice(valueAt("purchasePrice"), warn),
+      warrantyEndsAt: optionalDate(valueAt("warrantyEndsAt"), "Warranty end date", warn),
       itemType,
       isComputer: hasComputerDetails,
       quantity,
+      lowStockThreshold:
+        itemType === ItemType.SUPPLY
+          ? looseWholeNumber(valueAt("lowStockThreshold"), null, "Low stock level", warn, 100_000)
+          : null,
       status,
       condition,
       lastCheckedAt,
     },
     computer: hasComputerDetails
       ? {
-          operatingSystem: optionalText(valueAt("operatingSystem"), "operating system", 255),
+          operatingSystem: optionalText(valueAt("operatingSystem"), "Operating system", 255),
           osVersion: optionalText(valueAt("osVersion"), "OS version", 255),
-          processor: optionalText(valueAt("processor"), "processor", 255),
-          memoryGb: parseNumber(valueAt("memoryGb"), null, "memory (GB)", 16_384),
-          storageGb: parseNumber(valueAt("storageGb"), null, "storage (GB)"),
-          storageType: optionalText(valueAt("storageType"), "storage type", 255),
-          graphics: optionalText(valueAt("graphics"), "graphics", 255),
-          macAddress:
-            optionalText(valueAt("macAddress"), "MAC address", 255)?.toUpperCase() ?? null,
+          processor: optionalText(valueAt("processor"), "Processor", 255),
+          memoryGb: looseSizeGb(valueAt("memoryGb"), "Memory", warn, 16_384),
+          storageGb: looseSizeGb(valueAt("storageGb"), "Storage", warn),
+          storageType: optionalText(valueAt("storageType"), "Storage type", 255),
+          graphics: optionalText(valueAt("graphics"), "Graphics", 255),
+          macAddress,
           ipAddress: optionalText(valueAt("ipAddress"), "IP address", 255),
           hardwareDescription: optionalText(
             valueAt("hardwareDescription"),
-            "hardware description",
+            "Hardware description",
             5_000,
           ),
           softwareDescription: optionalText(
             valueAt("softwareDescription"),
-            "software description",
+            "Software description",
             5_000,
           ),
           lastCheckedAt,
@@ -438,7 +459,7 @@ function parseImportRow(
 }
 
 function missingSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} “${name}” does not exist. Enable setup creation or add it in Settings first.`;
+  return `${kind} “${name}” does not exist. Tick “Create missing categories and locations”, or add it in Settings first.`;
 }
 
 function inactiveSetupMessage(kind: "category" | "location", name: string) {
@@ -528,46 +549,61 @@ async function resolveLocation(
   return location;
 }
 
-// Save one validated row with its generated tag, computer profile, and audit entry.
+// Save one validated row (one record, or several identical units) with generated tags and audit entries.
 async function saveImportedRow(
   client: Prisma.TransactionClient,
   row: ParsedRow,
   category: SetupRecord,
   location: SetupRecord,
+  customDefinitions: CustomFieldDefinition[],
   source: { actor: InventoryUser; rowNumber: number; sheetName: string },
 ) {
-  const assetTag =
-    row.item.itemType === ItemType.ASSET
-      ? (row.suppliedAssetTag ??
-        (await nextInventoryAssetTag(client, {
-          categoryId: category.id,
-          locationId: location.id,
-          status: row.item.status ?? ItemStatus.OK,
-        })))
-      : row.suppliedAssetTag;
-  await client.inventoryItem.create({
-    data: {
-      ...row.item,
-      assetTag,
+  const applicable = new Set(
+    customFieldsFor(customDefinitions, {
       categoryId: category.id,
-      locationId: location.id,
-      computer: row.computer ? { create: row.computer } : undefined,
-      auditEvents: {
-        create: {
-          action: AuditAction.CREATED,
-          summary: "Inventory item imported from file.",
-          actorId: source.actor.id,
-          actorName: auditActorName(source.actor),
-          metadata: {
-            source: "import",
-            sheet: source.sheetName,
-            row: source.rowNumber,
-            activityKind: "record-create",
+      itemType: row.item.itemType as ItemType,
+    }).map((field) => field.id),
+  );
+  const customFields = Object.fromEntries(
+    Object.entries(row.customValues).filter(([id]) => applicable.has(id)),
+  );
+  for (let unit = 1; unit <= row.units; unit += 1) {
+    const assetTag =
+      row.item.itemType === ItemType.ASSET
+        ? (row.suppliedAssetTag ??
+          (await nextInventoryAssetTag(client, {
+            categoryId: category.id,
+            locationId: location.id,
+            status: row.item.status ?? ItemStatus.OK,
+          })))
+        : row.suppliedAssetTag;
+    await client.inventoryItem.create({
+      data: {
+        ...row.item,
+        name: row.units > 1 ? `${row.item.name} #${unit}`.slice(0, 255) : row.item.name,
+        assetTag,
+        categoryId: category.id,
+        locationId: location.id,
+        customFields: Object.keys(customFields).length ? customFields : undefined,
+        computer: row.computer ? { create: row.computer } : undefined,
+        auditEvents: {
+          create: {
+            action: AuditAction.CREATED,
+            summary: "Inventory item imported from file.",
+            actorId: source.actor.id,
+            actorName: auditActorName(source.actor),
+            metadata: {
+              source: "import",
+              sheet: source.sheetName,
+              row: source.rowNumber,
+              activityKind: "record-create",
+              ...(row.units > 1 ? { unit, units: row.units } : {}),
+            },
           },
         },
       },
-    },
-  });
+    });
+  }
 }
 
 type PreviewRow = {
@@ -624,9 +660,18 @@ async function existingIdentifierProblems(rows: PreviewRow[]) {
   return problems;
 }
 
-const maximumReportedProblems = 20;
+function plural(count: number, one: string, many = `${one}s`) {
+  return `${count.toLocaleString()} ${count === 1 ? one : many}`;
+}
 
-// Validate the file before writing records.
+function listed(values: string[], limit = 6) {
+  const shown = values.slice(0, limit).map((value) => `“${value}”`);
+  return values.length > limit
+    ? `${shown.join(", ")} and ${values.length - limit} more`
+    : shown.join(", ");
+}
+
+// Read the file and import (or just check) every row that can be understood.
 export async function importInventory(
   _previousState: ImportResult,
   formData: FormData,
@@ -634,10 +679,18 @@ export async function importInventory(
   const actor = await requireWriteAccess();
   const file = formData.get("file");
   const allowCreateSetup = formData.get("createMissingSetup") === "on";
-  const previewOnly = formData.get("previewOnly") === "on";
+  const keepExtraColumns = formData.get("keepExtraColumns") === "on";
+  const previewOnly = formData.get("intent") === "check" || formData.get("previewOnly") === "on";
+  const fail = (message: string): ImportResult => ({ ...emptyImportResult, errors: [message] });
+  let defaultCategoryName: string | null;
   let defaultLocationName: string | null;
   let defaultRoomNumber: string | null;
   try {
+    defaultCategoryName = optionalText(
+      formText(formData, "defaultCategory"),
+      "default category",
+      120,
+    );
     defaultLocationName = optionalText(
       formText(formData, "defaultLocation"),
       "default location",
@@ -649,31 +702,28 @@ export async function importInventory(
       80,
     );
   } catch (error) {
-    return { ...emptyImportResult, errors: [messageForImportError(error)] };
+    return fail(messageForImportError(error));
   }
   if (!(file instanceof File) || !file.size) {
-    return { ...emptyImportResult, errors: ["Choose a non-empty CSV or Excel file."] };
+    return fail("Choose a non-empty CSV or Excel file.");
   }
   if (file.size > maximumFileBytes) {
-    return { ...emptyImportResult, errors: ["The import file must be 10 MB or smaller."] };
+    return fail("The import file must be 10 MB or smaller.");
   }
 
   const extension = file.name.split(".").at(-1)?.toLowerCase();
   if (extension !== "csv" && extension !== "xlsx") {
-    return { ...emptyImportResult, errors: ["Only .csv and .xlsx files are supported."] };
+    return fail("Only .csv and .xlsx files are supported. In Excel, use Save As and pick one.");
   }
 
   let workbook: ExcelJS.Workbook;
   try {
     const data = Buffer.from(await file.arrayBuffer());
     if (extension === "xlsx" && !isXlsxFile(data)) {
-      return { ...emptyImportResult, errors: ["The selected file is not a valid Excel workbook."] };
+      return fail("The selected file is not a valid Excel workbook.");
     }
     if (extension === "csv" && data.includes(0)) {
-      return {
-        ...emptyImportResult,
-        errors: ["The selected CSV file contains unsupported binary data."],
-      };
+      return fail("The selected CSV file contains unsupported binary data.");
     }
     if (extension === "xlsx") {
       await validateXlsxArchive(data);
@@ -686,50 +736,57 @@ export async function importInventory(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    return {
-      ...emptyImportResult,
-      errors: [
-        message.includes("allowed") || message.includes("too many")
-          ? message
-          : "The spreadsheet could not be read. Save it again as a CSV or .xlsx file and retry.",
-      ],
-    };
+    return fail(
+      message.includes("allowed") || message.includes("too many")
+        ? message
+        : "The spreadsheet could not be read. Save it again as a CSV or .xlsx file and retry.",
+    );
   }
 
   const source = findInventorySheet(workbook);
-  if (!source || source.sheet.actualRowCount < 2) {
-    return {
-      ...emptyImportResult,
-      errors: [
-        "The file needs a row with name/item name and category/classification headers, plus at least one inventory row.",
-      ],
-    };
+  if (!source) {
+    const headings = foundHeadings(workbook);
+    return fail(
+      headings.length
+        ? `I could not find a column for the item name. The headings I can see are ${listed(headings, 12)}. Add or rename one to “Name” (“Item”, “Item name”, or “Equipment” also work) and try again.`
+        : "The file looks empty. It needs a heading row with at least an item name column, then one row per item.",
+    );
   }
-  const { sheet, columns, headerRowNumber } = source;
-  if (sheet.actualRowCount > maximumRows + 1) {
-    return {
-      ...emptyImportResult,
-      errors: [`Import up to ${maximumRows.toLocaleString()} inventory rows at a time.`],
-    };
-  }
-  if (sheet.actualColumnCount > maximumColumns) {
-    return {
-      ...emptyImportResult,
-      errors: [`The file has too many columns. Keep it to ${maximumColumns} columns or fewer.`],
-    };
+  const { sheet, headerRowNumber, match } = source;
+  const { columns } = match;
+
+  // Extra columns: one that matches a field from Settings fills it, the rest are kept in the
+  // notes (or ignored if staff prefer).
+  const customDefinitions = await loadCustomFields();
+  const customByHeader = new Map(
+    customDefinitions.map((field) => [normalizeHeader(field.label), field]),
+  );
+  const customColumns: RowSettings["customColumns"] = [];
+  const keptColumns: RowSettings["keptColumns"] = [];
+  const ignoredColumns: string[] = [];
+  for (const cell of match.extra) {
+    const field = customByHeader.get(normalizeHeader(cell.text));
+    if (field && !customColumns.some((entry) => entry.field.id === field.id)) {
+      customColumns.push({ column: cell.column, field });
+    } else if (keepExtraColumns) {
+      keptColumns.push({ column: cell.column, header: cell.text });
+    } else {
+      ignoredColumns.push(cell.text);
+    }
   }
 
-  const missing = ["name", "category"].filter((column) => !columns[column]);
-  if (!columns.location && !defaultLocationName) {
-    missing.push("location (or a default location below)");
-  }
-  if (missing.length) {
-    return { ...emptyImportResult, errors: [`Missing required column(s): ${missing.join(", ")}.`] };
-  }
+  const settings: RowSettings = {
+    customColumns,
+    defaultCategory: defaultCategoryName,
+    defaultLocation: defaultLocationName,
+    defaultRoomNumber,
+    keptColumns,
+    locationIsRoomNumber: columns.location !== undefined && columns.location === columns.roomNumber,
+  };
 
   const categoryCache = new Map<string, SetupRecord>();
   const locationCache = new Map<string, SetupRecord>();
-  // A preview reads setup records once so every row is checked against Settings.
+  // A check reads setup records once so every row is compared with Settings.
   const [knownCategories, knownLocations] = previewOnly
     ? await Promise.all([
         prisma.category.findMany({ select: { name: true, isActive: true } }),
@@ -743,41 +800,55 @@ export async function importInventory(
     knownLocations.map((entry) => [normalizedValue(entry.name), entry.isActive]),
   );
   const problems: { message: string; rowNumber: number }[] = [];
+  const warnings: { message: string; rowNumber: number }[] = [];
   const previewIdentifiers = new Set<string>();
   const previewRows: PreviewRow[] = [];
+  const fallbacks = { category: 0, location: 0 };
+  const nameHeading = normalizeHeader(
+    cellText(sheet.getRow(headerRowNumber).getCell(columns.name ?? 1).value),
+  );
   let imported = 0;
+  let records = 0;
   let skipped = 0;
+  let blankRows = 0;
+  let ignoredRows = 0;
+  let dataRows = 0;
+  let cutOff = false;
 
-  for (let rowNumber = headerRowNumber + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
+  const lastRow = Math.min(sheet.rowCount, headerRowNumber + maximumScannedRows);
+  for (let rowNumber = headerRowNumber + 1; rowNumber <= lastRow; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
-    const valueAt: ValueReader = (column) => {
-      const columnNumber = columns[column];
-      return columnNumber ? cellText(row.getCell(columnNumber).value) : "";
+    const cellAt = (column: number) => cellText(row.getCell(column).value);
+    const valueAt: ValueReader = (field) => {
+      const columnNumber = columns[field];
+      return columnNumber ? cellAt(columnNumber) : "";
     };
     const name = valueAt("name");
-    const categoryName = valueAt("category");
-    const sourceLocationName = valueAt("location");
-    if (!name && !categoryName && !sourceLocationName) {
+    const hasData =
+      (Object.keys(columns) as ImportField[]).some((field) => valueAt(field)) ||
+      [...customColumns, ...keptColumns].some(({ column }) => cellAt(column));
+    if (!hasData) {
+      blankRows += 1;
       continue;
     }
-    const locationName = sourceLocationName || defaultLocationName || "";
-    if (!name || !categoryName || !locationName) {
+    if (!name) {
       skipped += 1;
-      problems.push({ rowNumber, message: "name, category, and location are required." });
+      problems.push({ rowNumber, message: "has no item name, so it was skipped." });
       continue;
+    }
+    if (isSummaryName(name) || normalizeHeader(name) === nameHeading) {
+      ignoredRows += 1;
+      continue;
+    }
+    dataRows += 1;
+    if (dataRows > maximumRows) {
+      cutOff = true;
+      break;
     }
 
+    const warn: Warn = (message) => warnings.push({ rowNumber, message });
     try {
-      const parsed = parseImportRow(
-        valueAt,
-        {
-          categoryName,
-          locationName,
-          locationIsRoomNumber:
-            columns.location !== undefined && columns.location === columns.roomNumber,
-        },
-        { roomNumber: defaultRoomNumber },
-      );
+      const parsed = parseImportRow(valueAt, cellAt, settings, warn, fallbacks);
       const categoryKey = normalizedValue(parsed.categoryName);
       const locationKey = normalizedValue(parsed.locationName);
 
@@ -814,40 +885,68 @@ export async function importInventory(
           macAddress: parsed.computer?.macAddress ?? null,
         });
         imported += 1;
+        records += parsed.units;
         continue;
       }
 
       const savedSource = { actor, rowNumber, sheetName: sheet.name };
       const cachedCategory = categoryCache.get(categoryKey);
       const cachedLocation = locationCache.get(locationKey);
-      if (cachedCategory && cachedLocation) {
-        await saveImportedRow(prisma, parsed, cachedCategory, cachedLocation, savedSource);
+      if (cachedCategory && cachedLocation && parsed.units === 1) {
+        await saveImportedRow(
+          prisma,
+          parsed,
+          cachedCategory,
+          cachedLocation,
+          customDefinitions,
+          savedSource,
+        );
         imported += 1;
+        records += 1;
         continue;
       }
 
-      const result = await prisma.$transaction(async (transaction) => {
-        const category =
-          categoryCache.get(categoryKey) ??
-          (await resolveCategory(transaction, parsed.categoryName, actor, allowCreateSetup));
-        const location =
-          locationCache.get(locationKey) ??
-          (await resolveLocation(
+      const result = await prisma.$transaction(
+        async (transaction) => {
+          const category =
+            categoryCache.get(categoryKey) ??
+            (await resolveCategory(transaction, parsed.categoryName, actor, allowCreateSetup));
+          const location =
+            locationCache.get(locationKey) ??
+            (await resolveLocation(
+              transaction,
+              parsed.locationName,
+              parsed.roomNumber,
+              actor,
+              allowCreateSetup,
+            ));
+          await saveImportedRow(
             transaction,
-            parsed.locationName,
-            parsed.roomNumber,
-            actor,
-            allowCreateSetup,
-          ));
-        await saveImportedRow(transaction, parsed, category, location, savedSource);
-        return { category, location };
-      });
+            parsed,
+            category,
+            location,
+            customDefinitions,
+            savedSource,
+          );
+          return { category, location };
+        },
+        { timeout: 20_000 },
+      );
 
       categoryCache.set(categoryKey, result.category);
       locationCache.set(locationKey, result.location);
       imported += 1;
+      records += parsed.units;
     } catch (error) {
       skipped += 1;
+      // Warnings from a row that did not import would only confuse.
+      for (
+        let index = warnings.length - 1;
+        index >= 0 && warnings[index].rowNumber === rowNumber;
+        index -= 1
+      ) {
+        warnings.pop();
+      }
       problems.push({ rowNumber, message: messageForImportError(error) });
     }
   }
@@ -865,14 +964,88 @@ export async function importInventory(
     refreshInventoryViews();
     revalidatePath("/dashboard/settings");
   }
-  problems.sort((left, right) => left.rowNumber - right.rowNumber);
-  const errors = problems
-    .slice(0, maximumReportedProblems)
-    .map((problem) => `Row ${problem.rowNumber}: ${problem.message}`);
-  if (problems.length > maximumReportedProblems) {
-    errors.push(
-      `…and ${problems.length - maximumReportedProblems} more rows need correction. Fix these first, then validate again.`,
+
+  const notices: string[] = [];
+  notices.push(
+    workbook.worksheets.length > 1
+      ? `Read the “${sheet.name}” sheet (heading on row ${headerRowNumber}).`
+      : `Heading found on row ${headerRowNumber}.`,
+  );
+  if (fallbacks.category) {
+    notices.push(
+      `${plural(fallbacks.category, "row")} had no category and ${fallbacks.category === 1 ? "was" : "were"} filed under “${fallbackCategoryName}”. Add a Category column or a default category to avoid this.`,
     );
   }
-  return { imported, skipped, errors, previewed: previewOnly };
+  if (fallbacks.location) {
+    notices.push(
+      `${plural(fallbacks.location, "row")} had no location and ${fallbacks.location === 1 ? "was" : "were"} placed in “${fallbackLocationName}”. Add a Location column or a default location to avoid this.`,
+    );
+  }
+  if (customColumns.length) {
+    notices.push(
+      `Filled the extra fields ${listed(customColumns.map((entry) => entry.field.label))} from matching columns.`,
+    );
+  }
+  if (keptColumns.length) {
+    notices.push(
+      `Columns with no matching field (${listed(keptColumns.map((entry) => entry.header))}) were saved in each item's notes.`,
+    );
+  }
+  if (ignoredColumns.length) {
+    notices.push(`Ignored columns with no matching field: ${listed(ignoredColumns)}.`);
+  }
+  if (blankRows) {
+    notices.push(`Skipped ${plural(blankRows, "empty row")}.`);
+  }
+  if (ignoredRows) {
+    notices.push(`Skipped ${plural(ignoredRows, "total or repeated heading row")}.`);
+  }
+  if (cutOff) {
+    notices.push(
+      `Only the first ${maximumRows.toLocaleString()} rows are read at a time. Put the remaining rows in a second file and import that next.`,
+    );
+  }
+  if (!dataRows && !skipped) {
+    return {
+      ...emptyImportResult,
+      errors: ["There are no item rows under the headings. Add one row per item and try again."],
+      matched: match.matched.map((entry) => ({
+        header: entry.header,
+        label: fieldLabels[entry.field],
+      })),
+      notices,
+    };
+  }
+
+  problems.sort((left, right) => left.rowNumber - right.rowNumber);
+  warnings.sort((left, right) => left.rowNumber - right.rowNumber);
+  const errors = problems
+    .slice(0, maximumReported)
+    .map((problem) => `Row ${problem.rowNumber}: ${problem.message}`);
+  if (problems.length > maximumReported) {
+    errors.push(
+      `…and ${problems.length - maximumReported} more rows need correction. Fix these first, then check again.`,
+    );
+  }
+  const warningLines = warnings
+    .slice(0, maximumReported)
+    .map((warning) => `Row ${warning.rowNumber}: ${warning.message}`);
+  if (warnings.length > maximumReported) {
+    warningLines.push(
+      `…and ${warnings.length - maximumReported} more adjustments of the same kind.`,
+    );
+  }
+  return {
+    errors,
+    imported,
+    matched: match.matched.map((entry) => ({
+      header: entry.header,
+      label: fieldLabels[entry.field],
+    })),
+    notices,
+    previewed: previewOnly,
+    records,
+    skipped,
+    warnings: warningLines,
+  };
 }

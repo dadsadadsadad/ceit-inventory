@@ -71,7 +71,7 @@ reminders as the due date approaches, and a mobile app.
 
 | Feature            | In CEIT Inventory now                         | Idea for later                                                         |
 | ------------------ | --------------------------------------------- | ---------------------------------------------------------------------- |
-| Return reminders   | No (staff see overdue loans on the dashboard) | Reminder to the borrower the day before the return time                |
+| Return reminders   | Yes: a "due today" list and a ready-written message to copy | Send the reminder automatically the day before the return time |
 | Kits / bundles     | No                                            | Borrow a camera kit as one request                                     |
 | Calendar           | No                                            | Month and week calendar of reservations                                |
 | Borrower agreement | No                                            | A short "I will return this by..." acknowledgement on the request form |
@@ -83,7 +83,8 @@ well-regarded workspace tools do:
 
 - **Linear:** dark-first, near-black surfaces with a few lifted steps, one workhorse typeface, color
   used sparingly like a signal, high information density kept clean by consistent spacing and muted
-  colors, and a keyboard-first command menu (Ctrl+K) as the real way around the product.
+  colors, and a keyboard-first command menu as the real way around the product. (CEIT Inventory tried a
+  quick-navigation menu and removed it: with a dozen pages, the sidebar is faster.)
 - **Stripe and Vercel dashboards:** precision over decoration. One sans family (Inter or Geist), a
   monospace for IDs and money, tabular figures for any column of numbers, tight downward shadows only
   on floating layers (menus, dialogs), no glass or blur.
@@ -103,17 +104,22 @@ well-regarded workspace tools do:
 | A reservation that is not picked up within 2 hours of its start, and a pending request not handled within 24 hours, stop holding the equipment                              | Releases equipment automatically without a background job: the rule is checked whenever someone looks at the item or books it.                                                             |
 | Audit trail opens on "Important" and hides QR scans, label prints, report downloads, and sign-ins until asked for                                                           | Those events happen constantly and bury the changes people actually audit. Nothing is deleted; "Routine" and "Everything" are one click away.                                              |
 | Filters apply as you choose them and live in the URL                                                                                                                        | Every filtered view can be bookmarked, shared, and reached with the back button; no "Filter" button to forget.                                                                             |
-| Reports are generated on the page first, then downloaded                                                                                                                    | Staff can check the numbers before they print or share them. The preview, the PDF, and the CSV are built from the same data, so they cannot disagree.                                      |
+| Reports are generated on the page first, then printed or downloaded                                                                                                         | Staff can check the numbers before they print or share them. The preview, the PDF, and the CSV are built from the same data, so they cannot disagree.                                      |
+| Equipment gets one QR code per physical unit; stock gets one QR code per record                                                                                             | A QR label is stuck on a thing. Each PC or projector can be borrowed, reported, and located on its own, so each needs its own code. A box of markers is one thing however many it holds. Adding several identical units at once (or importing a quantity) creates a record and code for each. |
+| Signed-in phones that scan a label go to the record; everyone else gets the public page                                                                                     | Staff scan to fix or update something, borrowers scan to borrow or report. Borrow, return, and report stay one tap away for staff.                                                         |
+| The app's functions run in the same region as the database                                                                                                                  | Distance, not code, was the largest cause of slow pages: every query crossed the world and back. Fewer round trips and instant feedback come second.                                       |
+| An import never fails the whole file for a messy value                                                                                                                      | Real spreadsheets are untidy. Only a missing item name or a duplicate identifier skips a row; everything else is adjusted or left blank, and the result lists what happened.               |
 
 ## Backlog ranked by usefulness for this department
 
-1. Return reminders and a "due today" list (small, high value, uses existing data).
-2. Warranty end date on items and a warranty report.
-3. Seat counts for software licenses (paid vs installed).
-4. Guided room audit: scan everything in a room and see what is missing.
-5. Calendar view of reservations.
-6. Minimum quantity for supplies and a "running low" report.
-7. Preventive maintenance schedules.
-8. Kits (borrow several items as one request).
-9. Per-category custom fields.
-10. Scheduled email of a saved report.
+Done: return reminders and a "due today" list, warranty end date with a warranty report, a
+minimum quantity for stock with low-stock alerts and a stock report, and custom fields (which can be
+limited to a type or a category).
+
+1. Seat counts for software licenses (paid vs installed).
+2. Guided room audit: scan everything in a room and see what is missing.
+3. Calendar view of reservations.
+4. Preventive maintenance schedules.
+5. Kits (borrow several items as one request).
+6. Scheduled email of a saved report.
+7. Reminders sent by SMS or email on their own (today staff copy the message).

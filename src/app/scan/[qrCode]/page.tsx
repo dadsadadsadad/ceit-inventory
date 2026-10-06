@@ -1,24 +1,39 @@
 import { ItemStatus, ItemType } from "@prisma/client";
+import { CircleAlert, CircleCheck, Clock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { getCurrentInventoryUser, canManageInventory } from "@/lib/inventory-auth";
 import { canBorrowInventoryStatus } from "@/lib/borrow-availability";
 import { borrowPolicyFromEnvironment } from "@/lib/borrow-policy";
-import { isHoldLapsed } from "@/lib/borrow-schedule";
+import {
+  availableScheduledQuantity,
+  isHoldLapsed,
+  manilaDateTimeInput,
+  type ScheduledLoan,
+} from "@/lib/borrow-schedule";
 import { borrowStatus } from "@/lib/borrow-status";
+import { issueFormToken } from "@/lib/form-token";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { formatManilaDate } from "@/lib/manila-date";
 import { isInventoryQrCode } from "@/lib/qr-code";
+import { firstParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
-import { BorrowReturnChooser } from "../borrow-return-chooser";
+import {
+  BorrowReturnChooser,
+  type ItemAvailability,
+  type RequestMode,
+} from "../borrow-return-chooser";
 import { ScanAuditLogger } from "../scan-audit-logger";
 import { LiveUpdates } from "@/app/components/live-updates";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Equipment details · CEIT Inventory" };
+
+const halfHourMs = 30 * 60 * 1000;
+const requestModes: RequestMode[] = ["borrow", "return", "issue"];
 
 function isBorrowableItem(
   item: {
@@ -38,16 +53,52 @@ function isBorrowableItem(
   );
 }
 
-// Show public item details and available requests.
+/**
+ * Can this be borrowed right now, or only booked for later? When it is in use, find the first
+ * moment it is free again so the form can start its pickup choices from there.
+ */
+function availabilityFor(
+  borrowable: boolean,
+  capacity: number,
+  loans: ScheduledLoan[],
+  now: Date,
+  policy: ReturnType<typeof borrowPolicyFromEnvironment>,
+): ItemAvailability {
+  if (!borrowable) {
+    return { freeFrom: null, state: "closed" };
+  }
+  const freeAt = (at: Date) =>
+    availableScheduledQuantity(
+      capacity,
+      loans,
+      at,
+      new Date(at.getTime() + halfHourMs),
+      now,
+      policy,
+    ) > 0;
+  if (freeAt(now)) {
+    return { freeFrom: null, state: "now" };
+  }
+  const endings = loans
+    .map((loan) => loan.expectedReturnDate)
+    .filter((end) => end > now)
+    .sort((a, b) => a.getTime() - b.getTime());
+  const free = endings.find(freeAt);
+  return { freeFrom: free ? manilaDateTimeInput(free) : null, state: "later" };
+}
+
+// Show public item details and available requests. Signed-in staff go straight to the record.
 export default async function ScannedItemPage({
   params,
   searchParams,
 }: {
   params: Promise<{ qrCode: string }>;
   searchParams: Promise<{
-    request?: string | string[];
-    return?: string | string[];
-    issue?: string | string[];
+    issue?: RawParam;
+    mode?: RawParam;
+    request?: RawParam;
+    return?: RawParam;
+    view?: RawParam;
   }>;
 }) {
   const [{ qrCode }, search, user] = await Promise.all([
@@ -79,9 +130,18 @@ export default async function ScannedItemPage({
   }
 
   const canManage = Boolean(user && canManageInventory(user.role));
-  const requestSent =
-    (Array.isArray(search.request) ? search.request[0] : search.request) === "sent";
-  const returnSent = (Array.isArray(search.return) ? search.return[0] : search.return) === "sent";
+  const requestSent = firstParam(search.request) === "sent";
+  const returnSent = firstParam(search.return) === "sent";
+  const issueSent = firstParam(search.issue) === "sent";
+  const publicView = firstParam(search.view) === "public";
+  // A phone that is signed in goes straight to editing. The borrow, return and report forms stay
+  // one tap away from there, and still open here when the staff member wants the public view.
+  if (canManage && !publicView && !requestSent && !returnSent && !issueSent) {
+    redirect(`/dashboard/inventory/${item.id}?edit=1&scanned=1#edit-record`);
+  }
+  const requestedMode = firstParam(search.mode) as RequestMode | undefined;
+  const initialMode = requestedMode && requestModes.includes(requestedMode) ? requestedMode : null;
+
   const now = new Date();
   const policy = borrowPolicyFromEnvironment();
   const [activeLoans, activeIndividualLoan, bookedRows] = await Promise.all([
@@ -127,12 +187,19 @@ export default async function ScannedItemPage({
       : Promise.resolve([]),
   ]);
   // Bookings nobody collected or handled in time no longer hold the item.
-  const bookedTimes = bookedRows
-    .filter((booking) => !isHoldLapsed(booking, now, policy))
-    .slice(0, 6);
+  const liveBookings = bookedRows.filter((booking) => !isHoldLapsed(booking, now, policy));
+  const bookedTimes = liveBookings.slice(0, 6);
   const availableQuantity = item.quantity + (activeLoans._sum.requestedQuantity ?? 0);
   const borrowable = isBorrowableItem(item, activeIndividualLoan > 0) && availableQuantity > 0;
-  const issueSent = (Array.isArray(search.issue) ? search.issue[0] : search.issue) === "sent";
+  const availability = availabilityFor(borrowable, availableQuantity, liveBookings, now, policy);
+  const isAsset = item.itemType === ItemType.ASSET;
+  const freeFromDate = availability.freeFrom ? new Date(`${availability.freeFrom}:00+08:00`) : null;
+
+  const formTokens = {
+    borrow: issueFormToken(`borrow:${item.qrCode}`),
+    issue: issueFormToken(`issue:${item.qrCode}`),
+    return: issueFormToken(`return:${item.qrCode}`),
+  };
 
   return (
     <main className="page scan-item-page">
@@ -142,8 +209,11 @@ export default async function ScannedItemPage({
         <header>
           <div className="flex items-center justify-between gap-4">
             {canManage ? (
-              <Link href="/scan" className="accent-link text-sm font-semibold">
-                Back to scanner
+              <Link
+                href={`/dashboard/inventory/${item.id}?edit=1&scanned=1#edit-record`}
+                className="accent-link text-sm font-semibold"
+              >
+                ← Item record
               </Link>
             ) : (
               <Link href="/auth/login" className="accent-link text-sm font-semibold">
@@ -175,6 +245,39 @@ export default async function ScannedItemPage({
         {issueSent ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
             Your issue report was sent. CEIT staff will review it.
+          </div>
+        ) : null}
+
+        {/* Whether the item can be borrowed is the first thing a borrower should see. */}
+        {isAsset ? (
+          <div className={`availability-banner availability-${availability.state} rounded-lg`}>
+            {availability.state === "now" ? (
+              <CircleCheck size={22} aria-hidden="true" />
+            ) : availability.state === "later" ? (
+              <Clock size={22} aria-hidden="true" />
+            ) : (
+              <CircleAlert size={22} aria-hidden="true" />
+            )}
+            <div>
+              <p className="availability-title">
+                {availability.state === "now"
+                  ? "Available now"
+                  : availability.state === "later"
+                    ? "In use right now"
+                    : "Not available to borrow"}
+              </p>
+              <p className="availability-detail">
+                {availability.state === "now"
+                  ? "You can borrow it now or reserve it for later."
+                  : availability.state === "later"
+                    ? freeFromDate
+                      ? `Expected back ${formatManilaDate(freeFromDate, { dateStyle: "medium", timeStyle: "short" })}. You can only reserve it for after then.`
+                      : "It is past its return time and waiting for staff to confirm. You can reserve it for a later time."
+                    : item.status === ItemStatus.RETIRED
+                      ? "This item has been retired."
+                      : `Its status is ${inventoryStatusLabel(item.status).toLowerCase()}. Contact CEIT staff if you need it.`}
+              </p>
+            </div>
           </div>
         ) : null}
 
@@ -233,6 +336,9 @@ export default async function ScannedItemPage({
 
         {/* Public borrowing, return, and issue-report forms. */}
         <BorrowReturnChooser
+          availability={availability}
+          formTokens={formTokens}
+          initialMode={initialMode}
           policy={{
             maximumAdvanceDays: policy.maximumAdvanceDays,
             maximumLoanDays: policy.maximumLoanDays,
@@ -241,21 +347,9 @@ export default async function ScannedItemPage({
           qrCode={item.qrCode}
           itemName={item.name}
           maximumQuantity={availableQuantity}
-          borrowable={borrowable}
-          isAsset={item.itemType === ItemType.ASSET}
+          isAsset={isAsset}
           canReport={item.status !== ItemStatus.RETIRED}
         />
-
-        {canManage ? (
-          <div className="text-center">
-            <Link
-              href={`/dashboard/inventory/${item.id}?edit=1#edit-record`}
-              className="accent-link inline-flex px-4 py-2.5 text-sm font-semibold"
-            >
-              Edit item record
-            </Link>
-          </div>
-        ) : null}
       </div>
     </main>
   );

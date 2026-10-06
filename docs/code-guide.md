@@ -8,7 +8,7 @@
 - `src/lib/reports/`: one data model for every report. `kinds.ts` lists the reports and their filters, `build.ts` picks the builder, and `builders/` has one builder per report (each returns a `ReportModel` of metrics and tables). The page (`dashboard/reports/report-sheet.tsx`), the PDF (`pdf/render.ts`, colours in `pdf/theme.ts`), and the CSV all draw from that model, so they cannot disagree.
 - `src/lib/record-search.ts`: the searches behind the Inventory, Borrowing, and Maintenance lists, shared with their reports. `computer-directory.ts` and `computer-queries.ts` do the same for the Hardware and Software views.
 - `src/lib/borrow-policy.ts`: the borrowing limits and the environment variables that change them.
-- `src/app/styles/`: the stylesheet, in the order it loads: `tokens.css` (colours, themes, type), `base.css`, `shell.css` (sidebar, page frame, appearance and command menus), `components.css`, `pages.css`, and `views.css` (directories, audit trail, reports). The accent colour tokens are also written by the appearance picker.
+- `src/app/styles/`: the stylesheet, in the order it loads: `tokens.css` (colours, themes, type), `base.css`, `shell.css` (sidebar, page frame, appearance menu), `components.css`, `pages.css`, and `views.css` (directories, audit trail, reports). The accent colour tokens are also written by the appearance picker.
 - `src/lib/appearance.ts`: color conversion and contrast. `appearance-bootstrap.ts` restores saved colors before the page renders.
 - `src/prisma.ts`: the shared database client. `src/lib/database-transaction.ts` retries conflicting writes.
 - `prisma/schema.prisma`: tables, relations, and indexes. Add a migration for schema changes; keep applied migrations intact.

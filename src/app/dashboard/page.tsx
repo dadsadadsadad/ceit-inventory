@@ -4,12 +4,14 @@ import { after } from "next/server";
 import { BorrowStatus, MaintenanceStatus } from "@prisma/client";
 import {
   ArrowRight,
+  CalendarClock,
   CheckCheck,
   ClipboardCheck,
   Clock3,
   MapPin,
   Package,
-  PackagePlus,
+  PackageMinus,
+  ShieldAlert,
   Undo2,
   Wrench,
 } from "lucide-react";
@@ -19,7 +21,11 @@ import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth
 import { auditViewWhere } from "@/lib/audit-trail";
 import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
 import { inventoryAttentionWhere } from "@/lib/inventory-attention";
+import { dueTodayWhere } from "@/lib/loan-due";
 import { formatManilaDate } from "@/lib/manila-date";
+import { personName } from "@/lib/person";
+import { lowStockWhere, outOfStockWhere } from "@/lib/stock-queries";
+import { warrantyWhere } from "@/lib/warranty";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +42,10 @@ async function getDashboardData(includeAuditTrail: boolean) {
     borrowing,
     overdueLoans,
     attentionCount,
+    lowStockCount,
+    outOfStockCount,
+    warrantyEndingCount,
+    dueTodayCount,
   ] = await Promise.all([
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.location.count({ where: { isActive: true } }),
@@ -79,7 +89,17 @@ async function getDashboardData(includeAuditTrail: boolean) {
       },
     }),
     prisma.inventoryItem.count({ where: inventoryAttentionWhere }),
+    prisma.inventoryItem.count({ where: lowStockWhere() }),
+    prisma.inventoryItem.count({ where: outOfStockWhere() }),
+    prisma.inventoryItem.count({ where: warrantyWhere("ending", now) }),
+    prisma.borrowRequest.count({ where: dueTodayWhere(now) }),
   ]);
+  // Older notes were saved with an email address; show the person's username instead.
+  const noteAuthor = dashboardNote?.updatedByName ?? null;
+  const noteAuthorName = noteAuthor?.includes("@")
+    ? ((await prisma.user.findFirst({ where: { email: noteAuthor }, select: { username: true } }))
+        ?.username ?? noteAuthor)
+    : personName(noteAuthor);
   const count = (status: BorrowStatus) =>
     borrowing.find((entry) => entry.status === status)?._count._all ?? 0;
   const overdueCount = (status: BorrowStatus) =>
@@ -88,9 +108,14 @@ async function getDashboardData(includeAuditTrail: boolean) {
     statusCounts: inventory.map((entry) => ({ status: entry.status, count: entry._count._all })),
     itemCount: inventory.reduce((total, entry) => total + entry._count._all, 0),
     attentionCount,
+    dueTodayCount,
+    lowStockCount,
+    outOfStockCount,
+    warrantyEndingCount,
     locationCount,
     recentActivity,
     dashboardNote,
+    noteAuthorName,
     openTicketCount: maintenance,
     pendingBorrowCount: count(BorrowStatus.REQUESTED),
     checkedOutCount: count(BorrowStatus.BORROWED) + count(BorrowStatus.RETURN_REQUESTED),
@@ -116,7 +141,10 @@ export default async function DashboardPage() {
     ? dashboard.pendingBorrowCount +
       dashboard.returnCount +
       dashboard.openTicketCount +
-      dashboard.overdueUnreturnedCount
+      dashboard.overdueUnreturnedCount +
+      dashboard.dueTodayCount +
+      dashboard.lowStockCount +
+      dashboard.warrantyEndingCount
     : 0;
   const queue = dashboard
     ? [
@@ -135,6 +163,13 @@ export default async function DashboardPage() {
           Icon: Clock3,
         },
         {
+          label: "Due back today",
+          detail: "Remind borrowers before the return time",
+          count: dashboard.dueTodayCount,
+          href: "/dashboard/borrowing?status=DUE_TODAY",
+          Icon: CalendarClock,
+        },
+        {
           label: "Returns to confirm",
           detail: "Check returned equipment back in",
           count: dashboard.returnCount,
@@ -147,6 +182,22 @@ export default async function DashboardPage() {
           count: dashboard.openTicketCount,
           href: "/dashboard/maintenance?status=OPEN",
           Icon: Wrench,
+        },
+        {
+          label: "Low stock",
+          detail: dashboard.outOfStockCount
+            ? `${dashboard.outOfStockCount} out of stock. Time to restock`
+            : "Stock that is running low",
+          count: dashboard.lowStockCount,
+          href: "/dashboard/inventory?stock=low",
+          Icon: PackageMinus,
+        },
+        {
+          label: "Warranty ending soon",
+          detail: "Equipment whose warranty ends within 60 days",
+          count: dashboard.warrantyEndingCount,
+          href: "/dashboard/inventory?warranty=ending",
+          Icon: ShieldAlert,
         },
       ]
     : [];
@@ -216,6 +267,24 @@ export default async function DashboardPage() {
                   </Link>
                 </span>
               </div>
+              <div>
+                <span className="metric-symbol" aria-hidden="true">
+                  <PackageMinus size={20} strokeWidth={1.6} />
+                </span>
+                <p className="muted text-sm">Low stock</p>
+                <strong
+                  className={dashboard.lowStockCount ? "text-[var(--status-critical)]" : undefined}
+                >
+                  {dashboard.lowStockCount.toLocaleString()}
+                </strong>
+                <span className="metric-detail">
+                  <Link href="/dashboard/inventory?stock=low">
+                    {dashboard.outOfStockCount
+                      ? `${dashboard.outOfStockCount} out of stock`
+                      : "Stock at or below its alert level"}
+                  </Link>
+                </span>
+              </div>
             </section>
 
             <InventoryMix counts={dashboard.statusCounts} />
@@ -226,7 +295,7 @@ export default async function DashboardPage() {
                   <div className="section-heading">
                     <div>
                       <p className="eyebrow">The worklist</p>
-                      <h2 className="mt-1">Requests and returns</h2>
+                      <h2 className="mt-1">Needs a look</h2>
                     </div>
                     <span className={`queue-total ${waiting ? "has-work" : ""}`}>
                       {waiting ? `${waiting} to review` : "Up to date"}
@@ -274,7 +343,7 @@ export default async function DashboardPage() {
                 {canManage ? (
                   <DashboardNoteForm
                     initialContent={dashboard.dashboardNote?.content ?? ""}
-                    updatedByName={dashboard.dashboardNote?.updatedByName}
+                    updatedByName={dashboard.noteAuthorName}
                   />
                 ) : (
                   <p className="muted mt-5 whitespace-pre-wrap text-sm">
@@ -338,17 +407,6 @@ export default async function DashboardPage() {
                 </section>
               ) : null}
             </section>
-            {canManage ? (
-              <div className="overview-footer">
-                <span>Adding equipment to the department?</span>
-                <Link
-                  href="/dashboard/inventory/new"
-                  className="accent-link inline-flex items-center gap-2 text-sm font-semibold"
-                >
-                  <PackagePlus size={16} aria-hidden="true" /> Add item
-                </Link>
-              </div>
-            ) : null}
           </>
         ) : (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">

@@ -212,14 +212,22 @@ test("dashboard supporting text is readable without browser zoom", async ({ page
   expect(smallText).toEqual([]);
   for (const width of [1440, 1280, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 700 });
-    await expect(page.locator(".overview-metrics strong")).toHaveCount(3);
-    const metricTops = await page
-      .locator(".overview-metrics strong")
-      .evaluateAll((metrics) => metrics.map((metric) => metric.getBoundingClientRect().top));
-    expect(
-      Math.max(...metricTops) - Math.min(...metricTops),
-      `Metric alignment at ${width}px`,
-    ).toBeLessThan(1);
+    await expect(page.locator(".overview-metrics strong")).toHaveCount(4);
+    // The four metrics sit in one row or two; the figures in a row must line up.
+    const rows = await page.locator(".overview-metrics > div").evaluateAll((metrics) => {
+      const byRow = new Map<number, number[]>();
+      for (const metric of metrics) {
+        const row = Math.round(metric.getBoundingClientRect().top);
+        const figure = metric.querySelector("strong")!.getBoundingClientRect().top;
+        byRow.set(row, [...(byRow.get(row) ?? []), figure]);
+      }
+      return [...byRow.values()];
+    });
+    for (const tops of rows) {
+      expect(Math.max(...tops) - Math.min(...tops), `Metric alignment at ${width}px`).toBeLessThan(
+        1,
+      );
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );

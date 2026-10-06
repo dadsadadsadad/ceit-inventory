@@ -7,7 +7,11 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 ## What is included
 
 - Room and location management
-- Item categories, individually tracked assets, and quantity-based supply records
+- Item categories, individually tracked equipment (one record, asset tag, and QR code per physical unit), and counted stock records (one record and one QR code per kind of stock)
+- **Low-stock alerts** for stock: each record can set its own alert level (5 by default, 0 turns it off). Running low and out of stock show on the Inventory list, the item page, the dashboard, and in reports
+- **Warranty end dates** (optional) with a warranty report and an "ending soon" alert 60 days ahead
+- **Extra fields** that staff define in Settings (text, number, date, yes or no, or a list of choices) and fill in on any item, optionally only for one type or category
+- Optional "Licensed?" on installed software
 - Per-PC/Mac hardware and software descriptions, structured technical details, and installed-software records
 - Automatic asset tags in the existing `INV-CAT-ST-ROOM-0001` format and a unique QR code for every new equipment record
 - Item-wide last-checked dates, including a one-click inspection record
@@ -16,16 +20,19 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Multi-word search (every word must match, across name, tag, serial, room, MAC/IP, and more), filters, sorting, and page navigation for status, room, category, type, condition, items that need attention, and items not checked in 90+ days
 - Bulk status, condition, location, and inspection changes for selected items, including **Record inspection** for a whole room
-- CSV/XLSX import with flexible column headings and row-level feedback. **Validate before importing** checks every row against Settings (missing or inactive categories and rooms) and against records that already exist (asset tags, serial numbers, MAC addresses), so a clean preview matches what the real import will do
+- CSV/XLSX import that copes with the files people really have: any column order, missing or extra columns, empty rows, totals, and untidy values. **Check file** reports exactly what would happen without saving anything, and **Import** saves every row that can be understood
 - **Hardware and Software views** next to the Inventory list: every processor, memory size, storage, graphics part, operating system, and installed program, grouped, searchable, and showing which PCs have it, with license expiry for software
-- **Reports** you generate on the page first and then download as a PDF or CSV: overview, inventory, PC register, hardware, software, borrowing, maintenance, and audit trail, each with its own filters and a set of one-click quick reports (overdue loans, licenses ending soon, PCs missing details, and more)
+- **Reports** you generate on the page first and then print right there or download as a PDF or CSV: overview, inventory, stock, warranty, PC register, hardware, software, borrowing, maintenance, and audit trail, each with its own filters and a set of one-click quick reports (overdue loans, due today, low stock, warranties ending soon, licenses ending soon, PCs missing details, and more)
 - Filters that apply as you choose them and live in the address bar, on Inventory, Borrowing, Maintenance, Users, Hardware, Software, Labels, Reports, and the audit trail
 - An audit trail that opens on the important changes, groups events by day, and keeps routine events (QR scans, label prints, report downloads, sign-ins) one click away
 - Borrowing limits: reservations at most 3 days ahead, loans at most 7 days (14 with an extension), at most 3 open requests per student, no new requests while something is overdue, and missed pickups release the equipment automatically. See [the launch notes](docs/launch-checklist.md) for the exact rules and how to change them
 - Two account types: **Administrator** and **Faculty staff**. Faculty staff can do everything except create or manage accounts
 - A paper-and-ink "ledger" look with a serif for titles, a mono for asset tags, and light and dark themes; see [the design notes](docs/design-system.md)
-- Public borrowing requests from QR codes, including future reservations in the same borrow form, staff approval, checkout, cancellation, and return tracking
-- QR issue reports routed to Maintenance, with a source filter, staff inspection, item history, and CSV/PDF exports
+- Public borrowing requests from QR codes, including future reservations in the same borrow form, staff approval, checkout (with an ID check), cancellation, and return tracking
+- **Return reminders** and a **due today** list: staff copy a ready-written text for the borrower, and the dashboard and Borrowing page list what is due back today
+- **Scanning a QR code**: a signed-in phone goes straight to the item's record for editing, with small shortcuts to borrow, return, or report a problem. Anyone else sees the item, whether it is available (clearly, before any form), and the borrow, return, and report forms
+- QR issue reports (which ask for the reporter's name) routed to Maintenance, with a source filter, staff inspection, item history, and CSV/PDF exports
+- Light protection on the public forms: each is signed to the item and the time it was opened, so scripts posting straight to the server, instant submissions, and pages left open for hours are refused, on top of the rate limits and staff approval
 - Reservation pickup and return times in Philippine time, overlap protection, and report views for pending, reserved, borrowed, returned, and cancelled requests
 - One-unit tagged assets remain quantity `1` while checked out and temporarily use the deployed status; returning them restores their prior available status
 - Bulk retirement keeps a record and its history, while permanent deletion is deliberately blocked for records with borrowing or maintenance history
@@ -33,9 +40,8 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Administrator account management, account deactivation, password reset, and unlocking accounts that were temporarily locked after repeated failed sign-ins
 - Overdue loans are flagged in Borrowing and on the dashboard worklist, can be filtered, and staff can change a checked-out item's return time (availability is re-checked against other bookings)
 - The public QR page lists when an item is already booked or in use (times only, never borrower details)
-- Quick navigation (Ctrl/Cmd + K) supports arrow keys and Enter, and finds equipment by name, tag, serial, or room
 - CSV exports use Philippine time, matching the screens and PDF reports
-- Optimistic inventory, borrowing, and maintenance changes with automatic rollback on failed saves
+- Optimistic inventory, borrowing, and maintenance changes with automatic rollback on failed saves, an instant progress bar when a link is pressed, and page-shaped placeholders while data loads
 - Live dashboard and public QR updates across browser sessions, with reconnect and polling fallback
 
 ## Live updates and form behavior
@@ -76,11 +82,16 @@ Then open **Settings** to add rooms and categories. Each setting receives a tag 
 
 ### Import rules
 
-The importer accepts CSV and `.xlsx` files with flexible header aliases: spaces, underscores, capitalization, and legacy headings such as `inventory code`, `product info`, and `last date checked` are recognized. It needs a name, category, and either a location/room column or a chosen default location. Use **Validate before importing** first; it writes nothing and reports row-level problems.
+The importer takes CSV and `.xlsx` files as they come. The rules, in short (the Import page shows the same list):
 
-For individually tracked equipment, each physical unit must be a separate `asset` row with `quantity` set to `1`. This lets the system generate or validate one unique asset tag and one unique QR code per row. A row such as `TV, asset, quantity 4` is deliberately skipped rather than silently creating four ambiguous QR codes: add four rows, including each unit's room, serial number, and any supplied tag when those differ. PCs and Macs always follow this one-row-per-device rule.
-
-For shared stock, use `type` `supply`; one row may have `quantity` `4`, but it is one stock record with one QR code, not four individually tagged items. Invalid rows, duplicate asset tags/serial numbers/MAC addresses, inactive setup records, and unsupported values are skipped with a row number while valid rows in the same file continue to import. Missing categories and locations can be created during import when that option is enabled.
+- **Headings** are matched ignoring case, spaces, and punctuation, and many common names work (`Item`, `Equipment`, `Qty`, `Serial No.`, `Brand`, `Room`, `Price`, `Warranty`, `Property No.`, and older headings such as `inventory code` and `product info`). They can sit on any of the first 25 rows and in any order. With several sheets, the one that names the most fields is read. Only the item name is required.
+- **Missing columns**: a missing category or location uses the default typed on the Import page, or "Uncategorized" and "Unassigned" if none is given (and the result says how many rows that affected). Everything else is simply left blank.
+- **Extra columns**: a column whose heading matches one of your extra fields fills that field; any other column is kept in each item's notes (or ignored if you turn that off). The result lists which.
+- **Rows**: empty rows, total rows, and repeated headings are skipped silently. A row with no item name is skipped and listed. Up to 1,000 rows are read per file; the rest are reported so they can go in a second file.
+- **Values**: peso amounts such as `₱1,200`, sizes such as `8GB` or `1TB`, dates such as `1/15/2026` or `15 Jan 2026`, and words such as `broken`, `in use`, `consumable` are understood. A value that cannot be understood is left blank and listed as an adjustment; it never rejects the row.
+- **Quantity**: equipment with a quantity above 1 becomes that many separate items, each with its own asset tag and QR code (up to 50 per row; a supplied tag, serial number, or MAC address belongs to one unit, so such a row must stay one per unit). Mark a row `stock` in the `type` column to keep it as one counted record with a `low stock level`.
+- **Asset tags** that do not follow the `INV-CAT-ST-ROOM-0001` format are replaced by a generated tag, and the original is kept in the notes.
+- **Problems** that cannot be adjusted (a repeated asset tag, serial number, or MAC address, an inactive category or room) skip that row with its row number while every other row imports. **Check file** finds all of them first without saving anything.
 
 ## QR codes in production
 
