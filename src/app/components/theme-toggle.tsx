@@ -549,7 +549,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="appearance-trigger grid h-12 w-12 place-items-center rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        className="appearance-trigger rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         aria-label={isOpen ? "Close appearance settings" : "Open appearance settings"}
         aria-haspopup="dialog"
         aria-controls={dialogId}

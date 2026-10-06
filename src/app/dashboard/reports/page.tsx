@@ -20,6 +20,8 @@ import { ReportRequestError, type ReportModel } from "@/lib/reports/model";
 import { firstParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
+import { PrintButton } from "@/app/components/print-button";
+
 import { ReportBuilder, type ReportBuilderOptions } from "./report-builder";
 import { ReportSheet } from "./report-sheet";
 
@@ -41,6 +43,8 @@ const licenseLabels: Record<(typeof licenseFilters)[number], string> = {
   expiring: "Ending within 30 days",
   dated: "Has a license date",
   none: "No license date",
+  licensed: "Marked licensed",
+  unlicensed: "Marked free or not licensed",
 };
 
 function options<T extends string>(values: readonly T[], label: (value: T) => string) {
@@ -97,6 +101,16 @@ export default async function ReportsPage({
       { value: "RESOLVED", label: "Resolved" },
     ],
     periods: options(exportPeriods, (value) => periodLabels[value]),
+    stockLevels: [
+      { value: "low", label: "Running low or out" },
+      { value: "out", label: "Out of stock only" },
+    ],
+    warranties: [
+      { value: "ending", label: "Ending within 60 days" },
+      { value: "expired", label: "Warranty ended" },
+      { value: "active", label: "Still covered" },
+      { value: "none", label: "No warranty recorded" },
+    ],
   };
 
   let report: ReportModel | null = null;
@@ -125,8 +139,8 @@ export default async function ReportsPage({
           <p className="eyebrow">Department records</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Reports</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
-            Pick a report, narrow it down, and generate it right here. When it looks right, download
-            it as a PDF to share or a CSV for a spreadsheet.
+            Pick a report, narrow it down, and generate it right here. When it looks right, print it
+            on the spot, download a PDF to share, or take a CSV for a spreadsheet.
           </p>
         </header>
 
@@ -155,6 +169,7 @@ export default async function ReportsPage({
                 >
                   Download CSV
                 </a>
+                <PrintButton />
               </>
             }
           />

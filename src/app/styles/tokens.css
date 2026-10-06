@@ -62,7 +62,6 @@ html[data-theme="light"] {
   --border-strong: rgb(168 58 8 / 45%);
   --shadow: 0 1px 0 rgb(30 26 20 / 5%), 0 10px 24px -14px rgb(30 26 20 / 24%);
   --shadow-float: 0 18px 48px -12px rgb(30 26 20 / 32%);
-  --grain-blend: multiply;
   --grain-opacity: 0.07;
 
   --accent: #b83f0b;
@@ -92,8 +91,8 @@ html[data-theme="dark"] {
   --border-strong: rgb(255 155 80 / 48%);
   --shadow: 0 1px 0 rgb(0 0 0 / 30%), 0 14px 30px -16px rgb(0 0 0 / 70%);
   --shadow-float: 0 22px 60px -12px rgb(0 0 0 / 75%);
-  --grain-blend: screen;
-  --grain-opacity: 0.045;
+  /* The grain is dark ink, which cannot show on a dark page, so it is switched off there. */
+  --grain-opacity: 0;
 
   --accent: #ff9b50;
   --accent-hover: #ffc083;

@@ -27,6 +27,8 @@ export type ReportBuilderOptions = {
   maintenanceSources: Option[];
   maintenanceStatuses: Option[];
   periods: Option[];
+  stockLevels: Option[];
+  warranties: Option[];
 };
 
 type Props = {
@@ -163,6 +165,12 @@ export function ReportBuilder({ initial, options }: Props) {
             ? select("category", "Category", options.categories, "All categories")
             : null}
           {has("location") ? select("location", "Room", options.locations, "All rooms") : null}
+          {has("stockLevel")
+            ? select("stock", "Stock level", options.stockLevels, "Any level")
+            : null}
+          {has("warranty")
+            ? select("warranty", "Warranty", options.warranties, "Any warranty")
+            : null}
           {has("itemType")
             ? select("itemType", "Kind of record", options.itemTypes, "Everything")
             : null}

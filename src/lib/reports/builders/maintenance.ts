@@ -98,7 +98,12 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         rows: tickets.map((ticket) => [
           `${ticket.inventoryItem.name}\n${ticket.inventoryItem.assetTag ?? "No asset tag"}\n${ticket.title}`,
           `${humanize(ticket.priority)}\n${ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved"}`,
-          ticket.source === "QR" ? "QR issue report" : (ticket.reportedByName ?? "Staff"),
+          ticket.source === "QR"
+            ? ticket.reportedByName
+              ? `${ticket.reportedByName}
+QR report`
+              : "QR report"
+            : (ticket.reportedByName ?? "Staff"),
           [
             `Reported ${formatReportDateTime(ticket.openedAt)}`,
             ticket.resolvedAt

@@ -7,11 +7,22 @@ import { IssueReportForm } from "./issue-report-form";
 import { BorrowRequestForm } from "./borrow-request-form";
 import { ReturnRequestForm } from "./return-request-form";
 
-type RequestMode = "borrow" | "return" | "issue" | null;
+export type RequestMode = "borrow" | "return" | "issue";
+
+/** What a borrower is told about the item before they fill in anything. */
+export type ItemAvailability = {
+  /** When the item is next free, as a datetime-local value, if it is in use right now. */
+  freeFrom: string | null;
+  /** Borrowing is possible now, only for later, or not at all. */
+  state: "now" | "later" | "closed";
+};
 
 type BorrowReturnChooserProps = {
+  availability: ItemAvailability;
+  /** Signed notes proving each form came from this page. */
+  formTokens: { borrow: string; issue: string; return: string };
+  initialMode?: RequestMode | null;
   policy: { maximumAdvanceDays: number; maximumLoanDays: number };
-  borrowable: boolean;
   itemName: string;
   maximumQuantity: number;
   qrCode: string;
@@ -21,18 +32,24 @@ type BorrowReturnChooserProps = {
 
 // Switch between borrowing, returns, and issue reports.
 export function BorrowReturnChooser({
+  availability,
+  formTokens,
+  initialMode = null,
   policy,
-  borrowable,
   itemName,
   maximumQuantity,
   qrCode,
   canReport = true,
   isAsset = true,
 }: BorrowReturnChooserProps) {
-  const [mode, setMode] = useState<RequestMode>(null);
+  const [mode, setMode] = useState<RequestMode | null>(initialMode);
+  // Keep the notes this page was opened with. A live refresh issues fresh ones, and swapping
+  // them under someone who is about to press Send would make their form look "too quick".
+  const [tokens] = useState(formTokens);
   const contentRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLElement>(null);
-  const previousModeRef = useRef<RequestMode>(null);
+  const previousModeRef = useRef<RequestMode | null>(null);
+  const borrowOpen = availability.state !== "closed";
 
   useEffect(() => {
     if (mode) {
@@ -63,11 +80,13 @@ export function BorrowReturnChooser({
             itemName={itemName}
             maximumQuantity={maximumQuantity}
             policy={policy}
+            availability={availability}
+            formToken={tokens.borrow}
           />
         ) : mode === "return" ? (
-          <ReturnRequestForm qrCode={qrCode} itemName={itemName} />
+          <ReturnRequestForm qrCode={qrCode} itemName={itemName} formToken={tokens.return} />
         ) : (
-          <IssueReportForm qrCode={qrCode} itemName={itemName} />
+          <IssueReportForm qrCode={qrCode} itemName={itemName} formToken={tokens.issue} />
         )}
       </div>
     );
@@ -98,13 +117,19 @@ export function BorrowReturnChooser({
                 previousModeRef.current = "borrow";
                 setMode("borrow");
               }}
-              disabled={!borrowable}
-              className="primary-button request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!borrowOpen}
+              className={`${borrowOpen ? "primary-button" : "secondary-button"} request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <CalendarDays className="mb-2" size={20} aria-hidden="true" />
-              <span className="block text-base font-semibold">Borrow equipment</span>
+              <span className="block text-base font-semibold">
+                {availability.state === "later" ? "Reserve for later" : "Borrow equipment"}
+              </span>
               <span className="mt-1 block text-sm font-normal opacity-90">
-                Borrow now or reserve for later.
+                {availability.state === "closed"
+                  ? "Not available to borrow."
+                  : availability.state === "later"
+                    ? "In use now. Book it for after it is back."
+                    : "Borrow now or reserve for later."}
               </span>
             </button>
             <button
@@ -144,11 +169,6 @@ export function BorrowReturnChooser({
           </button>
         ) : null}
       </div>
-      {isAsset && !borrowable ? (
-        <p className="notice mt-4 rounded-lg px-4 py-3 text-sm" role="status">
-          This item is unavailable for new borrowing requests. You can still arrange a return.
-        </p>
-      ) : null}
     </section>
   );
 }

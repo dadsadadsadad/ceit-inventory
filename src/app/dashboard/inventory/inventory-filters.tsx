@@ -14,6 +14,7 @@ import {
   type SearchParams,
 } from "./inventory-query";
 import { isUuid } from "@/lib/ids";
+import { isWarrantyFilter } from "@/lib/warranty";
 
 type Option = { id: string; name: string };
 
@@ -39,6 +40,8 @@ export function InventoryFilters({
     ["itemType", isItemType(search.itemType) ? search.itemType : ""],
     ["condition", isItemCondition(search.condition) ? search.condition : ""],
     ["attention", search.attention === "1" ? "1" : ""],
+    ["stock", search.stock === "low" || search.stock === "out" ? search.stock : ""],
+    ["warranty", isWarrantyFilter(search.warranty) ? search.warranty : ""],
   ]) {
     if (value) {
       reportQuery.set(key, value);
@@ -108,6 +111,24 @@ export function InventoryFilters({
               defaultChecked={search.attention === "1"}
             />
             <span>Needs attention</span>
+          </label>
+          <label className="filter-chip">
+            <input
+              type="checkbox"
+              name="stock"
+              value="low"
+              defaultChecked={search.stock === "low"}
+            />
+            <span>Low stock</span>
+          </label>
+          <label className="filter-chip">
+            <input
+              type="checkbox"
+              name="warranty"
+              value="ending"
+              defaultChecked={search.warranty === "ending"}
+            />
+            <span>Warranty ending soon</span>
           </label>
           <label className="filter-chip">
             <input

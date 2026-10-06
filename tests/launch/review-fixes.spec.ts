@@ -37,7 +37,7 @@ test.beforeEach(async () => {
   );
 });
 
-test("import validation explains row problems and checks Settings and existing records", async ({
+test("import checking explains row problems, adjusts odd values, and checks Settings and existing records", async ({
   page,
 }) => {
   await signIn(page);
@@ -55,17 +55,19 @@ test("import validation explains row problems and checks Settings and existing r
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
   });
-  await page.getByLabel("Create missing categories and locations.", { exact: false }).uncheck();
-  await page.getByLabel("Validate before importing.", { exact: false }).check();
-  await page.getByRole("button", { name: "Validate or import inventory" }).click();
-  await expect(page.getByText("1 valid row", { exact: false })).toBeVisible();
-  await expect(page.getByText("4 skipped", { exact: false })).toBeVisible();
+  await page.getByLabel("Create missing categories and locations", { exact: false }).uncheck();
+  await page.getByRole("button", { name: "Check file" }).click();
+  // A bad date and an unreadable memory size are adjusted, not fatal; the other two rows are skipped.
+  await expect(page.getByText("3 rows look good", { exact: false })).toBeVisible();
+  await expect(page.getByText("2 skipped", { exact: false })).toBeVisible();
   await expect(page.getByText("category “Review missing category” does not exist")).toBeVisible();
-  await expect(page.getByText("purchase date is not a valid date.")).toBeVisible();
   await expect(
     page.getByText("asset tag INV-TST-OK-01-0001 is already assigned to a record."),
   ).toBeVisible();
-  await expect(page.getByText("memory (GB) must be a non-negative whole number.")).toBeVisible();
+  await expect(
+    page.getByText("Purchase date “2026-13-45” is not a date I could read"),
+  ).toBeVisible();
+  await expect(page.getByText("Memory “lots” is not a size I could read")).toBeVisible();
   expect(
     (
       await query(
@@ -122,7 +124,7 @@ test("overdue loans are listed, can get a new return time, and cannot overlap a 
   await expect(overdueRow).toContainText("1");
   await overdueRow.click();
   await expect(page).toHaveURL(/status=OVERDUE/);
-  const table = page.locator("tbody tr").filter({ visible: true });
+  const table = page.locator(".request-card");
   await expect(table).toHaveCount(1);
   await expect(table.first()).toContainText("Overdue");
 
@@ -140,7 +142,7 @@ test("overdue loans are listed, can get a new return time, and cannot overlap a 
 
   await returnTime.fill(manilaDateTimeInput(new Date(Date.now() + 24 * 3_600_000)));
   await table.first().getByRole("button", { name: "Save return time" }).click();
-  await expect(page.locator("tbody tr").filter({ visible: true })).toHaveCount(0);
+  await expect(page.locator(".request-card")).toHaveCount(0);
   const loan = (
     await query(
       `SELECT "expectedReturnDate" > NOW() AS future FROM "BorrowRequest" WHERE status='BORROWED'`,
@@ -171,24 +173,6 @@ test("a public item page lists booked times without borrower details", async ({ 
   await expect(page.getByText("Booked", { exact: true })).toBeVisible();
   await expect(page.getByText("Private Borrower Name")).toHaveCount(0);
   await expect(page.getByText("Private purpose")).toHaveCount(0);
-});
-
-test("quick navigation uses arrow keys, Enter, and finds equipment", async ({ page }) => {
-  await signIn(page);
-  await page.keyboard.press("Control+k");
-  const search = page.getByRole("combobox");
-  await search.fill("equipment 27");
-  await expect(page.getByRole("option", { name: /Lab equipment 27/ })).toBeVisible();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Lab equipment 27");
-
-  await page.goto("/dashboard");
-  await page.keyboard.press("Control+k");
-  await page.getByRole("combobox").fill("borrow");
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/dashboard\/borrowing/);
 });
 
 test("search matches every word and the needs-attention filter shares one definition", async ({

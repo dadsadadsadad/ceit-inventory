@@ -38,6 +38,8 @@ const licenseOptions = [
   { value: "expiring", label: "Expiring within 30 days" },
   { value: "dated", label: "Has a license date" },
   { value: "none", label: "No license date" },
+  { value: "licensed", label: "Marked licensed" },
+  { value: "unlicensed", label: "Marked free or not licensed" },
 ];
 
 type SearchParams = {
@@ -205,11 +207,8 @@ export default async function SoftwarePage({
           </div>
         </section>
 
-        <FilterForm
-          label="Software filters"
-          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] xl:items-end"
-        >
-          <label className="sm:col-span-2 xl:col-span-1">
+        <FilterForm label="Software filters" className="filter-spread card rounded-lg p-4">
+          <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
               name="q"
@@ -322,17 +321,22 @@ export default async function SoftwarePage({
                         <table className="w-full">
                           <thead>
                             <tr className="table-heading divider border-b">
-                              {["PC", "Version", "Installed", "License ends", "License hint"].map(
-                                (heading) => (
-                                  <th
-                                    key={heading}
-                                    scope="col"
-                                    className="px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.12em]"
-                                  >
-                                    {heading}
-                                  </th>
-                                ),
-                              )}
+                              {[
+                                "PC",
+                                "Version",
+                                "Installed",
+                                "Licensed",
+                                "License ends",
+                                "License hint",
+                              ].map((heading) => (
+                                <th
+                                  key={heading}
+                                  scope="col"
+                                  className="px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.12em]"
+                                >
+                                  {heading}
+                                </th>
+                              ))}
                             </tr>
                           </thead>
                           <tbody>
@@ -351,6 +355,15 @@ export default async function SoftwarePage({
                                   {install.version ?? <span className="muted">Not recorded</span>}
                                 </td>
                                 <td className="px-3 py-3 text-sm">{date(install.installedAt)}</td>
+                                <td className="px-3 py-3 text-sm">
+                                  {install.isLicensed === true ? (
+                                    "Licensed"
+                                  ) : install.isLicensed === false ? (
+                                    "Free or not licensed"
+                                  ) : (
+                                    <span className="muted">Not set</span>
+                                  )}
+                                </td>
                                 <td className="px-3 py-3 text-sm">
                                   {install.licenseExpiresAt ? (
                                     <span

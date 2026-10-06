@@ -3,6 +3,7 @@ import { Monitor, Package } from "lucide-react";
 
 import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import { Pager } from "@/app/components/pager";
+import { StockBadge } from "@/app/components/stock-badge";
 import { formatManilaDate } from "@/lib/manila-date";
 
 import { BulkSelectionToggle } from "./bulk-selection-toggle";
@@ -155,7 +156,11 @@ export function InventoryRecords({
                     </OptimisticText>
                   </p>
                   <p className="muted">
-                    {item.quantity} · {lastCheckedLabel(item.lastCheckedAt)}
+                    {item.itemType === "SUPPLY" ? `${item.quantity} in stock` : "1 unit"} ·{" "}
+                    {lastCheckedLabel(item.lastCheckedAt)}
+                  </p>
+                  <p className="text-right">
+                    <StockBadge item={item} />
                   </p>
                 </div>
               </article>
@@ -237,7 +242,10 @@ export function InventoryRecords({
                         {item.location.name}
                       </OptimisticText>
                     </td>
-                    <td className="muted px-5 py-4 text-sm">{item.quantity}</td>
+                    <td className="px-5 py-4 text-sm">
+                      <span className="muted">{item.quantity}</span>
+                      <StockBadge item={item} />
+                    </td>
                     <td className="px-5 py-4">
                       <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
                     </td>

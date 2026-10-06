@@ -37,7 +37,7 @@
   box-shadow: var(--shadow);
   display: grid;
   gap: 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .overview-metrics > div {
@@ -45,8 +45,26 @@
   position: relative;
 }
 
-.overview-metrics > div + div {
+.overview-metrics > div:nth-child(even) {
   border-left: 1px dashed var(--border-input);
+}
+
+.overview-metrics > div:nth-child(n + 3) {
+  border-top: 1px dashed var(--border-input);
+}
+
+@container workspace (min-width: 56rem) {
+  .overview-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .overview-metrics > div:nth-child(n + 3) {
+    border-top: 0;
+  }
+
+  .overview-metrics > div + div {
+    border-left: 1px dashed var(--border-input);
+  }
 }
 
 .overview-metrics p {
@@ -278,11 +296,14 @@
   padding: 1.4rem;
 }
 
+/* The ruled lines are drawn from the same 28px rhythm as the text, starting at the first line. */
 .dashboard-note-card textarea {
   background: repeating-linear-gradient(
     transparent 0 27px,
-    color-mix(in srgb, var(--foreground) 12%, transparent) 27px 28px
+    color-mix(in srgb, var(--foreground) 14%, transparent) 27px 28px
   );
+  background-attachment: local;
+  background-origin: content-box;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -290,7 +311,7 @@
   height: auto;
   line-height: 28px;
   min-height: 10rem;
-  padding-inline: 0;
+  padding: 0;
 }
 
 .note-corner {
@@ -359,17 +380,6 @@
   margin-top: 0.3rem;
 }
 
-.overview-footer {
-  align-items: center;
-  color: var(--muted);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 0.875rem;
-  gap: 1rem;
-  justify-content: space-between;
-  padding-block: 1.5rem 0.5rem;
-}
-
 @container workspace (min-width: 56rem) {
   .overview-workspace.has-queue {
     align-items: start;
@@ -408,12 +418,12 @@
   }
 
   .overview-metrics > div {
-    padding: 0.85rem 0.65rem;
+    padding: 0.85rem 0.9rem;
   }
 
   .overview-metrics p {
     font-size: 0.875rem;
-    min-height: 3em;
+    min-height: 1.5em;
     padding-right: 0;
   }
 
@@ -450,10 +460,6 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     padding-inline: 0;
-  }
-
-  .sidebar-utilities .command-shortcut {
-    display: none;
   }
 
   .page .overview-workspace :is(.work-queue, .activity-ledger, .dashboard-note-card) {
@@ -759,15 +765,12 @@
 @media print {
   body::before,
   .skip-link,
-  .command-trigger,
-  .command-menu-backdrop,
   .appearance-control,
   .appearance-popover,
   .no-print,
   .theme-toggle,
   .dashboard-sidebar,
-  .live-updates,
-  .overview-footer {
+  .live-updates {
     display: none !important;
   }
 

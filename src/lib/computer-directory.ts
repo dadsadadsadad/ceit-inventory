@@ -11,7 +11,14 @@ export type DirectoryPc = {
 
 export const licenseWarningDays = 30;
 
-export const licenseFilters = ["expired", "expiring", "dated", "none"] as const;
+export const licenseFilters = [
+  "expired",
+  "expiring",
+  "dated",
+  "none",
+  "licensed",
+  "unlicensed",
+] as const;
 export type LicenseFilter = (typeof licenseFilters)[number];
 
 export function isLicenseFilter(value: string | null | undefined): value is LicenseFilter {
@@ -43,6 +50,8 @@ export function licenseStateLabel(state: LicenseState) {
 
 export type SoftwareEntry = {
   installedAt: Date | null;
+  /** Whether this copy is marked as licensed; empty when nobody has said. */
+  isLicensed: boolean | null;
   licenseExpiresAt: Date | null;
   licenseKeyHint: string | null;
   name: string;

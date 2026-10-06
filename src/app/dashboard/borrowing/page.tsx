@@ -7,6 +7,7 @@ import { OptimisticStatus } from "@/app/components/optimistic-state";
 import { Pager } from "@/app/components/pager";
 import { borrowStatusLabel } from "@/lib/borrow-status";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
+import { personName } from "@/lib/person";
 import { firstParam, pageParam, textParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
@@ -19,7 +20,9 @@ import {
 } from "./borrowing-details";
 import {
   borrowRequestWhere,
+  dueTodayFilter,
   isBorrowStatus,
+  isDueTodayFilter,
   isOverdue,
   isOverdueFilter,
   lapsedLabel,
@@ -100,11 +103,8 @@ export default async function BorrowingPage({
         </header>
 
         {/* Search requests and narrow them down. Choices apply as soon as they are made. */}
-        <FilterForm
-          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] xl:items-end"
-          label="Borrowing request filters"
-        >
-          <label className="sm:col-span-2 xl:col-span-1">
+        <FilterForm className="filter-spread card rounded-lg p-4" label="Borrowing request filters">
+          <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
               name="q"
@@ -119,7 +119,9 @@ export default async function BorrowingPage({
             <select
               name="status"
               defaultValue={
-                isBorrowStatus(search.status) || isOverdueFilter(search.status)
+                isBorrowStatus(search.status) ||
+                isOverdueFilter(search.status) ||
+                isDueTodayFilter(search.status)
                   ? firstParam(search.status)
                   : ""
               }
@@ -127,6 +129,7 @@ export default async function BorrowingPage({
             >
               <option value="">All statuses</option>
               <option value={overdueFilter}>Overdue (past return time)</option>
+              <option value={dueTodayFilter}>Due back today</option>
               {statuses.map((status) => (
                 <option key={status} value={status}>
                   {borrowStatusLabel(status)}
@@ -145,9 +148,9 @@ export default async function BorrowingPage({
               }
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             >
-              <option value="">Reservations and borrow now</option>
-              <option value="reservation">Reservations only</option>
-              <option value="now">Borrow now only</option>
+              <option value="">Any kind</option>
+              <option value="reservation">Reservations</option>
+              <option value="now">Borrow now</option>
             </select>
           </label>
           <label>
@@ -196,212 +199,103 @@ export default async function BorrowingPage({
               </p>
             </div>
 
-            <div className="record-cards divide-y xl:hidden">
-              {requests.map((request) => (
-                <article key={request.id} className="space-y-4 p-4">
-                  {/* Borrowing request card for mobile. */}
-                  <div className="flex items-start justify-between gap-3">
-                    <Link
-                      href={`/dashboard/inventory/${request.inventoryItem.id}`}
-                      className="accent-link font-semibold"
-                    >
-                      {request.inventoryItem.name}
-                    </Link>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {isOverdue(request) ? (
-                        <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
-                          Overdue
-                        </span>
-                      ) : null}
-                      {lapsedLabel(request) ? (
-                        <span className="status-pill status-pill-pending rounded-md px-2.5 py-1 text-xs font-semibold">
-                          {lapsedLabel(request)}
-                        </span>
-                      ) : null}
-                      <OptimisticStatus
-                        entity={`borrow:${request.id}`}
-                        value={request.status}
-                        kind="borrowing"
-                      />
-                    </div>
-                  </div>
-                  <BorrowerDetails request={request} />
-                  <BorrowSchedule request={request} />
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="muted text-xs font-bold uppercase tracking-wide">Quantity</p>
-                      <p className="mt-1">
-                        {request.requestedQuantity} requested ·{" "}
-                        {inventoryAvailabilityLabel(request.inventoryItem)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="muted text-xs font-bold uppercase tracking-wide">Return by</p>
-                      <time
-                        className="mt-1 block"
-                        dateTime={request.expectedReturnDate.toISOString()}
-                      >
-                        {formatDateTime(request.expectedReturnDate)}
-                      </time>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="muted text-xs font-bold uppercase tracking-wide">Purpose</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{request.purpose}</p>
-                  </div>
-                  {request.staffNotes ? (
-                    <div>
-                      <p className="muted text-xs font-bold uppercase tracking-wide">Staff note</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
-                        {request.staffNotes}
-                      </p>
-                    </div>
-                  ) : null}
-                  {request.returnRequestNotes ? (
-                    <div>
-                      <p className="muted text-xs font-bold uppercase tracking-wide">
-                        Borrower return note
-                      </p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
-                        {request.returnRequestNotes}
-                      </p>
-                    </div>
-                  ) : null}
-                  {request.processedByName ? (
-                    <p className="muted text-xs">
-                      Processed by {request.processedByName}
-                      {request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}
-                    </p>
-                  ) : null}
-                  {request.returnedByName ? (
-                    <p className="muted text-xs">
-                      Returned by {request.returnedByName}
-                      {request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}
-                    </p>
-                  ) : null}
-                  <BorrowingActions request={request} layout="mobile" />
-                </article>
-              ))}
-            </div>
-
-            <div className="record-table hidden overflow-x-auto xl:block">
-              {/* Borrowing requests on wider screens. */}
-              <table className="w-full">
-                <thead>
-                  <tr className="table-heading divider border-b">
-                    <th
-                      scope="col"
-                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                    >
-                      Item
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                    >
-                      Borrower
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                    >
-                      Request
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                    >
-                      Status
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((request) => (
-                    <tr key={request.id} className="table-row border-b align-top last:border-0">
-                      <td className="px-5 py-4 text-sm">
+            <div className="request-list">
+              {requests.map((request) => {
+                const overdue = isOverdue(request);
+                const lapsed = lapsedLabel(request);
+                return (
+                  <article key={request.id} className="request-card">
+                    <header className="request-card-head">
+                      <div className="min-w-0">
                         <Link
                           href={`/dashboard/inventory/${request.inventoryItem.id}`}
-                          className="accent-link font-semibold"
+                          className="accent-link text-base font-semibold"
                         >
                           {request.inventoryItem.name}
                         </Link>
-                        <p className="muted mt-1 text-xs">
-                          {request.inventoryItem.assetTag ?? "No asset tag"} ·{" "}
-                          {inventoryAvailabilityLabel(request.inventoryItem)}
+                        <p className="muted mt-1 text-sm">
+                          <span className="asset-code">
+                            {request.inventoryItem.assetTag ?? "No asset tag"}
+                          </span>{" "}
+                          · {inventoryAvailabilityLabel(request.inventoryItem)}
                         </p>
-                      </td>
-                      <td className="px-5 py-4">
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {overdue ? (
+                          <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
+                            Overdue
+                          </span>
+                        ) : null}
+                        {lapsed ? (
+                          <span className="status-pill status-pill-pending rounded-md px-2.5 py-1 text-xs font-semibold">
+                            {lapsed}
+                          </span>
+                        ) : null}
+                        <OptimisticStatus
+                          entity={`borrow:${request.id}`}
+                          value={request.status}
+                          kind="borrowing"
+                        />
+                      </div>
+                    </header>
+
+                    <div className="request-card-grid">
+                      <section aria-label="Borrower">
+                        <p className="request-label">Borrower</p>
                         <BorrowerDetails request={request} />
-                      </td>
-                      <td className="px-5 py-4 text-sm">
-                        <p>{request.requestedQuantity} requested</p>
+                      </section>
+                      <section aria-label="Request">
+                        <p className="request-label">Request</p>
+                        <p className="text-sm">{request.requestedQuantity} requested</p>
                         <BorrowSchedule request={request} />
-                        <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">
+                        <p className="muted mt-2 whitespace-pre-wrap text-sm leading-6">
                           {request.purpose}
                         </p>
                         {request.staffNotes ? (
-                          <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">
+                          <p className="muted mt-2 whitespace-pre-wrap text-sm leading-6">
                             Staff: {request.staffNotes}
                           </p>
                         ) : null}
                         {request.returnRequestNotes ? (
-                          <p className="muted mt-2 max-w-64 whitespace-pre-wrap text-xs leading-5">
+                          <p className="muted mt-2 whitespace-pre-wrap text-sm leading-6">
                             Borrower return note: {request.returnRequestNotes}
                           </p>
                         ) : null}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <OptimisticStatus
-                            entity={`borrow:${request.id}`}
-                            value={request.status}
-                            kind="borrowing"
-                          />
-                          {isOverdue(request) ? (
-                            <span className="status-pill status-pill-critical rounded-md px-2.5 py-1 text-xs font-semibold">
-                              Overdue
-                            </span>
+                      </section>
+                      <section aria-label="History">
+                        <p className="request-label">History</p>
+                        <ul className="request-history">
+                          <li>Requested {formatDateTime(request.requestedAt)}</li>
+                          {request.returnRequestedAt ? (
+                            <li>Return requested {formatDateTime(request.returnRequestedAt)}</li>
                           ) : null}
-                          {lapsedLabel(request) ? (
-                            <span className="status-pill status-pill-pending rounded-md px-2.5 py-1 text-xs font-semibold">
-                              {lapsedLabel(request)}
-                            </span>
+                          {request.processedByName ? (
+                            <li>
+                              Processed by {personName(request.processedByName)}
+                              {request.processedAt
+                                ? ` · ${formatDateTime(request.processedAt)}`
+                                : ""}
+                            </li>
                           ) : null}
-                        </div>
-                        <p className="muted mt-3 max-w-48 text-xs leading-5">
-                          Requested {formatDateTime(request.requestedAt)}
-                        </p>
-                        {request.returnRequestedAt ? (
-                          <p className="muted mt-2 max-w-48 text-xs leading-5">
-                            Return requested {formatDateTime(request.returnRequestedAt)}
-                          </p>
-                        ) : null}
-                        {request.processedByName ? (
-                          <p className="muted mt-2 max-w-48 text-xs leading-5">
-                            Processed by {request.processedByName}
-                            {request.processedAt ? ` · ${formatDateTime(request.processedAt)}` : ""}
-                          </p>
-                        ) : null}
-                        {request.returnedByName ? (
-                          <p className="muted mt-2 max-w-48 text-xs leading-5">
-                            Returned by {request.returnedByName}
-                            {request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="min-w-[22rem] px-5 py-4">
-                        <BorrowingActions request={request} layout="desktop" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          {request.returnedByName ? (
+                            <li>
+                              Returned by {personName(request.returnedByName)}
+                              {request.returnedAt ? ` · ${formatDateTime(request.returnedAt)}` : ""}
+                            </li>
+                          ) : null}
+                          {request.remindedAt ? (
+                            <li>Reminded {formatDateTime(request.remindedAt)}</li>
+                          ) : null}
+                        </ul>
+                      </section>
+                    </div>
+
+                    <footer className="request-card-actions">
+                      <BorrowingActions request={request} />
+                    </footer>
+                  </article>
+                );
+              })}
             </div>
 
             <Pager

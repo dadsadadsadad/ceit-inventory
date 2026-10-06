@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { formatManilaDate } from "@/lib/manila-date";
+import { personName } from "@/lib/person";
 
 import type { ItemRecord } from "./item-record";
 
@@ -79,7 +80,7 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
               <li key={event.id} className="divider border-l pl-4 text-sm">
                 <p className="font-semibold">{event.summary}</p>
                 <p className="muted mt-1 text-xs">
-                  {event.actorName ?? "System"} ·{" "}
+                  {personName(event.actorName) ?? "System"} ·{" "}
                   {formatManilaDate(event.createdAt, {
                     dateStyle: "medium",
                     timeStyle: "short",

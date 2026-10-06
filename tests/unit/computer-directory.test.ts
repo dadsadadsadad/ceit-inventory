@@ -24,6 +24,7 @@ const entry = (
   version: null,
   licenseKeyHint: null,
   licenseExpiresAt: null,
+  isLicensed: null,
   installedAt: null,
   pc: pc(computer),
   ...extra,

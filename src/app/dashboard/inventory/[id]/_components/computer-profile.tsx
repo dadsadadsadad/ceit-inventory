@@ -12,6 +12,99 @@ import {
 import { Detail, TextField, dateValue, displayDate } from "./item-fields";
 import type { ItemRecord } from "./item-record";
 
+type SoftwareValues = {
+  installedAt: Date | null;
+  isLicensed: boolean | null;
+  licenseExpiresAt: Date | null;
+  licenseKeyHint: string | null;
+  name: string;
+  version: string | null;
+};
+
+// A short phrase for the line above a software entry: licensed, and until when.
+function licenseSummary(software: Pick<SoftwareValues, "isLicensed" | "licenseExpiresAt">) {
+  const parts = [
+    software.isLicensed === true
+      ? "Licensed"
+      : software.isLicensed === false
+        ? "Not licensed"
+        : null,
+    software.licenseExpiresAt ? `License ends ${displayDate(software.licenseExpiresAt)}` : null,
+  ].filter(Boolean);
+  return parts.length ? ` · ${parts.join(" · ")}` : "";
+}
+
+// The fields for one installed program, the same whether adding or editing it.
+function SoftwareFields({ software }: { software?: SoftwareValues }) {
+  const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
+  return (
+    <>
+      <label>
+        <span className="text-sm font-semibold">Software name *</span>
+        <input
+          required
+          name="name"
+          defaultValue={software?.name ?? ""}
+          maxLength={255}
+          className={field}
+          placeholder="Visual Studio Code"
+        />
+      </label>
+      <label>
+        <span className="text-sm font-semibold">Version</span>
+        <input
+          name="version"
+          defaultValue={software?.version ?? ""}
+          maxLength={255}
+          className={field}
+        />
+      </label>
+      <label>
+        <span className="text-sm font-semibold">Licensed?</span>
+        <select
+          name="isLicensed"
+          defaultValue={
+            software?.isLicensed === true ? "yes" : software?.isLicensed === false ? "no" : ""
+          }
+          className={field}
+        >
+          <option value="">Not set</option>
+          <option value="yes">Licensed</option>
+          <option value="no">Free or not licensed</option>
+        </select>
+      </label>
+      <label>
+        <span className="text-sm font-semibold">License ends</span>
+        <input
+          name="licenseExpiresAt"
+          type="date"
+          defaultValue={dateValue(software?.licenseExpiresAt)}
+          className={field}
+        />
+      </label>
+      <label>
+        <span className="text-sm font-semibold">License hint</span>
+        <input
+          name="licenseKeyHint"
+          defaultValue={software?.licenseKeyHint ?? ""}
+          maxLength={255}
+          className={field}
+          placeholder="Last four characters of the key"
+        />
+      </label>
+      <label>
+        <span className="text-sm font-semibold">Installed on</span>
+        <input
+          name="installedAt"
+          type="date"
+          defaultValue={dateValue(software?.installedAt)}
+          className={field}
+        />
+      </label>
+    </>
+  );
+}
+
 type ComputerInfo = {
   id: string;
   operatingSystem: string | null;
@@ -191,12 +284,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                         {software.version ? (
                           <span className="muted"> · {software.version}</span>
                         ) : null}
-                        {software.licenseExpiresAt ? (
-                          <span className="muted">
-                            {" "}
-                            · License ends {displayDate(software.licenseExpiresAt)}
-                          </span>
-                        ) : null}
+                        <span className="muted">{licenseSummary(software)}</span>
                       </summary>
                       {/* Edit this installed application. */}
                       <FeedbackForm
@@ -208,48 +296,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                         <input type="hidden" name="itemId" value={item.id} />
                         <input type="hidden" name="computerId" value={computer.id} />
                         <input type="hidden" name="id" value={software.id} />
-                        <input
-                          required
-                          name="name"
-                          defaultValue={software.name}
-                          maxLength={255}
-                          className="field rounded-lg px-3 py-2 text-sm"
-                          aria-label="Software name"
-                        />
-                        <input
-                          name="version"
-                          defaultValue={software.version ?? ""}
-                          maxLength={255}
-                          className="field rounded-lg px-3 py-2 text-sm"
-                          aria-label="Software version"
-                          placeholder="Version"
-                        />
-                        <input
-                          name="licenseKeyHint"
-                          defaultValue={software.licenseKeyHint ?? ""}
-                          maxLength={255}
-                          className="field rounded-lg px-3 py-2 text-sm"
-                          aria-label="License hint"
-                          placeholder="License hint"
-                        />
-                        <label className="text-sm">
-                          <span className="sr-only">Installed date</span>
-                          <input
-                            name="installedAt"
-                            type="date"
-                            defaultValue={dateValue(software.installedAt)}
-                            className="field w-full rounded-lg px-3 py-2"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <span className="sr-only">License expiry date</span>
-                          <input
-                            name="licenseExpiresAt"
-                            type="date"
-                            defaultValue={dateValue(software.licenseExpiresAt)}
-                            className="field w-full rounded-lg px-3 py-2"
-                          />
-                        </label>
+                        <SoftwareFields software={software} />
                         <SubmitButton
                           pendingLabel="Saving…"
                           className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
@@ -276,12 +323,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                       {software.version ? (
                         <span className="muted"> · {software.version}</span>
                       ) : null}
-                      {software.licenseExpiresAt ? (
-                        <span className="muted">
-                          {" "}
-                          · License ends {displayDate(software.licenseExpiresAt)}
-                        </span>
-                      ) : null}
+                      <span className="muted">{licenseSummary(software)}</span>
                     </div>
                   ),
                 )}
@@ -302,44 +344,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                   {/* Add another installed application. */}
                   <input type="hidden" name="itemId" value={item.id} />
                   <input type="hidden" name="computerId" value={computer.id} />
-                  <input
-                    required
-                    name="name"
-                    maxLength={255}
-                    className="field rounded-lg px-3 py-2 text-sm"
-                    placeholder="Software name"
-                    aria-label="Software name"
-                  />
-                  <input
-                    name="version"
-                    maxLength={255}
-                    className="field rounded-lg px-3 py-2 text-sm"
-                    placeholder="Version"
-                    aria-label="Software version"
-                  />
-                  <input
-                    name="licenseKeyHint"
-                    maxLength={255}
-                    className="field rounded-lg px-3 py-2 text-sm"
-                    placeholder="License hint"
-                    aria-label="License hint"
-                  />
-                  <label className="text-sm">
-                    <span className="sr-only">Installed date</span>
-                    <input
-                      name="installedAt"
-                      type="date"
-                      className="field w-full rounded-lg px-3 py-2"
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <span className="sr-only">License expiry date</span>
-                    <input
-                      name="licenseExpiresAt"
-                      type="date"
-                      className="field w-full rounded-lg px-3 py-2"
-                    />
-                  </label>
+                  <SoftwareFields />
                   <SubmitButton
                     pendingLabel="Adding…"
                     className="primary-button rounded-lg px-4 py-2 text-sm font-semibold"

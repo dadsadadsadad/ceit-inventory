@@ -58,6 +58,7 @@ test("a public QR issue appears in another session without navigation or reload"
   try {
     await publicPage.goto("http://127.0.0.1:3101/scan/ceit-launch-item-27");
     await publicPage.getByRole("button", { name: /Report a problem/ }).click();
+    await publicPage.getByLabel("Your name").fill("Live Reporter");
     await publicPage.getByLabel("Issue title").fill(title);
     await publicPage
       .getByLabel("What happened")
@@ -189,13 +190,11 @@ test("new records have an immediate preview and synchronize additions, edits, an
   try {
     await signIn(editor);
     await editor.goto("/dashboard/inventory/new");
-    await editor.getByLabel("Item name").fill(name);
+    await editor.locator('input[name="name"]').fill(name);
     await editor
-      .getByLabel("Category", { exact: false })
+      .locator('select[name="categoryId"]')
       .selectOption({ label: "Launch test equipment" });
-    await editor
-      .getByLabel("Location", { exact: false })
-      .selectOption({ label: "Launch test lab" });
+    await editor.locator('select[name="locationId"]').selectOption({ label: "Launch test lab" });
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -314,7 +313,10 @@ test("workspace layouts keep readable controls within their containers at four w
     "/dashboard/activity",
     "/dashboard/settings",
     "/dashboard/users",
-    "/scan/ceit-launch-item-27",
+    "/scan/ceit-launch-item-27?view=public",
+    "/dashboard/inventory/hardware",
+    "/dashboard/inventory/software",
+    "/dashboard/inventory/import",
   ];
   for (const width of [360, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 960 });

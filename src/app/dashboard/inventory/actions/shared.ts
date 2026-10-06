@@ -2,6 +2,14 @@ import "server-only";
 
 import { BorrowStatus, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
 
+import {
+  CustomFieldError,
+  customFieldInputName,
+  customFieldsFor,
+  parseCustomFieldValues,
+  readCustomValues,
+} from "@/lib/custom-fields";
+import { loadCustomFields } from "@/lib/custom-field-queries";
 import { isUuid } from "@/lib/ids";
 import { FormError } from "@/lib/form-action";
 import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
@@ -15,6 +23,8 @@ export const statuses = Object.values(ItemStatus);
 export const conditions = Object.values(ItemCondition);
 export const itemTypes = Object.values(ItemType);
 export const maximumBulkSelection = 10_000;
+/** The most equipment records one "Add" can create at once. */
+export const maximumNewUnits = 50;
 export const activeBorrowRequestStatuses = [
   BorrowStatus.REQUESTED,
   BorrowStatus.RESERVED,
@@ -169,6 +179,53 @@ export function optionalDate(formData: FormData, key: string) {
   return parsed;
 }
 
+// Stock records can set their own alert level. Empty means the default; equipment has none.
+export function readLowStockThreshold(formData: FormData, itemType: ItemType) {
+  if (itemType !== ItemType.SUPPLY) {
+    return null;
+  }
+  return optionalInteger(formData, "lowStockThreshold", 1_000_000);
+}
+
+// Read the custom field answers that apply to this item. Answers for fields that do not apply
+// (for example after a category change) are kept as they were; cleared answers are removed.
+export async function readItemCustomFields(
+  formData: FormData,
+  item: { categoryId: string; itemType: ItemType },
+  existing?: unknown,
+) {
+  const applicable = customFieldsFor(await loadCustomFields(), item);
+  const kept = readCustomValues(existing);
+  for (const field of applicable) {
+    delete kept[field.id];
+  }
+  let answers;
+  try {
+    answers = parseCustomFieldValues(applicable, (name) => formData.get(name));
+  } catch (error) {
+    if (error instanceof CustomFieldError) {
+      throw new FormError(error.message);
+    }
+    throw error;
+  }
+  const merged = { ...kept, ...answers };
+  return Object.keys(merged).length ? (merged as Prisma.InputJsonObject) : Prisma.DbNull;
+}
+
+export { customFieldInputName };
+
+// "yes" or "no" from a select; empty means nobody said.
+export function optionalYesNo(formData: FormData, key: string) {
+  const value = optionalText(formData, key, 8);
+  if (!value) {
+    return null;
+  }
+  if (value !== "yes" && value !== "no") {
+    throw new FormError(`${key} must be yes or no.`);
+  }
+  return value === "yes";
+}
+
 // Computer form values.
 export function computerData(formData: FormData, includeCheckTime = false) {
   return {
@@ -229,13 +286,19 @@ export function updatedFields(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
 ): Prisma.InputJsonObject {
+  const text = (value: unknown) =>
+    value === Prisma.DbNull
+      ? ""
+      : value !== null && typeof value === "object" && !(value instanceof Date)
+        ? JSON.stringify(value)
+        : String(value ?? "");
   const entries = Object.entries(after)
-    .filter(([key, value]) => String(before[key] ?? "") !== String(value ?? ""))
+    .filter(([key, value]) => text(before[key]) !== text(value))
     .map(([key, value]) => [
       key,
       value instanceof Date
         ? value.toISOString()
-        : value === undefined
+        : value === undefined || value === Prisma.DbNull
           ? null
           : (value as string | number | boolean | null),
     ]);

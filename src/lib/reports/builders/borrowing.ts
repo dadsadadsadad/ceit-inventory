@@ -1,6 +1,7 @@
 import { BorrowStatus, type Prisma } from "@prisma/client";
 
 import { borrowStatusLabel } from "@/lib/borrow-status";
+import { dueTodayWhere } from "@/lib/loan-due";
 import { borrowSearchWhere } from "@/lib/record-search";
 import {
   borrowingReportDateWhere,
@@ -49,6 +50,7 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
     borrowingReportDateWhere(filters, range),
     ...(status ? [{ status }] : []),
     ...(filters.borrowingState === "overdue" ? [{ expectedReturnDate: { lt: now } }] : []),
+    ...(filters.borrowingState === "due-today" ? [dueTodayWhere(now)] : []),
     ...borrowSearchWhere(filters.query),
   ];
   const where: Prisma.BorrowRequestWhereInput = { AND: conditions };
@@ -92,7 +94,9 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
           ? "Borrowed items"
           : filters.borrowingState === "returned"
             ? "Returned items"
-            : "Borrowing",
+            : filters.borrowingState === "due-today"
+              ? "Due back today"
+              : "Borrowing",
     description: "Requests, reservations, loans, and returns.",
     filters: chips(
       filters.query && `Search: “${filters.query}”`,

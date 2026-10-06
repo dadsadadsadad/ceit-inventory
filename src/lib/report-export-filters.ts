@@ -15,6 +15,7 @@ import {
   type LicenseFilter,
 } from "@/lib/computer-directory";
 import { isUuid } from "@/lib/ids";
+import { isWarrantyFilter, type WarrantyFilter } from "@/lib/warranty";
 import { manilaCalendarDate } from "@/lib/manila-date";
 
 export const exportPeriods = [
@@ -29,6 +30,7 @@ export const borrowingReportStates = [
   "all",
   "currently-borrowed",
   "overdue",
+  "due-today",
   "reserved",
   "returned",
   "requested",
@@ -62,6 +64,9 @@ export type ReportExportFilters = {
   pcOnly: boolean;
   period: ExportPeriod;
   query?: string;
+  /** "low" for stock at or below its alert level (which includes none left), "out" for none left. */
+  stock?: "low" | "out";
+  warranty?: WarrantyFilter;
 };
 
 type QueryParameters = Pick<URLSearchParams, "get">;
@@ -223,6 +228,14 @@ export function parseReportExportFilters(
   if (license && !isLicenseFilter(license)) {
     throw new Error("Invalid license filter.");
   }
+  const stock = parameters.get("stock");
+  if (stock && stock !== "low" && stock !== "out") {
+    throw new Error("Invalid stock filter.");
+  }
+  const warranty = parameters.get("warranty");
+  if (warranty && !isWarrantyFilter(warranty)) {
+    throw new Error("Invalid warranty filter.");
+  }
   const component = parameters.get("component");
   if (component && !isHardwareComponent(component)) {
     throw new Error("Invalid hardware component.");
@@ -256,6 +269,8 @@ export function parseReportExportFilters(
     pcOnly: parameters.get("pcOnly") === "1",
     period: requestedPeriod,
     query: searchText(parameters.get("q")),
+    stock: stock ? (stock as "low" | "out") : undefined,
+    warranty: warranty ? (warranty as WarrantyFilter) : undefined,
   };
 }
 
@@ -266,6 +281,7 @@ export function borrowingReportStatusFilter(
   switch (filters.borrowingState) {
     case "currently-borrowed":
     case "overdue":
+    case "due-today":
       return { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] };
     case "returned":
       return BorrowStatus.RETURNED;
@@ -288,6 +304,8 @@ export function borrowingReportStateLabel(state: BorrowingReportState) {
       return "Currently borrowed";
     case "overdue":
       return "Overdue";
+    case "due-today":
+      return "Due back today";
     case "returned":
       return "Returned items";
     case "reserved":
@@ -325,6 +343,7 @@ export function borrowingReportDateWhere(
   }
   switch (filters.borrowingState) {
     case "overdue":
+    case "due-today":
       return { expectedReturnDate: range };
     case "currently-borrowed":
       return { processedAt: range };

@@ -47,7 +47,7 @@ export function AuditFilters({ filters }: { filters: AuditTrailFilters }) {
           </label>
         ))}
       </fieldset>
-      <p className="muted text-sm">{auditViewDescription(filters.view)}</p>
+      <p className="muted mt-2 text-sm">{auditViewDescription(filters.view)}</p>
 
       <details className="filter-disclosure" open={advancedOpen}>
         <summary className="cursor-pointer text-sm font-semibold">More filters</summary>

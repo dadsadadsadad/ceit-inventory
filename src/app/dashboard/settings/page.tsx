@@ -8,6 +8,7 @@ import { prisma } from "@/prisma";
 import { createCategory, createLocation } from "./actions";
 import { AccountSettings } from "./_components/account-settings";
 import { CategoryEditor } from "./_components/category-editor";
+import { CustomFieldEditor, NewCustomField } from "./_components/custom-field-editor";
 import { LocationEditor } from "./_components/location-editor";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
       orderBy: { name: "asc" },
       include: { _count: { select: { items: true } } },
     }),
+    prisma.customField.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
   ]);
 
   return (
@@ -52,7 +54,7 @@ export default async function SettingsPage() {
           <div className="grid gap-6 xl:grid-cols-2">
             {/* Create and edit rooms. */}
             <section className="card rounded-lg p-5 sm:p-6">
-              <h3 className="text-lg font-semibold">Rooms and locations</h3>
+              <h3 className="card-title text-lg font-semibold">Rooms and locations</h3>
               <details className="section-disclosure mt-5">
                 <summary className="accent-link cursor-pointer text-sm font-semibold">
                   Add location
@@ -130,7 +132,7 @@ export default async function SettingsPage() {
 
             {/* Create and edit inventory categories. */}
             <section className="card rounded-lg p-5 sm:p-6">
-              <h3 className="text-lg font-semibold">Item categories</h3>
+              <h3 className="card-title text-lg font-semibold">Item categories</h3>
               <details className="section-disclosure mt-5">
                 <summary className="accent-link cursor-pointer text-sm font-semibold">
                   Add category
@@ -195,6 +197,34 @@ export default async function SettingsPage() {
               </div>
             </section>
           </div>
+
+          {/* Extra details staff can record on items. */}
+          <section>
+            <p className="eyebrow">Item details</p>
+            <h2 className="mt-2 text-xl font-semibold">Extra fields</h2>
+            <p className="muted mt-1 max-w-2xl text-sm leading-6">
+              Add your own details to items, such as a lens mount for cameras or a funding source.
+              They appear in an optional section when adding and editing items, and in the inventory
+              export.
+            </p>
+          </section>
+          <section className="card rounded-lg p-5 sm:p-6">
+            <NewCustomField categories={setup[0].map(({ id, name }) => ({ id, name }))} />
+            <div className="divider mt-6 space-y-3 border-t pt-5">
+              <h3 className="text-sm font-semibold">Current extra fields</h3>
+              {setup[2].length ? (
+                setup[2].map((field) => (
+                  <CustomFieldEditor
+                    key={field.id}
+                    field={field}
+                    categories={setup[0].map(({ id, name }) => ({ id, name }))}
+                  />
+                ))
+              ) : (
+                <p className="muted text-sm">No extra fields yet. Items work fine without them.</p>
+              )}
+            </div>
+          </section>
         </>
       </div>
     </div>

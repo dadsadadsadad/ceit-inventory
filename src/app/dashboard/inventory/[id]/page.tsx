@@ -1,9 +1,11 @@
 export const metadata = { title: "Item record · CEIT Inventory" };
 
+import { ItemType } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { OptimisticText } from "@/app/components/optimistic-state";
+import { loadCustomFields } from "@/lib/custom-field-queries";
 import { isUuid } from "@/lib/ids";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { firstParam, type RawParam } from "@/lib/search-params";
@@ -14,6 +16,8 @@ import { ItemEditPanel } from "./_components/item-edit-panel";
 import { ItemHistory } from "./_components/item-history";
 import { itemRecordInclude } from "./_components/item-record";
 import { ItemSummary } from "./_components/item-summary";
+import { ScanStrip } from "./_components/scan-strip";
+import { StockCard } from "./_components/stock-card";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +27,7 @@ export default async function InventoryItemPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ edit?: RawParam }>;
+  searchParams: Promise<{ edit?: RawParam; scanned?: RawParam }>;
 }) {
   const user = await requireInventoryAccess();
   const canManage = canManageInventory(user.role);
@@ -33,10 +37,11 @@ export default async function InventoryItemPage({
     notFound();
   }
 
-  const [item, categories, locations] = await Promise.all([
+  const [item, categories, locations, customFields] = await Promise.all([
     prisma.inventoryItem.findUnique({ where: { id }, include: itemRecordInclude }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.location.findMany({ orderBy: { name: "asc" } }),
+    loadCustomFields(),
   ]);
 
   if (!item) {
@@ -88,9 +93,12 @@ export default async function InventoryItemPage({
           </div>
         </header>
 
+        {firstParam(search.scanned) === "1" ? <ScanStrip item={item} /> : null}
+
         <div className="item-record-layout grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="space-y-6">
-            <ItemSummary item={item} />
+            <ItemSummary item={item} customFields={customFields} />
+            {item.itemType === ItemType.SUPPLY && canManage ? <StockCard item={item} /> : null}
             <ComputerSection item={item} canManage={canManage} />
             <ItemHistory item={item} />
           </div>
@@ -99,6 +107,7 @@ export default async function InventoryItemPage({
             <ItemEditPanel
               item={item}
               categories={categories}
+              customFields={customFields}
               locations={locations}
               open={firstParam(search.edit) === "1"}
             />

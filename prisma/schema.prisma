@@ -78,6 +78,15 @@ enum UserRole {
   STAFF
 }
 
+// The kinds of extra details staff can add to equipment and stock.
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  YES_NO
+  CHOICE
+}
+
 // Rooms and storage areas.
 model Location {
   id           String          @id @default(uuid()) @db.Uuid
@@ -99,6 +108,7 @@ model Category {
   description  String?
   isActive     Boolean         @default(true)
   items        InventoryItem[]
+  customFields CustomField[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }
@@ -120,6 +130,12 @@ model InventoryItem {
   serialNumber       String?              @unique
   purchaseDate       DateTime?
   purchasePrice      Decimal?             @db.Decimal(12, 2)
+  // Stock only: warn when the quantity falls to this number. Empty means the default (5).
+  lowStockThreshold  Int?
+  // Optional: when the manufacturer's warranty ends.
+  warrantyEndsAt     DateTime?
+  // Optional extra details, keyed by CustomField id.
+  customFields       Json?
   notes              String?
   lastCheckedAt      DateTime?
   categoryId         String               @db.Uuid
@@ -138,6 +154,28 @@ model InventoryItem {
   @@index([categoryId])
   @@index([itemType])
   @@index([lastCheckedAt])
+  @@index([updatedAt])
+  @@index([warrantyEndsAt])
+}
+
+// An extra detail staff can record on items, such as "Lens mount" or "Funding source".
+model CustomField {
+  id         String          @id @default(uuid()) @db.Uuid
+  label      String
+  fieldType  CustomFieldType @default(TEXT)
+  // The allowed answers for a CHOICE field.
+  choices    String[]
+  // Empty means every item; otherwise only items of this type (ASSET or SUPPLY).
+  appliesTo  ItemType?
+  // Empty means every category; otherwise only items in this category.
+  categoryId String?         @db.Uuid
+  category   Category?       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sortOrder  Int             @default(0)
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
 }
 
 // Hardware details for an inventory item.
@@ -170,6 +208,8 @@ model ComputerSoftware {
   version          String?
   licenseKeyHint   String?
   licenseExpiresAt DateTime?
+  // Optional: whether this copy is licensed (empty when nobody has said).
+  isLicensed       Boolean?
   installedAt      DateTime?
   computer         Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
   createdAt        DateTime  @default(now())
@@ -195,6 +235,7 @@ model InventoryAudit {
 
   @@index([itemId, createdAt])
   @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
 }
 
 // Borrowing, reservations, and returns.
@@ -221,6 +262,8 @@ model BorrowRequest {
   returnedByName        String?
   returnRequestedAt     DateTime?
   returnRequestNotes    String?
+  // When staff last reminded the borrower about the return time.
+  remindedAt            DateTime?
   checkedOutItemStatus  ItemStatus?
   personalDataExpiresAt DateTime
   inventoryItem         InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
@@ -232,6 +275,7 @@ model BorrowRequest {
   @@index([status, returnRequestedAt])
   @@index([personalDataExpiresAt])
   @@index([inventoryItemId, status, startsAt, expectedReturnDate])
+  @@index([status, expectedReturnDate])
 }
 
 // Temporary request limits.

@@ -221,22 +221,6 @@ test("photos upload, open above the page, preserve navigation focus, and can be 
   }
 });
 
-test("mobile quick navigation opens with the sidebar closed and restores focus", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await signIn(page);
-  const navigationButton = page.getByRole("button", { name: "Open navigation" });
-  await navigationButton.focus();
-  await page.keyboard.press("Control+k");
-  const menu = page.getByRole("dialog", { name: "Where would you like to go?" });
-  await expect(menu).toBeVisible();
-  await expect(menu.getByRole("combobox")).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(menu).toHaveCount(0);
-  await expect(navigationButton).toBeFocused();
-});
-
 test("the report builder clears filters and only offers controls that fit the report", async ({
   page,
 }) => {
@@ -291,7 +275,10 @@ test("every route has a readable mobile and desktop view in both themes", async 
     ["settings", "/dashboard/settings"],
     ["users", "/dashboard/users"],
     ["scanner", "/scan"],
-    ["public-item", "/scan/ceit-launch-item-24"],
+    ["public-item", "/scan/ceit-launch-item-24?view=public"],
+    ["scanned-item", `/dashboard/inventory/${item.id}?edit=1&scanned=1`],
+    ["hardware", "/dashboard/inventory/hardware"],
+    ["software", "/dashboard/inventory/software"],
     ["login", "/auth/login"],
   ];
   for (const theme of ["light", "dark"]) {

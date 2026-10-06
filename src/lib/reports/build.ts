@@ -11,6 +11,8 @@ import { buildMaintenanceReport } from "./builders/maintenance";
 import { buildOverviewReport } from "./builders/overview";
 import { buildPcRegisterReport } from "./builders/pcs";
 import { buildSoftwareReport } from "./builders/software";
+import { buildStockReport } from "./builders/stock";
+import { buildWarrantyReport } from "./builders/warranty";
 import type { BuilderContext } from "./builders/shared";
 import { isReportKind, reportKindInfo, type ReportKind } from "./kinds";
 import { reportFilename, ReportRequestError, type ReportModel, type ReportPurpose } from "./model";
@@ -24,6 +26,8 @@ const builders: Record<ReportKind, (context: BuilderContext) => Promise<ReportMo
   overview: buildOverviewReport,
   pcs: buildPcRegisterReport,
   software: buildSoftwareReport,
+  stock: buildStockReport,
+  warranty: buildWarrantyReport,
 };
 
 /**

@@ -18,7 +18,13 @@ const licenseChips = {
   expiring: "License ending within 30 days",
   dated: "Has a license date",
   none: "No license date",
+  licensed: "Marked licensed",
+  unlicensed: "Marked free or not licensed",
 } as const;
+
+function licensedText(value: boolean | null) {
+  return value === true ? "Licensed" : value === false ? "Free or not licensed" : "Not set";
+}
 
 function licenseSummary(group: SoftwareGroup) {
   if (group.state === "none") {
@@ -109,12 +115,14 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
           { label: "Software", width: 1.4, primary: true },
           { label: "PC", width: 1.4, primary: true },
           { label: "Installed", width: 0.9 },
+          { label: "Licensed", width: 0.9 },
           { label: "License ends", width: 1.1 },
         ],
         rows: installs.rows.map(({ install }) => [
           `${install.name}\n${install.version ? `Version ${install.version}` : "Version not recorded"}`,
           `${install.pc.name}\n${install.pc.room}`,
           formatReportDay(install.installedAt),
+          licensedText(install.isLicensed),
           install.licenseExpiresAt
             ? `${formatReportDay(install.licenseExpiresAt)}\n${licenseStateLabel(licenseState(install.licenseExpiresAt, now))}`
             : "No license date",
@@ -133,6 +141,7 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
               "Asset tag",
               "Room",
               "Installed",
+              "Licensed",
               "License ends",
               "License status",
               "License key hint",
@@ -144,6 +153,7 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
               install.pc.assetTag,
               install.pc.room,
               install.installedAt ? manilaDateText(install.installedAt) : "",
+              licensedText(install.isLicensed),
               install.licenseExpiresAt ? manilaDateText(install.licenseExpiresAt) : "",
               licenseStateLabel(licenseState(install.licenseExpiresAt, now)),
               install.licenseKeyHint,

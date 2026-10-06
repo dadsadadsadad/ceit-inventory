@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import { isUuid } from "@/lib/ids";
 import { isItemCondition, isItemStatus, isItemType } from "@/lib/record-search";
+import { isWarrantyFilter } from "@/lib/warranty";
 import { firstParam } from "@/lib/search-params";
 
 export { inventoryWhere, isItemCondition, isItemStatus, isItemType } from "@/lib/record-search";
@@ -22,6 +23,8 @@ export type SearchParams = {
   q?: string;
   sort?: string;
   status?: string;
+  stock?: string;
+  warranty?: string;
 };
 export type RawSearchParams = { [Key in keyof SearchParams]?: string | string[] };
 export type InventoryListItem = Prisma.InventoryItemGetPayload<{
@@ -35,6 +38,8 @@ export const inventoryListSelect = {
   id: true,
   name: true,
   assetTag: true,
+  itemType: true,
+  lowStockThreshold: true,
   quantity: true,
   status: true,
   lastCheckedAt: true,
@@ -101,6 +106,12 @@ export function inventoryFilterParameters(search: SearchParams) {
   }
   if (search.checked === "overdue") {
     parameters.set("checked", "overdue");
+  }
+  if (search.stock === "low" || search.stock === "out") {
+    parameters.set("stock", search.stock);
+  }
+  if (isWarrantyFilter(search.warranty)) {
+    parameters.set("warranty", search.warranty);
   }
   return parameters;
 }

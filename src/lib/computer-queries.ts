@@ -72,7 +72,11 @@ export function softwareWhere(
           ? { licenseExpiresAt: { not: null } }
           : filters.license === "none"
             ? { licenseExpiresAt: null }
-            : {};
+            : filters.license === "licensed"
+              ? { isLicensed: true }
+              : filters.license === "unlicensed"
+                ? { isLicensed: false }
+                : {};
   return {
     computer: { is: { item: { is: itemScope(filters) } } },
     ...licenseCondition,
@@ -165,6 +169,7 @@ export async function loadSoftware(filters: DirectoryFilters, now = new Date()) 
       version: true,
       licenseKeyHint: true,
       licenseExpiresAt: true,
+      isLicensed: true,
       installedAt: true,
       computer: { select: { item: { select: pcSelect } } },
     },
@@ -177,6 +182,7 @@ export async function loadSoftware(filters: DirectoryFilters, now = new Date()) 
     version: row.version,
     licenseKeyHint: row.licenseKeyHint,
     licenseExpiresAt: row.licenseExpiresAt,
+    isLicensed: row.isLicensed,
     installedAt: row.installedAt,
     pc: {
       id: row.computer.item.id,

@@ -37,6 +37,11 @@ async function download(page: Page, path: string) {
     },
   });
 }
+// Staff confirm they looked at the borrower's ID before equipment leaves.
+async function checkOutEquipment(page: Page) {
+  await page.getByLabel("I checked the borrower's school ID").filter({ visible: true }).check();
+  await page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }).click();
+}
 test.beforeAll(async () => {
   await query(
     'DELETE FROM "InventoryAudit"; DELETE FROM "BorrowRequest"; DELETE FROM "MaintenanceTicket"; DELETE FROM "PublicRequestAttempt"; DELETE FROM "InventoryItem" WHERE "qrCode" NOT LIKE \'ceit-launch-item-%\'; UPDATE "InventoryItem" SET status=\'OK\', quantity=1;',
@@ -53,7 +58,7 @@ async function fillBorrow(
   fromHours = 24,
   toHours = 26,
 ) {
-  await page.goto(`/scan/ceit-launch-item-${item}`);
+  await page.goto(`/scan/ceit-launch-item-${item}?view=public`);
   await page.getByRole("button", { name: /Borrow equipment/ }).click();
   if (later) {
     await page.getByLabel("Reserve for later").check();
@@ -116,6 +121,7 @@ test("maintenance finds equipment on demand and accepts an exact item link", asy
 test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ page }) => {
   await page.goto("/scan/ceit-launch-item-1");
   await page.getByRole("button", { name: /Report a problem/ }).click();
+  await page.getByLabel("Your name").fill("Test Reporter");
   await page.getByLabel("Issue title").fill("Lamp flickers during class");
   await page
     .getByLabel("What happened")
@@ -124,6 +130,7 @@ test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ pa
   await expect(page.getByRole("status")).toContainText("Your issue report was sent");
   await page.goto("/scan/ceit-launch-item-1");
   await page.getByRole("button", { name: /Report a problem/ }).click();
+  await page.getByLabel("Your name").fill("Test Reporter");
   await page.getByLabel("Issue title").fill("Lamp flickers during class");
   await page
     .getByLabel("What happened")
@@ -240,7 +247,7 @@ test("same-day checkout and return preserve the individual asset quantity", asyn
   await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
   await signIn(page);
   await page.goto("/dashboard/borrowing?q=TEST-NOW-1");
-  await page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }).click();
+  await checkOutEquipment(page);
   await expect(page.getByText("Borrowed", { exact: true }).filter({ visible: true })).toBeVisible();
   let item = await query('SELECT status,quantity FROM "InventoryItem" WHERE "qrCode"=$1', [
     "ceit-launch-item-3",
@@ -264,10 +271,7 @@ test("legacy grouped equipment returns every unit after its last available unit 
     await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
     await signIn(page);
     await page.goto(`/dashboard/borrowing?q=${student}`);
-    await page
-      .getByRole("button", { name: "Check out equipment" })
-      .filter({ visible: true })
-      .click();
+    await checkOutEquipment(page);
     await expect(
       page.getByText("Borrowed", { exact: true }).filter({ visible: true }),
     ).toBeVisible();
@@ -362,14 +366,14 @@ test("a reservation checks out only at pickup and the public return accepts phon
     'UPDATE "BorrowRequest" SET "startsAt"=NOW()+INTERVAL \'1 day\' WHERE "studentNumber"=$1',
     ["TEST-PICKUP"],
   );
-  await page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }).click();
+  await checkOutEquipment(page);
   await expect(page.getByRole("alert").filter({ hasText: "has not started yet" })).toBeVisible();
   await query(
     'UPDATE "BorrowRequest" SET "startsAt"=NOW()-INTERVAL \'1 minute\' WHERE "studentNumber"=$1',
     ["TEST-PICKUP"],
   );
   await page.reload();
-  await page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }).click();
+  await checkOutEquipment(page);
   await expect(page.getByText("Borrowed", { exact: true }).filter({ visible: true })).toBeVisible();
   const item = (
     await query('SELECT id FROM "InventoryItem" WHERE "qrCode"=$1', ["ceit-launch-item-4"])
@@ -382,7 +386,7 @@ test("a reservation checks out only at pickup and the public return accepts phon
     .selectOption("OK");
   await page.getByRole("button", { name: "Save update" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "still borrowed" })).toBeVisible();
-  await page.goto("/scan/ceit-launch-item-4");
+  await page.goto("/scan/ceit-launch-item-4?view=public");
   await page.getByRole("button", { name: /Return equipment/ }).click();
   await page.getByLabel("Student number").fill("TEST-PICKUP");
   await page.getByLabel("Contact number").fill("+63 912 345 6789");
@@ -432,11 +436,11 @@ test("item creation, stale edits, and import preview keep records and inputs con
 }) => {
   await signIn(page);
   await page.goto("/dashboard/inventory/new");
-  await page.getByLabel("Item name").fill("Launch test camera");
+  await page.locator('input[name="name"]').fill("Launch test camera");
   await page
     .getByLabel("Category", { exact: false })
     .selectOption({ label: "Launch test equipment" });
-  await page.getByLabel("Location", { exact: false }).selectOption({ label: "Launch test lab" });
+  await page.locator('select[name="locationId"]').selectOption({ label: "Launch test lab" });
   await page.getByRole("button", { name: "Create item" }).click();
   await expect(page).toHaveURL(/\/dashboard\/inventory\/[a-f0-9-]{36}$/);
   const created = (
@@ -465,9 +469,8 @@ test("item creation, stale edits, and import preview keep records and inputs con
       "name,category,location,type,quantity,serial number\nImported launch camera,Launch test equipment,Launch test lab,asset,1,LAUNCH-SERIAL-1\n",
     ),
   });
-  await page.getByLabel("Validate before importing.", { exact: false }).check();
-  await page.getByRole("button", { name: "Validate or import inventory" }).click();
-  await expect(page.getByText("1 valid row", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Check file" }).click();
+  await expect(page.getByText("1 row looks good", { exact: false })).toBeVisible();
   await expect(page.getByLabel("CSV or Excel file")).not.toHaveValue("");
   expect(
     (
@@ -476,9 +479,8 @@ test("item creation, stale edits, and import preview keep records and inputs con
       ])
     ).rows[0].count,
   ).toBe(0);
-  await page.getByLabel("Validate before importing.", { exact: false }).uncheck();
-  await page.getByRole("button", { name: "Validate or import inventory" }).click();
-  await expect(page.getByText("1 imported", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.getByText("1 row imported", { exact: false })).toBeVisible();
   expect(
     (
       await query('SELECT COUNT(*)::int AS count FROM "InventoryItem" WHERE "serialNumber"=$1', [

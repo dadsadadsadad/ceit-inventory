@@ -28,6 +28,9 @@ export function LiveUpdates() {
     let queued = false;
     let disposed = false;
     let lastRefresh = Date.now();
+    // The page this tab just changed was already re-rendered by the save itself, so the next
+    // revision change is our own and must not render the same page a second time.
+    let ownChangeUntil = 0;
     const readyAt = Date.now() + 3_000;
     let generation = 0;
     const endpoint = `/api/live?${qr ? `qr=${encodeURIComponent(qr)}` : `scope=${scope}`}`;
@@ -63,6 +66,10 @@ export function LiveUpdates() {
       if (revision !== next) {
         const initial = revision === undefined;
         revision = next;
+        if (!initial && Date.now() < ownChangeUntil) {
+          ownChangeUntil = 0;
+          return;
+        }
         // The navigation already rendered fresh data. Seed the subscription
         // without fetching that entire page again immediately after it opens.
         // A delayed polling fallback may have missed changes while connecting.
@@ -155,11 +162,12 @@ export function LiveUpdates() {
     }
     function mutation(event: Event) {
       if ((event as CustomEvent).detail?.success) {
+        ownChangeUntil = Date.now() + 8_000;
+        // Other tabs refresh; this one was refreshed by the save. Anything that arrived while
+        // editing is applied now.
         channel?.postMessage("changed");
-        changed();
-      } else {
-        flush();
       }
+      flush();
     }
     if (channel) {
       channel.onmessage = changed;

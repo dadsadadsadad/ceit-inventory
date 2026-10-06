@@ -40,8 +40,8 @@ export async function saveDashboardNote(formData: FormData) {
       });
       await transaction.dashboardNote.upsert({
         where: { scope: sharedDashboardNoteScope },
-        create: { scope: sharedDashboardNoteScope, content, updatedByName: actor.email },
-        update: { content, updatedByName: actor.email },
+        create: { scope: sharedDashboardNoteScope, content, updatedByName: actor.username },
+        update: { content, updatedByName: actor.username },
       });
       await transaction.inventoryAudit.create({
         data: auditEventData({

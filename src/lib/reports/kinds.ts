@@ -3,6 +3,8 @@
 export const reportKinds = [
   "overview",
   "inventory",
+  "stock",
+  "warranty",
   "pcs",
   "hardware",
   "software",
@@ -23,6 +25,8 @@ export type ReportControl =
   | "itemType"
   | "pcOnly"
   | "attention"
+  | "stockLevel"
+  | "warranty"
   | "incomplete"
   | "retired"
   | "component"
@@ -64,10 +68,27 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "category",
       "location",
       "itemType",
+      "stockLevel",
+      "warranty",
       "pcOnly",
       "attention",
       "dates",
     ],
+  },
+  stock: {
+    id: "stock",
+    label: "Stock",
+    description: "Every stock record with how many are left and which are running low or out.",
+    stem: "ceit-stock",
+    controls: ["search", "stockLevel", "category", "location"],
+  },
+  warranty: {
+    id: "warranty",
+    label: "Warranty",
+    description:
+      "Equipment with a recorded warranty, and which warranties have ended or are ending.",
+    stem: "ceit-warranty",
+    controls: ["search", "warranty", "category", "location", "itemType"],
   },
   pcs: {
     id: "pcs",
@@ -133,6 +154,21 @@ export const quickReports: {
     label: "Needs attention",
     description: "Defective, untested, poor, or waiting for repair.",
     query: { kind: "inventory", attention: "1" },
+  },
+  {
+    label: "Low stock",
+    description: "Stock at or below its alert level, and anything out.",
+    query: { kind: "stock", stock: "low" },
+  },
+  {
+    label: "Warranties ending soon",
+    description: "Equipment whose warranty ends within 60 days.",
+    query: { kind: "warranty", warranty: "ending" },
+  },
+  {
+    label: "Due back today",
+    description: "Loans to remind borrowers about.",
+    query: { kind: "borrowing", borrowingState: "due-today" },
   },
   {
     label: "Licenses ending soon",

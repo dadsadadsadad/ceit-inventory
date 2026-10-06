@@ -305,7 +305,7 @@ export default async function MaintenancePage({
                 />
               </label>
               <label className="block">
-                <span className="text-sm font-semibold">Description *</span>
+                <span className="text-sm font-semibold">What happened? *</span>
                 <textarea
                   required
                   name="description"
@@ -331,10 +331,7 @@ export default async function MaintenancePage({
         ) : null}
 
         {/* Filter issues by status, priority, source, and date. Choices apply at once. */}
-        <FilterForm
-          className="maintenance-filters card grid items-end gap-3 rounded-lg p-4"
-          label="Maintenance filters"
-        >
+        <FilterForm className="filter-spread card rounded-lg p-4" label="Maintenance filters">
           {selectedItem ? <input type="hidden" name="item" value={selectedItem} /> : null}
           <label className="min-w-0 flex-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
@@ -458,7 +455,7 @@ export default async function MaintenancePage({
                     <p className="muted mt-3 text-xs">
                       Reported {formatDate(ticket.openedAt)}
                       {ticket.source === "QR"
-                        ? " through a QR code"
+                        ? `${ticket.reportedByName ? ` by ${ticket.reportedByName}` : ""} through a QR code`
                         : ` by ${ticket.reportedByName ?? "Staff"}`}
                     </p>
                     {ticket.resolvedAt ? (

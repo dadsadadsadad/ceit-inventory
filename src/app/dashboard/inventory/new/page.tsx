@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { NewInventoryForm } from "./new-inventory-form";
 import { prisma } from "@/prisma";
+import { loadCustomFields } from "@/lib/custom-field-queries";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 // Load the categories and rooms for a new item.
 export default async function NewInventoryItemPage() {
   await requireInventoryManagementPageAccess();
-  const [categories, locations, pcCounts] = await Promise.all([
+  const [categories, locations, pcCounts, customFields] = await Promise.all([
     prisma.category.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -27,6 +28,7 @@ export default async function NewInventoryItemPage() {
       where: { isComputer: true },
       _count: { _all: true },
     }),
+    loadCustomFields(),
   ]);
   const ready = categories.length > 0 && locations.length > 0;
   const pcCountsByLocation = new Map(
@@ -43,7 +45,8 @@ export default async function NewInventoryItemPage() {
           <p className="eyebrow mt-5">New record</p>
           <h1 className="title mt-3 text-3xl">Add item</h1>
           <p className="muted mt-2 text-sm leading-6">
-            Add one item per equipment unit. For supplies, enter the quantity you have.
+            Add equipment (each unit gets its own tag and QR code) or a stock record counted by
+            quantity. Only the basics are required.
           </p>
         </header>
         {!ready ? (
@@ -55,6 +58,7 @@ export default async function NewInventoryItemPage() {
           /* New inventory entry form. */
           <NewInventoryForm
             categories={categories}
+            customFields={customFields}
             locations={locations.map((location) => ({
               ...location,
               nextPcNumber: (pcCountsByLocation.get(location.id) ?? 0) + 1,
