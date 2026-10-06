@@ -36,6 +36,21 @@ This replaces the earlier charcoal-and-orange look described in
 | `src/app/styles/views.css`      | Hardware and software directories, audit trail, reports                          |
 | `src/lib/reports/pdf/theme.ts`  | The PDF colours, taken from the same palette                                     |
 
+## Appearance options
+
+Each device can adjust the look without touching the code; every choice is an attribute on `<html>` set before the page paints (`src/lib/appearance-bootstrap.ts`) and styled in `src/app/styles/preferences.css`. The standard choice for each has no attribute.
+
+| Option      | Choices                                  | Attribute                           |
+| ----------- | ---------------------------------------- | ----------------------------------- |
+| Mode        | Light, Dark, Auto (follows the device)   | `data-theme`, `data-mode`           |
+| Background  | Paper, Bright, Cool; Ink, Midnight, Black | `data-tone` (one per mode)         |
+| Accent      | Orange default, seven presets, any color | `--accent*` properties              |
+| Text size   | Default, Large, Larger                   | `data-text` (scales every rem)      |
+| Corners     | Sharp, Default, Round                    | `data-corners` (radius tokens)      |
+| Titles      | Serif, Sans                              | `data-titles` (`--font-display`)    |
+| Contrast    | Standard, High                           | `data-contrast`                     |
+| Motion      | Full, Reduced                            | `data-motion`                       |
+
 Fonts are self-hosted from `src/app/fonts/` (Manrope, Fraunces, and IBM Plex Mono, all under the
 SIL Open Font License; the licence texts are alongside the font files).
 

@@ -21,6 +21,7 @@ import { prisma } from "@/prisma";
 
 import {
   activeBorrowRequestStatuses,
+  addInlineCustomField,
   assertActiveAssignments,
   assertAssetTag,
   assertTrackedAssetQuantity,
@@ -37,12 +38,14 @@ import {
   optionalInteger,
   optionalPurchasePrice,
   optionalText,
+  readInlineCustomField,
   readItemCustomFields,
   readLowStockThreshold,
   requiredId,
   requiredText,
   statuses,
   updatedFields,
+  withInlineAnswers,
 } from "./shared";
 
 // Create inventory: one stock record, one piece of equipment, or several identical units, each
@@ -83,13 +86,18 @@ export async function createInventoryItem(formData: FormData) {
       }
     }
     await assertActiveAssignments(categoryId, locationId);
-    const customFields = await readItemCustomFields(formData, { categoryId, itemType });
+    const baseCustomFields = await readItemCustomFields(formData, { categoryId, itemType });
+    const inlineField = readInlineCustomField(formData);
     const baseName = requiredText(formData, "name", 255);
 
     const created: string[] = [];
     try {
       await prisma.$transaction(
         async (transaction) => {
+          const customFields = withInlineAnswers(
+            baseCustomFields,
+            inlineField ? await addInlineCustomField(transaction, inlineField, actor) : {},
+          );
           for (let unit = 1; unit <= units; unit += 1) {
             const assetTag = isEquipment
               ? (suppliedAssetTag ??
@@ -184,6 +192,7 @@ export async function updateInventoryItem(formData: FormData) {
       throw new FormError("A PC must be a single tracked asset, not a supply record.");
     }
     await assertActiveAssignments(categoryId, locationId, existing);
+    const inlineField = readInlineCustomField(formData);
 
     const data = {
       name: requiredText(formData, "name", 255),
@@ -252,6 +261,10 @@ export async function updateInventoryItem(formData: FormData) {
           }
           const resolvedData = {
             ...data,
+            customFields: withInlineAnswers(
+              data.customFields,
+              inlineField ? await addInlineCustomField(transaction, inlineField, actor) : {},
+            ),
             assetTag:
               itemType === ItemType.ASSET && !data.assetTag
                 ? await nextInventoryAssetTag(transaction, { categoryId, locationId, status })

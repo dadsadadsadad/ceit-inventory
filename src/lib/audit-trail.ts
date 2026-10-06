@@ -1,5 +1,6 @@
 import { AuditAction, Prisma } from "@prisma/client";
 
+import { stripControlCharacters } from "./clean-text";
 import { personName } from "./person";
 import { manilaDateText, manilaDayLabel } from "@/lib/manila-date";
 import {
@@ -90,7 +91,8 @@ const recordChangeActions: AuditAction[] = [
 ];
 
 function textFilter(parameters: QueryParameters, key: string, label: string) {
-  const value = parameters.get(key)?.trim();
+  const raw = parameters.get(key);
+  const value = raw === null ? undefined : stripControlCharacters(raw).trim();
   if (!value) {
     return undefined;
   }
@@ -148,6 +150,7 @@ const nonInventoryEntities = [
   "category",
   "location",
   "custom-field",
+  "calendar-event",
   "dashboard-note",
   "session",
   "report-export",
@@ -175,7 +178,16 @@ export function auditViewWhere(view: AuditView): Prisma.InventoryAuditWhereInput
       return { entityType: "maintenance-ticket" };
     case "setup":
       return {
-        entityType: { in: ["account", "category", "location", "custom-field", "dashboard-note"] },
+        entityType: {
+          in: [
+            "account",
+            "category",
+            "location",
+            "custom-field",
+            "calendar-event",
+            "dashboard-note",
+          ],
+        },
       };
     case "inventory":
       return {
@@ -321,6 +333,9 @@ export function auditCategory(event: AuditTrailEvent) {
   if (event.entityType === "dashboard-note" || activityKind === "dashboard-note") {
     return "Dashboard notes";
   }
+  if (event.entityType === "calendar-event") {
+    return "Calendar";
+  }
   if (
     event.entityType === "category" ||
     event.entityType === "location" ||
@@ -419,9 +434,9 @@ export function auditChangedFields(event: AuditTrailEvent) {
 // Explain an event using its stored metadata.
 export function auditEventDetail(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
-  const changedFields = auditChangedFields(event);
-  if (changedFields.length) {
-    return `Captured ${changedFields.length} changed field${changedFields.length === 1 ? "" : "s"}.`;
+  // What changed is listed on its own, so there is nothing more to say about it.
+  if (auditChangedFields(event).length) {
+    return null;
   }
 
   const bulkAction = metadataText(metadata, "bulkAction");
@@ -437,13 +452,6 @@ export function auditEventDetail(event: AuditTrailEvent) {
     return "QR code printed for physical use.";
   }
   return null;
-}
-
-// Build a short preview of the event details.
-export function auditMetadataPreview(event: AuditTrailEvent) {
-  const metadata = auditMetadata(event);
-  const text = JSON.stringify(metadata, null, 2);
-  return text.length > 4_000 ? `${text.slice(0, 3_997)}…` : text;
 }
 
 export { exportPeriods };

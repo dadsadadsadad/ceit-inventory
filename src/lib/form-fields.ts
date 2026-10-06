@@ -1,5 +1,6 @@
 import "server-only";
 
+import { stripControlCharacters } from "@/lib/clean-text";
 import { FormError } from "@/lib/form-action";
 import { isUuid } from "@/lib/ids";
 
@@ -20,7 +21,7 @@ export function optionalText(
   maximumLength = 2_000,
   label = fieldLabel(key),
 ) {
-  const value = String(formData.get(key) ?? "").trim();
+  const value = stripControlCharacters(String(formData.get(key) ?? "")).trim();
   if (value.length > maximumLength) {
     throw new FormError(`${label} is too long.`);
   }

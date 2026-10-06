@@ -1,3 +1,61 @@
+# Website audit, third pass — security, calendar, appearance
+
+A review of how the site can be broken or misused, plus the dashboard calendar and a richer
+Appearance panel.
+
+**Security review.** Every server action, route, and page was checked for who may call it, what
+it accepts, and what it trusts. Every staff action checks the signed-in account; the three public
+actions are rate limited, signed to the item, and still need staff approval. Database access is
+through bound values everywhere (the only raw SQL uses fixed table names), text is shown as text,
+CSV exports defuse spreadsheet formulas, and photos are checked by signature. What was found and
+fixed:
+
+- **Row level security was missing on the extra-fields table.** Every other table already blocked
+  the public database API; the table added in the last release did not. The new migration turns it
+  on (and on the new calendar table).
+- **Guessing passwords across many usernames was not slowed down.** Only each account locked. A
+  device that fails 30 sign-ins in 15 minutes is now turned away before any password is checked.
+- **The sign-in page revealed which usernames exist**, because a locked account got a different
+  message. A wrong password, a locked account, and an unknown account now all get the same answer.
+- **A null byte in a search box or form** (typed into an address by hand, or sent by a script) made
+  the page's database query fail. Control characters are now removed where text arrives.
+- **Next.js 16.3.4 had a published remote-code-execution advisory** (in an image feature this app
+  does not use). Updated to 16.3.8, along with three smaller dependencies. Production dependencies
+  report no known vulnerabilities.
+- **Smaller hardening.** Opening a public QR page is recorded at most every five minutes per item
+  instead of every fifteen seconds, one import can create at most 2,000 records, and the site now
+  sends HSTS and a same-origin resource policy.
+
+Checked and found sound, now with tests: borrowing equipment that is still out (refused even when
+the form is edited by hand), returning equipment that was only reserved, a return time before the
+pickup time, forms sent without their signed note, search text and names that look like SQL or
+HTML, and staff-only pages, downloads, and feeds requested while signed out.
+
+**Calendar.** A calendar above the department note shows loans due back, reservations to hand over,
+software licenses and warranties that end, and events staff add themselves.
+
+**Appearance.** The panel is smaller, and adds Auto mode, three backgrounds per mode, high
+contrast, larger text, corner style, sans-serif titles, and reduced motion.
+
+**Smaller changes.** The audit trail no longer shows ids or raw data, and extra fields can be
+created from the add and edit forms.
+
+## Verification
+
+- Format check, ESLint, and TypeScript checks passed.
+- 231 unit tests passed, including the new borrowing-availability rules, the sign-in limit, the
+  calendar's months and days, the saved appearance choices (and the script that restores them),
+  and the control-character cleanup.
+- The launch suite ran every flow in a browser against an isolated database built from all 28
+  migrations, including the new security and calendar tests.
+
+## Database
+
+`20261008000000_calendar_and_row_security`: the calendar's table, row level security on two
+tables, a new kind of limited request for failed sign-ins, and removal of one redundant index. It
+changes and removes no data. It must be applied **before** this version is deployed, because the
+code reads the new table.
+
 # Website audit, second pass — 7 October 2026
 
 Stock and warranty tracking, a smarter import, faster and more responsive pages, and a rebuilt

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { runTransaction } from "@/lib/database-transaction";
 
 import { auditEventData } from "@/lib/audit-event";
+import { stripControlCharacters } from "@/lib/clean-text";
 import {
   clearSession,
   createSession,
@@ -11,6 +12,7 @@ import {
   simulatePasswordCheck,
   verifyPassword,
 } from "@/lib/inventory-auth";
+import { isSignInThrottled, recordFailedSignInAttempt } from "@/lib/sign-in-throttle";
 import { prisma } from "@/prisma";
 
 const maxIdentifierLength = 254;
@@ -50,7 +52,7 @@ async function recordFailedSignIn(userId: string) {
 
 // Check credentials, create a session, and record the sign-in.
 export async function signIn(formData: FormData) {
-  const identifier = String(formData.get("identifier") ?? "")
+  const identifier = stripControlCharacters(String(formData.get("identifier") ?? ""))
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -62,22 +64,32 @@ export async function signIn(formData: FormData) {
   ) {
     redirect("/auth/login?error=invalid-credentials");
   }
+  // Refuse before the slow password check, so a flood of guesses costs almost nothing.
+  if (await isSignInThrottled()) {
+    redirect("/auth/login?error=too-many-attempts");
+  }
 
   const user = await prisma.user.findUnique({
     where: identifier.includes("@") ? { email: identifier } : { username: identifier },
   });
   const now = new Date();
+  // A locked account gets the same answer as a wrong password or an unknown account, so the
+  // page never confirms which usernames exist.
   if (!user || !user.isActive) {
     await simulatePasswordCheck(password);
+    await recordFailedSignInAttempt();
     redirect("/auth/login?error=invalid-credentials");
   }
   if (user.lockedUntil && user.lockedUntil > now) {
-    redirect("/auth/login?error=temporarily-locked");
+    await simulatePasswordCheck(password);
+    await recordFailedSignInAttempt();
+    redirect("/auth/login?error=invalid-credentials");
   }
 
   if (!(await verifyPassword(password, user.passwordHash))) {
-    const locked = await recordFailedSignIn(user.id);
-    redirect(`/auth/login?error=${locked ? "temporarily-locked" : "invalid-credentials"}`);
+    await recordFailedSignIn(user.id);
+    await recordFailedSignInAttempt();
+    redirect("/auth/login?error=invalid-credentials");
   }
 
   await prisma.$transaction([

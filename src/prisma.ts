@@ -4,7 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 // Refresh the cached client after schema changes.
-const prismaSchemaVersion = `2026-10-07-stock-alerts-warranty-custom-fields:${process.env.INVENTORY_DB_SCHEMA ?? "public"}`;
+const prismaSchemaVersion = `2026-10-08-calendar-events:${process.env.INVENTORY_DB_SCHEMA ?? "public"}`;
 const databaseCache = globalThis as unknown as {
   prisma?: PrismaClient;
   prismaSchemaVersion?: string;

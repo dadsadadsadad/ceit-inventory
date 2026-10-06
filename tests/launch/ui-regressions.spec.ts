@@ -265,6 +265,7 @@ test("appearance on mobile supports keyboard controls and dismisses without clos
   await trigger.click();
   const panel = page.getByRole("dialog", { name: "Appearance", exact: true });
   await expect(panel.getByRole("button", { name: "Close appearance panel" })).toBeFocused();
+  await panel.getByText("Custom color", { exact: true }).click();
   const hue = panel.getByRole("slider", { name: /^Hue/ });
   const before = await hue.inputValue();
   await hue.focus();
@@ -334,6 +335,7 @@ test("both themes use neutral surfaces and accents visibly update controls, link
     await page.screenshot({ path: `test-results/ui-dashboard-${mode.toLowerCase()}.png` });
   }
   await page.getByRole("button", { name: "Open appearance settings" }).click();
+  await page.getByText("Custom color", { exact: true }).click();
   await page.getByLabel("Hex color").fill("123456");
   await expect(page.locator("html")).toHaveAttribute("data-accent", "custom");
   await page.getByRole("button", { name: "Use CEIT orange default" }).click();

@@ -3,6 +3,7 @@
 import { ItemStatus, PublicRequestKind } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auditEventData } from "@/lib/audit-event";
+import { stripControlCharacters } from "@/lib/clean-text";
 import { FormError, formAction } from "@/lib/form-action";
 import { assertFormToken } from "@/lib/form-token";
 import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
@@ -13,10 +14,11 @@ import { runTransaction } from "@/lib/database-transaction";
 // Validate the issue and send it to maintenance.
 export async function submitIssueReport(formData: FormData) {
   return formAction(async () => {
-    const qrCode = String(formData.get("qrCode") ?? "").trim();
-    const reporterName = String(formData.get("reporterName") ?? "").trim();
-    const title = String(formData.get("title") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
+    const text = (key: string) => stripControlCharacters(String(formData.get(key) ?? "")).trim();
+    const qrCode = text("qrCode");
+    const reporterName = text("reporterName");
+    const title = text("title");
+    const description = text("description");
     if (formData.get("website")) {
       throw new FormError("Unable to send this report. Please try again.");
     }

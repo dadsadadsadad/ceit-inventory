@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { auditEventData } from "@/lib/audit-event";
+import { stripControlCharacters } from "@/lib/clean-text";
 import { borrowStatus } from "@/lib/borrow-status";
 import { checkLoanAvailability } from "@/lib/loan-availability";
 import { normalizeContactNumber } from "@/lib/contact-number";
@@ -22,7 +23,7 @@ const studentNumberPattern = /^[a-z0-9][a-z0-9./-]*$/i;
 const maximumBorrowQuantity = 1_000;
 
 function readText(formData: FormData, key: string, maximumLength: number) {
-  const value = String(formData.get(key) ?? "").trim();
+  const value = stripControlCharacters(String(formData.get(key) ?? "")).trim();
   if (value.length > maximumLength) {
     throw new FormError("One of the submitted fields is too long.");
   }

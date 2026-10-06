@@ -8,7 +8,6 @@ import {
   auditCategory,
   auditChangedFields,
   auditEventDetail,
-  auditMetadataPreview,
   groupEventsByDay,
   type AuditTrailEvent,
 } from "@/lib/audit-trail";
@@ -25,6 +24,7 @@ function toneFor(category: string) {
     case "Maintenance":
       return "maintenance";
     case "Accounts":
+    case "Calendar":
     case "Dashboard notes":
     case "Configuration":
       return "setup";
@@ -58,7 +58,6 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
               const category = auditCategory(event as AuditTrailEvent);
               const detail = auditEventDetail(event as AuditTrailEvent);
               const changes = auditChangedFields(event as AuditTrailEvent);
-              const metadata = auditMetadataPreview(event as AuditTrailEvent);
               const subject = event.item?.name ?? event.entityLabel ?? null;
               const actor = auditActorLabel(event as AuditTrailEvent);
               return (
@@ -115,7 +114,7 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
                       </dl>
                       {detail ? <p className="muted text-sm leading-6">{detail}</p> : null}
                       {changes.length ? (
-                        <div className="mt-3 flex flex-wrap gap-2" aria-label="Captured changes">
+                        <div className="mt-3 flex flex-wrap gap-2" aria-label="What changed">
                           {changes.map((change) => (
                             <span
                               key={change.label}
@@ -126,16 +125,6 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
                             </span>
                           ))}
                         </div>
-                      ) : null}
-                      {metadata !== "{}" ? (
-                        <details className="mt-3">
-                          <summary className="muted cursor-pointer text-sm font-semibold">
-                            Technical details · AUD-{event.id.slice(0, 8).toUpperCase()}
-                          </summary>
-                          <pre className="muted mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs leading-5">
-                            {metadata}
-                          </pre>
-                        </details>
                       ) : null}
                     </div>
                   </details>

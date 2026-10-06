@@ -114,27 +114,18 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
       },
     ],
     csv: [
-      [
-        "Audit ID",
-        "When",
-        "Category",
-        "Action",
-        "Subject",
-        "Reference",
-        "User",
-        "Summary",
-        "Metadata",
-      ],
+      ["When", "Category", "Event", "Subject", "Asset tag", "User", "Summary", "What changed"],
       ...events.map((event) => [
-        event.id,
         event.createdAt,
         auditCategory(event),
-        event.action,
+        auditActionLabel(event.action),
         event.item?.name ?? event.entityLabel ?? "System",
-        event.item?.assetTag ?? event.entityId ?? "",
+        event.item?.assetTag ?? "",
         auditActorLabel(event),
         event.summary,
-        event.metadata ? JSON.stringify(event.metadata) : "",
+        auditChangedFields(event)
+          .map((change) => `${change.label}: ${change.value}`)
+          .join(" · "),
       ]),
     ],
   };

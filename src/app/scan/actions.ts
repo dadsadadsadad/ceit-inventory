@@ -8,6 +8,9 @@ import { prisma } from "@/prisma";
 import { getCurrentInventoryUser } from "@/lib/inventory-auth";
 
 const scanDeduplicationWindowMs = 15_000;
+// Anyone holding a label can open its page and trigger this, so an anonymous open is recorded
+// only now and then; otherwise it could fill the audit trail.
+const anonymousScanWindowMs = 5 * 60 * 1000;
 
 // Add the QR visit to the item's audit history.
 export async function recordInventoryScan(itemId: string) {
@@ -29,7 +32,9 @@ export async function recordInventoryScan(itemId: string) {
       itemId: item.id,
       action: AuditAction.SCANNED,
       actorId: actor?.id ?? null,
-      createdAt: { gte: new Date(Date.now() - scanDeduplicationWindowMs) },
+      createdAt: {
+        gte: new Date(Date.now() - (actor ? scanDeduplicationWindowMs : anonymousScanWindowMs)),
+      },
     },
     select: { id: true },
   });

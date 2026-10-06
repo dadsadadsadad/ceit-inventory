@@ -8,10 +8,11 @@ import { signIn } from "../actions";
 export const metadata: Metadata = { title: "Sign in · CEIT Inventory" };
 
 const messages: Record<string, string> = {
-  "invalid-credentials": "The email address, username, or password is incorrect.",
+  "invalid-credentials":
+    "The email address, username, or password is incorrect, or the account is temporarily locked after repeated failed attempts. Wait about 15 minutes or ask an administrator for help.",
   "missing-credentials": "Enter your email address or username and password.",
-  "temporarily-locked":
-    "For security, this account is temporarily locked. Try again in about 15 minutes or ask an administrator for help.",
+  "too-many-attempts":
+    "Too many failed sign-in attempts were made from this device. Wait about 15 minutes and try again.",
 };
 
 const notices: Record<string, string> = {

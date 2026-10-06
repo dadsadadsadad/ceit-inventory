@@ -1,9 +1,15 @@
+import { stripControlCharacters } from "./clean-text";
+
 /** A query-string value as Next.js delivers it: absent, one value, or repeated. */
 export type RawParam = string | string[] | undefined;
 
-/** The first value when a parameter is repeated, so odd URLs never break a page. */
+/**
+ * The first value when a parameter is repeated, so odd URLs never break a page, with control
+ * characters removed so a hand-made address cannot make a page's database query fail.
+ */
 export function firstParam(value: RawParam) {
-  return Array.isArray(value) ? value[0] : value;
+  const first = Array.isArray(value) ? value[0] : value;
+  return first === undefined ? undefined : stripControlCharacters(first);
 }
 
 /** A positive page number, capped so a huge value cannot request an absurd offset. */

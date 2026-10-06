@@ -244,3 +244,130 @@ export function getAccentColors(theme: Theme, color: string): AppearanceTokens {
     sidebarDeep: mixColors(sidebar, contrastDark, 0.38),
   };
 }
+
+/* ------------------------------------------------------------------ display preferences */
+/*
+  Besides the accent color, each device can choose how the workspace looks and feels. Every choice
+  is saved on the device and applied as an attribute on <html> (see preferences.css), so it takes
+  effect before the page paints (see appearance-bootstrap.ts, which must stay in step with this).
+*/
+
+export const modeChoices = ["light", "dark", "auto"] as const;
+export type ModeChoice = (typeof modeChoices)[number];
+
+/** The background tones on offer in each mode. The first is the standard look. */
+export const toneChoices = {
+  light: ["paper", "bright", "cool"],
+  dark: ["ink", "midnight", "black"],
+} as const;
+export type Tone = (typeof toneChoices)[Theme][number];
+
+export const toneLabels: Record<Tone, { label: string; swatch: readonly [string, string] }> = {
+  paper: { label: "Paper", swatch: ["#f2ede1", "#fbf8f1"] },
+  bright: { label: "Bright", swatch: ["#f7f6f3", "#ffffff"] },
+  cool: { label: "Cool", swatch: ["#eceff2", "#f8fafb"] },
+  ink: { label: "Ink", swatch: ["#131110", "#1c1916"] },
+  midnight: { label: "Midnight", swatch: ["#0d1117", "#151b24"] },
+  black: { label: "Black", swatch: ["#000000", "#0c0c0c"] },
+};
+
+export const textSizes = ["default", "large", "larger"] as const;
+export type TextSize = (typeof textSizes)[number];
+
+export const cornerStyles = ["sharp", "default", "round"] as const;
+export type CornerStyle = (typeof cornerStyles)[number];
+
+export const titleFonts = ["serif", "sans"] as const;
+export type TitleFont = (typeof titleFonts)[number];
+
+export const contrastLevels = ["standard", "high"] as const;
+export type ContrastLevel = (typeof contrastLevels)[number];
+
+export const motionLevels = ["full", "reduced"] as const;
+export type MotionLevel = (typeof motionLevels)[number];
+
+export type DisplayPreferences = {
+  contrast: ContrastLevel;
+  corners: CornerStyle;
+  mode: ModeChoice;
+  motion: MotionLevel;
+  text: TextSize;
+  titles: TitleFont;
+  toneDark: Tone;
+  toneLight: Tone;
+};
+
+export const defaultPreferences: DisplayPreferences = {
+  contrast: "standard",
+  corners: "default",
+  mode: "light",
+  motion: "full",
+  text: "default",
+  titles: "serif",
+  toneDark: "ink",
+  toneLight: "paper",
+};
+
+/** Where each choice is saved on the device. The mode keeps the original key. */
+export const preferenceKeys = {
+  contrast: "ceit-contrast",
+  corners: "ceit-corners",
+  mode: themeStorageKey,
+  motion: "ceit-motion",
+  text: "ceit-text",
+  titles: "ceit-titles",
+  toneDark: "ceit-tone-dark",
+  toneLight: "ceit-tone-light",
+} as const satisfies Record<keyof DisplayPreferences, string>;
+
+/** A saved value if it is one of the allowed choices, otherwise the standard one. */
+export function choiceOf<T extends string>(
+  value: string | null | undefined,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+/** Read the choices from saved strings, ignoring anything that is not recognised. */
+export function parsePreferences(
+  read: (key: string) => string | null | undefined,
+): DisplayPreferences {
+  return {
+    contrast: choiceOf(read(preferenceKeys.contrast), contrastLevels, defaultPreferences.contrast),
+    corners: choiceOf(read(preferenceKeys.corners), cornerStyles, defaultPreferences.corners),
+    mode: choiceOf(read(preferenceKeys.mode), modeChoices, defaultPreferences.mode),
+    motion: choiceOf(read(preferenceKeys.motion), motionLevels, defaultPreferences.motion),
+    text: choiceOf(read(preferenceKeys.text), textSizes, defaultPreferences.text),
+    titles: choiceOf(read(preferenceKeys.titles), titleFonts, defaultPreferences.titles),
+    toneDark: choiceOf(
+      read(preferenceKeys.toneDark),
+      toneChoices.dark,
+      defaultPreferences.toneDark,
+    ),
+    toneLight: choiceOf(
+      read(preferenceKeys.toneLight),
+      toneChoices.light,
+      defaultPreferences.toneLight,
+    ),
+  };
+}
+
+/** The theme actually shown: "auto" follows the device's own light or dark setting. */
+export function resolveTheme(mode: ModeChoice, deviceIsDark: boolean): Theme {
+  return mode === "auto" ? (deviceIsDark ? "dark" : "light") : mode;
+}
+
+/** The attributes put on <html>. A standard choice has none, so the stylesheet stays untouched. */
+export function preferenceAttributes(preferences: DisplayPreferences, theme: Theme) {
+  const tone = theme === "dark" ? preferences.toneDark : preferences.toneLight;
+  return {
+    "data-contrast": preferences.contrast === "standard" ? null : preferences.contrast,
+    "data-corners": preferences.corners === "default" ? null : preferences.corners,
+    "data-mode": preferences.mode,
+    "data-motion": preferences.motion === "full" ? null : preferences.motion,
+    "data-text": preferences.text === "default" ? null : preferences.text,
+    "data-titles": preferences.titles === "serif" ? null : preferences.titles,
+    "data-tone": tone === toneChoices[theme][0] ? null : tone,
+  } as const;
+}

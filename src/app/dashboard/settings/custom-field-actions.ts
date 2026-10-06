@@ -4,7 +4,7 @@ import { CustomFieldType, ItemType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { auditEventData } from "@/lib/audit-event";
-import { maximumCustomFields, parseChoices } from "@/lib/custom-fields";
+import { maximumCustomFields, validatedChoices } from "@/lib/custom-fields";
 import { FormError, formAction } from "@/lib/form-action";
 import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 import { requireWriteAccess } from "@/lib/inventory-auth";
@@ -32,17 +32,13 @@ function readScope(formData: FormData) {
 }
 
 function readChoices(formData: FormData, type: CustomFieldType) {
-  if (type !== CustomFieldType.CHOICE) {
-    return [];
+  try {
+    return validatedChoices(type, String(formData.get("choices") ?? ""));
+  } catch (error) {
+    throw new FormError(
+      error instanceof Error ? error.message : "Check the answers to choose from.",
+    );
   }
-  const choices = parseChoices(String(formData.get("choices") ?? ""));
-  if (choices.length < 2) {
-    throw new FormError("Give at least two answers to choose from, one per line.");
-  }
-  if (choices.some((choice) => choice.length > 80)) {
-    throw new FormError("Each answer must be 80 characters or fewer.");
-  }
-  return choices;
 }
 
 // Add an extra detail staff can record on items.

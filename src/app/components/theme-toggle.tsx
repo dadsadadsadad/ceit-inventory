@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Moon, Palette, Sun, X } from "lucide-react";
+import { Check, MonitorSmartphone, Moon, Palette, RotateCcw, Sun, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
@@ -11,36 +11,48 @@ import {
   useSyncExternalStore,
   type ChangeEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 
 import {
-  type Theme,
   type Accent,
-  themeStorageKey,
+  type ContrastLevel,
+  type CornerStyle,
+  type DisplayPreferences,
+  type ModeChoice,
+  type MotionLevel,
+  type TextSize,
+  type Theme,
+  type TitleFont,
   accentStorageKey,
   appearanceChangeEvent,
   accentPresets,
   legacyAccentColors,
   accentProperties,
-  isTheme,
-  normalizeHex,
-  defaultAccentColor,
-  readableTextColor,
   clamp,
+  defaultAccentColor,
+  defaultPreferences,
+  getAccentColors,
   hexToHsv,
   hsvToHex,
-  getAccentColors,
+  normalizeHex,
+  parsePreferences,
+  preferenceAttributes,
+  preferenceKeys,
+  readableTextColor,
+  resolveTheme,
+  toneChoices,
+  toneLabels,
 } from "@/lib/appearance";
 
 // Color picker controls.
 type AccentColorPickerProps = {
   color: string;
   onChange: (color: string) => void;
-  selectedAccent: Accent;
 };
 
 // Choose a color with sliders, presets, or a hex value.
-function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPickerProps) {
+function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
   const hsv = hexToHsv(color);
   const hexInputId = useId();
   const [hexDraft, setHexDraft] = useState("");
@@ -211,24 +223,6 @@ function AccentColorPicker({ color, onChange, selectedAccent }: AccentColorPicke
         <span id={`${hexInputId}-hint`} className="sr-only">
           Enter a six digit hexadecimal color.
         </span>
-        <div className="accent-color-presets" role="group" aria-label="Accent color presets">
-          {accentPresets.map((preset) => (
-            <button
-              key={preset.color}
-              type="button"
-              className="accent-color-preset"
-              style={{ backgroundColor: preset.color, color: readableTextColor(preset.color) }}
-              aria-label={`Use ${preset.name}`}
-              aria-pressed={selectedAccent === preset.color}
-              title={preset.name}
-              onClick={() => onChange(preset.color)}
-            >
-              {selectedAccent === preset.color ? (
-                <Check className="h-3 w-3" aria-hidden="true" />
-              ) : null}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -244,19 +238,33 @@ function resolveAccent(value: string | null): Accent {
   return value ? (legacyAccentColors[value.toLowerCase()] ?? null) : null;
 }
 
-// Read the saved theme with a browser-safe fallback.
-function getThemeSnapshot(): Theme {
-  if (typeof window === "undefined") {
-    return "light";
-  }
+// Preferences are read straight from storage. If storage is blocked, choices made in this visit
+// are remembered here so they still work until the page is closed.
+const sessionValues: Record<string, string> = {};
 
+function readSaved(key: string) {
   try {
-    const storedTheme = window.localStorage.getItem(themeStorageKey);
-    return isTheme(storedTheme) ? storedTheme : "light";
+    return window.localStorage.getItem(key);
   } catch {
-    const documentTheme = document.documentElement.dataset.theme;
-    return documentTheme === "dark" || documentTheme === "light" ? documentTheme : "light";
+    return sessionValues[key] ?? null;
   }
+}
+
+let cachedPreferencesKey = "";
+let cachedPreferences: DisplayPreferences = defaultPreferences;
+
+// The same object is returned until a saved choice changes, as useSyncExternalStore requires.
+function getPreferencesSnapshot(): DisplayPreferences {
+  if (typeof window === "undefined") {
+    return defaultPreferences;
+  }
+  const next = parsePreferences(readSaved);
+  const key = JSON.stringify(next);
+  if (key !== cachedPreferencesKey) {
+    cachedPreferencesKey = key;
+    cachedPreferences = next;
+  }
+  return cachedPreferences;
 }
 
 // Read the saved accent with a browser-safe fallback.
@@ -283,6 +291,18 @@ function subscribeToAppearance(callback: () => void) {
   };
 }
 
+const darkQuery = "(prefers-color-scheme: dark)";
+
+function subscribeToDevice(callback: () => void) {
+  const query = window.matchMedia(darkQuery);
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+
+function getDeviceIsDark() {
+  return window.matchMedia(darkQuery).matches;
+}
+
 function colorMix(color: string, percentage: number, mixWith: string) {
   return `color-mix(in srgb, ${color} ${percentage}%, ${mixWith})`;
 }
@@ -292,12 +312,19 @@ function clearCustomAccentProperties(root: HTMLElement) {
   accentProperties.forEach((property) => root.style.removeProperty(property));
 }
 
-// Apply the selected theme and readable accent colors.
-function applyAppearance(theme: Theme, accent: Accent) {
+// Apply the chosen look: the display choices as attributes, then the readable accent colors.
+function applyAppearance(preferences: DisplayPreferences, theme: Theme, accent: Accent) {
   const root = document.documentElement;
   const customColor = normalizeHex(accent);
 
   root.dataset.theme = theme;
+  for (const [name, value] of Object.entries(preferenceAttributes(preferences, theme))) {
+    if (value) {
+      root.setAttribute(name, value);
+    } else {
+      root.removeAttribute(name);
+    }
+  }
 
   if (!customColor) {
     root.dataset.accent = "orange";
@@ -342,10 +369,59 @@ function migrateAccentStorage(accent: Accent) {
   }
 }
 
-// Save the device's theme and accent color.
+type SegmentOption<T extends string> = { icon?: ReactNode; label: string; value: T };
+
+// A row of choices where exactly one is on, such as Light, Dark, or Auto.
+function Segmented<T extends string>({
+  className = "",
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  className?: string;
+  label: string;
+  onChange: (value: T) => void;
+  options: readonly SegmentOption<T>[];
+  value: T;
+}) {
+  return (
+    <fieldset className={`appearance-field ${className}`}>
+      <legend className="appearance-label">{label}</legend>
+      <div
+        className="appearance-segments"
+        role="group"
+        aria-label={label}
+        style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+      >
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={value === option.value}
+            className="appearance-segment appearance-mode-button"
+          >
+            {option.icon}
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+// Save the device's look: mode, background, accent color, and display choices.
 export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
-  const theme = useSyncExternalStore<Theme>(subscribeToAppearance, getThemeSnapshot, () => "light");
+  const preferences = useSyncExternalStore<DisplayPreferences>(
+    subscribeToAppearance,
+    getPreferencesSnapshot,
+    () => defaultPreferences,
+  );
   const accent = useSyncExternalStore<Accent>(subscribeToAppearance, getAccentSnapshot, () => null);
+  const deviceIsDark = useSyncExternalStore(subscribeToDevice, getDeviceIsDark, () => false);
+  const theme = resolveTheme(preferences.mode, deviceIsDark);
+  const tone = theme === "dark" ? preferences.toneDark : preferences.toneLight;
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -356,11 +432,15 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => {
     // Read storage again so the first hydration effect never overrides the
     // synchronous bootstrap choice with the server fallback values.
-    const currentTheme = getThemeSnapshot();
+    const currentPreferences = getPreferencesSnapshot();
     const currentAccent = getAccentSnapshot();
-    applyAppearance(currentTheme, currentAccent);
+    applyAppearance(
+      currentPreferences,
+      resolveTheme(currentPreferences.mode, getDeviceIsDark()),
+      currentAccent,
+    );
     migrateAccentStorage(currentAccent);
-  }, [theme, accent]);
+  }, [preferences, theme, accent]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -401,11 +481,21 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   }, [isOpen]);
 
   // Apply the choice, save it, and notify the other controls.
-  function saveAppearance(nextTheme: Theme, nextAccent: Accent) {
-    applyAppearance(nextTheme, nextAccent);
+  function saveAppearance(changes: Partial<DisplayPreferences>, nextAccent: Accent = accent) {
+    const next = { ...preferences, ...changes };
+    applyAppearance(next, resolveTheme(next.mode, getDeviceIsDark()), nextAccent);
 
     try {
-      window.localStorage.setItem(themeStorageKey, nextTheme);
+      for (const key of Object.keys(changes) as (keyof DisplayPreferences)[]) {
+        const storageKey = preferenceKeys[key];
+        sessionValues[storageKey] = next[key];
+        // The mode is always saved; the rest only when they differ from the standard look.
+        if (key !== "mode" && next[key] === defaultPreferences[key]) {
+          window.localStorage.removeItem(storageKey);
+        } else {
+          window.localStorage.setItem(storageKey, next[key]);
+        }
+      }
 
       if (nextAccent) {
         window.localStorage.setItem(accentStorageKey, nextAccent);
@@ -420,16 +510,14 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
     window.dispatchEvent(new Event(appearanceChangeEvent));
   }
 
-  function selectTheme(nextTheme: Theme) {
-    saveAppearance(nextTheme, accent);
-  }
-
-  function resetAccent() {
-    saveAppearance(theme, null);
+  function resetEverything() {
+    // Each tone is reset in the key it is saved under, so both modes return to their standard.
+    saveAppearance({ ...defaultPreferences }, null);
   }
 
   const pickerColor = accent ?? defaultAccentColor(theme);
   const accentLabel = accent ? `${accent} custom accent` : "CEIT orange default accent";
+  const toneKey = theme === "dark" ? "toneDark" : "toneLight";
 
   return (
     <div className={`appearance-control ${embedded ? "appearance-embedded" : "appearance-public"}`}>
@@ -443,17 +531,15 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
               aria-labelledby={headingId}
               className={`appearance-popover ${embedded ? "appearance-popover-embedded" : ""} text-[var(--foreground)]`}
             >
-              <div className="appearance-heading flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
-                  <Palette className="h-4 w-4" aria-hidden="true" />
+              <div className="appearance-heading">
+                <span className="appearance-heading-icon" aria-hidden="true">
+                  <Palette className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 id={headingId} className="text-base font-semibold tracking-tight">
+                  <h2 id={headingId} className="appearance-title">
                     Appearance
                   </h2>
-                  <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
-                    Saved on this device. Changes apply immediately.
-                  </p>
+                  <p className="appearance-note">Saved on this device.</p>
                 </div>
                 <button
                   ref={closeRef}
@@ -469,76 +555,158 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
                 </button>
               </div>
 
-              {/* Light and dark mode buttons. */}
-              <fieldset className="border-0 p-0">
-                <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                  Mode
-                </legend>
-                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Color mode">
-                  <button
-                    type="button"
-                    onClick={() => selectTheme("light")}
-                    aria-pressed={theme === "light"}
-                    className={`appearance-mode-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                      theme === "light"
-                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                        : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                    }`}
-                  >
-                    <Sun className="h-4 w-4" aria-hidden="true" />
-                    Light
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectTheme("dark")}
-                    aria-pressed={theme === "dark"}
-                    className={`appearance-mode-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                      theme === "dark"
-                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                        : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                    }`}
-                  >
-                    <Moon className="h-4 w-4" aria-hidden="true" />
-                    Dark
-                  </button>
+              <Segmented<ModeChoice>
+                label="Mode"
+                value={preferences.mode}
+                onChange={(mode) => saveAppearance({ mode })}
+                options={[
+                  { value: "light", label: "Light", icon: <Sun size={16} aria-hidden="true" /> },
+                  { value: "dark", label: "Dark", icon: <Moon size={16} aria-hidden="true" /> },
+                  {
+                    value: "auto",
+                    label: "Auto",
+                    icon: <MonitorSmartphone size={16} aria-hidden="true" />,
+                  },
+                ]}
+              />
+
+              {/* The standard background and two alternatives for the mode that is showing. */}
+              <fieldset className="appearance-field">
+                <legend className="appearance-label">Background</legend>
+                <div className="appearance-tones" role="group" aria-label="Background">
+                  {toneChoices[theme].map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      className="appearance-tone"
+                      aria-pressed={tone === choice}
+                      onClick={() => saveAppearance({ [toneKey]: choice })}
+                    >
+                      <span
+                        className="appearance-tone-swatch"
+                        style={{
+                          background: `linear-gradient(135deg, ${toneLabels[choice].swatch[0]} 50%, ${toneLabels[choice].swatch[1]} 50%)`,
+                        }}
+                        aria-hidden="true"
+                      />
+                      {toneLabels[choice].label}
+                    </button>
+                  ))}
                 </div>
               </fieldset>
 
-              {/* Custom accent picker and default-color reset. */}
-              <fieldset className="mt-5 border-0 p-0">
-                <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                  Accent color
-                </legend>
-                <p className="mb-3 text-sm text-[var(--muted)]">
-                  Colors buttons, links, selection indicators, and focus outlines. Page backgrounds
-                  stay neutral.
-                </p>
-                <div className="appearance-color-picker">
-                  <AccentColorPicker
-                    color={pickerColor}
-                    selectedAccent={accent}
-                    onChange={(nextAccent) => saveAppearance(theme, nextAccent)}
-                  />
+              {/* Presets in one row; anything else is a custom color. */}
+              <fieldset className="appearance-field">
+                <legend className="appearance-label">Accent color</legend>
+                <div
+                  className="accent-color-presets"
+                  role="group"
+                  aria-label="Accent color presets"
+                >
                   <button
                     type="button"
-                    onClick={resetAccent}
+                    className="accent-color-preset"
+                    style={{ backgroundColor: defaultAccentColor(theme), color: "#ffffff" }}
+                    aria-label="Use CEIT orange default"
                     aria-pressed={accent === null}
-                    className={`appearance-reset-color mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                      accent === null
-                        ? "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                        : "border-[var(--border)] bg-transparent text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                    }`}
+                    title="CEIT orange"
+                    onClick={() => saveAppearance({}, null)}
                   >
                     {accent === null ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                    Use CEIT orange default
                   </button>
+                  {accentPresets.map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      className="accent-color-preset"
+                      style={{
+                        backgroundColor: preset.color,
+                        color: readableTextColor(preset.color),
+                      }}
+                      aria-label={`Use ${preset.name}`}
+                      aria-pressed={accent === preset.color}
+                      title={preset.name}
+                      onClick={() => saveAppearance({}, preset.color)}
+                    >
+                      {accent === preset.color ? (
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : null}
+                    </button>
+                  ))}
                 </div>
+                <details className="appearance-disclosure">
+                  <summary>Custom color</summary>
+                  <div className="appearance-color-picker">
+                    <AccentColorPicker
+                      color={pickerColor}
+                      onChange={(nextAccent) => saveAppearance({}, nextAccent)}
+                    />
+                  </div>
+                </details>
               </fieldset>
 
-              <p
-                className="sr-only"
-                aria-live="polite"
-              >{`${theme} mode with ${accentLabel} selected.`}</p>
+              <details className="appearance-disclosure appearance-more">
+                <summary>
+                  More options
+                  <small>Text size, corners, titles, contrast, motion</small>
+                </summary>
+                <Segmented<TextSize>
+                  label="Text size"
+                  value={preferences.text}
+                  onChange={(text) => saveAppearance({ text })}
+                  options={[
+                    { value: "default", label: "Default" },
+                    { value: "large", label: "Large" },
+                    { value: "larger", label: "Larger" },
+                  ]}
+                />
+                <Segmented<CornerStyle>
+                  label="Corners"
+                  value={preferences.corners}
+                  onChange={(corners) => saveAppearance({ corners })}
+                  options={[
+                    { value: "sharp", label: "Sharp" },
+                    { value: "default", label: "Default" },
+                    { value: "round", label: "Round" },
+                  ]}
+                />
+                <Segmented<TitleFont>
+                  label="Titles"
+                  value={preferences.titles}
+                  onChange={(titles) => saveAppearance({ titles })}
+                  options={[
+                    { value: "serif", label: "Serif" },
+                    { value: "sans", label: "Sans" },
+                  ]}
+                />
+                <Segmented<ContrastLevel>
+                  label="Contrast"
+                  value={preferences.contrast}
+                  onChange={(contrast) => saveAppearance({ contrast })}
+                  options={[
+                    { value: "standard", label: "Standard" },
+                    { value: "high", label: "High" },
+                  ]}
+                />
+                <Segmented<MotionLevel>
+                  label="Motion"
+                  value={preferences.motion}
+                  onChange={(motion) => saveAppearance({ motion })}
+                  options={[
+                    { value: "full", label: "Full" },
+                    { value: "reduced", label: "Reduced" },
+                  ]}
+                />
+              </details>
+
+              <button type="button" className="appearance-reset" onClick={resetEverything}>
+                <RotateCcw size={15} aria-hidden="true" />
+                Reset appearance
+              </button>
+
+              <p className="sr-only" aria-live="polite">
+                {`${theme} mode, ${toneLabels[tone].label} background, ${accentLabel} selected.`}
+              </p>
             </section>,
             document.body,
           )

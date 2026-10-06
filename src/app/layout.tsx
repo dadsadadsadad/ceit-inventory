@@ -7,6 +7,7 @@ import { NavigationFeedback } from "./components/navigation-feedback";
 import { GlobalAppearance } from "./components/theme-toggle";
 import { OptimisticProvider } from "./components/optimistic-state";
 import "./styles/tokens.css";
+import "./styles/preferences.css";
 import "./styles/base.css";
 import "./styles/shell.css";
 import "./styles/components.css";
