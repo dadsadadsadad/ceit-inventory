@@ -1,9 +1,11 @@
+import { stripControlCharacters } from "./clean-text";
+
 const maximumTerms = 6;
 const maximumTermLength = 80;
 
 /** Split a search box value into words so "dell lab 2" can match across several fields. */
 export function searchTerms(value: string | null | undefined) {
-  return (value ?? "")
+  return stripControlCharacters(value ?? "")
     .trim()
     .split(/\s+/)
     .filter(Boolean)

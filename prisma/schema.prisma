@@ -71,6 +71,7 @@ enum PublicRequestKind {
   BORROW
   RETURN
   ISSUE
+  SIGN_IN
 }
 
 enum UserRole {
@@ -156,6 +157,20 @@ model InventoryItem {
   @@index([lastCheckedAt])
   @@index([updatedAt])
   @@index([warrantyEndsAt])
+}
+
+// An event staff add to the dashboard calendar, such as "Lab inventory check".
+model CalendarEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  title         String
+  notes         String?
+  // A calendar day, with no time of day.
+  eventDate     DateTime @db.Date
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([eventDate])
 }
 
 // An extra detail staff can record on items, such as "Lens mount" or "Funding source".

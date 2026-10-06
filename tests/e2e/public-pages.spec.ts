@@ -38,7 +38,7 @@ test("workspace font loads locally and sign-in remains usable when fonts fail", 
 test("login error state is rendered without leaking credentials", async ({ page }) => {
   await page.goto("/auth/login?error=invalid-credentials");
   await expect(
-    page.getByText("The email address, username, or password is incorrect.", { exact: true }),
+    page.getByText(/^The email address, username, or password is incorrect, or the account is/),
   ).toBeVisible();
 });
 
@@ -173,4 +173,128 @@ test("public buttons distinguish hovering from pressing and respect reduced moti
     await page.mouse.up();
   }
   await expect(page).toHaveURL(/\/auth\/login$/);
+});
+
+test.describe("display options", () => {
+  async function openPanel(page: import("@playwright/test").Page) {
+    await page.getByRole("button", { name: "Open appearance settings" }).click();
+    return page.getByRole("dialog", { name: "Appearance", exact: true });
+  }
+
+  test("backgrounds, text size, corners, titles, contrast and motion apply and persist", async ({
+    page,
+  }) => {
+    await page.goto("/auth/login");
+    const html = page.locator("html");
+    const panel = await openPanel(page);
+
+    // The standard look carries no extra attributes.
+    await expect(html).not.toHaveAttribute("data-tone", /.+/);
+    await expect(html).not.toHaveAttribute("data-text", /.+/);
+
+    await panel.getByRole("button", { name: "Dark", exact: true }).click();
+    await panel.getByRole("button", { name: "Midnight" }).click();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    await expect(html).toHaveAttribute("data-tone", "midnight");
+    const midnight = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(midnight).toBe("rgb(13, 17, 23)");
+
+    await panel.getByRole("button", { name: "Black" }).click();
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+      "rgb(0, 0, 0)",
+    );
+
+    await panel.getByText("More options").click();
+    await panel.getByRole("button", { name: "Larger" }).click();
+    await panel.getByRole("button", { name: "Round" }).click();
+    await panel.getByRole("button", { name: "Sans" }).click();
+    await panel.getByRole("button", { name: "High" }).click();
+    await panel.getByRole("button", { name: "Reduced" }).click();
+    await expect(html).toHaveAttribute("data-text", "larger");
+    await expect(html).toHaveAttribute("data-corners", "round");
+    await expect(html).toHaveAttribute("data-titles", "sans");
+    await expect(html).toHaveAttribute("data-contrast", "high");
+    await expect(html).toHaveAttribute("data-motion", "reduced");
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
+      "20px",
+    );
+    // Titles now use the interface font, so the two font tokens resolve to the same thing.
+    const [display, ui] = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return [
+        style.getPropertyValue("--font-display").trim(),
+        style.getPropertyValue("--font-ui").trim(),
+      ];
+    });
+    expect(display.length).toBeGreaterThan(0);
+    expect(display).toBe(ui);
+
+    // Everything survives a reload, applied before the page shows.
+    await page.reload();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    await expect(html).toHaveAttribute("data-tone", "black");
+    await expect(html).toHaveAttribute("data-text", "larger");
+    await expect(html).toHaveAttribute("data-corners", "round");
+
+    // One button returns to the standard look.
+    const again = await openPanel(page);
+    await again.getByRole("button", { name: "Reset appearance" }).click();
+    await expect(html).toHaveAttribute("data-theme", "light");
+    for (const name of [
+      "data-tone",
+      "data-text",
+      "data-corners",
+      "data-titles",
+      "data-contrast",
+      "data-motion",
+    ]) {
+      await expect(html).not.toHaveAttribute(name, /.+/);
+    }
+  });
+
+  test("auto follows the device and each mode keeps its own background", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/auth/login");
+    const html = page.locator("html");
+    const panel = await openPanel(page);
+    await panel.getByRole("button", { name: "Auto", exact: true }).click();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    await expect(html).toHaveAttribute("data-mode", "auto");
+    await panel.getByRole("button", { name: "Midnight" }).click();
+
+    // The device changes to light: the page follows, with the light mode's own background.
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(html).toHaveAttribute("data-theme", "light");
+    await expect(html).not.toHaveAttribute("data-tone", /.+/);
+    await expect(panel.getByRole("button", { name: "Paper" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(html).toHaveAttribute("data-tone", "midnight");
+    await page.reload();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    await expect(html).toHaveAttribute("data-tone", "midnight");
+  });
+
+  test("the panel stays compact and inside a phone screen with every option open", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto("/auth/login");
+    const panel = await openPanel(page);
+    const closed = await panel.boundingBox();
+    expect(closed!.height).toBeLessThan(560);
+    await panel.getByText("More options").click();
+    const box = await panel.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(640);
+    // Taller than the screen is fine because the panel scrolls, but nothing may spill sideways.
+    expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+      true,
+    );
+  });
 });

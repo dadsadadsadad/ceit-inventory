@@ -577,10 +577,10 @@
   overflow-x: clip;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 1rem;
+  padding: 0 1rem 1rem;
   position: fixed;
   right: 1rem;
-  width: min(26rem, calc(100vw - 2rem));
+  width: min(23rem, calc(100vw - 2rem));
   z-index: 90;
 }
 
@@ -593,13 +593,41 @@
 }
 
 .appearance-heading {
+  align-items: center;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  margin: -1rem -1rem 1rem;
-  padding: 1rem;
+  display: flex;
+  gap: 0.7rem;
+  margin: 0 -1rem 0.9rem;
+  padding: 0.75rem 1rem;
   position: sticky;
-  top: -1rem;
+  top: 0;
   z-index: 2;
+}
+
+.appearance-heading-icon {
+  align-items: center;
+  background: var(--accent-soft);
+  border-radius: var(--radius-control);
+  color: var(--accent);
+  display: grid;
+  flex-shrink: 0;
+  height: 2.25rem;
+  place-items: center;
+  width: 2.25rem;
+}
+
+.appearance-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.appearance-note {
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.35;
 }
 
 .appearance-close {
@@ -616,19 +644,9 @@
   background: var(--surface-muted);
 }
 
-.appearance-mode-button,
-.appearance-reset-color {
+.appearance-mode-button {
   /* Just over 44px so sub-pixel rounding can never take a touch target below the minimum. */
   min-height: 2.8rem;
-}
-
-.appearance-mode-button:hover,
-.appearance-reset-color:hover:not([aria-pressed="true"]) {
-  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
-}
-
-.appearance-reset-color {
-  white-space: nowrap;
 }
 
 .appearance-popover fieldset {
@@ -871,22 +889,29 @@
 .accent-color-presets {
   display: grid;
   gap: 0.3rem;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   min-width: 0;
   width: 100%;
 }
 
 .accent-color-preset {
   align-items: center;
+  aspect-ratio: 1;
   border: 1px solid rgb(255 255 255 / 45%);
-  border-radius: 0.4rem;
+  border-radius: 999px;
   color: white;
   cursor: pointer;
   display: inline-flex;
-  height: 32px;
   justify-content: center;
+  max-width: 2.4rem;
   outline: none;
   padding: 0;
+  transition: transform var(--interaction-duration) var(--interaction-ease);
+  width: 100%;
+}
+
+.accent-color-preset:hover {
+  transform: scale(1.1);
 }
 
 .accent-color-preset[aria-pressed="true"] {
@@ -911,7 +936,7 @@
     max-height: calc(100dvh - 1.5rem - env(safe-area-inset-bottom));
     max-width: calc(100vw - 1.5rem);
     right: 0.75rem;
-    width: min(26rem, calc(100vw - 1.5rem));
+    width: min(23rem, calc(100vw - 1.5rem));
   }
 
   .appearance-color-picker {
@@ -925,4 +950,164 @@
   .accent-color-plane {
     height: 5.5rem;
   }
+}
+
+/* ------------------------------------------------------------------ appearance panel layout */
+.appearance-field {
+  border: 0;
+  margin: 0 0 0.9rem;
+  min-width: 0;
+  padding: 0;
+}
+
+.appearance-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+/* Segments share one outline, so a row reads as a single control with one choice on. */
+.appearance-segments {
+  background: var(--surface-soft);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: 2px;
+  padding: 2px;
+}
+
+.appearance-segment {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-control) - 2px);
+  color: var(--muted-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 0.4rem;
+  transition:
+    background-color var(--interaction-duration) ease,
+    color var(--interaction-duration) ease,
+    box-shadow var(--interaction-duration) ease;
+}
+
+.appearance-segment:hover {
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+}
+
+.appearance-segment[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
+  color: var(--foreground);
+}
+
+.appearance-segment[aria-pressed="true"]:hover {
+  background: var(--surface);
+}
+
+.appearance-tones {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.appearance-tone {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  color: var(--muted-strong);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  min-height: 4.4rem;
+  padding: 0.5rem 0.3rem;
+  transition:
+    border-color var(--interaction-duration) ease,
+    box-shadow var(--interaction-duration) ease;
+}
+
+.appearance-tone:hover {
+  border-color: var(--accent);
+}
+
+.appearance-tone[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--foreground);
+}
+
+.appearance-tone-swatch {
+  border: 1px solid var(--border-input);
+  border-radius: calc(var(--radius-control) - 2px);
+  display: block;
+  height: 1.6rem;
+  width: 100%;
+}
+
+.appearance-disclosure {
+  margin-top: 0.6rem;
+}
+
+.appearance-disclosure > summary {
+  align-items: center;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  gap: 0.1rem 0.6rem;
+  min-height: 2.5rem;
+}
+
+.appearance-disclosure > summary small {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.appearance-more {
+  border-top: 1px solid var(--border);
+  margin: 0 0 0.5rem;
+  padding-top: 0.3rem;
+}
+
+.appearance-more > .appearance-field:first-of-type {
+  margin-top: 0.5rem;
+}
+
+.appearance-reset {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  color: var(--muted-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: center;
+  min-height: 2.8rem;
+  width: 100%;
+}
+
+.appearance-reset:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }

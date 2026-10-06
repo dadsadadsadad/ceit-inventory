@@ -16,13 +16,15 @@ import {
   Wrench,
 } from "lucide-react";
 import { InventoryMix } from "@/app/components/inventory-mix";
+import { DashboardCalendar } from "./dashboard-calendar";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { auditViewWhere } from "@/lib/audit-trail";
 import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
 import { inventoryAttentionWhere } from "@/lib/inventory-attention";
 import { dueTodayWhere } from "@/lib/loan-due";
-import { formatManilaDate } from "@/lib/manila-date";
+import { loadCalendarMonth } from "@/lib/calendar-queries";
+import { formatManilaDate, manilaCalendarDate } from "@/lib/manila-date";
 import { personName } from "@/lib/person";
 import { lowStockWhere, outOfStockWhere } from "@/lib/stock-queries";
 import { warrantyWhere } from "@/lib/warranty";
@@ -131,6 +133,13 @@ export default async function DashboardPage() {
   const user = await requireInventoryAccess();
   after(() => purgeExpiredBorrowerDataIfDue());
   const canManage = canManageInventory(user.role);
+  const today = manilaCalendarDate();
+  const calendarMonth = today.slice(0, 7);
+  // The calendar loads alongside the rest of the page, and never stops the page from loading.
+  const calendarEntries = loadCalendarMonth(calendarMonth).catch((error) => {
+    console.error("Unable to load the calendar", error);
+    return [];
+  });
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
     dashboard = await getDashboardData(canManage);
@@ -332,25 +341,33 @@ export default async function DashboardPage() {
                   </div>
                 </article>
               ) : null}
-              <aside className="card dashboard-note-card rounded-lg p-6">
-                <div className="section-heading">
-                  <div>
-                    <p className="eyebrow">Team memo</p>
-                    <h2 className="mt-1">Department note</h2>
+              <div className="dashboard-side">
+                <DashboardCalendar
+                  canEdit={canManage}
+                  initialEntries={await calendarEntries}
+                  initialMonth={calendarMonth}
+                  today={today}
+                />
+                <aside className="card dashboard-note-card rounded-lg p-6">
+                  <div className="section-heading">
+                    <div>
+                      <p className="eyebrow">Team memo</p>
+                      <h2 className="mt-1">Department note</h2>
+                    </div>
+                    <span className="note-corner" aria-hidden="true" />
                   </div>
-                  <span className="note-corner" aria-hidden="true" />
-                </div>
-                {canManage ? (
-                  <DashboardNoteForm
-                    initialContent={dashboard.dashboardNote?.content ?? ""}
-                    updatedByName={dashboard.noteAuthorName}
-                  />
-                ) : (
-                  <p className="muted mt-5 whitespace-pre-wrap text-sm">
-                    {dashboard.dashboardNote?.content || "No department note yet."}
-                  </p>
-                )}
-              </aside>
+                  {canManage ? (
+                    <DashboardNoteForm
+                      initialContent={dashboard.dashboardNote?.content ?? ""}
+                      updatedByName={dashboard.noteAuthorName}
+                    />
+                  ) : (
+                    <p className="muted mt-5 whitespace-pre-wrap text-sm">
+                      {dashboard.dashboardNote?.content || "No department note yet."}
+                    </p>
+                  )}
+                </aside>
+              </div>
               {canManage ? (
                 <section
                   className="card activity-ledger rounded-lg"

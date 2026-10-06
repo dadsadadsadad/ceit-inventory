@@ -1,0 +1,133 @@
+/*
+  Display preferences chosen in the Appearance panel. Each one is an attribute on <html>, set before
+  the page paints (src/lib/appearance-bootstrap.ts) and by the panel (src/app/components/theme-toggle.tsx).
+  The standard choice for each has no attribute, so none of this applies until someone changes it.
+*/
+
+/* ------------------------------------------------------------------ background tone */
+/* Light: Bright, a near-white neutral for well-lit rooms. */
+html[data-theme="light"][data-tone="bright"] {
+  --background: #f7f6f3;
+  --workspace-canvas: #f7f6f3;
+  --sidebar-base: #efeeea;
+  --surface: #ffffff;
+  --surface-soft: #faf9f7;
+  --surface-muted: #ebe9e4;
+  --grain-opacity: 0.03;
+}
+
+/* Light: Cool, a soft blue-grey. */
+html[data-theme="light"][data-tone="cool"] {
+  --background: #eceff2;
+  --workspace-canvas: #eceff2;
+  --sidebar-base: #e3e8ed;
+  --surface: #f8fafb;
+  --surface-soft: #f1f4f7;
+  --surface-muted: #dde3ea;
+  --foreground: #16202a;
+  --muted: #566371;
+  --muted-strong: #2e3a46;
+  --rule: #16202a;
+  --border: rgb(22 32 42 / 15%);
+  --border-input: rgb(22 32 42 / 34%);
+  --shadow: 0 1px 0 rgb(22 32 42 / 5%), 0 10px 24px -14px rgb(22 32 42 / 24%);
+  --grain-opacity: 0.03;
+}
+
+/* Dark: Midnight, a deep blue-black. */
+html[data-theme="dark"][data-tone="midnight"] {
+  --background: #0d1117;
+  --workspace-canvas: #0d1117;
+  --sidebar-base: #090c11;
+  --surface: #151b24;
+  --surface-soft: #1b2330;
+  --surface-muted: #252f3d;
+  --foreground: #e8edf4;
+  --muted: #93a1b3;
+  --muted-strong: #c9d3e0;
+  --rule: #e8edf4;
+  --border: rgb(232 237 244 / 14%);
+  --border-input: rgb(232 237 244 / 30%);
+}
+
+/* Dark: Black, true black for OLED screens. */
+html[data-theme="dark"][data-tone="black"] {
+  --background: #000000;
+  --workspace-canvas: #000000;
+  --sidebar-base: #000000;
+  --surface: #0c0c0c;
+  --surface-soft: #141414;
+  --surface-muted: #1f1f1f;
+  --foreground: #f2f2f2;
+  --muted: #a3a3a3;
+  --muted-strong: #d4d4d4;
+  --rule: #f2f2f2;
+  --border: rgb(255 255 255 / 15%);
+  --border-input: rgb(255 255 255 / 32%);
+}
+
+/* ------------------------------------------------------------------ contrast */
+/* Stronger text and edges, built from whichever tone is chosen. */
+html[data-contrast="high"] {
+  --muted: color-mix(in srgb, var(--foreground) 82%, var(--background));
+  --muted-strong: var(--foreground);
+  --border: color-mix(in srgb, var(--foreground) 34%, transparent);
+  --border-input: color-mix(in srgb, var(--foreground) 62%, transparent);
+}
+
+/* ------------------------------------------------------------------ text size */
+/* Everything is sized in rem, so this scales the whole interface. */
+html[data-text="large"] {
+  font-size: 112.5%;
+}
+
+html[data-text="larger"] {
+  font-size: 125%;
+}
+
+/* ------------------------------------------------------------------ corners */
+html[data-corners="sharp"] {
+  --radius-card: 0.2rem;
+  --radius-control: 0.15rem;
+  --radius-chip: 0.1rem;
+}
+
+html[data-corners="round"] {
+  --radius-card: 1.1rem;
+  --radius-control: 0.85rem;
+  --radius-chip: 0.65rem;
+}
+
+/* ------------------------------------------------------------------ titles */
+/* Page titles, section headings, and big numbers in the interface font instead of the serif. */
+html[data-titles="sans"] {
+  --font-display: var(--font-ui);
+}
+
+html[data-titles="sans"] :is(.title, .card-title, .page-inner h2, .page-narrow h2) {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* ------------------------------------------------------------------ motion */
+/* The same as the device's "reduce motion" setting, for people who want it on this site only. */
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+
+html[data-motion="reduced"]
+  :is(
+    .primary-button,
+    .secondary-button,
+    .danger-button,
+    .card-link,
+    .pagination-link,
+    .nav-link
+  ):is(:hover, :active) {
+  transform: none !important;
+}

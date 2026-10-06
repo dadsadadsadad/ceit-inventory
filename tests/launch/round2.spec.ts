@@ -53,6 +53,13 @@ test.beforeEach(async () => {
   await query('DELETE FROM "PublicRequestAttempt"');
 });
 
+// Open the section a heading belongs to, leaving it open if it already is.
+async function openDisclosure(heading: import("@playwright/test").Locator) {
+  await heading.locator("xpath=ancestor::details[1]").evaluate((details) => {
+    (details as HTMLDetailsElement).open = true;
+  });
+}
+
 async function chooseKind(page: Page, kind: "Equipment" | "Stock") {
   await page.getByRole("radio", { name: new RegExp(`^${kind}`) }).check();
 }
@@ -170,6 +177,51 @@ test("warranty and extra fields are optional, saved, filtered, and reported", as
   await page.goto("/dashboard/reports?kind=warranty&generate=1");
   await expect(page.getByText("Round2 camera").first()).toBeVisible();
   await expect(page.getByText("Round2 plain camera")).toHaveCount(0);
+});
+
+test("an extra field can be created from the item forms, not only from Settings", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/dashboard/inventory/new");
+  await chooseKind(page, "Equipment");
+  await fillBasics(page, "Round2 inline field");
+  await page.getByText("Extra details", { exact: true }).click();
+  await page.getByText("Add a new extra field", { exact: true }).click();
+  await page.getByLabel("Field name").fill("Round2 Color");
+  await page.getByLabel("Answer for this item").fill("Teal");
+  await page.getByRole("button", { name: "Create item" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
+  await expect(page.getByText("Round2 Color").first()).toBeVisible();
+  await expect(page.getByText("Teal").first()).toBeVisible();
+
+  // On the edit form, with a list of answers this time.
+  await page.goto(page.url() + "?edit=1");
+  await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
+  await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
+  await page.getByLabel("Field name").fill("Round2 Funding");
+  await page.getByLabel("Kind of answer").selectOption("CHOICE");
+  await page.getByLabel("Answers to choose from").fill(["Grant", "Gift"].join("\n"));
+  await page.getByLabel("Answer for this item").fill("Gift");
+  await page.getByRole("button", { name: "Save update" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await expect(page.getByText("Round2 Funding").first()).toBeVisible();
+  await expect(page.getByText("Gift", { exact: true }).first()).toBeVisible();
+
+  // The same name cannot be created twice, whatever its capitals.
+  await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
+  await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
+  await page.getByLabel("Field name").fill("round2 color");
+  await page.getByLabel("Kind of answer").selectOption("TEXT");
+  await page.getByRole("button", { name: "Save update" }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: /already an extra field called/ }),
+  ).toBeVisible();
+
+  // Both fields exist for every item now, and are managed in Settings.
+  await page.goto("/dashboard/settings");
+  await expect(page.getByText("Round2 Color").first()).toBeVisible();
+  await expect(page.getByText("Round2 Funding").first()).toBeVisible();
 });
 
 test("a flexible import copes with missing and extra columns, empty rows, and odd values", async ({

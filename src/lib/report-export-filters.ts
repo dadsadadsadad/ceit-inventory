@@ -14,6 +14,7 @@ import {
   type HardwareComponent,
   type LicenseFilter,
 } from "@/lib/computer-directory";
+import { stripControlCharacters } from "@/lib/clean-text";
 import { isUuid } from "@/lib/ids";
 import { isWarrantyFilter, type WarrantyFilter } from "@/lib/warranty";
 import { manilaCalendarDate } from "@/lib/manila-date";
@@ -192,7 +193,7 @@ function optionalId(value: string | null, message: string) {
 }
 
 function searchText(value: string | null) {
-  const text = value?.replace(/\s+/g, " ").trim().slice(0, 120);
+  const text = value && stripControlCharacters(value).replace(/\s+/g, " ").trim().slice(0, 120);
   return text || undefined;
 }
 

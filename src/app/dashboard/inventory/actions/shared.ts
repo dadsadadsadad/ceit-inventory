@@ -1,14 +1,26 @@
 import "server-only";
 
-import { BorrowStatus, ItemCondition, ItemStatus, ItemType, Prisma } from "@prisma/client";
+import {
+  BorrowStatus,
+  CustomFieldType,
+  ItemCondition,
+  ItemStatus,
+  ItemType,
+  Prisma,
+} from "@prisma/client";
 
+import { auditEventData } from "@/lib/audit-event";
 import {
   CustomFieldError,
   customFieldInputName,
   customFieldsFor,
+  maximumCustomFields,
   parseCustomFieldValues,
   readCustomValues,
+  validatedChoices,
+  type CustomFieldValues,
 } from "@/lib/custom-fields";
+import type { InventoryUser } from "@/lib/inventory-auth";
 import { loadCustomFields } from "@/lib/custom-field-queries";
 import { isUuid } from "@/lib/ids";
 import { FormError } from "@/lib/form-action";
@@ -213,6 +225,98 @@ export async function readItemCustomFields(
 }
 
 export { customFieldInputName };
+
+/** A new extra field typed into an item form, with this item's answer for it. */
+export type InlineCustomField = {
+  answer: string;
+  choices: string[];
+  fieldType: CustomFieldType;
+  label: string;
+};
+
+// Read the "add a new extra field" part of an item form. Nothing is written yet, so a form that
+// fails for another reason does not leave a stray field behind.
+export function readInlineCustomField(formData: FormData): InlineCustomField | null {
+  const label = String(formData.get("newFieldLabel") ?? "").trim();
+  if (!label) {
+    return null;
+  }
+  if (label.length > 60) {
+    throw new FormError("A field name must be 60 characters or fewer.");
+  }
+  const fieldType = String(formData.get("newFieldType") ?? "TEXT") as CustomFieldType;
+  if (!Object.values(CustomFieldType).includes(fieldType)) {
+    throw new FormError("Choose what kind of answer the new field takes.");
+  }
+  let choices: string[];
+  try {
+    choices = validatedChoices(fieldType, String(formData.get("newFieldChoices") ?? ""));
+  } catch (error) {
+    throw new FormError(error instanceof Error ? error.message : "Check the new field's answers.");
+  }
+  return {
+    answer: String(formData.get("newFieldValue") ?? "").trim(),
+    choices,
+    fieldType,
+    label,
+  };
+}
+
+// Create the field (for every item; Settings can narrow it) and return this item's answer for it.
+// It runs inside the item's own transaction, so the field and the item are saved together.
+export async function addInlineCustomField(
+  transaction: Prisma.TransactionClient,
+  request: InlineCustomField,
+  actor: InventoryUser,
+): Promise<CustomFieldValues> {
+  const existing = await transaction.customField.findMany({ select: { label: true } });
+  if (existing.length >= maximumCustomFields) {
+    throw new FormError(`You can add up to ${maximumCustomFields} extra fields.`);
+  }
+  if (existing.some((field) => field.label.toLowerCase() === request.label.toLowerCase())) {
+    throw new FormError(
+      `There is already an extra field called “${request.label}”. Fill that one in instead.`,
+    );
+  }
+  const field = await transaction.customField.create({
+    data: {
+      choices: request.choices,
+      fieldType: request.fieldType,
+      label: request.label,
+      sortOrder: existing.length,
+    },
+  });
+  await transaction.inventoryAudit.create({
+    data: auditEventData({
+      action: "CREATED",
+      actor,
+      entity: { id: field.id, label: field.label, type: "custom-field" },
+      metadata: { activityKind: "configuration", fieldType: request.fieldType },
+      summary: "Extra field created.",
+    }),
+  });
+  try {
+    return parseCustomFieldValues([{ ...field, appliesTo: null, categoryId: null }], (name) =>
+      name === customFieldInputName(field.id) ? request.answer : null,
+    );
+  } catch (error) {
+    if (error instanceof CustomFieldError) {
+      throw new FormError(error.message);
+    }
+    throw error;
+  }
+}
+
+// Put an item's answers for a newly created field with the answers it already has.
+export function withInlineAnswers(
+  base: Prisma.InputJsonObject | typeof Prisma.DbNull,
+  inline: CustomFieldValues,
+) {
+  if (!Object.keys(inline).length) {
+    return base;
+  }
+  return { ...(base === Prisma.DbNull ? {} : base), ...inline } as Prisma.InputJsonObject;
+}
 
 // "yes" or "no" from a select; empty means nobody said.
 export function optionalYesNo(formData: FormData, key: string) {

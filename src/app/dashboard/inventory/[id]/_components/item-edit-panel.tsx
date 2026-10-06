@@ -5,6 +5,7 @@ import { ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 import { CustomFieldInputs } from "@/app/components/custom-field-inputs";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { FormSection } from "@/app/components/form-section";
+import { NewExtraField } from "@/app/components/new-extra-field";
 import { SubmitButton } from "@/app/components/submit-button";
 import { customFieldsFor, readCustomValues, type CustomFieldDefinition } from "@/lib/custom-fields";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
@@ -292,14 +293,22 @@ export function ItemEditPanel({
             </div>
           </FormSection>
 
-          {applicableFields.length ? (
-            <FormSection title="Extra details" hint="Fields added in Settings">
+          <FormSection
+            title="Extra details"
+            hint={
+              applicableFields.length
+                ? "Fields your department added, or add a new one"
+                : "Record something that is not here yet"
+            }
+          >
+            {applicableFields.length ? (
               <CustomFieldInputs
                 fields={applicableFields}
                 values={readCustomValues(item.customFields)}
               />
-            </FormSection>
-          ) : null}
+            ) : null}
+            <NewExtraField />
+          </FormSection>
         </div>
         <SubmitButton
           pendingLabel="Saving update…"

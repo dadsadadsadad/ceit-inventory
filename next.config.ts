@@ -38,6 +38,9 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Permissions-Policy", value: "camera=(self), geolocation=(), microphone=()" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+          // Browsers only honour this over HTTPS, which the school launch requires anyway.
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
         ],
       },
     ];

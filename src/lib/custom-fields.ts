@@ -141,6 +141,21 @@ export function parseCustomFieldValues(
   return values;
 }
 
+/** The list of answers for a field. Only "choose from a list" fields have one, and it needs two. */
+export function validatedChoices(fieldType: CustomFieldType, text: string) {
+  if (fieldType !== CustomFieldType.CHOICE) {
+    return [];
+  }
+  const choices = parseChoices(text);
+  if (choices.length < 2) {
+    throw new CustomFieldError("Give at least two answers to choose from, one per line.");
+  }
+  if (choices.some((choice) => choice.length > 80)) {
+    throw new CustomFieldError("Each answer must be 80 characters or fewer.");
+  }
+  return choices;
+}
+
 /** The answers for a CHOICE field, typed one per line or separated by commas. */
 export function parseChoices(text: string) {
   const choices = text

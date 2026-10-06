@@ -2,8 +2,13 @@
 export const appearanceBootstrap = `
 try {
   const root = document.documentElement;
-  const savedTheme = localStorage.getItem("ceit-theme");
-  const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
+  const pick = (key, allowed, fallback) => {
+    const value = localStorage.getItem(key);
+    return allowed.indexOf(value) >= 0 ? value : fallback;
+  };
+  const mode = pick("ceit-theme", ["light", "dark", "auto"], "light");
+  const deviceDark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const theme = mode === "auto" ? (deviceDark ? "dark" : "light") : mode;
   const savedAccent = localStorage.getItem("ceit-accent");
   const legacy = { violet: "#8b5cf6", blue: "#0ea5e9", emerald: "#10b981" };
   const savedKey = (savedAccent || "").toLowerCase();
@@ -57,6 +62,24 @@ try {
     return result;
   };
   root.dataset.theme = theme;
+  const set = (name, value) => {
+    if (value) root.setAttribute(name, value);
+    else root.removeAttribute(name);
+  };
+  const tones = theme === "dark" ? ["ink", "midnight", "black"] : ["paper", "bright", "cool"];
+  const tone = pick(theme === "dark" ? "ceit-tone-dark" : "ceit-tone-light", tones, tones[0]);
+  const contrastPref = pick("ceit-contrast", ["standard", "high"], "standard");
+  const cornersPref = pick("ceit-corners", ["sharp", "default", "round"], "default");
+  const motionPref = pick("ceit-motion", ["full", "reduced"], "full");
+  const textPref = pick("ceit-text", ["default", "large", "larger"], "default");
+  const titlesPref = pick("ceit-titles", ["serif", "sans"], "serif");
+  set("data-mode", mode);
+  set("data-tone", tone === tones[0] ? null : tone);
+  set("data-contrast", contrastPref === "standard" ? null : contrastPref);
+  set("data-corners", cornersPref === "default" ? null : cornersPref);
+  set("data-motion", motionPref === "full" ? null : motionPref);
+  set("data-text", textPref === "default" ? null : textPref);
+  set("data-titles", titlesPref === "serif" ? null : titlesPref);
   if (accent) {
     const textSurface = theme === "light" ? "#e4e9ef" : "#343c47";
     const linkDirection = theme === "light" ? dark : light;

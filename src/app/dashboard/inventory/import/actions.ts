@@ -7,6 +7,7 @@ import { AuditAction, ItemCondition, ItemStatus, ItemType, Prisma } from "@prism
 import { revalidatePath } from "next/cache";
 
 import { auditActorName, auditEventData } from "@/lib/audit-event";
+import { stripControlCharacters } from "@/lib/clean-text";
 import { requireWriteAccess, type InventoryUser } from "@/lib/inventory-auth";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import {
@@ -73,6 +74,8 @@ type ValueReader = (column: ImportField) => string;
 
 const maximumFileBytes = 10 * 1024 * 1024;
 const maximumRows = 1_000;
+// Rows of "quantity 50" multiply, so the records one file may create are capped as well.
+const maximumRecords = 2_000;
 // Rows scanned past the heading; a sheet padded with formatting can report far more than it holds.
 const maximumScannedRows = 25_000;
 const maximumXlsxArchiveEntries = 2_000;
@@ -83,6 +86,10 @@ const fallbackLocationName = "Unassigned";
 
 // Read a spreadsheet cell, including rich text and formula results.
 function cellText(value: ExcelJS.CellValue | undefined): string {
+  return stripControlCharacters(rawCellText(value));
+}
+
+function rawCellText(value: ExcelJS.CellValue | undefined): string {
   if (value === null || value === undefined) {
     return "";
   }
@@ -841,7 +848,7 @@ export async function importInventory(
       continue;
     }
     dataRows += 1;
-    if (dataRows > maximumRows) {
+    if (dataRows > maximumRows || records >= maximumRecords) {
       cutOff = true;
       break;
     }
@@ -1002,7 +1009,7 @@ export async function importInventory(
   }
   if (cutOff) {
     notices.push(
-      `Only the first ${maximumRows.toLocaleString()} rows are read at a time. Put the remaining rows in a second file and import that next.`,
+      `Only the first ${maximumRows.toLocaleString()} rows (or ${maximumRecords.toLocaleString()} items, when rows make several) are read at a time. Put the remaining rows in a second file and import that next.`,
     );
   }
   if (!dataRows && !skipped) {

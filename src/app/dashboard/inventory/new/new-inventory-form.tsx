@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CustomFieldInputs } from "@/app/components/custom-field-inputs";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { FormSection } from "@/app/components/form-section";
+import { NewExtraField } from "@/app/components/new-extra-field";
 import { SubmitButton } from "@/app/components/submit-button";
 import { customFieldsFor, type CustomFieldDefinition } from "@/lib/custom-fields";
 import { defaultLowStockThreshold } from "@/lib/stock-level";
@@ -461,11 +462,17 @@ export function NewInventoryForm({
           </FormSection>
         ) : null}
 
-        {extraFields.length ? (
-          <FormSection title="Extra details" hint="Fields your department added in Settings">
-            <CustomFieldInputs fields={extraFields} />
-          </FormSection>
-        ) : null}
+        <FormSection
+          title="Extra details"
+          hint={
+            extraFields.length
+              ? "Fields your department added, or add a new one"
+              : "Record something that is not here yet"
+          }
+        >
+          {extraFields.length ? <CustomFieldInputs fields={extraFields} /> : null}
+          <NewExtraField />
+        </FormSection>
       </div>
 
       <SubmitButton

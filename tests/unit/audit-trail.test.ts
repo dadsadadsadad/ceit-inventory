@@ -135,7 +135,7 @@ describe("audit trail views", () => {
     expect(auditViewWhere("maintenance")).toEqual({ entityType: "maintenance-ticket" });
     expect(auditViewWhere("setup")).toEqual({
       entityType: {
-        in: ["account", "category", "location", "custom-field", "dashboard-note"],
+        in: ["account", "category", "location", "custom-field", "calendar-event", "dashboard-note"],
       },
     });
   });

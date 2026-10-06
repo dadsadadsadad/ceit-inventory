@@ -10,7 +10,7 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Item categories, individually tracked equipment (one record, asset tag, and QR code per physical unit), and counted stock records (one record and one QR code per kind of stock)
 - **Low-stock alerts** for stock: each record can set its own alert level (5 by default, 0 turns it off). Running low and out of stock show on the Inventory list, the item page, the dashboard, and in reports
 - **Warranty end dates** (optional) with a warranty report and an "ending soon" alert 60 days ahead
-- **Extra fields** that staff define in Settings (text, number, date, yes or no, or a list of choices) and fill in on any item, optionally only for one type or category
+- **Extra fields** (text, number, date, yes or no, or a list of choices) that staff add in Settings **or straight from any item's add or edit form**, fill in on any item, and can limit to one type or category in Settings
 - Optional "Licensed?" on installed software
 - Per-PC/Mac hardware and software descriptions, structured technical details, and installed-software records
 - Automatic asset tags in the existing `INV-CAT-ST-ROOM-0001` format and a unique QR code for every new equipment record
@@ -27,7 +27,9 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - An audit trail that opens on the important changes, groups events by day, and keeps routine events (QR scans, label prints, report downloads, sign-ins) one click away
 - Borrowing limits: reservations at most 3 days ahead, loans at most 7 days (14 with an extension), at most 3 open requests per student, no new requests while something is overdue, and missed pickups release the equipment automatically. See [the launch notes](docs/launch-checklist.md) for the exact rules and how to change them
 - Two account types: **Administrator** and **Faculty staff**. Faculty staff can do everything except create or manage accounts
-- A paper-and-ink "ledger" look with a serif for titles, a mono for asset tags, and light and dark themes; see [the design notes](docs/design-system.md)
+- A paper-and-ink "ledger" look with a serif for titles and a mono for asset tags; see [the design notes](docs/design-system.md). A compact **Appearance** panel (saved per device) sets light, dark, or follow-the-device mode; a background tone for each mode (Paper, Bright, Cool; Ink, Midnight, Black); an accent color; and, under More options, text size, corner style, titles in serif or sans, high contrast, and reduced motion
+- A **calendar** on the dashboard, above the department note: loans due back, reservations to hand over, software licenses and warranties that end, and events staff add themselves (a lab inventory check, a class booking). Click a day to see and add what is on it
+- An audit trail written for people: each entry says who did what and what changed, without database ids or raw data
 - Public borrowing requests from QR codes, including future reservations in the same borrow form, staff approval, checkout (with an ID check), cancellation, and return tracking
 - **Return reminders** and a **due today** list: staff copy a ready-written text for the borrower, and the dashboard and Borrowing page list what is due back today
 - **Scanning a QR code**: a signed-in phone goes straight to the item's record for editing, with small shortcuts to borrow, return, or report a problem. Anyone else sees the item, whether it is available (clearly, before any form), and the borrow, return, and report forms
