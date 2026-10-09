@@ -9,6 +9,9 @@ import { liveScopeTables, type LiveUpdateScope } from "./live-update-scope";
 // Coalesce simultaneous viewers without retaining public QR codes indefinitely.
 const cache = new Map<string, { expires: number; value: Promise<string> }>();
 
+/** The revision for a QR code that matches no item, so nobody keeps a stream open for it. */
+export const missingItemRevision = "missing";
+
 export function liveRevision(qrCode?: string, scope: LiveUpdateScope = "dashboard") {
   const key = qrCode ? `qr:${qrCode}` : scope;
   const existing = cache.get(key);
@@ -50,6 +53,9 @@ async function readRevision(qrCode: string | undefined, scope: LiveUpdateScope) 
       JOIN ${table("Location")} l ON l.id = i."locationId"
       WHERE i."qrCode" = ${qrCode}
     `);
+    if (Array.isArray(snapshot) && snapshot.length === 0) {
+      return missingItemRevision;
+    }
   } else {
     const parts = liveScopeTables[scope].map((name) => {
       const timestamp =

@@ -5,6 +5,7 @@ import { auditActorName, auditEventData } from "@/lib/audit-event";
 import {
   auditCategory,
   auditChangedFields,
+  auditSubjectLabel,
   auditTrailSearchParameters,
   auditTrailWhere,
   auditViewWhere,
@@ -152,5 +153,23 @@ describe("audit trail views", () => {
       ["Today", 2],
       ["Yesterday", 1],
     ]);
+  });
+});
+
+describe("audit event subjects", () => {
+  it("names the item, then the person for account events, then the saved label", () => {
+    expect(
+      auditSubjectLabel({ entityLabel: "ignored", entityType: null, item: { name: "Lab1-PC-01" } }),
+    ).toBe("Lab1-PC-01");
+    expect(
+      auditSubjectLabel({ entityLabel: "maria | maria@ceit.edu", entityType: "session" }),
+    ).toBe("maria");
+    expect(
+      auditSubjectLabel({ entityLabel: "maria | maria@ceit.edu", entityType: "account" }),
+    ).toBe("maria");
+    expect(
+      auditSubjectLabel({ entityLabel: "Borrow request 1A2B3C4D", entityType: "borrow-request" }),
+    ).toBe("Borrow request 1A2B3C4D");
+    expect(auditSubjectLabel({ entityLabel: "  ", entityType: null })).toBeNull();
   });
 });

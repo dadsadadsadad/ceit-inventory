@@ -9,6 +9,7 @@ import { FormError, formAction } from "@/lib/form-action";
 import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
+import { runTransaction } from "@/lib/database-transaction";
 
 function refreshPages() {
   revalidatePath("/dashboard/settings");
@@ -53,25 +54,27 @@ export async function createCustomField(formData: FormData) {
     const scope = readScope(formData);
     const choices = readChoices(formData, fieldType);
 
-    const existing = await prisma.customField.findMany({ select: { label: true } });
-    if (existing.length >= maximumCustomFields) {
-      throw new FormError(`You can add up to ${maximumCustomFields} extra fields.`);
-    }
-    if (existing.some((field) => field.label.toLowerCase() === label.toLowerCase())) {
-      throw new FormError("There is already an extra field with that name.");
-    }
-
-    const field = await prisma.customField.create({
-      data: { label, fieldType, choices, ...scope, sortOrder: existing.length },
-    });
-    await prisma.inventoryAudit.create({
-      data: auditEventData({
-        action: "CREATED",
-        actor,
-        entity: { id: field.id, label: field.label, type: "custom-field" },
-        metadata: { activityKind: "configuration", fieldType },
-        summary: "Extra field created.",
-      }),
+    // Checked, added, and recorded together, so the limit holds even for two saves at once.
+    await runTransaction(async (transaction) => {
+      const existing = await transaction.customField.findMany({ select: { label: true } });
+      if (existing.length >= maximumCustomFields) {
+        throw new FormError(`You can add up to ${maximumCustomFields} extra fields.`);
+      }
+      if (existing.some((field) => field.label.toLowerCase() === label.toLowerCase())) {
+        throw new FormError("There is already an extra field with that name.");
+      }
+      const field = await transaction.customField.create({
+        data: { label, fieldType, choices, ...scope, sortOrder: existing.length },
+      });
+      await transaction.inventoryAudit.create({
+        data: auditEventData({
+          action: "CREATED",
+          actor,
+          entity: { id: field.id, label: field.label, type: "custom-field" },
+          metadata: { activityKind: "configuration", fieldType },
+          summary: "Extra field created.",
+        }),
+      });
     });
     refreshPages();
   });

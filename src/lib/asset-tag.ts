@@ -1,5 +1,7 @@
 import { ItemStatus, PrismaClient } from "@prisma/client";
 
+import { FormError } from "./form-error";
+
 export const inventoryAssetTagPattern = /^INV-([A-Z0-9]{3})-([A-Z]{2})-(\d{2})-(\d{4})$/;
 
 const statusCodes: Record<ItemStatus, string> = {
@@ -115,7 +117,7 @@ export async function nextInventoryAssetTag(
     }),
   ]);
   if (!category?.assetTagCode || !location?.assetTagCode) {
-    throw new Error(
+    throw new FormError(
       "This category or room needs an asset-tag code in Settings before equipment can be added.",
     );
   }

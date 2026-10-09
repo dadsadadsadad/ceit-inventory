@@ -48,7 +48,7 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
             href={`/dashboard/inventory/${item.id}`}
             className="accent-link text-sm font-semibold"
           >
-            ← Back to item
+            ← Item record
           </Link>
           {scanUrl ? <PrintLabel itemId={item.id} /> : null}
         </div>

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { PublicRequestKind } from "@prisma/client";
 
 import { prisma } from "@/prisma";
+import { clientAddress, rateLimitSecret } from "./client-address";
 
 /**
  * A limit on failed sign-ins from one device (its network address), on top of the lock on each
@@ -16,18 +17,9 @@ export const maximumFailedSignIns = 30;
 const windowMs = 15 * 60 * 1000;
 
 async function deviceFingerprint() {
-  const requestHeaders = await headers();
-  const forwarded = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const address = forwarded || requestHeaders.get("x-real-ip") || "unknown";
-  const secret =
-    process.env.REQUEST_RATE_LIMIT_SECRET ??
-    process.env.SCHOOL_DATABASE_URL ??
-    process.env.DATABASE_URL;
-  if (!secret) {
-    throw new Error("Sign-in protection is not configured.");
-  }
+  const address = clientAddress(await headers());
   // The network address alone, because a script changes its browser name as easily as it likes.
-  return createHmac("sha256", secret).update(`sign-in:${address}`).digest("hex");
+  return createHmac("sha256", rateLimitSecret()).update(`sign-in:${address}`).digest("hex");
 }
 
 /** Has this device used up its failed sign-ins for now? */

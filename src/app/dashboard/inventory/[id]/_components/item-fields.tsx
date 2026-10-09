@@ -78,12 +78,15 @@ export function TextField({
 export function Detail({
   label: detailLabel,
   children,
+  wide = false,
 }: {
   label: string;
   children: React.ReactNode;
+  /** Longer text, such as a description, takes the full row. */
+  wide?: boolean;
 }) {
   return (
-    <div>
+    <div className={wide ? "detail-wide" : undefined}>
       <dt className="muted text-xs font-bold uppercase tracking-wide">{detailLabel}</dt>
       <dd className="mt-1 break-words text-sm font-semibold">{children}</dd>
     </div>

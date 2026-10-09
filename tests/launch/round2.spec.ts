@@ -40,7 +40,9 @@ async function checkOut(qrCode: string, returnsInHours: number) {
   await query(
     `INSERT INTO "BorrowRequest" (id,"inventoryItemId","borrowerName","studentNumber",contact,purpose,"requestedQuantity","expectedReturnDate","startsAt",status,"checkedOutItemStatus","personalDataExpiresAt","updatedAt")
      VALUES ($1,$2,'Round Two Student','2024-0001','09123456789','Class',1,$3,NOW() - INTERVAL '2 hours','BORROWED','OK',NOW() + INTERVAL '30 days',NOW())`,
-    [randomUUID(), id, new Date(Date.now() + returnsInHours * 3_600_000)],
+    // An ISO string, not a Date: the driver would send a Date in this computer's time zone, which
+    // the time-zone-less column would keep as if it were UTC.
+    [randomUUID(), id, new Date(Date.now() + returnsInHours * 3_600_000).toISOString()],
   );
 }
 

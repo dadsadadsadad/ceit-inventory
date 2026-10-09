@@ -20,6 +20,7 @@ import {
 } from "./borrowing-details";
 import {
   borrowRequestWhere,
+  borrowingListTiers,
   dueTodayFilter,
   isBorrowStatus,
   isDueTodayFilter,
@@ -34,6 +35,8 @@ import {
   type BorrowingRecord,
   type SearchParams,
 } from "./borrowing-query";
+import { HandHelping } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -51,28 +54,47 @@ export default async function BorrowingPage({
   let requests: BorrowingRecord[] = [];
   let totalRecords = 0;
   let currentPage = requestedPage;
-  const loadPage = (page: number) =>
-    prisma.borrowRequest.findMany({
-      where,
-      include: {
-        inventoryItem: {
-          select: { assetTag: true, id: true, name: true, quantity: true, status: true },
-        },
-      },
-      orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
+  const tierWhere = borrowingListTiers.map((tier) => ({
+    AND: [where, { status: { in: tier } }],
+  }));
+  // One page across the groups in order: the rest of one group, then the start of the next.
+  const loadPage = async (page: number, tierCounts: number[]) => {
+    let skip = (page - 1) * pageSize;
+    const rows: BorrowingRecord[] = [];
+    for (const [index, count] of tierCounts.entries()) {
+      if (rows.length === pageSize) {
+        break;
+      }
+      if (skip >= count) {
+        skip -= count;
+        continue;
+      }
+      rows.push(
+        ...(await prisma.borrowRequest.findMany({
+          where: tierWhere[index],
+          include: {
+            inventoryItem: {
+              select: { assetTag: true, id: true, name: true, quantity: true, status: true },
+            },
+          },
+          orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
+          skip,
+          take: pageSize - rows.length,
+        })),
+      );
+      skip = 0;
+    }
+    return rows;
+  };
 
   try {
-    const [count, requestedRows] = await Promise.all([
-      prisma.borrowRequest.count({ where }),
-      loadPage(requestedPage),
-    ]);
-    totalRecords = count;
+    const tierCounts = await Promise.all(
+      tierWhere.map((tier) => prisma.borrowRequest.count({ where: tier })),
+    );
+    totalRecords = tierCounts.reduce((total, count) => total + count, 0);
     const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
     currentPage = Math.min(requestedPage, totalPages);
-    requests = currentPage === requestedPage ? requestedRows : await loadPage(currentPage);
+    requests = await loadPage(currentPage, tierCounts);
   } catch (error) {
     console.error("Unable to load borrowing requests", error);
     databaseError = true;
@@ -186,10 +208,9 @@ export default async function BorrowingPage({
             Borrowing requests could not be loaded. Confirm the database connection and try again.
           </div>
         ) : requests.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">
-            No borrowing requests match these filters. Students can submit a request from an
-            item&apos;s QR code page.
-          </div>
+          <EmptyState icon={HandHelping} title="No borrowing requests match these filters.">
+            Students can submit a request from an item&apos;s QR code page.
+          </EmptyState>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Borrowing requests">
             <div className="divider border-b px-5 py-3">
@@ -246,7 +267,10 @@ export default async function BorrowingPage({
                       </section>
                       <section aria-label="Request">
                         <p className="request-label">Request</p>
-                        <p className="text-sm">{request.requestedQuantity} requested</p>
+                        <p className="text-sm">
+                          {request.requestedQuantity}{" "}
+                          {request.requestedQuantity === 1 ? "unit" : "units"} requested
+                        </p>
                         <BorrowSchedule request={request} />
                         <p className="muted mt-2 whitespace-pre-wrap text-sm leading-6">
                           {request.purpose}

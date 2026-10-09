@@ -506,8 +506,11 @@
     width: 100%;
   }
 
-  .page header > .flex:last-child > a {
-    flex: 1 1 9rem;
+  /* Header buttons share the row at their natural width and wrap whole, never mid-label. */
+  .page header > .flex:last-child > :is(a, details, button) {
+    flex: 1 1 auto;
+    text-align: center;
+    white-space: nowrap;
   }
 }
 

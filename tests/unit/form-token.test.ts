@@ -26,6 +26,10 @@ describe("signed public form tokens", () => {
     expect(() =>
       assertFormToken("borrow:abc", `${time}.${"0".repeat(64)}`, issuedAt + 5_000),
     ).toThrow(/could not be verified/);
+    // As many characters as a real signature, but more bytes: refused, not a crash.
+    expect(() =>
+      assertFormToken("borrow:abc", `${time}.${"é".repeat(64)}`, issuedAt + 5_000),
+    ).toThrow(/could not be verified/);
   });
 
   it("will not let a token be used for another item or another kind of form", () => {

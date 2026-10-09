@@ -40,7 +40,7 @@ export default async function NewInventoryItemPage() {
       <div className="page-narrow space-y-6">
         <header>
           <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
-            Back to inventory
+            ← Inventory
           </Link>
           <p className="eyebrow mt-5">New record</p>
           <h1 className="title mt-3 text-3xl">Add item</h1>

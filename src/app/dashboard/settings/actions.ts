@@ -22,6 +22,7 @@ import {
   requireWriteAccess,
   verifyPassword,
 } from "@/lib/inventory-auth";
+import { isAccountLocked, recordFailedPassword } from "@/lib/account-lock";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[a-z0-9._-]{3,32}$/;
@@ -141,7 +142,7 @@ export async function updateOwnAccount(formData: FormData) {
 
     const account = await prisma.user.findUnique({
       where: { id: actor.id },
-      select: { email: true, passwordHash: true, username: true },
+      select: { email: true, lockedUntil: true, passwordHash: true, username: true },
     });
     if (!account) {
       throw new FormError("Your account is no longer available.");
@@ -154,7 +155,15 @@ export async function updateOwnAccount(formData: FormData) {
     if (!current) {
       throw new FormError("Enter your current password to update your account.");
     }
+    // Wrong guesses here count toward the same lock as sign-in, so a borrowed session cannot be
+    // used to try password after password.
+    if (isAccountLocked(account)) {
+      throw new FormError(
+        "Too many wrong passwords were entered. Wait about 15 minutes before trying again.",
+      );
+    }
     if (!(await verifyPassword(current, account.passwordHash))) {
+      await recordFailedPassword(actor.id);
       throw new FormError("Your current password is incorrect.");
     }
 

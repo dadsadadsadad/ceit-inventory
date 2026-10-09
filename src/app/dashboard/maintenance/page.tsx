@@ -19,6 +19,8 @@ import { firstParam, pageParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
 import { createMaintenanceTicket, updateMaintenanceTicket } from "./actions";
+import { Wrench } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -461,6 +463,11 @@ export default async function MaintenancePage({
                     {ticket.resolvedAt ? (
                       <p className="muted mt-1 text-xs">Resolved {formatDate(ticket.resolvedAt)}</p>
                     ) : null}
+                    {ticket.resolutionNotes ? (
+                      <p className="ticket-staff-note mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6">
+                        <strong>Staff notes</strong> {ticket.resolutionNotes}
+                      </p>
+                    ) : null}
                   </div>
                   {/* Save inspection results and staff notes. */}
                   <details className="section-disclosure min-w-0">
@@ -560,9 +567,9 @@ export default async function MaintenancePage({
               </article>
             ))
           ) : (
-            <div className="notice rounded-lg px-5 py-4 text-sm">
-              No maintenance requests match this filter.
-            </div>
+            <EmptyState icon={Wrench} title="No maintenance requests match these filters.">
+              Report an issue when equipment needs inspection, repair, or replacement.
+            </EmptyState>
           )}
         </section>
         <Pager

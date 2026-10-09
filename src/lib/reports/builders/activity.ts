@@ -4,6 +4,7 @@ import {
   auditCategory,
   auditChangedFields,
   auditEventDetail,
+  auditSubjectLabel,
   auditTrailWhere,
   auditViewLabel,
   defaultAuditView,
@@ -79,7 +80,11 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
     ),
     metrics: [
       { label: "Events", value: total.toLocaleString() },
-      { label: "People involved", value: people.length.toLocaleString() },
+      {
+        label: "People involved",
+        // Public scans and requests have no staff member behind them.
+        value: people.filter((person) => person.actorName).length.toLocaleString(),
+      },
       {
         label: "Most common event",
         value: topAction ? auditActionLabel(topAction.action) : "None",
@@ -104,7 +109,7 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
           ]
             .filter(Boolean)
             .join("\n"),
-          [event.item?.name ?? event.entityLabel ?? "No linked record", event.item?.assetTag]
+          [auditSubjectLabel(event) ?? "No linked record", event.item?.assetTag]
             .filter(Boolean)
             .join("\n"),
           auditActorLabel(event),
@@ -119,7 +124,7 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
         event.createdAt,
         auditCategory(event),
         auditActionLabel(event.action),
-        event.item?.name ?? event.entityLabel ?? "System",
+        auditSubjectLabel(event) ?? "",
         event.item?.assetTag ?? "",
         auditActorLabel(event),
         event.summary,

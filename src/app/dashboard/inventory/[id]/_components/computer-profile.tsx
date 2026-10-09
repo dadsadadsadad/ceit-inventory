@@ -223,12 +223,15 @@ function ComputerSummary({ computer }: { computer: ComputerInfo }) {
       </Detail>
       <Detail label="MAC address">{computer.macAddress ?? "Not recorded"}</Detail>
       <Detail label="IP address">{computer.ipAddress ?? "Not recorded"}</Detail>
-      <Detail label="Last checked">{displayDate(computer.lastCheckedAt)}</Detail>
       {computer.hardwareDescription ? (
-        <Detail label="Hardware description">{computer.hardwareDescription}</Detail>
+        <Detail label="Hardware description" wide>
+          {computer.hardwareDescription}
+        </Detail>
       ) : null}
       {computer.softwareDescription ? (
-        <Detail label="Software description">{computer.softwareDescription}</Detail>
+        <Detail label="Software description" wide>
+          {computer.softwareDescription}
+        </Detail>
       ) : null}
     </dl>
   );

@@ -29,6 +29,8 @@ import {
 import { InventoryRecords } from "./inventory-records";
 import { InventoryRowNavigation } from "./inventory-row-navigation";
 import { InventoryTabs } from "./inventory-tabs";
+import { PackageSearch } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -178,12 +180,11 @@ export default async function InventoryPage({
             Inventory could not be loaded. Confirm the database connection and try again.
           </div>
         ) : inventoryItems.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">
-            No records match these filters.{" "}
+          <EmptyState icon={PackageSearch} title="No records match these filters.">
             {canManage
               ? "Add an item or import an existing file to get started."
               : "Try clearing a filter."}
-          </div>
+          </EmptyState>
         ) : (
           <InventoryFormContainer canManage={bulkMode}>
             {bulkMode ? (

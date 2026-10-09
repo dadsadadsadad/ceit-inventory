@@ -48,6 +48,16 @@ export function isDueTodayFilter(value?: string | string[]) {
   return firstParam(value) === dueTodayFilter;
 }
 
+/**
+ * The list shows what needs staff first: requests and returns waiting on someone, then loans and
+ * reservations still in progress, then finished history. Newest first within each group.
+ */
+export const borrowingListTiers: BorrowStatus[][] = [
+  [borrowStatus.REQUESTED, borrowStatus.RETURN_REQUESTED],
+  [borrowStatus.BORROWED, borrowStatus.RESERVED],
+  [borrowStatus.RETURNED, borrowStatus.DECLINED, borrowStatus.CANCELLED],
+];
+
 // A short reason a pending or reserved request no longer holds the equipment.
 export function lapsedLabel(request: BorrowingRecord, now = new Date()) {
   if (!isHoldLapsed(request, now, borrowPolicyFromEnvironment())) {

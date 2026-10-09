@@ -17,6 +17,16 @@
   align-self: end;
 }
 
+.overview-greeting {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.overview-greeting strong {
+  color: var(--foreground);
+  font-weight: 650;
+}
+
 .overview-dateline {
   align-items: baseline;
   color: var(--muted);
@@ -381,10 +391,13 @@
 }
 
 @container workspace (min-width: 56rem) {
+  /* The side column spans both rows; the last row takes its extra height, so the worklist and
+     the recent activity below it stay together instead of drifting apart. */
   .overview-workspace.has-queue {
     align-items: start;
     column-gap: 1.25rem;
     grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 1fr);
+    grid-template-rows: auto 1fr;
   }
 
   .overview-workspace.has-queue .dashboard-side {
@@ -476,6 +489,28 @@
   padding: 0.85rem;
 }
 
+.detail-wide {
+  grid-column: 1 / -1;
+}
+
+/* Phones fit two facts per row instead of one tall stack. */
+@media (min-width: 360px) and (max-width: 639px) {
+  .item-detail-page dl.grid,
+  .scan-item-page dl.grid {
+    gap: 0.6rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .item-detail-page dl > div,
+  .scan-item-page dl > div {
+    padding: 0.7rem 0.75rem;
+  }
+
+  .detail-wide-phone {
+    grid-column: 1 / -1;
+  }
+}
+
 .item-detail-page .page-inner > .grid > aside.card h2 {
   align-items: center;
   display: flex;
@@ -536,8 +571,86 @@
   color: var(--accent);
 }
 
-.scan-page .scanner-preview {
-  min-height: min(62vw, 28rem);
+/* The scanner: a viewfinder beside the steps and manual lookup, stacked on phones. */
+.scanner-card {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .scanner-card {
+    align-items: start;
+    grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+  }
+}
+
+.scanner-video {
+  aspect-ratio: 4 / 5;
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .scanner-video {
+    aspect-ratio: 1;
+  }
+}
+
+/* Four corner brackets frame where the label should go. */
+.scanner-corners {
+  --corner: color-mix(in srgb, var(--accent) 70%, #fff);
+  --corner-size: 2.25rem;
+  background:
+    linear-gradient(var(--corner), var(--corner)) top left / var(--corner-size) 3px no-repeat,
+    linear-gradient(var(--corner), var(--corner)) top left / 3px var(--corner-size) no-repeat,
+    linear-gradient(var(--corner), var(--corner)) top right / var(--corner-size) 3px no-repeat,
+    linear-gradient(var(--corner), var(--corner)) top right / 3px var(--corner-size) no-repeat,
+    linear-gradient(var(--corner), var(--corner)) bottom left / var(--corner-size) 3px no-repeat,
+    linear-gradient(var(--corner), var(--corner)) bottom left / 3px var(--corner-size) no-repeat,
+    linear-gradient(var(--corner), var(--corner)) bottom right / var(--corner-size) 3px no-repeat,
+    linear-gradient(var(--corner), var(--corner)) bottom right / 3px var(--corner-size) no-repeat;
+  inset: 12%;
+  opacity: 0.55;
+  transition: opacity var(--interaction-duration) ease;
+}
+
+.scanner-preview[data-scanning="true"] .scanner-corners {
+  opacity: 1;
+}
+
+.scanner-steps {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0 0 1.1rem;
+  padding: 0;
+}
+
+.scanner-steps li {
+  align-items: center;
+  display: flex;
+  font-size: 0.9375rem;
+  gap: 0.7rem;
+}
+
+.scanner-steps li > span {
+  background: var(--accent-soft);
+  border-radius: 999px;
+  color: var(--accent);
+  display: grid;
+  flex: none;
+  font-family: var(--font-tag);
+  font-size: 0.875rem;
+  font-weight: 500;
+  height: 1.75rem;
+  place-items: center;
+  width: 1.75rem;
+}
+
+.scanner-status {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 0.6rem 0.8rem;
 }
 
 .scanner-preview[data-scanning="true"] .scanner-corners::after {
@@ -550,12 +663,6 @@
   position: absolute;
   right: 5%;
   top: 10%;
-}
-
-@media (max-width: 639px) {
-  .scan-page .scanner-preview {
-    min-height: 17rem;
-  }
 }
 
 /* ------------------------------------------------------------------ sign-in */
@@ -615,6 +722,28 @@
   font-size: 1rem;
   line-height: 1.6;
   margin-top: 1.5rem;
+}
+
+.login-points {
+  border-top: 1px dashed rgb(243 237 224 / 22%);
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 1.5rem 0 0;
+}
+
+.login-points li {
+  align-items: center;
+  color: #d9d0bf;
+  display: flex;
+  font-size: 0.9375rem;
+  gap: 0.75rem;
+}
+
+.login-points svg {
+  color: color-mix(in srgb, var(--accent) 65%, #fff);
+  flex: none;
 }
 
 .login-form-side {

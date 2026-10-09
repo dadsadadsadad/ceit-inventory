@@ -1,5 +1,5 @@
 import { getCurrentInventoryUser } from "@/lib/inventory-auth";
-import { liveRevision } from "@/lib/live-revision";
+import { liveRevision, missingItemRevision } from "@/lib/live-revision";
 import { isLiveUpdateScope } from "@/lib/live-update-scope";
 import { isInventoryQrCode } from "@/lib/qr-code";
 
@@ -21,6 +21,10 @@ export async function GET(request: Request) {
     return new Response(null, { status: 401 });
   }
   const headers = { "Cache-Control": "private, no-store, no-transform" };
+  // A public subscription is only for a label that exists; a made-up code gets nothing to watch.
+  if (qrCode && (await liveRevision(qrCode, scope)) === missingItemRevision) {
+    return new Response(null, { status: 404, headers });
+  }
   if (url.searchParams.get("mode") === "poll") {
     return Response.json({ revision: await liveRevision(qrCode, scope) }, { headers });
   }

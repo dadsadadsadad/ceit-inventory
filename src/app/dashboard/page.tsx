@@ -19,12 +19,12 @@ import { InventoryMix } from "@/app/components/inventory-mix";
 import { DashboardCalendar } from "./dashboard-calendar";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
-import { auditViewWhere } from "@/lib/audit-trail";
+import { auditSubjectLabel, auditViewWhere } from "@/lib/audit-trail";
 import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
 import { inventoryAttentionWhere } from "@/lib/inventory-attention";
 import { dueTodayWhere } from "@/lib/loan-due";
 import { loadCalendarMonth } from "@/lib/calendar-queries";
-import { formatManilaDate, manilaCalendarDate } from "@/lib/manila-date";
+import { formatManilaDate, manilaCalendarDate, manilaHour } from "@/lib/manila-date";
 import { personName } from "@/lib/person";
 import { lowStockWhere, outOfStockWhere } from "@/lib/stock-queries";
 import { warrantyWhere } from "@/lib/warranty";
@@ -58,6 +58,7 @@ async function getDashboardData(includeAuditTrail: boolean) {
             id: true,
             summary: true,
             entityLabel: true,
+            entityType: true,
             createdAt: true,
             item: { select: { id: true, name: true } },
           },
@@ -211,6 +212,16 @@ export default async function DashboardPage() {
       ]
     : [];
 
+  const hour = manilaHour();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const standing = !dashboard
+    ? ""
+    : !canManage
+      ? "Everything in its place. Ready for what’s next."
+      : waiting
+        ? `${waiting.toLocaleString()} ${waiting === 1 ? "thing is" : "things are"} waiting on your worklist.`
+        : "Everything is in its place. Nothing needs you right now.";
+
   return (
     <div className="page dashboard-overview-page">
       <div className="page-inner space-y-6">
@@ -218,7 +229,9 @@ export default async function DashboardPage() {
           <div className="overview-intro">
             <p className="eyebrow">Your equipment workspace</p>
             <h1 className="title mt-2">Inventory dashboard</h1>
-            <p className="muted mt-3 text-sm">Everything in its place. Ready for what’s next.</p>
+            <p className="overview-greeting muted mt-3">
+              {greeting}, <strong>{user.username}</strong>. {standing}
+            </p>
           </div>
           <div className="overview-header-actions">
             <Link
@@ -230,7 +243,7 @@ export default async function DashboardPage() {
           </div>
         </header>
         <div className="overview-dateline">
-          <span>At a glance</span>
+          <span>Today</span>
           <time dateTime={new Date().toISOString()}>
             {formatManilaDate(new Date(), {
               weekday: "short",
@@ -397,7 +410,7 @@ export default async function DashboardPage() {
                               </Link>
                             ) : (
                               <p className="muted mt-1 text-xs">
-                                {event.entityLabel ?? "System activity"}
+                                {auditSubjectLabel(event) ?? "Department records"}
                               </p>
                             )}
                           </div>

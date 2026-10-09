@@ -209,47 +209,49 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
             })}
           />
         ) : null}
-        {request.status === borrowStatus.BORROWED ? (
-          <details className="section-disclosure">
-            <summary className="accent-link cursor-pointer text-sm font-semibold">
-              {isOverdue(request, now) ? "Set a new return time" : "Change return time"}
-            </summary>
-            <FeedbackForm
-              action={extendBorrowRequest}
-              successMessage="Return time updated."
-              resetOnSuccess={false}
-              className="mt-3 space-y-3"
+        <details className="section-disclosure">
+          <summary className="accent-link cursor-pointer text-sm font-semibold">
+            {request.status === borrowStatus.RETURN_REQUESTED
+              ? "Not back yet? Keep it on loan"
+              : isOverdue(request, now)
+                ? "Set a new return time"
+                : "Change return time"}
+          </summary>
+          <FeedbackForm
+            action={extendBorrowRequest}
+            successMessage="Return time updated."
+            resetOnSuccess={false}
+            className="mt-3 space-y-3"
+          >
+            <input type="hidden" name="requestId" value={request.id} />
+            <label className="block text-sm font-semibold">
+              <span className="block">New return date and time</span>
+              <input
+                required
+                type="datetime-local"
+                name="expectedReturnDate"
+                min={manilaDateTimeInput(now)}
+                defaultValue={manilaDateTimeInput(suggestedReturn)}
+                className="field mt-1 w-full rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              <span className="block">Reason (optional)</span>
+              <input
+                name="staffNotes"
+                maxLength={2_000}
+                className="field mt-1 w-full rounded-lg px-3 py-2 text-sm"
+                placeholder="e.g. Approved by the instructor"
+              />
+            </label>
+            <SubmitButton
+              pendingLabel="Saving…"
+              className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
             >
-              <input type="hidden" name="requestId" value={request.id} />
-              <label className="block text-sm font-semibold">
-                <span className="block">New return date and time</span>
-                <input
-                  required
-                  type="datetime-local"
-                  name="expectedReturnDate"
-                  min={manilaDateTimeInput(now)}
-                  defaultValue={manilaDateTimeInput(suggestedReturn)}
-                  className="field mt-1 w-full rounded-lg px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block text-sm font-semibold">
-                <span className="block">Reason (optional)</span>
-                <input
-                  name="staffNotes"
-                  maxLength={2_000}
-                  className="field mt-1 w-full rounded-lg px-3 py-2 text-sm"
-                  placeholder="e.g. Approved by the instructor"
-                />
-              </label>
-              <SubmitButton
-                pendingLabel="Saving…"
-                className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
-              >
-                Save return time
-              </SubmitButton>
-            </FeedbackForm>
-          </details>
-        ) : null}
+              Save return time
+            </SubmitButton>
+          </FeedbackForm>
+        </details>
       </div>
     );
   }

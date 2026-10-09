@@ -305,6 +305,22 @@ export function auditActorLabel(event: Pick<AuditTrailEvent, "actorId" | "actorN
   return event.actorId ? "Former user" : "System / public";
 }
 
+/**
+ * What an event is about: the item, the person whose account or session it was, or its saved label.
+ * Accounts are stored as "username | email", and people are shown by username everywhere.
+ */
+export function auditSubjectLabel(
+  event: Pick<AuditTrailEvent, "entityLabel" | "entityType"> & { item?: { name: string } | null },
+) {
+  if (event.item?.name) {
+    return event.item.name;
+  }
+  if (event.entityType === "account" || event.entityType === "session") {
+    return personName(event.entityLabel);
+  }
+  return event.entityLabel?.trim() || null;
+}
+
 export function auditMetadata(event: Pick<AuditTrailEvent, "metadata">): Prisma.JsonObject {
   const metadata = event.metadata;
   return metadata && typeof metadata === "object" && !Array.isArray(metadata)

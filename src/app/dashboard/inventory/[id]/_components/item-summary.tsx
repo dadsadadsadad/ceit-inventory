@@ -27,6 +27,7 @@ export function ItemSummary({
     (field) => formatCustomValue(field, extraValues[field.id]) !== null,
   );
   const warranty = warrantyState(item.warrantyEndsAt);
+  const isSupply = item.itemType === ItemType.SUPPLY;
   return (
     <>
       {/* Item details and photo preview. */}
@@ -70,21 +71,24 @@ export function ItemSummary({
             <Detail label="Manufacturer / model">
               {[item.manufacturer, item.model].filter(Boolean).join(" ") || "Not recorded"}
             </Detail>
-            <Detail label="Serial number">{item.serialNumber ?? "Not recorded"}</Detail>
+            {/* Supplies rarely have a serial number or warranty, so blanks are left out. */}
+            {!isSupply || item.serialNumber ? (
+              <Detail label="Serial number">{item.serialNumber ?? "Not recorded"}</Detail>
+            ) : null}
             <Detail label="Purchased">{displayDate(item.purchaseDate)}</Detail>
-            <Detail label="Warranty">
-              {item.warrantyEndsAt
-                ? `${displayDate(item.warrantyEndsAt)} · ${warrantyStateLabel(warranty).toLowerCase()}`
-                : "Not recorded"}
-            </Detail>
+            {!isSupply || item.warrantyEndsAt ? (
+              <Detail label="Warranty">
+                {item.warrantyEndsAt
+                  ? `${displayDate(item.warrantyEndsAt)} · ${warrantyStateLabel(warranty).toLowerCase()}`
+                  : "Not recorded"}
+              </Detail>
+            ) : null}
             <Detail label="Last checked">{displayDate(item.lastCheckedAt)}</Detail>
             {item.purchasePrice !== null ? (
               <Detail label="Acquisition value">{displayPurchasePrice(item.purchasePrice)}</Detail>
             ) : null}
             <Detail label="Record type">
-              {item.itemType === ItemType.ASSET
-                ? "Equipment · its own QR code"
-                : "Stock · one QR code for all"}
+              {item.itemType === ItemType.ASSET ? "Equipment (one unit)" : "Stock (by quantity)"}
             </Detail>
             {extraFields.map((field) => (
               <Detail key={field.id} label={field.label}>

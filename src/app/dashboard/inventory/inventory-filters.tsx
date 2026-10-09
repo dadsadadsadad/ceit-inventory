@@ -52,7 +52,7 @@ export function InventoryFilters({
     <>
       {/* Search, filter, and sort the inventory. Choices apply as soon as they are made. */}
       <FilterForm
-        className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
+        className="card grid gap-3 rounded-lg p-4 min-[360px]:grid-cols-2 xl:grid-cols-4 xl:items-end"
         label="Inventory filters"
       >
         {bulkMode ? <input type="hidden" name="bulk" value="1" /> : null}
@@ -62,7 +62,7 @@ export function InventoryFilters({
             <input type="hidden" name="direction" value={sort.direction} />
           </>
         ) : null}
-        <label className="sm:col-span-2">
+        <label className="min-[360px]:col-span-2">
           <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
           <input
             name="q"
@@ -88,13 +88,13 @@ export function InventoryFilters({
           </select>
         </label>
         <label>
-          <span className="muted text-xs font-bold uppercase tracking-wide">Location</span>
+          <span className="muted text-xs font-bold uppercase tracking-wide">Room</span>
           <select
             name="location"
             defaultValue={search.location && isUuid(search.location) ? search.location : ""}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
           >
-            <option value="">All locations</option>
+            <option value="">All rooms</option>
             {locations.map((location) => (
               <option key={location.id} value={location.id}>
                 {location.name}
@@ -102,7 +102,10 @@ export function InventoryFilters({
             ))}
           </select>
         </label>
-        <div className="filter-chips sm:col-span-2 xl:col-span-4" aria-label="Quick filters">
+        <div
+          className="filter-chips min-[360px]:col-span-2 xl:col-span-4"
+          aria-label="Quick filters"
+        >
           <label className="filter-chip">
             <input
               type="checkbox"
@@ -141,11 +144,11 @@ export function InventoryFilters({
           </label>
         </div>
         <details
-          className="filter-disclosure sm:col-span-2 xl:col-span-4"
+          className="filter-disclosure min-[360px]:col-span-2 xl:col-span-4"
           open={Boolean(search.category || search.itemType || search.condition)}
         >
           <summary className="cursor-pointer text-sm font-semibold">More filters</summary>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 grid gap-3 min-[360px]:grid-cols-2 xl:grid-cols-3">
             <label>
               <span className="muted text-xs font-bold uppercase tracking-wide">Category</span>
               <select
@@ -193,7 +196,7 @@ export function InventoryFilters({
             </label>
           </div>
         </details>
-        <div className="flex flex-wrap items-center gap-4 sm:col-span-2 xl:col-span-4">
+        <div className="flex flex-wrap items-center gap-4 min-[360px]:col-span-2 xl:col-span-4">
           <ClearFiltersButton className="accent-link text-sm font-semibold">
             Clear all filters
           </ClearFiltersButton>

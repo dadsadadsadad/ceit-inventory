@@ -23,6 +23,11 @@ export function manilaCalendarDate(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+/** The hour of the day in the Philippines, from 0 to 23. */
+export function manilaHour(date = new Date()) {
+  return (date.getUTCHours() + 8) % 24;
+}
+
 export function nextManilaCalendarDate(date = new Date()) {
   const nextDay = new Date(`${manilaCalendarDate(date)}T12:00:00.000Z`);
   nextDay.setUTCDate(nextDay.getUTCDate() + 1);

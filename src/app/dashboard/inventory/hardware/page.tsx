@@ -20,6 +20,8 @@ import { prisma } from "@/prisma";
 
 import { InventoryTabs } from "../inventory-tabs";
 import { PcChips } from "../pc-chips";
+import { Cpu } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -147,7 +149,7 @@ export default async function HardwarePage({
 
         <FilterForm
           label="Hardware filters"
-          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] xl:items-end"
+          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-end"
         >
           <label className="sm:col-span-2 xl:col-span-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
@@ -174,9 +176,8 @@ export default async function HardwarePage({
               ))}
             </select>
           </label>
-          <ClearFiltersButton className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold" />
 
-          <fieldset className="filter-chips sm:col-span-2 xl:col-span-3" aria-label="Show hardware">
+          <fieldset className="filter-chips sm:col-span-2" aria-label="Show hardware">
             <legend className="sr-only">Show hardware</legend>
             {[
               ["components", "By component"],
@@ -190,10 +191,7 @@ export default async function HardwarePage({
           </fieldset>
 
           {mode === "components" ? (
-            <fieldset
-              className="filter-chips sm:col-span-2 xl:col-span-3"
-              aria-label="Hardware component"
-            >
+            <fieldset className="filter-chips sm:col-span-2" aria-label="Hardware component">
               <legend className="sr-only">Hardware component</legend>
               {hardwareComponents.map((entry) => (
                 <label key={entry.value} className="filter-chip">
@@ -209,7 +207,7 @@ export default async function HardwarePage({
             </fieldset>
           ) : null}
 
-          <div className="flex flex-wrap gap-x-6 gap-y-2 sm:col-span-2 xl:col-span-3">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 sm:col-span-2">
             <label className="filter-check flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -230,6 +228,9 @@ export default async function HardwarePage({
               />
               Include retired and lost PCs
             </label>
+            <ClearFiltersButton className="accent-link text-sm font-semibold sm:ml-auto">
+              Clear all filters
+            </ClearFiltersButton>
           </div>
         </FilterForm>
 
@@ -241,10 +242,9 @@ export default async function HardwarePage({
         ) : null}
 
         {computers.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">
-            No PCs match these filters. Mark equipment as a PC and add its hardware details on its
-            record to see it here.
-          </div>
+          <EmptyState icon={Cpu} title="No PCs match these filters.">
+            Mark equipment as a PC and add its hardware details on its record to see it here.
+          </EmptyState>
         ) : mode === "components" ? (
           <section
             className="card overflow-hidden rounded-lg"
