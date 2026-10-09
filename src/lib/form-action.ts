@@ -1,8 +1,10 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 
+import { FormError } from "./form-error";
+
 /** Expected form errors must be returned: production Server Actions redact thrown messages. */
-export class FormError extends Error {}
+export { FormError };
 
 // Return expected form errors and let redirects continue.
 export async function formAction(operation: () => Promise<unknown>) {
@@ -18,6 +20,12 @@ export async function formAction(operation: () => Promise<unknown>) {
         return {
           error:
             "A record with these details already exists. Check for a duplicate before trying again.",
+        };
+      }
+      if (error.code === "P2003") {
+        return {
+          error:
+            "Something this refers to, such as a room or category, no longer exists. Refresh the page and try again.",
         };
       }
       if (error.code === "P2025") {

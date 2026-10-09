@@ -1,6 +1,6 @@
 "use server";
 
-import { AuditAction } from "@prisma/client";
+import { AuditAction, Prisma } from "@prisma/client";
 
 import { auditActorName } from "@/lib/audit-event";
 import { FormError, formAction } from "@/lib/form-action";
@@ -76,37 +76,45 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
       throw new FormError("The image file does not match its declared type.");
     }
 
-    await prisma.$transaction(async (transaction) => {
-      const [item, photoCount] = await Promise.all([
-        transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } }),
-        transaction.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
-      ]);
-      if (!item) {
-        throw new FormError("This inventory item no longer exists.");
-      }
-      if (photoCount >= maximumItemPhotos) {
-        throw new FormError(`Each item can have up to ${maximumItemPhotos} photos.`);
-      }
-      await transaction.inventoryItemPhoto.create({
-        data: {
-          inventoryItemId: itemId,
-          fileName: photoFileName(file.name),
-          contentType: file.type,
-          byteSize: bytes.byteLength,
-          data: Buffer.from(bytes),
-        },
-      });
-      await transaction.inventoryAudit.create({
-        data: {
-          itemId,
-          action: AuditAction.UPDATED,
-          summary: "Item photo added.",
-          actorId: actor.id,
-          actorName: auditActorName(actor),
-          metadata: { source: "photo-upload", contentType: file.type, byteSize: bytes.byteLength },
-        },
-      });
-    });
+    await prisma.$transaction(
+      async (transaction) => {
+        const [item, photoCount] = await Promise.all([
+          transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } }),
+          transaction.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
+        ]);
+        if (!item) {
+          throw new FormError("This inventory item no longer exists.");
+        }
+        if (photoCount >= maximumItemPhotos) {
+          throw new FormError(`Each item can have up to ${maximumItemPhotos} photos.`);
+        }
+        await transaction.inventoryItemPhoto.create({
+          data: {
+            inventoryItemId: itemId,
+            fileName: photoFileName(file.name),
+            contentType: file.type,
+            byteSize: bytes.byteLength,
+            data: Buffer.from(bytes),
+          },
+        });
+        await transaction.inventoryAudit.create({
+          data: {
+            itemId,
+            action: AuditAction.UPDATED,
+            summary: "Item photo added.",
+            actorId: actor.id,
+            actorName: auditActorName(actor),
+            metadata: {
+              source: "photo-upload",
+              contentType: file.type,
+              byteSize: bytes.byteLength,
+            },
+          },
+        });
+        // Serializable, so two uploads at once cannot both slip under the photo limit.
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     refreshInventoryViews(itemId);
   });

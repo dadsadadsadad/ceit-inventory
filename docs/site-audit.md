@@ -1,3 +1,55 @@
+# Website audit, fourth pass — full check and polish, 9 October 2026
+
+Every page was looked at again with realistic data at desktop, phone (390 and 320 pixels wide),
+and dark mode, and every server action and route was read for holes.
+
+**Fixed: things that were wrong.**
+
+- Changing an item's "Last checked" date on its edit form did not update its PC profile, so a PC
+  showed two different inspection dates. The two now stay in step, and the PC card no longer
+  repeats the date.
+- On the dashboard, a long calendar pushed the recent activity far below the worklist, leaving a
+  large empty gap. Account and sign-in events in the activity lists showed the stored
+  "username | email" label; they now show the person's name.
+- The inventory table gave the asset tag column the space meant for item names, so names and
+  rooms wrapped mid-word. Columns now size to what they hold.
+- Optional sections on the add and edit forms wrapped their headings unevenly in narrow panels,
+  and stacked fields on the edit form had uneven gaps.
+- The borrowing list put finished history first. It now shows requests and returns waiting on
+  staff, then loans and reservations in progress, then history.
+- Long report figures such as acquisition value broke across lines.
+- The scanned-item choices ignored their left alignment, and the condition on the public item page
+  was formatted with the status helper.
+- Splitting a grouped asset did not copy its warranty or extra details to the new units.
+
+**Fixed: holes.**
+
+- Public forms counted their limit per device, which a script could reset by changing its browser
+  name. A looser limit per network address now applies as well.
+- Five wrong passwords lock an account, so anyone who knew a username could keep its owner out. A
+  browser the owner has signed in on before can still sign in with the right password, and wrong
+  current passwords on the Settings page count toward the same lock.
+- Live updates no longer keep a connection open for a QR code that matches no item.
+- Opening one QR page many times at once could write many scan records; the check and the write
+  now happen together. The same is true for the photo limit, the calendar's daily limit, the
+  extra-field limit, and the borrowing check when splitting grouped equipment.
+- A malformed form signature could cause a server error instead of a message. A missing room or
+  category, or a room without an asset-tag code, now gives a clear message.
+- A return requested by mistake (or by someone else) could not be undone; staff can now keep the
+  loan open with a new return time. Retired stock can no longer have its count changed.
+
+**Polish.** A personal greeting with what is waiting; a framed scanner with steps beside it; calm
+empty states instead of warning boxes; a not-found page that keeps the sidebar; show-password
+buttons on every password field; styled file pickers; two-up filters and facts on phones; staff
+notes shown on maintenance cards; consistent "Room" wording, back links, and clear-filter links.
+Password boxes are named by their label alone, with the hint read as a description.
+
+**Verification.** Format, ESLint, and TypeScript checks pass; 235 unit tests pass; the launch
+suite (103 browser tests, including new ones for the lock, borrowing order, keeping a loan open,
+live updates, and the not-found page) passes against a fresh database built from all 28
+migrations; production dependencies report no known vulnerabilities. **No database change** is
+needed for this version.
+
 # Website audit, third pass — security, calendar, appearance
 
 A review of how the site can be broken or misused, plus the dashboard calendar and a richer

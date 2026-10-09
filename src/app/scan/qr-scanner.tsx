@@ -130,7 +130,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
   }
 
   return (
-    <section className="card rounded-lg p-5 sm:p-7">
+    <section className="card scanner-card rounded-lg p-5 sm:p-7">
       <div
         data-scanning={isScanning}
         className="scanner-preview relative overflow-hidden rounded-lg bg-black"
@@ -141,12 +141,9 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
           muted
           playsInline
           aria-label="QR code scanner camera preview"
-          className="aspect-[4/5] w-full object-cover sm:aspect-[3/4]"
+          className="scanner-video w-full object-cover"
         />
-        <div
-          className="scanner-corners pointer-events-none absolute inset-7 rounded-2xl"
-          aria-hidden="true"
-        />
+        <div className="scanner-corners pointer-events-none absolute" aria-hidden="true" />
         {!isScanning && !isStarting ? (
           <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center">
             <div className="scanner-empty-state">
@@ -157,51 +154,67 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
           </div>
         ) : null}
       </div>
-      <p id="scanner-status" className="muted mt-4 text-sm leading-6" role="status">
-        {message}
-      </p>
-      {/* Start and stop the camera. */}
-      <div className="mt-5 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={
-            isScanning
-              ? () => {
-                  stopCamera();
-                  setMessage("Camera is off.");
-                }
-              : startCamera
-          }
-          disabled={isStarting}
-          className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60"
-        >
-          {isStarting ? "Starting camera…" : isScanning ? "Stop camera" : "Use camera"}
-        </button>
-      </div>
-      <div className="divider mt-6 border-t pt-5">
-        <h2 className="text-sm font-semibold">Manual lookup</h2>
-        {/* Open an item using its printed code. */}
-        <form onSubmit={submitManualCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
-          <label className="sr-only" htmlFor="manual-qr-code">
-            QR code
-          </label>
-          <input
-            id="manual-qr-code"
-            value={manualCode}
-            onChange={(event) => setManualCode(event.target.value)}
-            required
-            autoCapitalize="none"
-            autoComplete="off"
-            spellCheck={false}
-            aria-describedby="scanner-status"
-            maxLength={2048}
-            className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm"
-            placeholder="Paste or type QR code"
-          />
-          <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-            Open item
+      <div className="scanner-side">
+        <ol className="scanner-steps">
+          <li>
+            <span aria-hidden="true">1</span> Turn on the camera.
+          </li>
+          <li>
+            <span aria-hidden="true">2</span> Hold the label inside the frame.
+          </li>
+          <li>
+            <span aria-hidden="true">3</span> The record opens on its own.
+          </li>
+        </ol>
+        <p id="scanner-status" className="scanner-status muted text-sm leading-6" role="status">
+          {message}
+        </p>
+        {/* Start and stop the camera. */}
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={
+              isScanning
+                ? () => {
+                    stopCamera();
+                    setMessage("Camera is off.");
+                  }
+                : startCamera
+            }
+            disabled={isStarting}
+            className={`${isScanning ? "secondary-button" : "primary-button"} rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60`}
+          >
+            {isStarting ? "Starting camera…" : isScanning ? "Stop camera" : "Use camera"}
           </button>
-        </form>
+        </div>
+        <div className="divider mt-6 border-t pt-5">
+          <h2 className="text-sm font-semibold">Manual lookup</h2>
+          <p className="muted mt-1 text-sm leading-6">
+            No camera? Type the code printed under the QR image.
+          </p>
+          {/* Open an item using its printed code. */}
+          <form onSubmit={submitManualCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <label className="sr-only" htmlFor="manual-qr-code">
+              QR code
+            </label>
+            <input
+              id="manual-qr-code"
+              value={manualCode}
+              onChange={(event) => setManualCode(event.target.value)}
+              required
+              autoCapitalize="none"
+              autoComplete="off"
+              spellCheck={false}
+              aria-describedby="scanner-status"
+              maxLength={2048}
+              className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm"
+              placeholder="Paste or type QR code"
+            />
+            <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
+              Open item
+            </button>
+          </form>
+        </div>
       </div>
     </section>
   );

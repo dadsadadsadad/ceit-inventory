@@ -136,7 +136,7 @@ export function FeedbackForm({
           return { error: result.error, success: false };
         }
         formRef.current
-          ?.querySelectorAll<HTMLInputElement>('input[type="password"]')
+          ?.querySelectorAll<HTMLInputElement>('input[type="password"], input[data-password]')
           .forEach((input) => {
             input.value = "";
           });

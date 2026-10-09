@@ -23,6 +23,8 @@ import { prisma } from "@/prisma";
 
 import { InventoryTabs } from "../inventory-tabs";
 import { PcChips } from "../pc-chips";
+import { AppWindow } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -261,17 +263,21 @@ export default async function SoftwarePage({
               ))}
             </select>
           </label>
-          <ClearFiltersButton className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold" />
-          <label className="filter-check flex items-center gap-2 text-sm sm:col-span-2 xl:col-span-5">
-            <input
-              type="checkbox"
-              name="retired"
-              value="1"
-              defaultChecked={includeRetired}
-              className="h-4 w-4"
-            />
-            Include retired and lost PCs
-          </label>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <label className="filter-check flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="retired"
+                value="1"
+                defaultChecked={includeRetired}
+                className="h-4 w-4"
+              />
+              Include retired and lost PCs
+            </label>
+            <ClearFiltersButton className="accent-link text-sm font-semibold sm:ml-auto">
+              Clear all filters
+            </ClearFiltersButton>
+          </div>
         </FilterForm>
 
         {loaded.truncated ? (
@@ -282,10 +288,9 @@ export default async function SoftwarePage({
         ) : null}
 
         {groups.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">
-            No software matches these filters. Add installed software on a PC&apos;s record to see
-            it here.
-          </div>
+          <EmptyState icon={AppWindow} title="No software matches these filters.">
+            Add installed software on a PC&apos;s record to see it here.
+          </EmptyState>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Installed software">
             <div className="divider border-b px-5 py-3">

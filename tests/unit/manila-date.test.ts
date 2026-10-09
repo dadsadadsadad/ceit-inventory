@@ -5,6 +5,7 @@ import {
   manilaCalendarDate,
   manilaDateText,
   manilaDateTimeText,
+  manilaHour,
   nextManilaCalendarDate,
   startOfManilaDay,
 } from "@/lib/manila-date";
@@ -25,5 +26,11 @@ describe("Philippine calendar helpers", () => {
     expect(manilaDateText(instant)).toBe("2026-08-28");
     expect(manilaDateTimeText(instant)).toBe("2026-08-28 02:30");
     expect(manilaDateText(instant)).toBe(manilaCalendarDate(instant));
+  });
+
+  it("reads the hour of the day in the Philippines", () => {
+    expect(manilaHour(new Date("2026-08-27T18:30:00.000Z"))).toBe(2);
+    expect(manilaHour(new Date("2026-08-27T03:59:00.000Z"))).toBe(11);
+    expect(manilaHour(new Date("2026-08-27T16:00:00.000Z"))).toBe(0);
   });
 });

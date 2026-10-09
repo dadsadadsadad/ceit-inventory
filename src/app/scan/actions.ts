@@ -3,6 +3,7 @@
 import { AuditAction } from "@prisma/client";
 
 import { auditActorName } from "@/lib/audit-event";
+import { runTransaction } from "@/lib/database-transaction";
 import { isUuid } from "@/lib/ids";
 import { prisma } from "@/prisma";
 import { getCurrentInventoryUser } from "@/lib/inventory-auth";
@@ -27,29 +28,36 @@ export async function recordInventoryScan(itemId: string) {
     return;
   }
 
-  const recentScan = await prisma.inventoryAudit.findFirst({
-    where: {
-      itemId: item.id,
-      action: AuditAction.SCANNED,
-      actorId: actor?.id ?? null,
-      createdAt: {
-        gte: new Date(Date.now() - (actor ? scanDeduplicationWindowMs : anonymousScanWindowMs)),
-      },
-    },
-    select: { id: true },
-  });
-  if (recentScan) {
-    return;
+  try {
+    // Checked and written together, so many opens at the same moment still record one scan.
+    await runTransaction(async (transaction) => {
+      const recentScan = await transaction.inventoryAudit.findFirst({
+        where: {
+          itemId: item.id,
+          action: AuditAction.SCANNED,
+          actorId: actor?.id ?? null,
+          createdAt: {
+            gte: new Date(Date.now() - (actor ? scanDeduplicationWindowMs : anonymousScanWindowMs)),
+          },
+        },
+        select: { id: true },
+      });
+      if (recentScan) {
+        return;
+      }
+      await transaction.inventoryAudit.create({
+        data: {
+          itemId: item.id,
+          action: AuditAction.SCANNED,
+          summary: actor ? "Item QR code scanned by staff." : "Item QR code opened.",
+          actorId: actor?.id ?? null,
+          actorName: auditActorName(actor),
+          metadata: { source: "qr", scanType: actor ? "staff" : "public" },
+        },
+      });
+    });
+  } catch (error) {
+    // A scan record is a courtesy; the page works without it.
+    console.error("Unable to record a QR scan", error);
   }
-
-  await prisma.inventoryAudit.create({
-    data: {
-      itemId: item.id,
-      action: AuditAction.SCANNED,
-      summary: actor ? "Item QR code scanned by staff." : "Item QR code opened.",
-      actorId: actor?.id ?? null,
-      actorName: auditActorName(actor),
-      metadata: { source: "qr", scanType: actor ? "staff" : "public" },
-    },
-  });
 }

@@ -28,6 +28,7 @@ import {
 } from "../borrow-return-chooser";
 import { ScanAuditLogger } from "../scan-audit-logger";
 import { LiveUpdates } from "@/app/components/live-updates";
+import { humanizeEnum } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Equipment details · CEIT Inventory" };
@@ -284,7 +285,7 @@ export default async function ScannedItemPage({
         {/* Public item details. */}
         <article className="card rounded-lg p-5 sm:p-7">
           <dl className="grid gap-5 sm:grid-cols-2">
-            <div>
+            <div className="detail-wide-phone">
               <dt className="muted text-xs font-bold uppercase tracking-wide">Asset tag</dt>
               <dd className="mt-1 font-mono text-sm font-semibold">
                 {item.assetTag ?? "Not assigned"}
@@ -296,7 +297,7 @@ export default async function ScannedItemPage({
             </div>
             <div>
               <dt className="muted text-xs font-bold uppercase tracking-wide">Condition</dt>
-              <dd className="mt-1 text-sm font-semibold">{inventoryStatusLabel(item.condition)}</dd>
+              <dd className="mt-1 text-sm font-semibold">{humanizeEnum(item.condition)}</dd>
             </div>
             <div>
               <dt className="muted text-xs font-bold uppercase tracking-wide">Location</dt>

@@ -120,7 +120,13 @@ export function ReportSheet({ actions, report }: { actions: ReactNode; report: R
           {report.metrics.map((metric) => (
             <div key={metric.label} className="report-metric" data-tone={metric.tone}>
               <dt>{metric.label}</dt>
-              <dd>{metric.value}</dd>
+              <dd
+                data-length={
+                  metric.value.length > 12 ? "longer" : metric.value.length > 8 ? "long" : undefined
+                }
+              >
+                {metric.value}
+              </dd>
               {metric.note ? <small className="muted">{metric.note}</small> : null}
             </div>
           ))}

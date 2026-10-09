@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { runTransaction } from "@/lib/database-transaction";
 
+import { isAccountLocked, recordFailedPassword } from "@/lib/account-lock";
 import { auditEventData } from "@/lib/audit-event";
 import { stripControlCharacters } from "@/lib/clean-text";
 import {
@@ -12,43 +12,12 @@ import {
   simulatePasswordCheck,
   verifyPassword,
 } from "@/lib/inventory-auth";
+import { forgetDevice, isKnownDevice, rememberDevice } from "@/lib/known-device";
 import { isSignInThrottled, recordFailedSignInAttempt } from "@/lib/sign-in-throttle";
 import { prisma } from "@/prisma";
 
 const maxIdentifierLength = 254;
 const maxPasswordLength = 256;
-const failedSignInWindowMs = 15 * 60 * 1000;
-const lockDurationMs = 15 * 60 * 1000;
-const maximumAttempts = 5;
-
-// Count failed attempts before applying the lockout.
-async function recordFailedSignIn(userId: string) {
-  return runTransaction(async (transaction) => {
-    const current = await transaction.user.findUnique({ where: { id: userId } });
-    if (!current) {
-      return false;
-    }
-    const now = new Date();
-    if (current.lockedUntil && current.lockedUntil > now) {
-      return true;
-    }
-    const isNewWindow =
-      !current.firstFailedSignInAt ||
-      now.getTime() - current.firstFailedSignInAt.getTime() > failedSignInWindowMs;
-    const failedSignInCount = isNewWindow ? 1 : current.failedSignInCount + 1;
-    const lockedUntil =
-      failedSignInCount >= maximumAttempts ? new Date(now.getTime() + lockDurationMs) : null;
-    await transaction.user.update({
-      where: { id: userId },
-      data: {
-        failedSignInCount,
-        firstFailedSignInAt: isNewWindow ? now : current.firstFailedSignInAt,
-        lockedUntil,
-      },
-    });
-    return Boolean(lockedUntil);
-  }, 5);
-}
 
 // Check credentials, create a session, and record the sign-in.
 export async function signIn(formData: FormData) {
@@ -80,14 +49,15 @@ export async function signIn(formData: FormData) {
     await recordFailedSignInAttempt();
     redirect("/auth/login?error=invalid-credentials");
   }
-  if (user.lockedUntil && user.lockedUntil > now) {
+  // The owner's own browser may still try while the account is locked; see known-device.ts.
+  if (isAccountLocked(user, now) && !(await isKnownDevice(user.id))) {
     await simulatePasswordCheck(password);
     await recordFailedSignInAttempt();
     redirect("/auth/login?error=invalid-credentials");
   }
 
   if (!(await verifyPassword(password, user.passwordHash))) {
-    await recordFailedSignIn(user.id);
+    await recordFailedPassword(user.id);
     await recordFailedSignInAttempt();
     redirect("/auth/login?error=invalid-credentials");
   }
@@ -108,6 +78,7 @@ export async function signIn(formData: FormData) {
     }),
   ]);
   await createSession(user.id);
+  await rememberDevice(user.id);
   redirect("/dashboard");
 }
 
@@ -130,5 +101,6 @@ export async function signOut() {
     console.error("Unable to record sign-out audit event", error);
   }
   await clearSession();
+  await forgetDevice();
   redirect("/auth/login");
 }

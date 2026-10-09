@@ -445,11 +445,17 @@ export async function extendBorrowRequest(formData: FormData) {
       if (!request) {
         throw new FormError("This borrowing request no longer exists.");
       }
-      if (request.status !== borrowStatus.BORROWED) {
+      if (
+        request.status !== borrowStatus.BORROWED &&
+        request.status !== borrowStatus.RETURN_REQUESTED
+      ) {
         throw new FormError(
           "Only equipment that is currently checked out can have its return time changed.",
         );
       }
+      // A return was asked for but the equipment is still out (or the request was not the
+      // borrower's): a new return time puts it back on loan.
+      const keepsOnLoan = request.status === borrowStatus.RETURN_REQUESTED;
       if (newReturn.getTime() === request.expectedReturnDate.getTime()) {
         throw new FormError("Choose a different return time to save a change.");
       }
@@ -468,6 +474,7 @@ export async function extendBorrowRequest(formData: FormData) {
         where: { id },
         data: {
           expectedReturnDate: newReturn,
+          ...(keepsOnLoan ? { status: borrowStatus.BORROWED, returnRequestedAt: null } : {}),
           // Borrower details are kept until the retention period after the agreed return.
           ...(retentionDeadline > request.personalDataExpiresAt
             ? { personalDataExpiresAt: retentionDeadline }
@@ -486,7 +493,7 @@ export async function extendBorrowRequest(formData: FormData) {
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,
-          summary: `Return time changed to ${formatManilaDate(newReturn, { dateStyle: "medium", timeStyle: "short" })}.`,
+          summary: `${keepsOnLoan ? "Kept on loan; return" : "Return"} time changed to ${formatManilaDate(newReturn, { dateStyle: "medium", timeStyle: "short" })}.`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           entityId: id,
@@ -494,7 +501,7 @@ export async function extendBorrowRequest(formData: FormData) {
           entityType: "borrow-request",
           metadata: {
             borrowRequestId: id,
-            transition: "RETURN_TIME_CHANGED",
+            transition: keepsOnLoan ? "RETURN_REQUEST_WITHDRAWN" : "RETURN_TIME_CHANGED",
             previousReturn: request.expectedReturnDate.toISOString(),
             newReturn: newReturn.toISOString(),
           },

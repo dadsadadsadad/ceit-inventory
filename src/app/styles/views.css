@@ -24,6 +24,29 @@
   border-left: 1px dashed var(--border-input);
 }
 
+/* Phones: two figures per row, ruled like the dashboard, with a lone last figure across both. */
+@media (max-width: 639px) {
+  .directory-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .directory-stats > div + div {
+    border-left: 0;
+  }
+
+  .directory-stats > div:nth-child(even) {
+    border-left: 1px dashed var(--border-input);
+  }
+
+  .directory-stats > div:nth-child(n + 3) {
+    border-top: 1px dashed var(--border-input);
+  }
+
+  .directory-stats > div:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
 .directory-stats strong {
   font-family: var(--font-display);
   font-size: 1.9rem;
@@ -41,6 +64,7 @@
   border-top: 1px solid var(--border);
   display: grid;
   gap: 1rem 2rem;
+  grid-template-columns: minmax(0, 1fr);
   padding: 1.1rem 1.25rem;
 }
 
@@ -343,6 +367,22 @@
 
 .report-metric[data-tone="alert"] dd {
   color: var(--accent);
+}
+
+/* Long values such as peso amounts shrink to stay on one line instead of breaking mid-number. */
+.report-metric dd[data-length] {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.report-metric dd[data-length="long"] {
+  font-size: 1.4rem;
+  line-height: 1.55;
+}
+
+.report-metric dd[data-length="longer"] {
+  font-size: 1.1rem;
+  line-height: 1.95;
 }
 
 .report-section {

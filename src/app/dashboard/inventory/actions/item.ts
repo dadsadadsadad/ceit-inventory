@@ -296,6 +296,13 @@ export async function updateInventoryItem(formData: FormData) {
               },
             },
           });
+          if ("lastCheckedAt" in changes) {
+            // Keep the PC profile's own inspection date in step with the record.
+            await transaction.computer.updateMany({
+              where: { itemId: id },
+              data: { lastCheckedAt: resolvedData.lastCheckedAt },
+            });
+          }
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -323,10 +330,15 @@ export async function adjustStockQuantity(formData: FormData) {
       async (transaction) => {
         const item = await transaction.inventoryItem.findUnique({
           where: { id },
-          select: { itemType: true, quantity: true },
+          select: { itemType: true, quantity: true, status: true },
         });
         if (!item || item.itemType !== ItemType.SUPPLY) {
           throw new FormError("Only stock records have a quantity to adjust.");
+        }
+        if (item.status === ItemStatus.RETIRED) {
+          throw new FormError(
+            "This stock record is retired. Restore it before adjusting the count.",
+          );
         }
         const next = direction === "add" ? item.quantity + amount : item.quantity - amount;
         if (next < 0) {
@@ -451,6 +463,12 @@ export async function splitGroupedAsset(formData: FormData) {
               "This record changed and can no longer be split. Refresh the page and try again.",
             );
           }
+          // Checked again here: a request sent since the check above would point at one unit.
+          if (await transaction.borrowRequest.count({ where: { inventoryItemId: id } })) {
+            throw new FormError(
+              "This grouped asset now has a borrowing request and cannot be split automatically.",
+            );
+          }
           const unitCount = item.quantity;
           await transaction.inventoryItem.update({
             where: { id },
@@ -492,6 +510,9 @@ export async function splitGroupedAsset(formData: FormData) {
                 model: item.model,
                 purchaseDate: item.purchaseDate,
                 purchasePrice: item.purchasePrice,
+                // Units bought together share their warranty and the department's extra details.
+                warrantyEndsAt: item.warrantyEndsAt,
+                customFields: (item.customFields ?? undefined) as Prisma.InputJsonValue | undefined,
                 notes: item.notes,
                 lastCheckedAt: item.lastCheckedAt,
                 auditEvents: {

@@ -1,6 +1,6 @@
 export const metadata = { title: "Item record · CEIT Inventory" };
 
-import { ItemType } from "@prisma/client";
+import { ItemStatus, ItemType } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -98,7 +98,11 @@ export default async function InventoryItemPage({
         <div className="item-record-layout grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="space-y-6">
             <ItemSummary item={item} customFields={customFields} />
-            {item.itemType === ItemType.SUPPLY && canManage ? <StockCard item={item} /> : null}
+            {item.itemType === ItemType.SUPPLY &&
+            canManage &&
+            item.status !== ItemStatus.RETIRED ? (
+              <StockCard item={item} />
+            ) : null}
             <ComputerSection item={item} canManage={canManage} />
             <ItemHistory item={item} />
           </div>

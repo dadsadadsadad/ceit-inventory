@@ -212,8 +212,10 @@ export function InventoryRecords({
                         />
                       </td>
                     ) : null}
-                    <td className="muted asset-code px-5 py-4 text-sm">{item.assetTag ?? "–"}</td>
-                    <td className="px-5 py-4 text-sm">
+                    <td className="record-tag muted asset-code px-5 py-4 text-sm">
+                      {item.assetTag ?? "–"}
+                    </td>
+                    <td className="record-item px-5 py-4 text-sm">
                       <div className="record-identity">
                         <span
                           className={`record-symbol ${item.computer ? "is-computer" : ""}`}
@@ -237,19 +239,21 @@ export function InventoryRecords({
                         </div>
                       </div>
                     </td>
-                    <td className="muted px-5 py-4 text-sm">
+                    <td className="record-location muted px-5 py-4 text-sm">
                       <OptimisticText entity={`item:${item.id}`} field="location">
                         {item.location.name}
                       </OptimisticText>
                     </td>
                     <td className="px-5 py-4 text-sm">
-                      <span className="muted">{item.quantity}</span>
-                      <StockBadge item={item} />
+                      <span className="stock-cell">
+                        <span className="muted">{item.quantity.toLocaleString()}</span>
+                        <StockBadge item={item} />
+                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
                     </td>
-                    <td className="muted px-5 py-4 text-sm">
+                    <td className="record-checked muted px-5 py-4 text-sm">
                       {lastCheckedLabel(item.lastCheckedAt)}
                     </td>
                   </tr>

@@ -223,8 +223,34 @@ select.field {
 }
 
 input[type="file"].field {
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
   overflow: hidden;
+  padding-block: 0.45rem;
   white-space: normal;
+}
+
+input[type="file"]::file-selector-button {
+  background: var(--surface-soft);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-chip);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  margin-right: 0.75rem;
+  padding: 0.35rem 0.85rem;
+  transition:
+    background-color var(--interaction-duration) ease,
+    border-color var(--interaction-duration) ease;
+}
+
+input[type="file"]:hover::file-selector-button {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 input[type="datetime-local"] {
@@ -242,6 +268,54 @@ input[type="datetime-local"] {
 .page label > .uppercase {
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+/* A label wrapping a field is a block, so stacked fields keep the same gap between them. */
+label:has(> .field) {
+  display: block;
+}
+
+/* A password box with its show/hide button tucked inside the right edge. */
+.password-field {
+  display: block;
+  position: relative;
+}
+
+.password-field > .field {
+  padding-right: 3rem;
+  width: 100%;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-chip);
+  bottom: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 2.5rem;
+  justify-content: center;
+  margin: auto 0;
+  position: absolute;
+  right: 0.25rem;
+  top: 0;
+  transition:
+    background-color var(--interaction-duration) ease,
+    color var(--interaction-duration) ease;
+  width: 2.5rem;
+}
+
+.password-toggle:hover,
+.password-toggle[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.password-toggle:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 .page label:has(.field) > span:first-child {
@@ -269,6 +343,49 @@ input[type="datetime-local"] {
   border-left: 4px solid var(--accent);
   color: var(--muted-strong);
   overflow-wrap: anywhere;
+}
+
+/* Nothing to show: a quiet, dashed placeholder rather than a warning. */
+.empty-state {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+}
+
+.empty-state-icon {
+  background: var(--accent-soft);
+  border-radius: 999px;
+  color: var(--accent);
+  display: grid;
+  height: 3rem;
+  margin-bottom: 0.9rem;
+  place-items: center;
+  width: 3rem;
+}
+
+.empty-state-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.empty-state-text {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin-top: 0.35rem;
+  max-width: 34rem;
+  text-wrap: pretty;
+}
+
+.empty-state-action {
+  margin-top: 1rem;
 }
 
 .notice-success {
@@ -452,6 +569,7 @@ label.filter-chip:has(input:focus-visible) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .pc-chip {
@@ -460,8 +578,10 @@ label.filter-chip:has(input:focus-visible) {
   border: 1px solid var(--border);
   border-radius: var(--radius-chip);
   display: inline-flex;
+  flex-wrap: wrap;
   font-size: 0.875rem;
-  gap: 0.4rem;
+  gap: 0 0.4rem;
+  max-width: 100%;
   padding: 0.3rem 0.6rem;
   transition:
     background-color var(--interaction-duration) ease,
@@ -699,16 +819,27 @@ a.pc-chip:hover {
   min-width: 66rem;
 }
 
-.inventory-page .record-table td:nth-last-child(6) {
-  min-width: 13rem;
+/* The item name gets the room; tags, dates, and counts stay on one line. */
+.record-table .record-item {
+  min-width: 17.5rem;
 }
 
-.inventory-page .record-table td:nth-last-child(7) {
+.record-table :is(.record-tag, .record-checked) {
+  overflow-wrap: normal;
   white-space: nowrap;
 }
 
-.inventory-page .record-table td:last-child {
-  min-width: 9rem;
+.record-table .record-location {
+  min-width: 10.5rem;
+  overflow-wrap: break-word;
+}
+
+.stock-cell {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+  gap: 0.35rem 0.5rem;
 }
 
 .record-table td:last-child .accent-link,
@@ -1028,6 +1159,19 @@ a.pc-chip:hover {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+/* The choices on a scanned item read like cards: icon, title, and a line of help, left aligned. */
+.request-choice {
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.request-choice.request-choice-row {
+  align-items: center;
+  flex-direction: row;
+}
+
 .request-choice svg {
   flex-shrink: 0;
   transition: transform var(--interaction-duration);
@@ -1135,9 +1279,38 @@ a.pc-chip:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  /* The update button waits in the corner; the form takes a column only once it is opened. */
   .maintenance-ticket-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .maintenance-ticket-grid:has(> details[open]) {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
   }
+}
+
+.maintenance-ticket-grid > details[open] {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 1rem;
+}
+
+.maintenance-ticket-grid > details[open] > summary {
+  margin-bottom: 0;
+}
+
+.ticket-staff-note {
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted);
+  padding-left: 0.85rem;
+}
+
+.ticket-staff-note strong {
+  color: var(--foreground);
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 650;
 }
 
 @container setup (min-width: 24rem) {
@@ -1168,13 +1341,14 @@ a.pc-chip:hover {
 
 .form-section-summary {
   align-items: center;
+  column-gap: 0.75rem;
   cursor: pointer;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.75rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   list-style: none;
   min-height: 3.25rem;
-  padding: 0.7rem 1rem;
+  padding: 0.75rem 1rem;
+  row-gap: 0.1rem;
 }
 
 .form-section-summary::-webkit-details-marker {
@@ -1185,6 +1359,8 @@ a.pc-chip:hover {
   border-bottom: 2px solid var(--muted);
   border-right: 2px solid var(--muted);
   content: "";
+  grid-column: 1;
+  grid-row: 1;
   height: 0.5rem;
   transform: rotate(-45deg);
   transition: transform var(--interaction-duration) var(--interaction-ease);
@@ -1195,10 +1371,16 @@ a.pc-chip:hover {
   transform: rotate(45deg);
 }
 
+.form-section-summary:hover::before {
+  border-color: var(--accent);
+}
+
 .form-section-title {
   font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 600;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .form-section-tag {
@@ -1207,24 +1389,20 @@ a.pc-chip:hover {
   color: var(--muted);
   font-family: var(--font-tag);
   font-size: 0.875rem;
-  letter-spacing: 0.04em;
-  padding: 0.05rem 0.5rem;
+  grid-column: 3;
+  grid-row: 1;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.5rem;
   text-transform: uppercase;
 }
 
+/* The hint sits under the title at every width, so narrow panels never wrap it oddly. */
 .form-section-hint {
   color: var(--muted);
-  flex-basis: 100%;
   font-size: 0.875rem;
-  padding-left: 1.25rem;
-}
-
-@media (min-width: 640px) {
-  .form-section-hint {
-    flex-basis: auto;
-    margin-left: auto;
-    padding-left: 0;
-  }
+  grid-column: 2 / -1;
+  grid-row: 2;
+  line-height: 1.45;
 }
 
 .form-section-body {
@@ -1443,20 +1621,31 @@ a.pc-chip:hover {
 }
 
 /* ------------------------------------------------------------------ filter bars with many controls */
-/* The search takes its own row; the selects and dates share the rest, wrapping instead of being
-   squeezed until their text is cut off. */
+/* The search takes its own row; the selects and dates share the rest, growing to fill it and
+   wrapping instead of being squeezed until their text is cut off. Phones fit two per row. */
 .filter-spread {
-  align-items: end;
-  display: grid;
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr));
+}
+
+.filter-spread > * {
+  flex: 1 1 11.5rem;
 }
 
 .filter-spread > label:first-of-type,
 .filter-spread > :is(button, p, div, a):not(label) {
-  grid-column: 1 / -1;
+  flex-basis: 100%;
 }
 
 .filter-spread > button {
-  justify-self: start;
+  flex-grow: 0;
+  text-align: left;
+}
+
+@media (max-width: 639px) {
+  .filter-spread > * {
+    flex-basis: 9rem;
+  }
 }

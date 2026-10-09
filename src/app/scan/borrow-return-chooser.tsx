@@ -157,11 +157,11 @@ export function BorrowReturnChooser({
               previousModeRef.current = "issue";
               setMode("issue");
             }}
-            className="secondary-button request-choice gap-3 rounded-lg px-5 py-4 text-left sm:col-span-2"
+            className="secondary-button request-choice request-choice-row gap-3 rounded-lg px-5 py-4 text-left sm:col-span-2"
           >
             <Wrench size={20} aria-hidden="true" />
             <span className="flex-1">
-              <span className="block text-sm font-semibold">Report a problem</span>
+              <span className="block text-base font-semibold">Report a problem</span>
               <span className="muted mt-1 block text-sm font-normal">
                 Something damaged or not working?
               </span>

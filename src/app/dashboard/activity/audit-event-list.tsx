@@ -8,6 +8,7 @@ import {
   auditCategory,
   auditChangedFields,
   auditEventDetail,
+  auditSubjectLabel,
   groupEventsByDay,
   type AuditTrailEvent,
 } from "@/lib/audit-trail";
@@ -58,8 +59,10 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
               const category = auditCategory(event as AuditTrailEvent);
               const detail = auditEventDetail(event as AuditTrailEvent);
               const changes = auditChangedFields(event as AuditTrailEvent);
-              const subject = event.item?.name ?? event.entityLabel ?? null;
+              const subject = auditSubjectLabel(event);
               const actor = auditActorLabel(event as AuditTrailEvent);
+              // A sign-in is about the person who signed in, so their name is shown once.
+              const byline = subject === actor ? [actor] : [subject, actor];
               return (
                 <li key={event.id} className="audit-entry">
                   <details className="audit-details">
@@ -70,7 +73,7 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
                       <span className={`audit-tag audit-tag-${toneFor(category)}`}>{category}</span>
                       <span className="audit-text">
                         <strong>{event.summary}</strong>
-                        <small>{[subject, actor].filter(Boolean).join(" · ")}</small>
+                        <small>{byline.filter(Boolean).join(" · ")}</small>
                       </span>
                       <ChevronDown className="audit-chevron" size={18} aria-hidden="true" />
                     </summary>
@@ -91,7 +94,7 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
                                 {event.item.name}
                               </Link>
                             ) : (
-                              (event.entityLabel ?? "No linked record")
+                              (subject ?? "No linked record")
                             )}
                             {event.item?.assetTag ? (
                               <span className="muted asset-code"> · {event.item.assetTag}</span>

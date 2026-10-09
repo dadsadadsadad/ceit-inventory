@@ -4,7 +4,17 @@ test("login page is available without a database query", async ({ page }) => {
   await page.goto("/auth/login");
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.getByLabel("Password")).toBeVisible();
+  const password = page.getByLabel("Password", { exact: true });
+  await expect(password).toHaveAttribute("type", "password");
+  // The box is named by its label alone, not by the button beside it.
+  await expect(password).toHaveAccessibleName("Password");
+  // The eye button shows what was typed and hides it again.
+  const toggle = page.getByRole("button", { name: "Show password" });
+  await toggle.click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  await expect(password).toHaveAttribute("type", "password");
 });
 
 test("workspace font loads locally and sign-in remains usable when fonts fail", async ({
@@ -56,9 +66,8 @@ test("sign-in shows one brand at desktop and mobile widths", async ({ page }) =>
 
 test("unknown routes receive the application not-found page", async ({ page }) => {
   await page.goto("/this-route-does-not-exist");
-  await expect(
-    page.getByRole("heading", { name: "That inventory record is not available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page or item is not here" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to dashboard" })).toBeVisible();
 });
 
 test("audit trail is not available without signing in", async ({ page }) => {

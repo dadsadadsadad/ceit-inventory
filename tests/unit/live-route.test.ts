@@ -6,7 +6,7 @@ const { currentUser, revision } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/inventory-auth", () => ({ getCurrentInventoryUser: currentUser }));
-vi.mock("@/lib/live-revision", () => ({ liveRevision: revision }));
+vi.mock("@/lib/live-revision", () => ({ liveRevision: revision, missingItemRevision: "missing" }));
 
 import { GET } from "@/app/api/live/route";
 import { isLiveUpdateScope, liveUpdateScope } from "@/lib/live-update-scope";
@@ -45,6 +45,14 @@ describe("live subscriptions", () => {
     expect((await reader.read()).done).toBe(true);
     expect(revision).toHaveBeenCalledTimes(1);
     expect(currentUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses to watch a QR code that matches no item", async () => {
+    currentUser.mockResolvedValue(null);
+    revision.mockResolvedValue("missing");
+    const response = await GET(new Request("http://localhost/api/live?qr=ceit-made-up-code"));
+    expect(response.status).toBe(404);
+    expect(response.body).toBeNull();
   });
 
   it("maps editing pages to their data without treating unrelated URLs as dashboards", () => {

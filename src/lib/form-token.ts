@@ -44,10 +44,10 @@ export function issueFormToken(scope: string, now = Date.now()) {
 /** Refuse a submission whose token is missing, forged, too fast, or too old. */
 export function assertFormToken(scope: string, token: string, now = Date.now()) {
   const [issuedAt = "", signature = ""] = token.split(".");
-  const expected = sign(scope, issuedAt);
-  const matches =
-    signature.length === expected.length &&
-    timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  // Compared as bytes: a signature with a non-ASCII character has more bytes than characters.
+  const given = Buffer.from(signature);
+  const expected = Buffer.from(sign(scope, issuedAt));
+  const matches = given.length === expected.length && timingSafeEqual(given, expected);
   const age = now - Number(issuedAt);
   if (!matches || !Number.isFinite(age)) {
     throw new FormError("This form could not be verified. Reload the page and try again.");

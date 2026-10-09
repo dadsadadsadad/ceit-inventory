@@ -12,6 +12,8 @@ import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 import { PrintSheet } from "./print-sheet";
+import { QrCode } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 type Search = { ids?: string | string[]; location?: string | string[]; layout?: string | string[] };
@@ -71,9 +73,10 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
         {/* Label-sheet title and print controls. */}
         <header className="no-print flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Link href="/dashboard/inventory" className="accent-link text-sm">
+            <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
               ← Inventory
             </Link>
+            <p className="eyebrow mt-5">Printing</p>
             <h1 className="title mt-3 text-3xl">QR labels</h1>
             <p className="muted mt-2 text-sm">Print labels for selected items or a whole room.</p>
           </div>
@@ -182,11 +185,18 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             </div>
           </>
         ) : !invalid && !tooMany ? (
-          <p className="notice no-print rounded-lg p-4">
-            {location || ids.length
-              ? "No items found for this selection."
-              : "Choose a room above, or select items in Inventory to get started."}
-          </p>
+          <div className="no-print">
+            <EmptyState
+              icon={QrCode}
+              title={
+                location || ids.length ? "No items found for this selection." : "No labels yet."
+              }
+            >
+              {location || ids.length
+                ? "Choose another room, or select items in Inventory."
+                : "Choose a room above, or select items in Inventory to get started."}
+            </EmptyState>
+          </div>
         ) : null}
       </div>
     </div>

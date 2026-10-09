@@ -19,7 +19,7 @@ export default async function StudentSurveyPage() {
     <div className="page">
       <div className="page-narrow space-y-6">
         <header>
-          <p className="eyebrow">CEIT inventory</p>
+          <p className="eyebrow">Student feedback</p>
           <h1 className="title mt-2 text-3xl">Student survey</h1>
           <p className="muted mt-3 text-sm leading-6">
             Students, scan the QR code below with your phone camera to answer the form.

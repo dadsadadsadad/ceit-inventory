@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 
-import { SubmitButton } from "@/app/components/submit-button";
+import { ClipboardList, QrCode, Wrench } from "lucide-react";
+
 import { BrandMark } from "@/app/components/brand-mark";
+import { PasswordInput } from "@/app/components/password-input";
+import { SubmitButton } from "@/app/components/submit-button";
 
 import { signIn } from "../actions";
 
@@ -49,6 +52,18 @@ export default async function LoginPage({
             Good work starts with the right equipment.
           </h2>
           <p className="login-caption">Keep it organized. Put it to work. Pass it on.</p>
+          <ul className="login-points">
+            <li>
+              <QrCode size={18} aria-hidden="true" /> Scan a label to open any record
+            </li>
+            <li>
+              <ClipboardList size={18} aria-hidden="true" /> Lend, reserve, and check equipment back
+              in
+            </li>
+            <li>
+              <Wrench size={18} aria-hidden="true" /> Follow repairs from report to fix
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -103,21 +118,16 @@ export default async function LoginPage({
                 placeholder="name@example.com or ceit.staff"
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold">
-                Password
-              </label>
-              <input
-                required
-                type="password"
-                id="password"
-                name="password"
-                autoComplete="current-password"
-                maxLength={256}
-                className="field mt-2 block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
-                placeholder="Enter password"
-              />
-            </div>
+            <PasswordInput
+              label="Password"
+              required
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              maxLength={256}
+              className="field block w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
+              placeholder="Enter password"
+            />
             <SubmitButton
               pendingLabel="Signing in…"
               className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"

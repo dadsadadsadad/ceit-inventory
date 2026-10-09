@@ -12,6 +12,7 @@ import { accountRoles, roleLabel } from "@/lib/roles";
 import { everyTermMatches, searchTerms } from "@/lib/search-terms";
 import { firstParam, textParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
+import { PasswordInput } from "@/app/components/password-input";
 
 export const dynamic = "force-dynamic";
 
@@ -129,21 +130,16 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 ))}
               </select>
             </label>
-            <label>
-              <span className="text-sm font-semibold">Initial password *</span>
-              <input
-                required
-                minLength={8}
-                maxLength={256}
-                type="password"
-                name="password"
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                autoComplete="new-password"
-              />
-              <span className="muted mt-1 block text-xs">
-                At least 8 characters with a letter and number.
-              </span>
-            </label>
+            <PasswordInput
+              label="Initial password *"
+              hint="At least 8 characters with a letter and number."
+              required
+              minLength={8}
+              maxLength={256}
+              name="password"
+              className="field w-full rounded-lg px-3 py-2.5 text-sm"
+              autoComplete="new-password"
+            />
             <SubmitButton
               pendingLabel="Creating…"
               className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
@@ -155,10 +151,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
         {/* Find accounts by name, account type, or status. Choices apply at once. */}
         <FilterForm
-          className="card grid gap-3 rounded-lg p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_auto] xl:items-end"
+          className="card grid gap-3 rounded-lg p-4 min-[360px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_auto] xl:items-end"
           label="Account filters"
         >
-          <label className="sm:col-span-2 xl:col-span-1">
+          <label className="min-[360px]:col-span-2 xl:col-span-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
               name="q"
@@ -196,7 +192,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               <option value="locked">Locked after failed sign-ins</option>
             </select>
           </label>
-          <ClearFiltersButton className="accent-link text-sm font-semibold">
+          <ClearFiltersButton className="accent-link justify-self-start text-sm font-semibold min-[360px]:col-span-2 xl:col-span-1 xl:self-center">
             Clear all filters
           </ClearFiltersButton>
         </FilterForm>
@@ -300,20 +296,16 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     />{" "}
                     Active
                   </label>
-                  <label>
-                    <span className="muted text-xs font-bold uppercase tracking-wide">
-                      New password
-                    </span>
-                    <input
-                      minLength={8}
-                      maxLength={256}
-                      type="password"
-                      name="password"
-                      className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                      autoComplete="new-password"
-                      placeholder="Leave blank to keep"
-                    />
-                  </label>
+                  <PasswordInput
+                    label="New password"
+                    labelClassName="muted block text-xs font-bold uppercase tracking-wide"
+                    minLength={8}
+                    maxLength={256}
+                    name="password"
+                    className="field w-full rounded-lg px-3 py-2.5 text-sm"
+                    autoComplete="new-password"
+                    placeholder="Leave blank to keep"
+                  />
                   <SubmitButton
                     pendingLabel="Saving…"
                     className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"

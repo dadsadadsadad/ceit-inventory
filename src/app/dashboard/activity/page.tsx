@@ -13,6 +13,8 @@ import { prisma } from "@/prisma";
 
 import { AuditEventList, type ActivityEvent } from "./audit-event-list";
 import { AuditFilters } from "./audit-filters";
+import { ScrollText } from "lucide-react";
+import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -127,9 +129,9 @@ export default async function AuditTrailPage({
             The audit trail could not be loaded. Confirm the database connection and try again.
           </div>
         ) : activity.length === 0 ? (
-          <div className="notice rounded-lg px-5 py-4 text-sm">
-            Nothing matches these filters. Try another view, a wider timeframe, or fewer words.
-          </div>
+          <EmptyState icon={ScrollText} title="Nothing matches these filters.">
+            Try another view, a wider timeframe, or fewer words.
+          </EmptyState>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Audit events">
             <div className="divider flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3">
