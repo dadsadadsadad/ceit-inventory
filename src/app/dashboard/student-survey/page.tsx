@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 export const metadata = { title: "Student survey · CEIT Inventory" };
 
 const studentSurveyUrl =
-  "https://docs.google.com/forms/d/e/1FAIpQLSd8_bXefkRCsBeKzE-Mob5XKrb27i2wlZBGm1mQLFdJzGfkuA/viewformviewform";
+  "https://docs.google.com/forms/d/e/1FAIpQLSd8_bXefkRCsBeKzE-Mob5XKrb27i2wlZBGm1mQLFdJzGfkuA/viewform";
 
 export default async function StudentSurveyPage() {
   const qrDataUrl = await QRCode.toDataURL(studentSurveyUrl, {
