@@ -202,3 +202,78 @@ test.describe("public pages and missing records", () => {
     ).toBeVisible();
   });
 });
+
+test.describe("QR labels", () => {
+  test("many labels can be picked one by one, by category, and in four sizes", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/dashboard/inventory/labels");
+    const sheets = page.locator(".label-sheet");
+    const labels = page.locator(".sheet-label");
+
+    // Pick two items by searching, without choosing a room.
+    const search = page.getByLabel("Pick items one by one");
+    await search.fill("Lab equipment 3");
+    await page.locator("label.label-result", { hasText: "Lab equipment 3 ·" }).click();
+    await expect(labels).toHaveCount(1);
+    await search.fill("Lab equipment 4");
+    await page.locator("label.label-result", { hasText: "Lab equipment 4 ·" }).click();
+    await expect(labels).toHaveCount(2);
+    await expect(page.getByText("2 picked")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Print labels" })).toBeVisible();
+
+    // Untick one to remove it.
+    await page
+      .locator(".label-choice-group label.filter-chip", { hasText: "Lab equipment 3" })
+      .first()
+      .click();
+    await expect(labels).toHaveCount(1);
+
+    // Clearing the picks prints a whole category instead.
+    await page.getByRole("link", { name: "Clear picked items" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/inventory\/labels$/);
+    await expect(page.getByText(/\d+ picked/)).toHaveCount(0);
+    await page
+      .getByRole("combobox", { name: "Category", exact: true })
+      .selectOption({ label: "Launch test equipment" });
+    await expect(labels).toHaveCount(27);
+    await expect(sheets).toHaveCount(2);
+
+    // The sizes: 40, 24, 8, and 2 labels per sheet.
+    const size = page.getByRole("combobox", { name: "Label size" });
+    for (const [layout, count] of [
+      ["small", 1],
+      ["large", 4],
+      ["poster", 14],
+      ["compact", 2],
+    ] as const) {
+      await size.selectOption(layout);
+      await expect(sheets).toHaveCount(count);
+    }
+    // Every label still fits inside its box at the smallest size.
+    await size.selectOption("small");
+    await expect(sheets).toHaveCount(1);
+    const overflow = await labels.evaluateAll((elements) =>
+      elements.some((element) => element.scrollWidth > element.clientWidth + 1),
+    );
+    expect(overflow).toBe(false);
+  });
+
+  test("a single label can be printed at different sizes", async ({ page }) => {
+    await signIn(page);
+    const id = await itemId("ceit-launch-item-3");
+    await page.goto(`/dashboard/inventory/${id}/label`);
+    const code = page.locator(".print-label-code");
+    const width = () => code.evaluate((element) => element.getBoundingClientRect().width);
+    await expect(code).toBeVisible();
+    await expect.poll(width).toBeGreaterThan(200);
+    const medium = await width();
+    await page.getByRole("combobox", { name: "Label size" }).selectOption("small");
+    await expect(page).toHaveURL(/size=small/);
+    await expect.poll(width).toBeLessThan(medium);
+    await page.getByRole("combobox", { name: "Label size" }).selectOption("large");
+    await expect.poll(width).toBeGreaterThan(medium);
+    await page.getByRole("link", { name: "Print several labels on one sheet" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/inventory\/labels\?ids=/);
+    await expect(page.locator(".sheet-label")).toHaveCount(1);
+  });
+});

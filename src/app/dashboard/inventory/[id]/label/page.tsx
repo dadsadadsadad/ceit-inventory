@@ -6,18 +6,39 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 
+import { FilterForm } from "@/app/components/filter-form";
 import { PrintLabel } from "@/app/components/print-label";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryLabelAppUrl } from "@/lib/inventory-label-url";
 import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
 
+/** How big the code prints on one label. Medium is the size the label always had. */
+const labelSizes = {
+  small: "Small: 4 cm code",
+  medium: "Medium: 7 cm code",
+  large: "Large: 10 cm code",
+  poster: "Extra large: 14 cm code",
+} as const;
+type LabelSize = keyof typeof labelSizes;
+
 // Build the printable QR label for one item.
-export default async function ItemLabelPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ItemLabelPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ size?: string | string[] }>;
+}) {
   await requireInventoryAccess();
-  const [{ id }, requestHeaders] = await Promise.all([params, headers()]);
+  const [{ id }, search, requestHeaders] = await Promise.all([params, searchParams, headers()]);
+  const requestedSize = firstParam(search.size) ?? "";
+  const size: LabelSize = Object.hasOwn(labelSizes, requestedSize)
+    ? (requestedSize as LabelSize)
+    : "medium";
   if (!isUuid(id)) {
     notFound();
   }
@@ -37,7 +58,7 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
   );
   const scanUrl = appUrl ? `${appUrl}/scan/${encodeURIComponent(item.qrCode)}` : null;
   const qrDataUrl = scanUrl
-    ? await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "M", margin: 1, width: 560 })
+    ? await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "M", margin: 1, width: 900 })
     : null;
 
   return (
@@ -52,8 +73,35 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
           </Link>
           {scanUrl ? <PrintLabel itemId={item.id} /> : null}
         </div>
+        {scanUrl ? (
+          <FilterForm
+            label="Label size filters"
+            className="no-print card flex flex-wrap items-end justify-between gap-4 rounded-lg p-5"
+          >
+            <label className="min-w-56">
+              <span className="block text-sm font-semibold">Label size</span>
+              <select
+                name="size"
+                defaultValue={size}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+              >
+                {Object.entries(labelSizes).map(([key, name]) => (
+                  <option key={key} value={key}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link
+              href={`/dashboard/inventory/labels?ids=${item.id}`}
+              className="accent-link pb-2.5 text-sm font-semibold"
+            >
+              Print several labels on one sheet
+            </Link>
+          </FilterForm>
+        ) : null}
         {scanUrl && qrDataUrl ? (
-          <article className="print-label mx-auto max-w-md rounded-lg p-7 text-center">
+          <article className={`print-label print-label-${size} mx-auto rounded-lg p-7 text-center`}>
             {/* Printable item label. */}
             <p className="eyebrow">CEIT inventory</p>
             <h1 className="mt-3 text-2xl font-bold">{item.name}</h1>
@@ -62,7 +110,8 @@ export default async function ItemLabelPage({ params }: { params: Promise<{ id: 
             </p>
             <Image
               unoptimized
-              className="mx-auto mt-6 h-64 w-64"
+              loading="eager"
+              className="print-label-code mx-auto mt-6"
               src={qrDataUrl}
               alt={`QR code for ${item.name}`}
               width={280}

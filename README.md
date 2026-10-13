@@ -16,7 +16,7 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Automatic asset tags in the existing `INV-CAT-ST-ROOM-0001` format and a unique QR code for every new equipment record
 - Item-wide last-checked dates, including a one-click inspection record
 - Item status, condition, and location updates with an audit history
-- Individual QR labels and A4 label sheets for selected items or a room (24 compact or 8 large labels per sheet)
+- QR labels: print one at four sizes (4 to 14 cm), or many at once on A4 sheets for a room, a category, or items picked by search (small 40, medium 24, large 8, or extra large 2 per sheet)
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
 - Multi-word search (every word must match, across name, tag, serial, room, MAC/IP, and more), filters, sorting, and page navigation for status, room, category, type, condition, items that need attention, and items not checked in 90+ days
 - Bulk status, condition, location, and inspection changes for selected items, including **Record inspection** for a whole room

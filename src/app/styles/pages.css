@@ -794,6 +794,39 @@
   overflow: hidden;
 }
 
+/* One item's label: the code prints at the chosen size, measured in real units for paper. */
+.print-label {
+  max-width: 100%;
+  width: max-content;
+}
+
+.print-label-code {
+  height: 70mm;
+  max-width: 100%;
+  object-fit: contain;
+  width: 70mm;
+}
+
+.print-label-small .print-label-code {
+  height: 40mm;
+  width: 40mm;
+}
+
+.print-label-large .print-label-code {
+  height: 100mm;
+  width: 100mm;
+}
+
+.print-label-poster .print-label-code {
+  height: 140mm;
+  width: 140mm;
+}
+
+.print-label-small,
+.print-label-medium {
+  min-width: min(100%, 22rem);
+}
+
 .label-sheet-preview {
   overflow-x: auto;
   padding: 4px 0 1rem;
@@ -885,6 +918,131 @@
 
 .label-layout-large .sheet-label p {
   font-size: 8pt;
+}
+
+/* Small: 4 across and 10 down, a 2 cm code with the name and tag beside it. */
+.label-layout-small .label-sheet {
+  gap: 2mm;
+  grid-auto-rows: 25.5mm;
+  grid-template-columns: repeat(4, 46mm);
+}
+
+.label-layout-small .sheet-label {
+  gap: 1.5mm;
+  padding: 1.5mm;
+}
+
+.label-layout-small .sheet-label img {
+  height: 20mm;
+  width: 20mm;
+}
+
+.label-layout-small .sheet-label h2 {
+  font-size: 6.5pt;
+  max-height: 2.4em;
+}
+
+.label-layout-small .sheet-label p {
+  font-size: 5pt;
+  margin-top: 0.5mm;
+}
+
+.label-layout-small .sheet-label :is(.sheet-label-hint, .sheet-label-brand) {
+  display: none;
+}
+
+/* Extra large: two per sheet, a 9 cm code above large text, for doors and shared equipment. */
+.label-layout-poster .label-sheet {
+  gap: 6mm;
+  grid-auto-rows: 132mm;
+  grid-template-columns: 190mm;
+}
+
+.label-layout-poster .sheet-label {
+  flex-direction: column;
+  gap: 4mm;
+  justify-content: center;
+  padding: 6mm;
+  text-align: center;
+}
+
+.label-layout-poster .sheet-label img {
+  height: 90mm;
+  width: 90mm;
+}
+
+.label-layout-poster .sheet-label h2 {
+  font-size: 18pt;
+  max-height: 2.6em;
+}
+
+.label-layout-poster .sheet-label p {
+  font-size: 11pt;
+  margin-top: 1.5mm;
+}
+
+.label-layout-poster .sheet-label .sheet-label-tag {
+  font-size: 12pt;
+}
+
+.label-layout-poster .sheet-label .sheet-label-hint {
+  font-size: 10pt;
+}
+
+/* The label picker: room, category, and size in a row; picking items below. */
+.label-picker {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.label-picker-row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+.label-picker-items {
+  border-top: 1px dashed var(--border-input);
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 1rem;
+}
+
+.label-search {
+  display: block;
+  position: relative;
+}
+
+.label-search > svg {
+  color: var(--muted);
+  left: 0.8rem;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.label-search > .field {
+  padding-left: 2.3rem;
+}
+
+.label-choice-group {
+  border: 0;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.label-choice-group legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.label-result small {
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 @page {

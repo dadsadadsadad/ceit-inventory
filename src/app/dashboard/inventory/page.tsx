@@ -141,7 +141,7 @@ export default async function InventoryPage({
                   Inventory tools
                 </summary>
                 <div className="secondary-actions-menu">
-                  <Link href="/dashboard/inventory/labels">Print QR labels</Link>
+                  <Link href="/dashboard/inventory/labels">Print QR labels (many at once)</Link>
                   <Link href="/dashboard/inventory/import">Import file</Link>
                 </div>
               </details>
