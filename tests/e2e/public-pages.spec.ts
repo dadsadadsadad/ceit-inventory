@@ -190,9 +190,7 @@ test.describe("display options", () => {
     return page.getByRole("dialog", { name: "Appearance", exact: true });
   }
 
-  test("backgrounds, text size, corners, titles, contrast and motion apply and persist", async ({
-    page,
-  }) => {
+  test("backgrounds, text size, corners, and titles apply and persist", async ({ page }) => {
     await page.goto("/auth/login");
     const html = page.locator("html");
     const panel = await openPanel(page);
@@ -217,13 +215,12 @@ test.describe("display options", () => {
     await panel.getByRole("button", { name: "Larger" }).click();
     await panel.getByRole("button", { name: "Round" }).click();
     await panel.getByRole("button", { name: "Sans" }).click();
-    await panel.getByRole("button", { name: "High" }).click();
-    await panel.getByRole("button", { name: "Reduced" }).click();
     await expect(html).toHaveAttribute("data-text", "larger");
     await expect(html).toHaveAttribute("data-corners", "round");
     await expect(html).toHaveAttribute("data-titles", "sans");
-    await expect(html).toHaveAttribute("data-contrast", "high");
-    await expect(html).toHaveAttribute("data-motion", "reduced");
+    // Contrast and motion are no longer options.
+    await expect(panel.getByText("Contrast", { exact: true })).toHaveCount(0);
+    await expect(panel.getByText("Motion", { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
       "20px",
     );
@@ -249,14 +246,7 @@ test.describe("display options", () => {
     const again = await openPanel(page);
     await again.getByRole("button", { name: "Reset appearance" }).click();
     await expect(html).toHaveAttribute("data-theme", "light");
-    for (const name of [
-      "data-tone",
-      "data-text",
-      "data-corners",
-      "data-titles",
-      "data-contrast",
-      "data-motion",
-    ]) {
+    for (const name of ["data-tone", "data-text", "data-corners", "data-titles"]) {
       await expect(html).not.toHaveAttribute(name, /.+/);
     }
   });

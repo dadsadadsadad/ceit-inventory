@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { InventoryMix } from "@/app/components/inventory-mix";
 import { DashboardCalendar } from "./dashboard-calendar";
+import { DashboardClock } from "./dashboard-clock";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { auditSubjectLabel, auditViewWhere } from "@/lib/audit-trail";
@@ -243,7 +244,7 @@ export default async function DashboardPage() {
           </div>
         </header>
         <div className="overview-dateline">
-          <span>Today</span>
+          <DashboardClock initial={new Date().toISOString()} />
           <time dateTime={new Date().toISOString()}>
             {formatManilaDate(new Date(), {
               weekday: "short",

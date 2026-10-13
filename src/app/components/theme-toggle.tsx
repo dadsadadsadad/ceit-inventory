@@ -16,11 +16,9 @@ import {
 
 import {
   type Accent,
-  type ContrastLevel,
   type CornerStyle,
   type DisplayPreferences,
   type ModeChoice,
-  type MotionLevel,
   type TextSize,
   type Theme,
   type TitleFont,
@@ -648,7 +646,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
               <details className="appearance-disclosure appearance-more">
                 <summary>
                   More options
-                  <small>Text size, corners, titles, contrast, motion</small>
+                  <small>Text size, corners, titles</small>
                 </summary>
                 <Segmented<TextSize>
                   label="Text size"
@@ -677,24 +675,6 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
                   options={[
                     { value: "serif", label: "Serif" },
                     { value: "sans", label: "Sans" },
-                  ]}
-                />
-                <Segmented<ContrastLevel>
-                  label="Contrast"
-                  value={preferences.contrast}
-                  onChange={(contrast) => saveAppearance({ contrast })}
-                  options={[
-                    { value: "standard", label: "Standard" },
-                    { value: "high", label: "High" },
-                  ]}
-                />
-                <Segmented<MotionLevel>
-                  label="Motion"
-                  value={preferences.motion}
-                  onChange={(motion) => saveAppearance({ motion })}
-                  options={[
-                    { value: "full", label: "Full" },
-                    { value: "reduced", label: "Reduced" },
                   ]}
                 />
               </details>

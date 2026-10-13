@@ -125,8 +125,6 @@ describe("display preferences", () => {
         [preferenceKeys.text]: "larger",
         [preferenceKeys.corners]: "round",
         [preferenceKeys.titles]: "sans",
-        [preferenceKeys.contrast]: "high",
-        [preferenceKeys.motion]: "reduced",
       }),
     );
     expect(preferences).toEqual({
@@ -136,8 +134,6 @@ describe("display preferences", () => {
       text: "larger",
       corners: "round",
       titles: "sans",
-      contrast: "high",
-      motion: "reduced",
     });
   });
 
@@ -150,28 +146,22 @@ describe("display preferences", () => {
 
   it("puts attributes on the page only for choices that are not the standard", () => {
     expect(preferenceAttributes(defaultPreferences, "light")).toEqual({
-      "data-contrast": null,
       "data-corners": null,
       "data-mode": "light",
-      "data-motion": null,
       "data-text": null,
       "data-titles": null,
       "data-tone": null,
     });
     const everything: DisplayPreferences = {
-      contrast: "high",
       corners: "sharp",
       mode: "dark",
-      motion: "reduced",
       text: "large",
       titles: "sans",
       toneDark: "midnight",
       toneLight: "bright",
     };
     expect(preferenceAttributes(everything, "dark")).toMatchObject({
-      "data-contrast": "high",
       "data-corners": "sharp",
-      "data-motion": "reduced",
       "data-text": "large",
       "data-titles": "sans",
       "data-tone": "midnight",
@@ -186,8 +176,6 @@ describe("display preferences", () => {
       "ceit-text": "large",
       "ceit-corners": "round",
       "ceit-titles": "sans",
-      "ceit-contrast": "high",
-      "ceit-motion": "reduced",
     };
     const { attributes, dataset } = restoreAppearance("dark", null, values);
     expect(dataset.theme).toBe("dark");

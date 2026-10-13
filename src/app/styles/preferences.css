@@ -66,15 +66,6 @@ html[data-theme="dark"][data-tone="black"] {
   --border-input: rgb(255 255 255 / 32%);
 }
 
-/* ------------------------------------------------------------------ contrast */
-/* Stronger text and edges, built from whichever tone is chosen. */
-html[data-contrast="high"] {
-  --muted: color-mix(in srgb, var(--foreground) 82%, var(--background));
-  --muted-strong: var(--foreground);
-  --border: color-mix(in srgb, var(--foreground) 34%, transparent);
-  --border-input: color-mix(in srgb, var(--foreground) 62%, transparent);
-}
-
 /* ------------------------------------------------------------------ text size */
 /* Everything is sized in rem, so this scales the whole interface. */
 html[data-text="large"] {
@@ -107,27 +98,4 @@ html[data-titles="sans"] {
 html[data-titles="sans"] :is(.title, .card-title, .page-inner h2, .page-narrow h2) {
   font-weight: 700;
   letter-spacing: -0.025em;
-}
-
-/* ------------------------------------------------------------------ motion */
-/* The same as the device's "reduce motion" setting, for people who want it on this site only. */
-html[data-motion="reduced"] *,
-html[data-motion="reduced"] *::before,
-html[data-motion="reduced"] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  scroll-behavior: auto !important;
-  transition: none !important;
-}
-
-html[data-motion="reduced"]
-  :is(
-    .primary-button,
-    .secondary-button,
-    .danger-button,
-    .card-link,
-    .pagination-link,
-    .nav-link
-  ):is(:hover, :active) {
-  transform: none !important;
 }

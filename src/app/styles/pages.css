@@ -40,6 +40,12 @@
   text-transform: uppercase;
 }
 
+.overview-clock {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 .overview-metrics {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -424,10 +430,6 @@
 
   .dashboard-overview-page .dashboard-header .title {
     font-size: 2rem;
-  }
-
-  .overview-dateline > span {
-    display: none;
   }
 
   .overview-metrics > div {

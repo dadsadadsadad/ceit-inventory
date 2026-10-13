@@ -280,17 +280,9 @@ export type CornerStyle = (typeof cornerStyles)[number];
 export const titleFonts = ["serif", "sans"] as const;
 export type TitleFont = (typeof titleFonts)[number];
 
-export const contrastLevels = ["standard", "high"] as const;
-export type ContrastLevel = (typeof contrastLevels)[number];
-
-export const motionLevels = ["full", "reduced"] as const;
-export type MotionLevel = (typeof motionLevels)[number];
-
 export type DisplayPreferences = {
-  contrast: ContrastLevel;
   corners: CornerStyle;
   mode: ModeChoice;
-  motion: MotionLevel;
   text: TextSize;
   titles: TitleFont;
   toneDark: Tone;
@@ -298,10 +290,8 @@ export type DisplayPreferences = {
 };
 
 export const defaultPreferences: DisplayPreferences = {
-  contrast: "standard",
   corners: "default",
   mode: "light",
-  motion: "full",
   text: "default",
   titles: "serif",
   toneDark: "ink",
@@ -310,10 +300,8 @@ export const defaultPreferences: DisplayPreferences = {
 
 /** Where each choice is saved on the device. The mode keeps the original key. */
 export const preferenceKeys = {
-  contrast: "ceit-contrast",
   corners: "ceit-corners",
   mode: themeStorageKey,
-  motion: "ceit-motion",
   text: "ceit-text",
   titles: "ceit-titles",
   toneDark: "ceit-tone-dark",
@@ -334,10 +322,8 @@ export function parsePreferences(
   read: (key: string) => string | null | undefined,
 ): DisplayPreferences {
   return {
-    contrast: choiceOf(read(preferenceKeys.contrast), contrastLevels, defaultPreferences.contrast),
     corners: choiceOf(read(preferenceKeys.corners), cornerStyles, defaultPreferences.corners),
     mode: choiceOf(read(preferenceKeys.mode), modeChoices, defaultPreferences.mode),
-    motion: choiceOf(read(preferenceKeys.motion), motionLevels, defaultPreferences.motion),
     text: choiceOf(read(preferenceKeys.text), textSizes, defaultPreferences.text),
     titles: choiceOf(read(preferenceKeys.titles), titleFonts, defaultPreferences.titles),
     toneDark: choiceOf(
@@ -362,10 +348,8 @@ export function resolveTheme(mode: ModeChoice, deviceIsDark: boolean): Theme {
 export function preferenceAttributes(preferences: DisplayPreferences, theme: Theme) {
   const tone = theme === "dark" ? preferences.toneDark : preferences.toneLight;
   return {
-    "data-contrast": preferences.contrast === "standard" ? null : preferences.contrast,
     "data-corners": preferences.corners === "default" ? null : preferences.corners,
     "data-mode": preferences.mode,
-    "data-motion": preferences.motion === "full" ? null : preferences.motion,
     "data-text": preferences.text === "default" ? null : preferences.text,
     "data-titles": preferences.titles === "serif" ? null : preferences.titles,
     "data-tone": tone === toneChoices[theme][0] ? null : tone,
