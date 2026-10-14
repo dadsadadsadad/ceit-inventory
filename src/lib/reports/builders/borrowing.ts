@@ -1,4 +1,4 @@
-import { BorrowStatus, type Prisma } from "@prisma/client";
+import { BorrowStatus, ItemStatus, ItemType, type Prisma } from "@prisma/client";
 
 import { borrowStatusLabel } from "@/lib/borrow-status";
 import { dueTodayWhere } from "@/lib/loan-due";
@@ -11,7 +11,7 @@ import {
 } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
-import { chips, dateRangeChip, formatReportDateTime, plural } from "../format";
+import { chips, dateRangeChip, formatPeso, formatReportDateTime, plural } from "../format";
 import type { ReportModel } from "../model";
 import { countChart, monthChart } from "../charts";
 import { loadCapped, monthlyCounts, namedItemCounts, type BuilderContext } from "./shared";
@@ -55,52 +55,93 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
     ...borrowSearchWhere(filters.query),
   ];
   const where: Prisma.BorrowRequestWhereInput = { AND: conditions };
+  const idleWhere: Prisma.InventoryItemWhereInput = {
+    itemType: ItemType.ASSET,
+    status: { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] },
+    borrowRequests: { none: range ? { requestedAt: range } : {} },
+  };
 
-  const [{ rows: requests, total }, active, overdue, returned, byStatus, byMonth, topItems] =
-    await Promise.all([
-      loadCapped(context, {
-        find: (take) =>
-          prisma.borrowRequest.findMany({
-            where,
-            include: { inventoryItem: { select: { assetTag: true, name: true } } },
-            orderBy:
-              filters.borrowingState === "overdue"
-                ? { expectedReturnDate: "asc" }
-                : { requestedAt: "desc" },
-            take,
-          }),
-        count: () => prisma.borrowRequest.count({ where }),
-      }),
-      prisma.borrowRequest.count({
-        where: { AND: [where, { status: { in: activeStatuses } }] },
-      }),
-      prisma.borrowRequest.count({
-        where: {
-          AND: [where, { status: { in: activeStatuses } }, { expectedReturnDate: { lt: now } }],
-        },
-      }),
-      prisma.borrowRequest.count({ where: { AND: [where, { status: BorrowStatus.RETURNED }] } }),
-      prisma.borrowRequest.groupBy({ by: ["status"], where, _count: { _all: true } }),
-      monthlyCounts(now, (requestedAt) =>
-        prisma.borrowRequest.count({ where: { AND: [where, { requestedAt }] } }),
-      ),
-      prisma.borrowRequest
-        .groupBy({
-          by: ["inventoryItemId"],
+  const [
+    { rows: requests, total },
+    active,
+    overdue,
+    returned,
+    byStatus,
+    byMonth,
+    topItems,
+    finished,
+    idle,
+    idleCount,
+  ] = await Promise.all([
+    loadCapped(context, {
+      find: (take) =>
+        prisma.borrowRequest.findMany({
           where,
-          _count: { _all: true },
-          orderBy: { _count: { inventoryItemId: "desc" } },
-          take: 7,
-        })
-        .then((groups) =>
-          namedItemCounts(
-            groups.map((group) => ({
-              inventoryItemId: group.inventoryItemId,
-              count: group._count._all,
-            })),
-          ),
+          include: { inventoryItem: { select: { assetTag: true, name: true } } },
+          orderBy:
+            filters.borrowingState === "overdue"
+              ? { expectedReturnDate: "asc" }
+              : { requestedAt: "desc" },
+          take,
+        }),
+      count: () => prisma.borrowRequest.count({ where }),
+    }),
+    prisma.borrowRequest.count({
+      where: { AND: [where, { status: { in: activeStatuses } }] },
+    }),
+    prisma.borrowRequest.count({
+      where: {
+        AND: [where, { status: { in: activeStatuses } }, { expectedReturnDate: { lt: now } }],
+      },
+    }),
+    prisma.borrowRequest.count({ where: { AND: [where, { status: BorrowStatus.RETURNED }] } }),
+    prisma.borrowRequest.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    monthlyCounts(now, (requestedAt) =>
+      prisma.borrowRequest.count({ where: { AND: [where, { requestedAt }] } }),
+    ),
+    prisma.borrowRequest
+      .groupBy({
+        by: ["inventoryItemId"],
+        where,
+        _count: { _all: true },
+        orderBy: { _count: { inventoryItemId: "desc" } },
+        take: 7,
+      })
+      .then((groups) =>
+        namedItemCounts(
+          groups.map((group) => ({
+            inventoryItemId: group.inventoryItemId,
+            count: group._count._all,
+          })),
         ),
-    ]);
+      ),
+    // Finished loans, for how long things stay out and how often they come back on time.
+    prisma.borrowRequest.findMany({
+      where: { AND: [where, { status: BorrowStatus.RETURNED, returnedAt: { not: null } }] },
+      select: { expectedReturnDate: true, processedAt: true, returnedAt: true, startsAt: true },
+      take: 10_000,
+    }),
+    // Equipment nobody asked for in this period: candidates to lend out more, move, or retire.
+    prisma.inventoryItem.findMany({
+      where: idleWhere,
+      include: { category: true, location: true },
+      orderBy: [{ purchasePrice: { sort: "desc", nulls: "last" } }, { name: "asc" }],
+      take: 30,
+    }),
+    prisma.inventoryItem.count({ where: idleWhere }),
+  ]);
+  const late = finished.filter(
+    (loan) => loan.returnedAt && loan.returnedAt > loan.expectedReturnDate,
+  ).length;
+  const loanDays = finished.map(
+    (loan) =>
+      ((loan.returnedAt ?? loan.expectedReturnDate).getTime() -
+        (loan.processedAt ?? loan.startsAt).getTime()) /
+      dayMs,
+  );
+  const averageLoan = loanDays.length
+    ? loanDays.reduce((sum, value) => sum + Math.max(0, value), 0) / loanDays.length
+    : null;
 
   const stateDate =
     filters.borrowingState in dateLabels
@@ -139,6 +180,24 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         tone: overdue ? "alert" : undefined,
       },
       { label: "Returned", value: returned.toLocaleString() },
+      {
+        label: "Returned on time",
+        value: finished.length
+          ? `${Math.round(((finished.length - late) / finished.length) * 100)}%`
+          : "–",
+        note: finished.length ? `${plural(late, "late return")}` : "no returns yet",
+        tone: late ? "alert" : undefined,
+      },
+      {
+        label: "Average loan",
+        value: averageLoan === null ? "–" : `${averageLoan.toFixed(1)} days`,
+        note: "from check-out to return",
+      },
+      {
+        label: "Equipment never requested",
+        value: idleCount.toLocaleString(),
+        note: range ? "in this period" : "since records began",
+      },
     ],
     charts: [
       monthChart("Requests per month", byMonth, "requests"),
@@ -151,6 +210,15 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         "requests",
       ),
       countChart("Most requested equipment", topItems, "requests", 7),
+      {
+        title: "Returns",
+        kind: "bars",
+        unit: "loans",
+        data: [
+          { label: "On time", value: finished.length - late, tone: "ok" },
+          { label: "Late", value: late, tone: "defective" },
+        ],
+      },
     ],
     tables: [
       {
@@ -201,6 +269,22 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         }),
         total,
         emptyText: "No borrowing requests match these filters.",
+      },
+      {
+        heading: range ? "Equipment not requested in this period" : "Equipment never requested",
+        note: "Equipment in use that nobody has asked to borrow, most valuable first.",
+        columns: [
+          { label: "Item", width: 2, primary: true },
+          { label: "Room", width: 1.2 },
+          { label: "Price", width: 1, align: "right" },
+        ],
+        rows: idle.map((item) => [
+          [item.name, item.assetTag].filter(Boolean).join(" · "),
+          `${item.location.name}\n${item.category.name}`,
+          item.purchasePrice === null ? "No price" : formatPeso(item.purchasePrice),
+        ]),
+        total: idleCount,
+        emptyText: "Every piece of equipment has been requested at least once.",
       },
     ],
     csv: [

@@ -39,3 +39,43 @@ export function dateRangeChip(range: ExportDateRange, label = "Dates") {
 export function chips(...entries: (string | null | undefined | false)[]) {
   return entries.filter((entry): entry is string => Boolean(entry));
 }
+
+const pesoFormat = new Intl.NumberFormat("en-PH", {
+  currency: "PHP",
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  style: "currency",
+});
+
+const shortPesoFormat = new Intl.NumberFormat("en-PH", {
+  currency: "PHP",
+  maximumFractionDigits: 0,
+  style: "currency",
+});
+
+/** A peso amount, like ₱45,000.00. */
+export function formatPeso(value: number | { toString(): string } | null | undefined) {
+  return value === null || value === undefined ? "" : pesoFormat.format(Number(value.toString()));
+}
+
+/** A peso amount without centavos, for charts and summary figures: ₱392,000. */
+export function formatPesoShort(value: number) {
+  return shortPesoFormat.format(value);
+}
+
+/** Whole years and months between two dates, like "2 yr 3 mo" or "5 mo". */
+export function formatAge(from: Date | null | undefined, now: Date) {
+  if (!from) {
+    return "";
+  }
+  const months = Math.max(
+    0,
+    (now.getUTCFullYear() - from.getUTCFullYear()) * 12 + (now.getUTCMonth() - from.getUTCMonth()),
+  );
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  if (!years) {
+    return `${rest} mo`;
+  }
+  return rest ? `${years} yr ${rest} mo` : `${years} yr`;
+}

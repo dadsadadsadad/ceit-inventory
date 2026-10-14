@@ -60,3 +60,17 @@ export function warrantyWhere(
       return { warrantyEndsAt: null };
   }
 }
+
+/** Warranties still running that end within the next `days` days, from today. */
+export function warrantyEndingWithinWhere(
+  days: number,
+  now = new Date(),
+): Prisma.InventoryItemWhereInput {
+  const start = new Date(today(now));
+  return { warrantyEndsAt: { gte: start, lte: new Date(start.getTime() + days * dayMs) } };
+}
+
+/** Whole days from today until a warranty ends; negative once it has ended. */
+export function warrantyDaysLeft(endsAt: Date, now = new Date()) {
+  return Math.round((endsAt.getTime() - today(now)) / dayMs);
+}

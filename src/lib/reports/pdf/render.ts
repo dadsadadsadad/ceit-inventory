@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 
 import { formatReportDateTime } from "../format";
-import { hasChartData } from "../charts";
+import { chartValue, hasChartData } from "../charts";
 import type { ReportChart, ReportColumn, ReportMetric, ReportModel, ReportTable } from "../model";
 import { capLines, pdfText, wrapLine } from "./text";
 import { contentWidth, pageLayout, pdfChartTones, pdfTheme } from "./theme";
@@ -306,7 +306,7 @@ class Sheet {
 
     if (chart.kind === "bars") {
       const labelWidth = Math.min(width * 0.36, 110);
-      const valueWidth = 30;
+      const valueWidth = chart.format === "peso" ? 64 : 30;
       const trackX = x + 10 + labelWidth + 6;
       const trackWidth = width - 20 - labelWidth - 6 - valueWidth;
       chart.data.forEach((entry, index) => {
@@ -336,7 +336,7 @@ class Sheet {
             color: color(entry),
           });
         }
-        const value = entry.value.toLocaleString();
+        const value = pdfText(chartValue(chart, entry.value));
         page.drawText(value, {
           x: x + width - 10 - fonts.bold.widthOfTextAtSize(value, 8),
           y: rowTop - 10,
@@ -371,7 +371,7 @@ class Sheet {
           color: color(entry),
         });
       }
-      const value = entry.value.toLocaleString();
+      const value = pdfText(chartValue(chart, entry.value));
       page.drawText(value, {
         x: centre - fonts.bold.widthOfTextAtSize(value, 7.5) / 2,
         y: baseline + barHeight + 4,

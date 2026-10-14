@@ -5,6 +5,8 @@ export const reportKinds = [
   "inventory",
   "stock",
   "warranty",
+  "value",
+  "health",
   "pcs",
   "hardware",
   "software",
@@ -37,7 +39,11 @@ export type ReportControl =
   | "maintenancePriority"
   | "auditView"
   | "action"
-  | "actor";
+  | "actor"
+  | "price"
+  | "purchased"
+  | "within"
+  | "missing";
 
 export type ReportKindInfo = {
   controls: ReportControl[];
@@ -72,6 +78,9 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "warranty",
       "pcOnly",
       "attention",
+      "price",
+      "purchased",
+      "missing",
       "dates",
     ],
   },
@@ -88,7 +97,41 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
     description:
       "Equipment with a recorded warranty, and which warranties have ended or are ending.",
     stem: "ceit-warranty",
-    controls: ["search", "warranty", "category", "location", "itemType"],
+    controls: [
+      "search",
+      "warranty",
+      "within",
+      "category",
+      "location",
+      "itemType",
+      "price",
+      "purchased",
+    ],
+  },
+  value: {
+    id: "value",
+    label: "Asset value",
+    description:
+      "What the equipment is worth, by category and room, how old it is, and the value at risk.",
+    stem: "ceit-asset-value",
+    controls: [
+      "search",
+      "inventoryStatus",
+      "category",
+      "location",
+      "itemType",
+      "price",
+      "purchased",
+      "missing",
+    ],
+  },
+  health: {
+    id: "health",
+    label: "Record health",
+    description:
+      "Records missing a price, serial number, purchase date, warranty, photo, or recent check.",
+    stem: "ceit-record-health",
+    controls: ["search", "category", "location", "itemType", "missing"],
   },
   pcs: {
     id: "pcs",
@@ -110,7 +153,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
     label: "Software",
     description: "Every installed program, which PCs have it, and when licenses end.",
     stem: "ceit-software",
-    controls: ["search", "location", "license", "retired"],
+    controls: ["search", "location", "license", "within", "retired"],
   },
   borrowing: {
     id: "borrowing",
@@ -184,6 +227,36 @@ export const quickReports: {
     label: "Open repairs",
     description: "Problems nobody has resolved yet.",
     query: { kind: "maintenance", maintenanceStatus: "OPEN" },
+  },
+  {
+    label: "What the equipment is worth",
+    description: "Total value by category and room, and the value at risk.",
+    query: { kind: "value" },
+  },
+  {
+    label: "Records missing a price",
+    description: "Equipment and stock with no purchase price recorded.",
+    query: { kind: "health", missing: "price" },
+  },
+  {
+    label: "Warranties ending in 90 days",
+    description: "Plan renewals or repairs before cover runs out.",
+    query: { kind: "warranty", within: "90" },
+  },
+  {
+    label: "Unlicensed software",
+    description: "Copies marked free or not licensed.",
+    query: { kind: "software", license: "unlicensed" },
+  },
+  {
+    label: "Licenses ending in 90 days",
+    description: "Software to renew this quarter.",
+    query: { kind: "software", within: "90" },
+  },
+  {
+    label: "Not checked in 90 days",
+    description: "Equipment due for an inspection.",
+    query: { kind: "health", missing: "inspection" },
   },
   {
     label: "Last 30 days of borrowing",

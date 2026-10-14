@@ -26,9 +26,11 @@ export type ReportBuilderOptions = {
   maintenancePriorities: Option[];
   maintenanceSources: Option[];
   maintenanceStatuses: Option[];
+  missingDetails: Option[];
   periods: Option[];
   stockLevels: Option[];
   warranties: Option[];
+  windows: Option[];
 };
 
 type Props = {
@@ -178,6 +180,75 @@ export function ReportBuilder({ initial, options }: Props) {
             ? select("component", "Hardware part", options.components, "All parts")
             : null}
           {has("license") ? select("license", "License", options.licenses, "Any license") : null}
+          {has("within")
+            ? select(
+                "within",
+                kind === "software" ? "License ends within" : "Warranty ends within",
+                options.windows,
+                "Any time",
+              )
+            : null}
+          {has("missing")
+            ? select(
+                "missing",
+                "Missing",
+                options.missingDetails,
+                // Record health lists every gap by default; other reports list every record.
+                kind === "health" ? "Anything missing" : "Any record",
+              )
+            : null}
+          {has("price") ? (
+            <>
+              <label>
+                <span className={label}>Price from (₱)</span>
+                <input
+                  name="priceMin"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  defaultValue={initial.priceMin ?? ""}
+                  placeholder="0"
+                  className={field}
+                />
+              </label>
+              <label>
+                <span className={label}>Price to (₱)</span>
+                <input
+                  name="priceMax"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  defaultValue={initial.priceMax ?? ""}
+                  placeholder="Any"
+                  className={field}
+                />
+              </label>
+            </>
+          ) : null}
+          {has("purchased") ? (
+            <>
+              <label>
+                <span className={label}>Bought from</span>
+                <input
+                  name="purchasedFrom"
+                  type="date"
+                  defaultValue={initial.purchasedFrom ?? ""}
+                  className={field}
+                />
+              </label>
+              <label>
+                <span className={label}>Bought to</span>
+                <input
+                  name="purchasedTo"
+                  type="date"
+                  defaultValue={initial.purchasedTo ?? ""}
+                  className={field}
+                />
+              </label>
+            </>
+          ) : null}
           {has("borrowingState")
             ? select("borrowingState", "Show", options.borrowingStates, "All requests")
             : null}

@@ -6,12 +6,14 @@ import { manilaCalendarDate } from "@/lib/manila-date";
 import { buildActivityReport } from "./builders/activity";
 import { buildBorrowingReport } from "./builders/borrowing";
 import { buildHardwareReport } from "./builders/hardware";
+import { buildHealthReport } from "./builders/health";
 import { buildInventoryReport } from "./builders/inventory";
 import { buildMaintenanceReport } from "./builders/maintenance";
 import { buildOverviewReport } from "./builders/overview";
 import { buildPcRegisterReport } from "./builders/pcs";
 import { buildSoftwareReport } from "./builders/software";
 import { buildStockReport } from "./builders/stock";
+import { buildValueReport } from "./builders/value";
 import { buildWarrantyReport } from "./builders/warranty";
 import type { BuilderContext } from "./builders/shared";
 import { isReportKind, reportKindInfo, type ReportKind } from "./kinds";
@@ -21,12 +23,14 @@ const builders: Record<ReportKind, (context: BuilderContext) => Promise<ReportMo
   activity: buildActivityReport,
   borrowing: buildBorrowingReport,
   hardware: buildHardwareReport,
+  health: buildHealthReport,
   inventory: buildInventoryReport,
   maintenance: buildMaintenanceReport,
   overview: buildOverviewReport,
   pcs: buildPcRegisterReport,
   software: buildSoftwareReport,
   stock: buildStockReport,
+  value: buildValueReport,
   warranty: buildWarrantyReport,
 };
 

@@ -39,6 +39,25 @@ export const borrowingReportStates = [
   "cancelled",
 ] as const;
 
+/** How far ahead "ending within" looks for warranties and licenses, in days. */
+export const reportWindows = [30, 60, 90, 180, 365] as const;
+export type ReportWindow = (typeof reportWindows)[number];
+
+/** Details a record can be missing, for finding gaps in the register. */
+export const missingDetails = [
+  "price",
+  "purchaseDate",
+  "serial",
+  "warranty",
+  "photo",
+  "inspection",
+  "pcDetails",
+] as const;
+export type MissingDetail = (typeof missingDetails)[number];
+
+/** The most a purchase price can be, the same as the item form allows. */
+export const maximumReportPrice = 99_999_999.99;
+
 export type ExportPeriod = (typeof exportPeriods)[number];
 export type BorrowingReportState = (typeof borrowingReportStates)[number];
 export type ExportDateRange = { from?: Date; toExclusive?: Date };
@@ -62,12 +81,21 @@ export type ReportExportFilters = {
   maintenancePriority?: MaintenancePriority;
   maintenanceSource?: "QR" | "STAFF";
   maintenanceStatus?: MaintenanceStatus;
+  /** Only records missing this detail. */
+  missing?: MissingDetail;
   pcOnly: boolean;
   period: ExportPeriod;
+  /** Purchase price range in pesos, inclusive. */
+  priceMax?: number;
+  priceMin?: number;
+  /** When equipment was bought (its purchase date), separate from when the record was added. */
+  purchased: ExportDateRange;
   query?: string;
   /** "low" for stock at or below its alert level (which includes none left), "out" for none left. */
   stock?: "low" | "out";
   warranty?: WarrantyFilter;
+  /** Warranties or licenses ending within this many days (from today). */
+  within?: ReportWindow;
 };
 
 type QueryParameters = Pick<URLSearchParams, "get">;
@@ -207,6 +235,18 @@ function borrowingReportState(value: string | null) {
   return value;
 }
 
+function optionalPrice(value: string | null, label: string) {
+  const text = value?.replace(/[₱,\s]/g, "");
+  if (!text) {
+    return undefined;
+  }
+  const amount = Number(text);
+  if (!Number.isFinite(amount) || amount < 0 || amount > maximumReportPrice) {
+    throw new Error(`${label} must be a peso amount from 0 to 99,999,999.99.`);
+  }
+  return Math.round(amount * 100) / 100;
+}
+
 // Validate the selected report filters and dates.
 export function parseReportExportFilters(
   parameters: QueryParameters,
@@ -241,6 +281,19 @@ export function parseReportExportFilters(
   if (component && !isHardwareComponent(component)) {
     throw new Error("Invalid hardware component.");
   }
+  const priceMin = optionalPrice(parameters.get("priceMin"), "Lowest price");
+  const priceMax = optionalPrice(parameters.get("priceMax"), "Highest price");
+  if (priceMin !== undefined && priceMax !== undefined && priceMin > priceMax) {
+    throw new Error("The lowest price must not be more than the highest price.");
+  }
+  const within = parameters.get("within");
+  if (within && !reportWindows.includes(Number(within) as ReportWindow)) {
+    throw new Error("Invalid time window.");
+  }
+  const missing = parameters.get("missing");
+  if (missing && !missingDetails.includes(missing as MissingDetail)) {
+    throw new Error("Invalid missing detail.");
+  }
 
   return {
     attention: parameters.get("attention") === "1",
@@ -267,11 +320,19 @@ export function parseReportExportFilters(
       MaintenanceStatus,
       "Invalid maintenance status.",
     ),
+    missing: missing ? (missing as MissingDetail) : undefined,
     pcOnly: parameters.get("pcOnly") === "1",
     period: requestedPeriod,
+    priceMax,
+    priceMin,
+    purchased: dateRange(
+      calendarDate(parameters.get("purchasedFrom"), "Purchased from"),
+      calendarDate(parameters.get("purchasedTo"), "Purchased to"),
+    ),
     query: searchText(parameters.get("q")),
     stock: stock ? (stock as "low" | "out") : undefined,
     warranty: warranty ? (warranty as WarrantyFilter) : undefined,
+    within: within ? (Number(within) as ReportWindow) : undefined,
   };
 }
 

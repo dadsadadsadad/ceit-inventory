@@ -67,6 +67,15 @@ describe("report builders", () => {
     database.computer.groupBy.mockResolvedValue([]);
     database.borrowRequest.groupBy.mockResolvedValue([]);
     database.maintenanceTicket.groupBy.mockResolvedValue([]);
+    database.inventoryItem.count.mockResolvedValue(0);
+    database.inventoryItem.aggregate.mockResolvedValue({
+      _count: { _all: 0 },
+      _sum: { quantity: 0, purchasePrice: null },
+      _avg: { purchasePrice: null },
+      _max: { purchasePrice: null },
+    });
+    database.maintenanceTicket.findMany.mockResolvedValue([]);
+    database.borrowRequest.findMany.mockResolvedValue([]);
   });
 
   it("refuses an unknown report and accepts the old name for borrowing", async () => {
@@ -169,12 +178,15 @@ describe("report builders", () => {
 
     it("counts a title once however it is capitalised, and flags licenses", async () => {
       const report = await run("kind=software");
-      expect(report.metrics).toEqual([
+      expect(report.metrics.slice(0, 4)).toEqual([
         expect.objectContaining({ label: "Titles", value: "3" }),
         expect.objectContaining({ label: "Installations", value: "4" }),
         expect.objectContaining({ label: "Licenses ending soon", value: "1", tone: "alert" }),
         expect.objectContaining({ label: "Licenses expired", value: "1", tone: "alert" }),
       ]);
+      expect(report.metrics.map((metric) => metric.label)).toEqual(
+        expect.arrayContaining(["Marked not licensed", "No license information"]),
+      );
       const titles = report.tables[0].rows;
       expect(titles.map((row) => row[0].toLowerCase())).toEqual(["blender", "notes", "zoom"]);
       expect(titles[2][1]).toBe("2");
@@ -354,6 +366,7 @@ describe("report builders", () => {
       assetTag: `TAG-${name}`,
       warrantyEndsAt: warrantyEndsAt ? new Date(`${warrantyEndsAt}T00:00:00.000Z`) : null,
       purchaseDate: null,
+      purchasePrice: null,
       status: "OK",
       category: { name: "Computers" },
       location: { name: "Lab A" },
@@ -373,12 +386,14 @@ describe("report builders", () => {
     it("says where each warranty stands on the report day", async () => {
       const report = await run("kind=warranty");
       const states = report.tables[0].rows.map((row) => row[1].split("\n")[1]);
-      expect(states).toEqual(["Warranty ended", "Ends within 60 days", "Under warranty"]);
+      expect(states.slice(0, 2)).toEqual(["Ended 35 days ago", "40 days left"]);
+      expect(states[2]).toMatch(/^\d+ days left$/);
       expect(report.metrics.map((metric) => metric.label)).toEqual([
         "With a warranty",
-        "Ending soon",
+        "Ending within 60 days",
         "Warranty ended",
-        "Still covered",
+        "Value still covered",
+        "Equipment with no warranty",
       ]);
     });
 

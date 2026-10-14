@@ -1,9 +1,11 @@
-import type { Prisma } from "@prisma/client";
+import { ItemType, type Prisma } from "@prisma/client";
 
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { manilaDateText } from "@/lib/manila-date";
 import { inventoryWhere } from "@/lib/record-search";
 import {
+  warrantyDaysLeft,
+  warrantyEndingWithinWhere,
   warrantyState,
   warrantyStateLabel,
   warrantyWarningDays,
@@ -11,8 +13,10 @@ import {
 } from "@/lib/warranty";
 import { prisma } from "@/prisma";
 
-import { chips, formatReportDay } from "../format";
+import { monthChart, monthSpan, upcomingMonths } from "../charts";
+import { chips, formatPeso, formatPesoShort, formatReportDay, plural } from "../format";
 import type { ReportModel } from "../model";
+import { itemDetailChips, itemDetailWhere } from "./item-filters";
 import { filterNames, loadCapped, type BuilderContext } from "./shared";
 
 const filterLabels = {
@@ -22,23 +26,51 @@ const filterLabels = {
   none: "No warranty recorded",
 } as const;
 
-// Equipment warranties: what has ended, what is ending, and what has no warranty on record.
+// Equipment warranties: what has ended, what is ending, what it is worth, and what comes next.
 export async function buildWarrantyReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
-  const base: Prisma.InventoryItemWhereInput = inventoryWhere({
-    category: filters.categoryId,
-    itemType: filters.itemType,
-    location: filters.locationId,
-    q: filters.query,
-  });
+  const base: Prisma.InventoryItemWhereInput = {
+    AND: [
+      inventoryWhere({
+        category: filters.categoryId,
+        itemType: filters.itemType,
+        location: filters.locationId,
+        q: filters.query,
+      }),
+      ...itemDetailWhere(filters, now),
+    ],
+  };
+  // "Ending within" a chosen window takes the place of the fixed 60-day "ending soon".
+  const window = filters.within ?? warrantyWarningDays;
+  const months = upcomingMonths(now, 12);
+  const endingSoon = warrantyEndingWithinWhere(window, now);
   const where: Prisma.InventoryItemWhereInput = {
     AND: [
       base,
-      filters.warranty ? warrantyWhere(filters.warranty, now) : { warrantyEndsAt: { not: null } },
+      filters.within
+        ? endingSoon
+        : filters.warranty
+          ? warrantyWhere(filters.warranty, now)
+          : { warrantyEndsAt: { not: null } },
     ],
   };
+  const value = (extra: Prisma.InventoryItemWhereInput) =>
+    prisma.inventoryItem
+      .aggregate({ where: { AND: [base, extra] }, _sum: { purchasePrice: true } })
+      .then((result) => Number(result._sum.purchasePrice?.toString() ?? 0));
 
-  const [{ rows: items, total }, expired, ending, active, names] = await Promise.all([
+  const [
+    { rows: items, total },
+    expired,
+    ending,
+    active,
+    none,
+    coveredValue,
+    endingValue,
+    endedValue,
+    upcoming,
+    names,
+  ] = await Promise.all([
     loadCapped(context, {
       find: (take) =>
         prisma.inventoryItem.findMany({
@@ -50,36 +82,80 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
       count: () => prisma.inventoryItem.count({ where }),
     }),
     prisma.inventoryItem.count({ where: { AND: [base, warrantyWhere("expired", now)] } }),
-    prisma.inventoryItem.count({ where: { AND: [base, warrantyWhere("ending", now)] } }),
-    prisma.inventoryItem.count({ where: { AND: [base, warrantyWhere("active", now)] } }),
+    prisma.inventoryItem.count({ where: { AND: [base, endingSoon] } }),
+    prisma.inventoryItem.count({
+      where: {
+        AND: [
+          base,
+          { warrantyEndsAt: { not: null } },
+          { NOT: endingSoon },
+          { NOT: warrantyWhere("expired", now) },
+        ],
+      },
+    }),
+    prisma.inventoryItem.count({
+      where: { AND: [base, { itemType: ItemType.ASSET }, warrantyWhere("none", now)] },
+    }),
+    value({ OR: [warrantyWhere("active", now), warrantyWhere("ending", now)] }),
+    value(endingSoon),
+    value(warrantyWhere("expired", now)),
+    Promise.all(
+      months.map((month) =>
+        prisma.inventoryItem
+          .count({
+            where: { AND: [base, { warrantyEndsAt: { gte: month.start, lt: month.end } }] },
+          })
+          .then((count): [string, number] => [month.label, count]),
+      ),
+    ),
     filterNames(filters),
   ]);
 
   const stateText = (item: (typeof items)[number]) =>
     warrantyStateLabel(warrantyState(item.warrantyEndsAt, now));
+  const daysText = (endsAt: Date) => {
+    const days = warrantyDaysLeft(endsAt, now);
+    if (days < 0) {
+      return `Ended ${plural(-days, "day")} ago`;
+    }
+    return days === 0 ? "Ends today" : `${plural(days, "day")} left`;
+  };
 
   return {
     kind: "warranty",
     title: "Warranty",
-    description: "Which warranties have ended, which are ending soon, and which are still running.",
+    description:
+      "Which warranties have ended or are ending, the value they cover, and what ends in the coming year.",
     filters: chips(
       filters.query && `Search: “${filters.query}”`,
-      filters.warranty && filterLabels[filters.warranty],
+      filters.within
+        ? `Ending within ${filters.within} days`
+        : filters.warranty && filterLabels[filters.warranty],
       names.category && `Category: ${names.category}`,
       names.location && `Room: ${names.location}`,
       filters.itemType && `Type: ${filters.itemType === "ASSET" ? "Equipment" : "Stock"}`,
+      ...itemDetailChips(filters),
     ),
     generatedAt: now,
     metrics: [
       { label: "With a warranty", value: (expired + ending + active).toLocaleString() },
       {
-        label: "Ending soon",
+        label: `Ending within ${window} days`,
         value: ending.toLocaleString(),
-        note: `within ${warrantyWarningDays} days`,
+        note: endingValue ? `${formatPesoShort(endingValue)} of equipment` : undefined,
         tone: ending ? "alert" : undefined,
       },
-      { label: "Warranty ended", value: expired.toLocaleString() },
-      { label: "Still covered", value: active.toLocaleString() },
+      {
+        label: "Warranty ended",
+        value: expired.toLocaleString(),
+        note: endedValue ? `${formatPesoShort(endedValue)} of equipment` : undefined,
+      },
+      { label: "Value still covered", value: formatPesoShort(coveredValue) },
+      {
+        label: "Equipment with no warranty",
+        value: none.toLocaleString(),
+        tone: none ? "alert" : undefined,
+      },
     ],
     charts: [
       {
@@ -88,27 +164,36 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
         unit: "records",
         data: [
           { label: "Under warranty", value: active, tone: "ok" },
-          { label: filterLabels.ending, value: ending, tone: "not_tested" },
+          { label: `Ending within ${window} days`, value: ending, tone: "not_tested" },
           { label: "Ended", value: expired, tone: "defective" },
+          { label: "No warranty recorded", value: none, tone: "retired" },
         ],
       },
+      monthChart(
+        "Warranties ending, next 12 months",
+        upcoming,
+        "warranties",
+        `How many warranties end each month, ${monthSpan(months)}.`,
+      ),
     ],
     tables: [
       {
-        heading: "Warranties",
+        heading: filters.within ? `Ending within ${filters.within} days` : "Warranties",
         columns: [
-          { label: "Item", width: 2.2, primary: true },
-          { label: "Warranty ends", width: 1.2 },
+          { label: "Item", width: 2.1, primary: true },
+          { label: "Warranty ends", width: 1.3 },
+          { label: "Price", width: 1, align: "right" },
           { label: "Purchased", width: 1 },
-          { label: "Status", width: 1 },
+          { label: "Status", width: 0.9 },
         ],
         rows: items.map((item) => [
           [item.name, `${item.category.name} · ${item.location.name}`, item.assetTag]
             .filter(Boolean)
             .join("\n"),
           item.warrantyEndsAt
-            ? `${formatReportDay(item.warrantyEndsAt)}\n${stateText(item)}`
+            ? `${formatReportDay(item.warrantyEndsAt)}\n${daysText(item.warrantyEndsAt)}`
             : "Not recorded",
+          item.purchasePrice === null ? "No price" : formatPeso(item.purchasePrice),
           formatReportDay(item.purchaseDate),
           inventoryStatusLabel(item.status),
         ]),
@@ -124,7 +209,9 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
         "Location",
         "Warranty ends",
         "Warranty status",
+        "Days left",
         "Purchase date",
+        "Purchase price (PHP)",
         "Status",
       ],
       ...items.map((item) => [
@@ -134,7 +221,9 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
         item.location.name,
         item.warrantyEndsAt ? manilaDateText(item.warrantyEndsAt) : "",
         stateText(item),
+        item.warrantyEndsAt ? warrantyDaysLeft(item.warrantyEndsAt, now) : "",
         item.purchaseDate ? manilaDateText(item.purchaseDate) : "",
+        item.purchasePrice === null ? "" : Number(item.purchasePrice.toString()),
         inventoryStatusLabel(item.status),
       ]),
     ],

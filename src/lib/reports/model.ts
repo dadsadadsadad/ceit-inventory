@@ -40,6 +40,8 @@ export type ReportChartTone =
  */
 export type ReportChart = {
   data: { label: string; tone?: ReportChartTone; value: number }[];
+  /** Counts by default; "peso" shows amounts like ₱45,000. */
+  format?: "count" | "peso";
   kind: "bars" | "columns";
   note?: string;
   title: string;

@@ -458,6 +458,10 @@
   text-align: right;
 }
 
+.report-chart[data-format="peso"] .chart-bars li {
+  grid-template-columns: minmax(5.5rem, 30%) minmax(0, 1fr) 6.5rem;
+}
+
 .chart-track {
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
   border-radius: 0 4px 4px 0;

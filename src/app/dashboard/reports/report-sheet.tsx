@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { formatManilaDate } from "@/lib/manila-date";
-import { hasChartData } from "@/lib/reports/charts";
+import { chartValue, hasChartData } from "@/lib/reports/charts";
 import type { ReportChart, ReportModel, ReportTable } from "@/lib/reports/model";
 
 function Cell({ text, primary }: { primary?: boolean; text: string }) {
@@ -22,9 +22,11 @@ function Cell({ text, primary }: { primary?: boolean; text: string }) {
 function Chart({ chart }: { chart: ReportChart }) {
   const max = Math.max(1, ...chart.data.map((entry) => entry.value));
   const describe = (entry: ReportChart["data"][number]) =>
-    `${entry.label}: ${entry.value.toLocaleString()} ${chart.unit}`;
+    chart.format === "peso"
+      ? `${entry.label}: ${chartValue(chart, entry.value)}`
+      : `${entry.label}: ${entry.value.toLocaleString()} ${chart.unit}`;
   return (
-    <figure className="report-chart" data-kind={chart.kind}>
+    <figure className="report-chart" data-kind={chart.kind} data-format={chart.format}>
       <figcaption>
         <strong>{chart.title}</strong>
         {chart.note ? <span className="muted">{chart.note}</span> : null}
@@ -42,7 +44,7 @@ function Chart({ chart }: { chart: ReportChart }) {
                 />
               </span>
               <span className="chart-value" aria-hidden="true">
-                {entry.value.toLocaleString()}
+                {chartValue(chart, entry.value)}
               </span>
             </li>
           ))}
@@ -52,7 +54,7 @@ function Chart({ chart }: { chart: ReportChart }) {
           {chart.data.map((entry) => (
             <li key={entry.label} title={describe(entry)} aria-label={describe(entry)}>
               <span className="chart-value" aria-hidden="true">
-                {entry.value.toLocaleString()}
+                {chartValue(chart, entry.value)}
               </span>
               <span className="chart-column-track" aria-hidden="true">
                 <span

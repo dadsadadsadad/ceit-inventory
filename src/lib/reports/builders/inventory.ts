@@ -10,7 +10,16 @@ import { loadCustomFields } from "@/lib/custom-field-queries";
 import { formatCustomValue, readCustomValues } from "@/lib/custom-fields";
 import { prisma } from "@/prisma";
 
-import { chips, dateRangeChip, formatReportDay, formatReportDateTime, humanize } from "../format";
+import {
+  chips,
+  dateRangeChip,
+  formatPeso,
+  formatPesoShort,
+  formatReportDay,
+  formatReportDateTime,
+  humanize,
+} from "../format";
+import { itemDetailChips, itemDetailWhere } from "./item-filters";
 import { countChart, statusChart } from "../charts";
 import type { ReportModel } from "../model";
 import {
@@ -32,7 +41,7 @@ const warrantyChip = {
 export async function buildInventoryReport(context: BuilderContext): Promise<ReportModel> {
   const { filters } = context;
   const created = reportDateFilter(filters.dateRange);
-  const where: Prisma.InventoryItemWhereInput = {
+  const listed: Prisma.InventoryItemWhereInput = {
     ...inventoryWhere({
       attention: filters.attention ? "1" : undefined,
       category: filters.categoryId,
@@ -46,6 +55,9 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
     }),
     ...(created ? { createdAt: created } : {}),
     ...(filters.pcOnly ? { isComputer: true } : {}),
+  };
+  const where: Prisma.InventoryItemWhereInput = {
+    AND: [listed, ...itemDetailWhere(filters, context.now)],
   };
 
   const [
@@ -70,7 +82,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
     }),
     prisma.inventoryItem.aggregate({
       where,
-      _sum: { quantity: true },
+      _sum: { quantity: true, purchasePrice: true },
       _count: { _all: true },
     }),
     prisma.inventoryItem.groupBy({ by: ["status"], where, _count: { _all: true } }),
@@ -100,11 +112,17 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
       filters.pcOnly && "PC / Mac only",
       filters.attention && "Needs attention",
       dateRangeChip(filters.dateRange, "Added"),
+      ...itemDetailChips(filters),
     ),
     generatedAt: context.now,
     metrics: [
       { label: "Records", value: summary._count._all.toLocaleString() },
       { label: "Units in stock", value: (summary._sum.quantity ?? 0).toLocaleString() },
+      {
+        label: "Total value",
+        value: formatPesoShort(Number(summary._sum.purchasePrice?.toString() ?? 0)),
+        note: "purchase prices on record",
+      },
       {
         label: "Needs attention",
         value: attention.toLocaleString(),
@@ -140,6 +158,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
           { label: "Item", width: 1.9, primary: true },
           { label: "Type", width: 0.9 },
           { label: "Status", width: 1 },
+          { label: "Price and warranty", width: 1.2 },
           { label: "Last checked", width: 1.15 },
         ],
         rows: items.map((item) => [
@@ -155,6 +174,13 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
             .join("\n"),
           `${humanize(item.itemType)}\n${item.quantity} unit${item.quantity === 1 ? "" : "s"}${item.isComputer ? "\nPC / Mac" : ""}`,
           `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}${needsInventoryAttention(item) ? "\nNeeds attention" : ""}${needsRestock(item) ? `\n${stockLevelLabel(stockLevel(item)!)}` : ""}`,
+          [
+            item.purchasePrice === null ? "No price" : formatPeso(item.purchasePrice),
+            item.purchaseDate && `Bought ${formatReportDay(item.purchaseDate)}`,
+            item.warrantyEndsAt && `Warranty to ${formatReportDay(item.warrantyEndsAt)}`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
           `${formatReportDateTime(item.lastCheckedAt)}\nAdded ${formatReportDay(item.createdAt)}`,
         ]),
         total,
@@ -177,6 +203,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
         "Serial number",
         "Created",
         "Purchase date",
+        "Purchase price (PHP)",
         "Last checked",
         "PC operating system",
         "PC last checked",
@@ -199,6 +226,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
         item.serialNumber,
         item.createdAt,
         item.purchaseDate ? manilaDateText(item.purchaseDate) : "",
+        item.purchasePrice === null ? "" : Number(item.purchasePrice.toString()),
         item.lastCheckedAt ? manilaDateText(item.lastCheckedAt) : "",
         item.computer?.operatingSystem,
         item.computer?.lastCheckedAt ? manilaDateText(item.computer.lastCheckedAt) : "",

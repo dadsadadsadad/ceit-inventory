@@ -4,7 +4,14 @@ import { maintenanceSearchWhere } from "@/lib/record-search";
 import { reportDateFilter } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
-import { chips, dateRangeChip, formatReportDateTime, humanize, plural } from "../format";
+import {
+  chips,
+  dateRangeChip,
+  formatPesoShort,
+  formatReportDateTime,
+  humanize,
+  plural,
+} from "../format";
 import type { ReportModel } from "../model";
 import { countChart, monthChart } from "../charts";
 import { loadCapped, monthlyCounts, namedItemCounts, type BuilderContext } from "./shared";
@@ -35,6 +42,8 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
     byPriority,
     byMonth,
     topItems,
+    openTickets,
+    repeats,
   ] = await Promise.all([
     loadCapped(context, {
       find: (take) =>
@@ -75,7 +84,62 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           })),
         ),
       ),
+    // Open requests, for how long they have waited and what the broken equipment is worth.
+    prisma.maintenanceTicket.findMany({
+      where: { AND: [where, open] },
+      select: {
+        openedAt: true,
+        inventoryItemId: true,
+        inventoryItem: { select: { purchasePrice: true } },
+      },
+      take: 5_000,
+    }),
+    // Equipment reported more than once: the same fault coming back, or a unit worth replacing.
+    prisma.maintenanceTicket
+      .groupBy({
+        by: ["inventoryItemId"],
+        where,
+        _count: { _all: true },
+        _max: { openedAt: true },
+        having: { inventoryItemId: { _count: { gt: 1 } } },
+        orderBy: { _count: { inventoryItemId: "desc" } },
+        take: 25,
+      })
+      .then(async (groups) => {
+        const named = await namedItemCounts(
+          groups.map((group) => ({
+            inventoryItemId: group.inventoryItemId,
+            count: group._count._all,
+          })),
+        );
+        return groups.map((group, index) => ({
+          name: named[index][0],
+          count: group._count._all,
+          last: group._max.openedAt,
+        }));
+      }),
   ]);
+  const ageBands = [
+    { label: "Under a week", below: 7 },
+    { label: "1 to 4 weeks", below: 30 },
+    { label: "1 to 3 months", below: 90 },
+    { label: "Over 3 months", below: Number.POSITIVE_INFINITY },
+  ];
+  const waiting = ageBands.map(
+    (band, index) =>
+      openTickets.filter((ticket) => {
+        const age = (now.getTime() - ticket.openedAt.getTime()) / dayMs;
+        return age < band.below && (index === 0 || age >= ageBands[index - 1].below);
+      }).length,
+  );
+  const brokenValue = [
+    ...new Map(
+      openTickets.map((ticket) => [
+        ticket.inventoryItemId,
+        Number(ticket.inventoryItem.purchasePrice?.toString() ?? 0),
+      ]),
+    ).values(),
+  ].reduce((sum, value) => sum + value, 0);
   const priorityCount = new Map(byPriority.map((entry) => [entry.priority, entry._count._all]));
   const days = resolvedTickets.map(
     (ticket) =>
@@ -114,6 +178,22 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         value:
           average === null ? "No repairs yet" : plural(Math.max(1, Math.round(average)), "day"),
       },
+      {
+        label: "Waiting over a month",
+        value: (waiting[2] + waiting[3]).toLocaleString(),
+        tone: waiting[2] + waiting[3] ? "alert" : undefined,
+      },
+      {
+        label: "Value awaiting repair",
+        value: formatPesoShort(brokenValue),
+        note: "equipment with an open request",
+      },
+      {
+        label: "Repeat problems",
+        value: repeats.length.toLocaleString(),
+        note: "equipment reported more than once",
+        tone: repeats.length ? "alert" : undefined,
+      },
     ],
     charts: [
       monthChart("Requests reported per month", byMonth, "requests"),
@@ -130,6 +210,16 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           })),
       },
       countChart("Most reported equipment", topItems, "requests", 7),
+      {
+        title: "How long open requests have waited",
+        kind: "bars",
+        unit: "requests",
+        data: ageBands.map((band, index) => ({
+          label: band.label,
+          value: waiting[index],
+          tone: index >= 2 ? ("defective" as const) : undefined,
+        })),
+      },
     ],
     tables: [
       {
@@ -146,8 +236,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           `${humanize(ticket.priority)}\n${ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved"}`,
           ticket.source === "QR"
             ? ticket.reportedByName
-              ? `${ticket.reportedByName}
-QR report`
+              ? `${ticket.reportedByName}\nQR report`
               : "QR report"
             : (ticket.reportedByName ?? "Staff"),
           [
@@ -162,6 +251,22 @@ QR report`
         ]),
         total,
         emptyText: "No maintenance requests match these filters.",
+      },
+      {
+        heading: "Repeat problems",
+        note: "Equipment reported more than once. Worth a closer look, or replacing.",
+        columns: [
+          { label: "Equipment", width: 2.2, primary: true },
+          { label: "Requests", width: 0.8, align: "right" },
+          { label: "Last reported", width: 1.2 },
+        ],
+        rows: repeats.map((entry) => [
+          entry.name,
+          entry.count.toLocaleString(),
+          formatReportDateTime(entry.last),
+        ]),
+        total: repeats.length,
+        emptyText: "No equipment has been reported more than once.",
       },
     ],
     csv: [

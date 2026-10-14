@@ -324,6 +324,7 @@ test.describe("inventory views", () => {
 
     // Filters and paging keep the view, and selecting items works in it.
     await page.getByLabel("Search", { exact: true }).fill("Lab equipment 2");
+    await expect(page).toHaveURL(/q=Lab/);
     await expect(page).toHaveURL(/view=compact/);
     await page.getByRole("link", { name: "Select items" }).click();
     await expect(page.locator('.record-compact-row input[type="checkbox"]').first()).toBeVisible();
@@ -390,5 +391,68 @@ test.describe("report charts", () => {
     await page.goto("/dashboard/reports?kind=borrowing&generate=1");
     await expect(page.getByText("Requests per month", { exact: true })).toBeVisible();
     await expect(page.locator(".chart-columns li")).toHaveCount(6);
+  });
+});
+
+test.describe("money, warranty, and record reports", () => {
+  test("asset value, record health, and the new filters build on the page and as files", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await query(
+      `UPDATE "InventoryItem" SET "purchasePrice"=45000, "purchaseDate"='2024-06-01', "warrantyEndsAt"=CURRENT_DATE + 30 WHERE "qrCode"='ceit-launch-item-2'`,
+    );
+    await query(
+      `UPDATE "InventoryItem" SET "purchasePrice"=8000 WHERE "qrCode"='ceit-launch-item-3'`,
+    );
+
+    // Other tests may have priced records too, so compare with the database.
+    const priced = async (minimum = 0) =>
+      Math.round(
+        Number(
+          (
+            await query(
+              `SELECT COALESCE(SUM("purchasePrice"),0) AS total FROM "InventoryItem" WHERE "purchasePrice" >= $1`,
+              [minimum],
+            )
+          ).rows[0].total,
+        ),
+      ).toLocaleString("en-PH");
+    await page.goto("/dashboard/reports?kind=value&generate=1");
+    await expect(page.getByRole("heading", { name: "Asset value", level: 2 })).toBeVisible();
+    await expect(page.locator(".report-metric", { hasText: "Total value" })).toContainText(
+      await priced(),
+    );
+    await expect(page.getByText("Value by category", { exact: true }).first()).toBeVisible();
+
+    // A price range narrows the list and says so.
+    await page.goto("/dashboard/reports?kind=value&priceMin=10000&generate=1");
+    await expect(page.locator(".report-chip", { hasText: /Price:.*or more/ })).toBeVisible();
+    await expect(page.locator(".report-metric", { hasText: "Total value" })).toContainText(
+      await priced(10000),
+    );
+
+    // Record health lists what is missing.
+    await page.goto("/dashboard/reports?kind=health&missing=price&generate=1");
+    await expect(page.getByRole("heading", { name: "No purchase price", level: 3 })).toBeVisible();
+
+    // Warranties ending within a window.
+    await page.goto("/dashboard/reports?kind=warranty&within=90&generate=1");
+    await expect(page.locator(".report-chip", { hasText: "Ending within 90 days" })).toBeVisible();
+    await expect(page.getByText("Warranties ending, next 12 months")).toBeVisible();
+
+    const cookie = (await page.context().cookies())
+      .map((entry) => `${entry.name}=${entry.value}`)
+      .join("; ");
+    for (const kind of ["value", "health"]) {
+      const pdf = await page.request.get(`/dashboard/reports/export/pdf?kind=${kind}`, {
+        headers: { Cookie: cookie },
+      });
+      expect(pdf.status()).toBe(200);
+      const csv = await page.request.get(`/dashboard/reports/export?kind=${kind}`, {
+        headers: { Cookie: cookie },
+      });
+      expect(csv.status()).toBe(200);
+    }
   });
 });

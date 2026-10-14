@@ -12,7 +12,10 @@ import {
   borrowingReportStateLabel,
   borrowingReportStates,
   exportPeriods,
+  missingDetails,
+  reportWindows,
 } from "@/lib/report-export-filters";
+import { missingDetailLabels } from "@/lib/reports/builders/item-filters";
 import { buildReport } from "@/lib/reports/build";
 import { humanize } from "@/lib/reports/format";
 import { quickReports } from "@/lib/reports/kinds";
@@ -111,6 +114,14 @@ export default async function ReportsPage({
       { value: "active", label: "Still covered" },
       { value: "none", label: "No warranty recorded" },
     ],
+    windows: reportWindows.map((days) => ({
+      value: String(days),
+      label: days === 365 ? "The next year" : `The next ${days} days`,
+    })),
+    missingDetails: missingDetails.map((detail) => ({
+      value: detail,
+      label: missingDetailLabels[detail],
+    })),
   };
 
   let report: ReportModel | null = null;

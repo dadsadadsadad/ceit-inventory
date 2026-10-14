@@ -96,6 +96,9 @@ export function FilterForm({
       return;
     }
     lastQuery.current = current;
+    // The address changed some other way (a link, the back button): typing still waiting to be
+    // applied is dropped, so it cannot undo that change a moment later.
+    window.clearTimeout(timer.current);
     if (formRef.current) {
       applyQueryToForm(formRef.current, new URLSearchParams(current));
     }
