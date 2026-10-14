@@ -78,7 +78,7 @@ test("stock warns when it runs low, using each record's own level and 5 by defau
   await signIn(page);
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Stock");
-  await fillBasics(page, "Round2 markers");
+  await fillBasics(page, "Sample markers");
   await page.locator('input[name="quantity"]').fill("4");
   await page.getByRole("button", { name: "Create stock record" }).click();
   await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
@@ -86,7 +86,7 @@ test("stock warns when it runs low, using each record's own level and 5 by defau
 
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Stock");
-  await fillBasics(page, "Round2 chalk");
+  await fillBasics(page, "Sample chalk");
   await page.locator('input[name="quantity"]').fill("4");
   await page.locator('input[name="lowStockThreshold"]').fill("2");
   await page.getByRole("button", { name: "Create stock record" }).click();
@@ -95,13 +95,13 @@ test("stock warns when it runs low, using each record's own level and 5 by defau
 
   // Only the record using the default level of 5 is listed as low.
   await page.goto("/dashboard/inventory?stock=low");
-  await expect(page.getByText("Round2 markers").filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText("Round2 chalk")).toHaveCount(0);
+  await expect(page.getByText("Sample markers").filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText("Sample chalk")).toHaveCount(0);
 
   // Using stock moves a record across its own line.
-  await page.goto("/dashboard/inventory?q=Round2%20chalk");
+  await page.goto("/dashboard/inventory?q=Sample%20chalk");
   await page
-    .getByRole("link", { name: /Round2 chalk/ })
+    .getByRole("link", { name: /Sample chalk/ })
     .first()
     .click();
   await page.getByRole("radio", { name: "Use stock" }).check({ force: true });
@@ -116,8 +116,8 @@ test("stock warns when it runs low, using each record's own level and 5 by defau
   // The stock report lists both, with their levels.
   await page.goto("/dashboard/reports?kind=stock&generate=1");
   await expect(page.getByRole("heading", { name: "Stock", exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Round2 markers").first()).toBeVisible();
-  await expect(page.getByText("Round2 chalk").first()).toBeVisible();
+  await expect(page.getByText("Sample markers").first()).toBeVisible();
+  await expect(page.getByText("Sample chalk").first()).toBeVisible();
 });
 
 test("equipment can be added as several units, each with its own asset tag and QR code", async ({
@@ -126,19 +126,19 @@ test("equipment can be added as several units, each with its own asset tag and Q
   await signIn(page);
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Equipment");
-  await fillBasics(page, "Round2 monitor");
+  await fillBasics(page, "Sample monitor");
   await page.locator('input[name="units"]').fill("3");
   await page.getByRole("button", { name: "Create 3 items" }).click();
   await expect(page).toHaveURL(/\/dashboard\/inventory\/labels\?.*created=3/);
   const rows = (
     await query(
-      'SELECT name,"assetTag","qrCode" FROM "InventoryItem" WHERE name LIKE \'Round2 monitor #%\' ORDER BY name',
+      'SELECT name,"assetTag","qrCode" FROM "InventoryItem" WHERE name LIKE \'Sample monitor #%\' ORDER BY name',
     )
   ).rows;
   expect(rows.map((row) => row.name)).toEqual([
-    "Round2 monitor #1",
-    "Round2 monitor #2",
-    "Round2 monitor #3",
+    "Sample monitor #1",
+    "Sample monitor #2",
+    "Sample monitor #3",
   ]);
   expect(new Set(rows.map((row) => row.assetTag)).size).toBe(3);
   expect(new Set(rows.map((row) => row.qrCode)).size).toBe(3);
@@ -155,13 +155,13 @@ test("warranty and extra fields are optional, saved, filtered, and reported", as
   // A new item needs no warranty and no extra details: they sit in closed sections.
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Equipment");
-  await fillBasics(page, "Round2 plain camera");
+  await fillBasics(page, "Sample plain camera");
   await page.getByRole("button", { name: "Create item" }).click();
   await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
 
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Equipment");
-  await fillBasics(page, "Round2 camera");
+  await fillBasics(page, "Sample camera");
   await page.getByText("Purchase and warranty", { exact: true }).click();
   const ending = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
   await page.locator('input[name="warrantyEndsAt"]').fill(ending);
@@ -173,12 +173,12 @@ test("warranty and extra fields are optional, saved, filtered, and reported", as
   await expect(page.getByText("Ends within 60 days").first()).toBeVisible();
 
   await page.goto("/dashboard/inventory?warranty=ending");
-  await expect(page.getByText("Round2 camera").filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText("Round2 plain camera")).toHaveCount(0);
+  await expect(page.getByText("Sample camera").filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText("Sample plain camera")).toHaveCount(0);
 
   await page.goto("/dashboard/reports?kind=warranty&generate=1");
-  await expect(page.getByText("Round2 camera").first()).toBeVisible();
-  await expect(page.getByText("Round2 plain camera")).toHaveCount(0);
+  await expect(page.getByText("Sample camera").first()).toBeVisible();
+  await expect(page.getByText("Sample plain camera")).toHaveCount(0);
 });
 
 test("an extra field can be created from the item forms, not only from Settings", async ({
@@ -187,33 +187,33 @@ test("an extra field can be created from the item forms, not only from Settings"
   await signIn(page);
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Equipment");
-  await fillBasics(page, "Round2 inline field");
+  await fillBasics(page, "Sample inline field");
   await page.getByText("Extra details", { exact: true }).click();
   await page.getByText("Add a new extra field", { exact: true }).click();
-  await page.getByLabel("Field name").fill("Round2 Color");
+  await page.getByLabel("Field name").fill("Sample Color");
   await page.getByLabel("Answer for this item").fill("Teal");
   await page.getByRole("button", { name: "Create item" }).click();
   await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
-  await expect(page.getByText("Round2 Color").first()).toBeVisible();
+  await expect(page.getByText("Sample Color").first()).toBeVisible();
   await expect(page.getByText("Teal").first()).toBeVisible();
 
   // On the edit form, with a list of answers this time.
   await page.goto(page.url() + "?edit=1");
   await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
   await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
-  await page.getByLabel("Field name").fill("Round2 Funding");
+  await page.getByLabel("Field name").fill("Sample Funding");
   await page.getByLabel("Kind of answer").selectOption("CHOICE");
   await page.getByLabel("Answers to choose from").fill(["Grant", "Gift"].join("\n"));
   await page.getByLabel("Answer for this item").fill("Gift");
   await page.getByRole("button", { name: "Save update" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
-  await expect(page.getByText("Round2 Funding").first()).toBeVisible();
+  await expect(page.getByText("Sample Funding").first()).toBeVisible();
   await expect(page.getByText("Gift", { exact: true }).first()).toBeVisible();
 
   // The same name cannot be created twice, whatever its capitals.
   await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
   await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
-  await page.getByLabel("Field name").fill("round2 color");
+  await page.getByLabel("Field name").fill("sample color");
   await page.getByLabel("Kind of answer").selectOption("TEXT");
   await page.getByRole("button", { name: "Save update" }).click();
   await expect(
@@ -222,8 +222,8 @@ test("an extra field can be created from the item forms, not only from Settings"
 
   // Both fields exist for every item now, and are managed in Settings.
   await page.goto("/dashboard/settings");
-  await expect(page.getByText("Round2 Color").first()).toBeVisible();
-  await expect(page.getByText("Round2 Funding").first()).toBeVisible();
+  await expect(page.getByText("Sample Color").first()).toBeVisible();
+  await expect(page.getByText("Sample Funding").first()).toBeVisible();
 });
 
 test("a flexible import copes with missing and extra columns, empty rows, and odd values", async ({
@@ -233,10 +233,10 @@ test("a flexible import copes with missing and extra columns, empty rows, and od
   await page.goto("/dashboard/inventory/import");
   const csv = [
     "Equipment,Qty,Brand,Price,Warranty,Funding source,Lens mount",
-    'Round2 import tripod,3,Manfrotto,"₱1,200",15 Jan 2030,Alumni gift,Canon EF',
+    'Sample import tripod,3,Manfrotto,"₱1,200",15 Jan 2030,Alumni gift,Canon EF',
     ",,,,,,",
     "Total,3,,,,,",
-    "Round2 import cable,2,,12,not a date,,",
+    "Sample import cable,2,,12,not a date,,",
   ].join("\n");
   await page.setInputFiles('input[name="file"]', {
     name: "flexible.csv",
@@ -251,7 +251,7 @@ test("a flexible import copes with missing and extra columns, empty rows, and od
   expect(
     (
       await query(
-        "SELECT COUNT(*)::int AS count FROM \"InventoryItem\" WHERE name LIKE 'Round2 import%'",
+        "SELECT COUNT(*)::int AS count FROM \"InventoryItem\" WHERE name LIKE 'Sample import%'",
       )
     ).rows[0].count,
   ).toBe(0);
@@ -260,29 +260,29 @@ test("a flexible import copes with missing and extra columns, empty rows, and od
   await expect(page.getByText(/rows? imported/)).toBeVisible();
   const items = (
     await query(
-      'SELECT name,"purchasePrice","warrantyEndsAt"::text AS "warrantyEndsAt",notes,"assetTag" FROM "InventoryItem" WHERE name LIKE \'Round2 import%\' ORDER BY name',
+      'SELECT name,"purchasePrice","warrantyEndsAt"::text AS "warrantyEndsAt",notes,"assetTag" FROM "InventoryItem" WHERE name LIKE \'Sample import%\' ORDER BY name',
     )
   ).rows;
   // The tripod row of 3 became three tracked units; the cable row of 2 became two.
   expect(items.map((row) => row.name)).toEqual([
-    "Round2 import cable #1",
-    "Round2 import cable #2",
-    "Round2 import tripod #1",
-    "Round2 import tripod #2",
-    "Round2 import tripod #3",
+    "Sample import cable #1",
+    "Sample import cable #2",
+    "Sample import tripod #1",
+    "Sample import tripod #2",
+    "Sample import tripod #3",
   ]);
   expect(new Set(items.map((row) => row.assetTag)).size).toBe(5);
-  const tripod = items.find((row) => row.name === "Round2 import tripod #1");
+  const tripod = items.find((row) => row.name === "Sample import tripod #1");
   expect(Number(tripod.purchasePrice)).toBe(1200);
   expect(tripod.warrantyEndsAt).toMatch(/^2030-01-15/);
   expect(tripod.notes).toContain("Funding source: Alumni gift");
   // An unreadable warranty date was left blank instead of rejecting the row.
-  expect(items.find((row) => row.name === "Round2 import cable #1").warrantyEndsAt).toBeNull();
+  expect(items.find((row) => row.name === "Sample import cable #1").warrantyEndsAt).toBeNull();
   // Missing category and location were filled with the plain fallbacks.
   expect(
     (
       await query(
-        'SELECT c.name AS category, l.name AS location FROM "InventoryItem" i JOIN "Category" c ON c.id=i."categoryId" JOIN "Location" l ON l.id=i."locationId" WHERE i.name=\'Round2 import tripod #1\'',
+        'SELECT c.name AS category, l.name AS location FROM "InventoryItem" i JOIN "Category" c ON c.id=i."categoryId" JOIN "Location" l ON l.id=i."locationId" WHERE i.name=\'Sample import tripod #1\'',
       )
     ).rows[0],
   ).toEqual({ category: "Uncategorized", location: "Unassigned" });
@@ -333,7 +333,7 @@ test("a signed-in phone goes straight to editing, with borrow, return, and repor
 test("an issue report asks for a name and shows it to staff", async ({ page }) => {
   await page.goto("/scan/ceit-launch-item-9");
   await page.getByRole("button", { name: /Report a problem/ }).click();
-  await page.getByLabel("Issue title").fill("Round2 cracked screen");
+  await page.getByLabel("Issue title").fill("Sample cracked screen");
   await page.getByLabel("What happened").fill("The screen has a long crack across the middle.");
   await page.getByRole("button", { name: "Send issue report" }).click();
   // Without a name the browser stops the form.
@@ -341,7 +341,7 @@ test("an issue report asks for a name and shows it to staff", async ({ page }) =
   expect(
     (
       await query(
-        "SELECT COUNT(*)::int AS count FROM \"MaintenanceTicket\" WHERE title='Round2 cracked screen'",
+        "SELECT COUNT(*)::int AS count FROM \"MaintenanceTicket\" WHERE title='Sample cracked screen'",
       )
     ).rows[0].count,
   ).toBe(0);
@@ -351,7 +351,7 @@ test("an issue report asks for a name and shows it to staff", async ({ page }) =
   expect(
     (
       await query(
-        'SELECT "reportedByName" FROM "MaintenanceTicket" WHERE title=\'Round2 cracked screen\'',
+        'SELECT "reportedByName" FROM "MaintenanceTicket" WHERE title=\'Sample cracked screen\'',
       )
     ).rows[0].reportedByName,
   ).toBe("Ana Reyes");

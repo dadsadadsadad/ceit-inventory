@@ -395,7 +395,7 @@ test.describe("report charts", () => {
 });
 
 test.describe("money, warranty, and record reports", () => {
-  test("asset value, record health, and the new filters build on the page and as files", async ({
+  test("asset value, record health, and the price and license filters build on the page and as files", async ({
     page,
   }) => {
     await signIn(page);

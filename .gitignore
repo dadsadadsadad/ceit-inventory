@@ -26,15 +26,10 @@ next-env.d.ts
 
 /src/generated/prisma
 /.idea/
-/.agents/
-/.codex/
 /dev/
+/tmp/
 
 # Generated browser-test artifacts
 /test-results/
 /playwright-report/
 /blob-report/
-
-# Python bytecode
-__pycache__/
-*.pyc
