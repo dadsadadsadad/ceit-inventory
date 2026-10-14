@@ -5,6 +5,15 @@ import { isItemCondition, isItemStatus, isItemType } from "@/lib/record-search";
 import { isWarrantyFilter } from "@/lib/warranty";
 import { firstParam } from "@/lib/search-params";
 
+import { inventoryViewOf } from "./inventory-view";
+
+export {
+  inventoryViewCookie,
+  inventoryViewOf,
+  inventoryViews,
+  type InventoryView,
+} from "./inventory-view";
+
 export { inventoryWhere, isItemCondition, isItemStatus, isItemType } from "@/lib/record-search";
 
 export const pageSize = 25;
@@ -24,8 +33,10 @@ export type SearchParams = {
   sort?: string;
   status?: string;
   stock?: string;
+  view?: string;
   warranty?: string;
 };
+
 export type RawSearchParams = { [Key in keyof SearchParams]?: string | string[] };
 export type InventoryListItem = Prisma.InventoryItemGetPayload<{
   select: typeof inventoryListSelect;
@@ -125,6 +136,9 @@ export function pageLink(search: SearchParams, page: number) {
   const parameters = inventoryFilterParameters(search);
   if (search.bulk === "1") {
     parameters.set("bulk", "1");
+  }
+  if (search.view && inventoryViewOf(search.view) !== "list") {
+    parameters.set("view", inventoryViewOf(search.view));
   }
   const sort = currentSort(search);
   if (sort) {

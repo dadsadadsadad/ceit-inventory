@@ -14,8 +14,9 @@ import {
 import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatReportDateTime } from "../format";
+import { countChart, monthChart } from "../charts";
 import { ReportRequestError, type ReportModel } from "../model";
-import { loadCapped, type BuilderContext } from "./shared";
+import { loadCapped, monthlyCounts, type BuilderContext } from "./shared";
 
 // Show changed fields or a short event detail.
 function eventDetail(event: AuditTrailEvent) {
@@ -36,7 +37,7 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
   }
   const where = auditTrailWhere(filters);
 
-  const [{ rows: events, total }, people, actions] = await Promise.all([
+  const [{ rows: events, total }, people, actions, byAction, byMonth] = await Promise.all([
     loadCapped(context, {
       find: (take) =>
         prisma.inventoryAudit.findMany({
@@ -55,6 +56,10 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
       orderBy: { _count: { action: "desc" } },
       take: 1,
     }),
+    prisma.inventoryAudit.groupBy({ by: ["action"], where, _count: { _all: true } }),
+    monthlyCounts(context.now, (createdAt) =>
+      prisma.inventoryAudit.count({ where: { AND: [where, { createdAt }] } }),
+    ),
   ]);
   const topAction = actions[0];
 
@@ -90,6 +95,17 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
         value: topAction ? auditActionLabel(topAction.action) : "None",
         note: topAction ? `${topAction._count._all.toLocaleString()} times` : undefined,
       },
+    ],
+    charts: [
+      monthChart("Events per month", byMonth, "events"),
+      countChart(
+        "Events by kind",
+        byAction.map((entry): [string, number] => [
+          auditActionLabel(entry.action),
+          entry._count._all,
+        ]),
+        "events",
+      ),
     ],
     tables: [
       {

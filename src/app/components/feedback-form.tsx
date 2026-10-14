@@ -69,6 +69,9 @@ export function FeedbackForm({
       const started: string[] = [];
       function fieldLabel(field: string) {
         const control = formRef.current?.elements.namedItem(field);
+        if (control instanceof HTMLInputElement && control.dataset.previewLabel) {
+          return control.dataset.previewLabel;
+        }
         return control instanceof HTMLSelectElement
           ? (control.selectedOptions[0]?.textContent ?? "")
           : String(formData.get(field) ?? "");

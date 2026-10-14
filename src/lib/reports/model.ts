@@ -30,7 +30,32 @@ export type ReportMetric = {
   value: string;
 };
 
+/** Status colours, the same ones the dashboard's status bar uses, so a status reads alike everywhere. */
+export type ReportChartTone =
+  | "ok"
+  | "working"
+  | "deployed"
+  | "defective"
+  | "not_tested"
+  | "retired"
+  | "lost";
+
+/**
+ * A simple chart drawn the same way on the page and in the PDF. Bars compare amounts across
+ * categories; columns show amounts over time. The numbers also appear in the report's tables.
+ */
+export type ReportChart = {
+  data: { label: string; tone?: ReportChartTone; value: number }[];
+  kind: "bars" | "columns";
+  note?: string;
+  title: string;
+  /** What is counted, as a plural noun, for the hover text: "records", "requests". */
+  unit: string;
+};
+
 export type ReportModel = {
+  /** Charts shown above the tables. */
+  charts?: ReportChart[];
   /** Spreadsheet rows including the header row. Reports without their own fall back to the tables. */
   csv?: unknown[][];
   description: string;

@@ -9,6 +9,7 @@ import { loadSoftware } from "@/lib/computer-queries";
 import { manilaDateText } from "@/lib/manila-date";
 
 import { chips, formatReportDay } from "../format";
+import { countChart } from "../charts";
 import { capRows, type ReportModel } from "../model";
 import { pcNames } from "./hardware";
 import { filterNames, type BuilderContext } from "./shared";
@@ -86,6 +87,32 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
         label: "Licenses expired",
         value: expired.toLocaleString(),
         tone: expired ? "alert" : undefined,
+      },
+    ],
+    charts: [
+      countChart(
+        "Most installed software",
+        groups.map((group): [string, number] => [group.name, group.installs.length]),
+        "installations",
+      ),
+      {
+        title: "Licenses",
+        kind: "bars",
+        unit: "titles",
+        data: [
+          {
+            label: "Valid",
+            value: groups.filter((group) => group.state === "valid").length,
+            tone: "ok",
+          },
+          { label: "Ending soon", value: expiring, tone: "not_tested" },
+          { label: "Expired", value: expired, tone: "defective" },
+          {
+            label: "No license date",
+            value: groups.filter((group) => group.state === "none").length,
+            tone: "retired",
+          },
+        ],
       },
     ],
     tables: [

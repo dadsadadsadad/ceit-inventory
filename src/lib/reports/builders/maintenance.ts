@@ -6,7 +6,8 @@ import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatReportDateTime, humanize, plural } from "../format";
 import type { ReportModel } from "../model";
-import { loadCapped, type BuilderContext } from "./shared";
+import { countChart, monthChart } from "../charts";
+import { loadCapped, monthlyCounts, namedItemCounts, type BuilderContext } from "./shared";
 
 const dayMs = 24 * 60 * 60 * 1000;
 const urgent = [MaintenancePriority.HIGH, MaintenancePriority.URGENT];
@@ -26,7 +27,15 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
   };
   const open = { status: MaintenanceStatus.OPEN };
 
-  const [{ rows: tickets, total }, openCount, urgentCount, resolvedTickets] = await Promise.all([
+  const [
+    { rows: tickets, total },
+    openCount,
+    urgentCount,
+    resolvedTickets,
+    byPriority,
+    byMonth,
+    topItems,
+  ] = await Promise.all([
     loadCapped(context, {
       find: (take) =>
         prisma.maintenanceTicket.findMany({
@@ -46,7 +55,28 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
       select: { openedAt: true, resolvedAt: true },
       take: 5_000,
     }),
+    prisma.maintenanceTicket.groupBy({ by: ["priority"], where, _count: { _all: true } }),
+    monthlyCounts(now, (openedAt) =>
+      prisma.maintenanceTicket.count({ where: { AND: [where, { openedAt }] } }),
+    ),
+    prisma.maintenanceTicket
+      .groupBy({
+        by: ["inventoryItemId"],
+        where,
+        _count: { _all: true },
+        orderBy: { _count: { inventoryItemId: "desc" } },
+        take: 7,
+      })
+      .then((groups) =>
+        namedItemCounts(
+          groups.map((group) => ({
+            inventoryItemId: group.inventoryItemId,
+            count: group._count._all,
+          })),
+        ),
+      ),
   ]);
+  const priorityCount = new Map(byPriority.map((entry) => [entry.priority, entry._count._all]));
   const days = resolvedTickets.map(
     (ticket) =>
       ((ticket.resolvedAt ?? ticket.openedAt).getTime() - ticket.openedAt.getTime()) / dayMs,
@@ -84,6 +114,22 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         value:
           average === null ? "No repairs yet" : plural(Math.max(1, Math.round(average)), "day"),
       },
+    ],
+    charts: [
+      monthChart("Requests reported per month", byMonth, "requests"),
+      {
+        title: "Requests by priority",
+        kind: "bars",
+        unit: "requests",
+        data: Object.values(MaintenancePriority)
+          .slice()
+          .reverse()
+          .map((priority) => ({
+            label: humanize(priority),
+            value: priorityCount.get(priority) ?? 0,
+          })),
+      },
+      countChart("Most reported equipment", topItems, "requests", 7),
     ],
     tables: [
       {

@@ -56,6 +56,9 @@ export function InventoryFilters({
         label="Inventory filters"
       >
         {bulkMode ? <input type="hidden" name="bulk" value="1" /> : null}
+        {search.view && search.view !== "list" ? (
+          <input type="hidden" name="view" value={search.view} />
+        ) : null}
         {sort ? (
           <>
             <input type="hidden" name="sort" value={sort.field} />

@@ -9,11 +9,12 @@ const { database, computers } = vi.hoisted(() => ({
       findMany: vi.fn(),
       groupBy: vi.fn(),
     },
-    category: { findUnique: vi.fn() },
+    category: { findMany: vi.fn(), findUnique: vi.fn() },
+    computer: { groupBy: vi.fn() },
     customField: { findMany: vi.fn() },
-    location: { findUnique: vi.fn() },
-    borrowRequest: { count: vi.fn(), findMany: vi.fn() },
-    maintenanceTicket: { count: vi.fn(), findMany: vi.fn() },
+    location: { findMany: vi.fn(), findUnique: vi.fn() },
+    borrowRequest: { count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
+    maintenanceTicket: { count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
   },
   computers: { loadComputers: vi.fn(), loadSoftware: vi.fn() },
 }));
@@ -58,6 +59,14 @@ describe("report builders", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     database.customField.findMany.mockResolvedValue([]);
+    // The charts' counts: nothing to group unless a test says otherwise.
+    database.inventoryItem.groupBy.mockResolvedValue([]);
+    database.inventoryItem.findMany.mockResolvedValue([]);
+    database.category.findMany.mockResolvedValue([]);
+    database.location.findMany.mockResolvedValue([]);
+    database.computer.groupBy.mockResolvedValue([]);
+    database.borrowRequest.groupBy.mockResolvedValue([]);
+    database.maintenanceTicket.groupBy.mockResolvedValue([]);
   });
 
   it("refuses an unknown report and accepts the old name for borrowing", async () => {

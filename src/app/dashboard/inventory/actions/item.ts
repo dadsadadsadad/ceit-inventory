@@ -16,6 +16,7 @@ import { nextInventoryAssetTag } from "@/lib/asset-tag";
 import { FormError, formAction } from "@/lib/form-action";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { isSingleTrackedAsset } from "@/lib/inventory-pc";
+import { maximumLabelCount } from "@/lib/label-sheet";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { prisma } from "@/prisma";
 
@@ -423,7 +424,8 @@ export async function retireInventoryItem(formData: FormData) {
   });
 }
 
-// Give each unit its own record.
+// Give each unit its own record, tag, and QR code: a grouped asset, or a counted stock record
+// (such as five screwdriver sets) whose units should be told apart when borrowed.
 export async function splitGroupedAsset(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -437,8 +439,8 @@ export async function splitGroupedAsset(formData: FormData) {
       where: { id },
       select: { itemType: true, quantity: true, isComputer: true },
     });
-    if (!original || original.itemType !== ItemType.ASSET || original.quantity <= 1) {
-      throw new FormError("This record is already an individual asset.");
+    if (!original || original.quantity <= 1) {
+      throw new FormError("This record is already a single unit.");
     }
     if (original.isComputer) {
       throw new FormError(
@@ -454,11 +456,12 @@ export async function splitGroupedAsset(formData: FormData) {
       );
     }
 
+    let unitIds: string[] = [];
     try {
-      await prisma.$transaction(
+      unitIds = await prisma.$transaction(
         async (transaction) => {
           const item = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
-          if (item.itemType !== ItemType.ASSET || item.quantity <= 1 || item.isComputer) {
+          if (item.quantity <= 1 || item.isComputer) {
             throw new FormError(
               "This record changed and can no longer be split. Refresh the page and try again.",
             );
@@ -470,14 +473,26 @@ export async function splitGroupedAsset(formData: FormData) {
             );
           }
           const unitCount = item.quantity;
+          const wasStock = item.itemType === ItemType.SUPPLY;
           await transaction.inventoryItem.update({
             where: { id },
             data: {
               quantity: 1,
+              name: `${item.name} (unit 1)`,
+              // A stock record becomes equipment: one unit, its own tag, no restock alert.
+              itemType: ItemType.ASSET,
+              lowStockThreshold: null,
+              assetTag:
+                item.assetTag ??
+                (await nextInventoryAssetTag(transaction, {
+                  categoryId: item.categoryId,
+                  locationId: item.locationId,
+                  status: item.status,
+                })),
               auditEvents: {
                 create: {
                   action: AuditAction.UPDATED,
-                  summary: `Grouped asset split into ${unitCount} individually tracked units.`,
+                  summary: `${wasStock ? "Stock record" : "Grouped asset"} split into ${unitCount} individually tracked units.`,
                   actorId: actor.id,
                   actorName: auditActorName(actor),
                   metadata: {
@@ -489,13 +504,15 @@ export async function splitGroupedAsset(formData: FormData) {
               },
             },
           });
+          const created = [id];
           for (let unitNumber = 2; unitNumber <= unitCount; unitNumber += 1) {
             const assetTag = await nextInventoryAssetTag(transaction, {
               categoryId: item.categoryId,
               locationId: item.locationId,
               status: item.status,
             });
-            await transaction.inventoryItem.create({
+            const unit = await transaction.inventoryItem.create({
+              select: { id: true },
               data: {
                 name: `${item.name} (unit ${unitNumber})`,
                 assetTag,
@@ -532,7 +549,9 @@ export async function splitGroupedAsset(formData: FormData) {
                 },
               },
             });
+            created.push(unit.id);
           }
+          return created;
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -541,7 +560,12 @@ export async function splitGroupedAsset(formData: FormData) {
     }
 
     refreshInventoryViews(id);
-    redirect(`/dashboard/inventory/${id}`);
+    // Straight to their labels, already chosen, so each unit can be tagged right away.
+    redirect(
+      unitIds.length <= maximumLabelCount
+        ? `/dashboard/inventory/labels?ids=${unitIds.join(",")}&created=${unitIds.length}`
+        : `/dashboard/inventory/${id}`,
+    );
   });
 }
 

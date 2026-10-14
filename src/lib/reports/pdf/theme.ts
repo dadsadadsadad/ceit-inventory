@@ -22,6 +22,19 @@ export const pdfTheme = {
   paper: hex("#f6f1e5"),
   rowTint: hex("#faf7ef"),
   white: hex("#ffffff"),
+  chartTrack: hex("#efe9dc"),
+} as const;
+
+/** Chart colours: the accent, and the dashboard's status colours (tokens.css --mix-*). */
+export const pdfChartTones = {
+  accent: hex("#b83f0b"),
+  ok: hex("#3f9d83"),
+  working: hex("#4f8fc4"),
+  deployed: hex("#8672cf"),
+  defective: hex("#d4685f"),
+  not_tested: hex("#c99a4b"),
+  retired: hex("#8a8a94"),
+  lost: hex("#b46c90"),
 } as const;
 
 /** A4 in points. */

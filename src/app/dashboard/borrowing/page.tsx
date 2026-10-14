@@ -225,7 +225,7 @@ export default async function BorrowingPage({
                 const overdue = isOverdue(request);
                 const lapsed = lapsedLabel(request);
                 return (
-                  <article key={request.id} className="request-card">
+                  <article key={request.id} className="request-card" data-status={request.status}>
                     <header className="request-card-head">
                       <div className="min-w-0">
                         <Link

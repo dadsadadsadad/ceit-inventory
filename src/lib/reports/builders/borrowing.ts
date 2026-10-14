@@ -13,7 +13,8 @@ import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatReportDateTime, plural } from "../format";
 import type { ReportModel } from "../model";
-import { loadCapped, type BuilderContext } from "./shared";
+import { countChart, monthChart } from "../charts";
+import { loadCapped, monthlyCounts, namedItemCounts, type BuilderContext } from "./shared";
 
 const dayMs = 24 * 60 * 60 * 1000;
 const activeStatuses: BorrowStatus[] = [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED];
@@ -55,30 +56,51 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
   ];
   const where: Prisma.BorrowRequestWhereInput = { AND: conditions };
 
-  const [{ rows: requests, total }, active, overdue, returned] = await Promise.all([
-    loadCapped(context, {
-      find: (take) =>
-        prisma.borrowRequest.findMany({
+  const [{ rows: requests, total }, active, overdue, returned, byStatus, byMonth, topItems] =
+    await Promise.all([
+      loadCapped(context, {
+        find: (take) =>
+          prisma.borrowRequest.findMany({
+            where,
+            include: { inventoryItem: { select: { assetTag: true, name: true } } },
+            orderBy:
+              filters.borrowingState === "overdue"
+                ? { expectedReturnDate: "asc" }
+                : { requestedAt: "desc" },
+            take,
+          }),
+        count: () => prisma.borrowRequest.count({ where }),
+      }),
+      prisma.borrowRequest.count({
+        where: { AND: [where, { status: { in: activeStatuses } }] },
+      }),
+      prisma.borrowRequest.count({
+        where: {
+          AND: [where, { status: { in: activeStatuses } }, { expectedReturnDate: { lt: now } }],
+        },
+      }),
+      prisma.borrowRequest.count({ where: { AND: [where, { status: BorrowStatus.RETURNED }] } }),
+      prisma.borrowRequest.groupBy({ by: ["status"], where, _count: { _all: true } }),
+      monthlyCounts(now, (requestedAt) =>
+        prisma.borrowRequest.count({ where: { AND: [where, { requestedAt }] } }),
+      ),
+      prisma.borrowRequest
+        .groupBy({
+          by: ["inventoryItemId"],
           where,
-          include: { inventoryItem: { select: { assetTag: true, name: true } } },
-          orderBy:
-            filters.borrowingState === "overdue"
-              ? { expectedReturnDate: "asc" }
-              : { requestedAt: "desc" },
-          take,
-        }),
-      count: () => prisma.borrowRequest.count({ where }),
-    }),
-    prisma.borrowRequest.count({
-      where: { AND: [where, { status: { in: activeStatuses } }] },
-    }),
-    prisma.borrowRequest.count({
-      where: {
-        AND: [where, { status: { in: activeStatuses } }, { expectedReturnDate: { lt: now } }],
-      },
-    }),
-    prisma.borrowRequest.count({ where: { AND: [where, { status: BorrowStatus.RETURNED }] } }),
-  ]);
+          _count: { _all: true },
+          orderBy: { _count: { inventoryItemId: "desc" } },
+          take: 7,
+        })
+        .then((groups) =>
+          namedItemCounts(
+            groups.map((group) => ({
+              inventoryItemId: group.inventoryItemId,
+              count: group._count._all,
+            })),
+          ),
+        ),
+    ]);
 
   const stateDate =
     filters.borrowingState in dateLabels
@@ -117,6 +139,18 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         tone: overdue ? "alert" : undefined,
       },
       { label: "Returned", value: returned.toLocaleString() },
+    ],
+    charts: [
+      monthChart("Requests per month", byMonth, "requests"),
+      countChart(
+        "Requests by status",
+        byStatus.map((entry): [string, number] => [
+          borrowStatusLabel(entry.status),
+          entry._count._all,
+        ]),
+        "requests",
+      ),
+      countChart("Most requested equipment", topItems, "requests", 7),
     ],
     tables: [
       {

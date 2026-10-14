@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ItemStatus, MaintenancePriority, MaintenanceStatus, type Prisma } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
+import { ItemPicker } from "@/app/components/item-picker";
 import { ClearFiltersButton, FilterForm } from "@/app/components/filter-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
@@ -35,7 +36,6 @@ type SearchParams = {
   to?: string | string[];
   page?: string | string[];
   report?: string | string[];
-  itemSearch?: string | string[];
 };
 
 const resolutionItemStatuses = [
@@ -76,7 +76,6 @@ export default async function MaintenancePage({
       ? requestedItem
       : undefined;
   const reporting = firstParam(search.report) === "1" || Boolean(selectedItem);
-  const itemSearch = firstParam(search.itemSearch)?.trim().slice(0, 120) ?? "";
   const source = ["QR", "STAFF"].includes(firstParam(search.source) ?? "")
     ? firstParam(search.source)
     : undefined;
@@ -134,35 +133,20 @@ export default async function MaintenancePage({
       skip: (page - 1) * 25,
       take: 25,
     });
-  const [items, requestedTickets, count] = await Promise.all([
-    reporting
-      ? prisma.inventoryItem.findMany({
-          where: {
-            status: { not: ItemStatus.RETIRED },
-            ...(selectedItem
-              ? { id: selectedItem }
-              : itemSearch
-                ? {
-                    OR: [
-                      { name: { contains: itemSearch, mode: "insensitive" } },
-                      { assetTag: { contains: itemSearch, mode: "insensitive" } },
-                      { serialNumber: { contains: itemSearch, mode: "insensitive" } },
-                    ],
-                  }
-                : {}),
-          },
-          orderBy: [{ name: "asc" }, { assetTag: "asc" }],
-          select: { assetTag: true, id: true, name: true },
-          take: 51,
+  const [preselected, requestedTickets, count] = await Promise.all([
+    // An item link (from an item's page or QR scan) arrives with the equipment already chosen.
+    reporting && selectedItem
+      ? prisma.inventoryItem.findFirst({
+          where: { id: selectedItem, status: { not: ItemStatus.RETIRED } },
+          select: { assetTag: true, id: true, name: true, location: { select: { name: true } } },
         })
-      : Promise.resolve([]),
+      : Promise.resolve(null),
     loadTickets(requestedPage),
     prisma.maintenanceTicket.count({ where }),
   ]);
   const totalPages = Math.max(1, Math.ceil(count / 25));
   const page = Math.min(requestedPage, totalPages);
   const tickets = page === requestedPage ? requestedTickets : await loadTickets(page);
-  const reportItems = items.slice(0, 50);
 
   return (
     <div className="page maintenance-page">
@@ -218,37 +202,6 @@ export default async function MaintenancePage({
                 Close form
               </Link>
             </div>
-            {!selectedItem ? (
-              <form
-                className="mt-4 flex flex-wrap items-end gap-3"
-                aria-label="Find equipment for maintenance"
-              >
-                <input type="hidden" name="report" value="1" />
-                <label className="min-w-0 flex-1">
-                  <span className="text-sm font-semibold">Find equipment</span>
-                  <input
-                    name="itemSearch"
-                    defaultValue={itemSearch}
-                    maxLength={120}
-                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                    placeholder="Name, asset tag, or serial number"
-                  />
-                </label>
-                <button className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-                  Find items
-                </button>
-              </form>
-            ) : null}
-            {items.length > 50 ? (
-              <p className="muted mt-3 text-sm">
-                Showing the first 50 matches. Search by name or asset tag to find a specific item.
-              </p>
-            ) : null}
-            {!items.length ? (
-              <p className="notice mt-4 rounded-lg px-4 py-3 text-sm">
-                No active equipment matches. Try another name or asset tag.
-              </p>
-            ) : null}
             <FeedbackForm
               action={createMaintenanceTicket}
               createPreview={{ titleField: "title", detailFields: ["itemId", "description"] }}
@@ -260,27 +213,20 @@ export default async function MaintenancePage({
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label>
-                  <span className="text-sm font-semibold">Inventory item *</span>
-                  <select
-                    required
-                    name="itemId"
-                    defaultValue={
-                      items.some((item) => item.id === selectedItem) ? selectedItem : ""
-                    }
-                    className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                  >
-                    <option value="" disabled>
-                      Select an item
-                    </option>
-                    {reportItems.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                        {item.assetTag ? ` · ${item.assetTag}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <ItemPicker
+                  name="itemId"
+                  label="Equipment *"
+                  initial={
+                    preselected
+                      ? {
+                          id: preselected.id,
+                          name: preselected.name,
+                          assetTag: preselected.assetTag,
+                          location: preselected.location.name,
+                        }
+                      : null
+                  }
+                />
                 <label>
                   <span className="text-sm font-semibold">Priority</span>
                   <select
@@ -322,7 +268,6 @@ export default async function MaintenancePage({
                 <span>Mark the item as defective while this request needs attention.</span>
               </label>
               <SubmitButton
-                disabled={!reportItems.length}
                 pendingLabel="Reporting…"
                 className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
               >

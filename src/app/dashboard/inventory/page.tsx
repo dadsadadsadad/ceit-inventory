@@ -1,6 +1,7 @@
 export const metadata = { title: "Inventory · CEIT Inventory" };
 
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ItemCondition, ItemStatus } from "@prisma/client";
 
 import { FeedbackForm } from "@/app/components/feedback-form";
@@ -18,6 +19,8 @@ import {
   currentSort,
   inventoryListSelect,
   inventoryOrderBy,
+  inventoryViewCookie,
+  inventoryViewOf,
   inventoryWhere,
   maximumBulkSelection,
   normalizeSearch,
@@ -58,8 +61,15 @@ export default async function InventoryPage({
 }: {
   searchParams: Promise<RawSearchParams>;
 }) {
-  const [user, rawSearch] = await Promise.all([requireInventoryAccess(), searchParams]);
-  const search = normalizeSearch(rawSearch);
+  const [user, rawSearch, cookieStore] = await Promise.all([
+    requireInventoryAccess(),
+    searchParams,
+    cookies(),
+  ]);
+  const normalized = normalizeSearch(rawSearch);
+  // The address wins; otherwise the view this device chose last time.
+  const view = inventoryViewOf(normalized.view ?? cookieStore.get(inventoryViewCookie)?.value);
+  const search = { ...normalized, view };
   const canManage = canManageInventory(user.role);
   const bulkMode = canManage && search.bulk === "1";
   const where = inventoryWhere(search);
@@ -136,15 +146,18 @@ export default async function InventoryPage({
           </div>
           {canManage ? (
             <div className="flex flex-wrap items-center gap-3">
-              <details className="secondary-actions">
-                <summary className="secondary-button cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold">
-                  Inventory tools
-                </summary>
-                <div className="secondary-actions-menu">
-                  <Link href="/dashboard/inventory/labels">Print QR labels (many at once)</Link>
-                  <Link href="/dashboard/inventory/import">Import file</Link>
-                </div>
-              </details>
+              <Link
+                href="/dashboard/inventory/labels"
+                className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              >
+                Print QR labels
+              </Link>
+              <Link
+                href="/dashboard/inventory/import"
+                className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              >
+                Import file
+              </Link>
               <Link
                 href="/dashboard/inventory/new"
                 className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
@@ -214,6 +227,7 @@ export default async function InventoryPage({
               search={search}
               totalPages={totalPages}
               totalRecords={totalRecords}
+              view={view}
             />
           </InventoryFormContainer>
         )}

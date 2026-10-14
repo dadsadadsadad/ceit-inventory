@@ -351,7 +351,6 @@ test("inventory tools remain clickable above filters on desktop and mobile", asy
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/dashboard/inventory");
-    await page.locator("summary").filter({ hasText: "Inventory tools" }).click();
     await page.getByRole("link", { name: "Import file", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/inventory\/import$/);
     await expect(page.locator("h1")).toBeVisible();

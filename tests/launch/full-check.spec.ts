@@ -298,3 +298,97 @@ test.describe("QR labels", () => {
     await expect(page.locator(".sheet-label")).toHaveCount(1);
   });
 });
+
+test.describe("inventory views", () => {
+  test("the list can be shown as a table, cards, or a compact list, and is remembered", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/dashboard/inventory");
+    const views = page.getByRole("navigation", { name: "Inventory view" });
+    await expect(views.getByRole("link", { name: "List" })).toHaveAttribute("aria-current", "true");
+
+    await views.getByRole("link", { name: "Cards" }).click();
+    await expect(page).toHaveURL(/view=cards/);
+    await expect(page.locator(".record-tile")).toHaveCount(25);
+    // A card opens its record.
+    await page.locator(".record-tile").first().locator(".record-tile-facts").click();
+    await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
+
+    await page.goto("/dashboard/inventory");
+    // The last choice is remembered on this device.
+    await expect(page.locator(".record-tile")).toHaveCount(25);
+    await views.getByRole("link", { name: "Compact" }).click();
+    await expect(page).toHaveURL(/view=compact/);
+    await expect(page.locator(".record-compact-row")).toHaveCount(25);
+
+    // Filters and paging keep the view, and selecting items works in it.
+    await page.getByLabel("Search", { exact: true }).fill("Lab equipment 2");
+    await expect(page).toHaveURL(/view=compact/);
+    await page.getByRole("link", { name: "Select items" }).click();
+    await expect(page.locator('.record-compact-row input[type="checkbox"]').first()).toBeVisible();
+
+    await views.getByRole("link", { name: "List" }).click();
+    await expect(page.locator(".record-compact-row")).toHaveCount(0);
+  });
+});
+
+test.describe("units that are borrowed one at a time", () => {
+  test("a counted stock record can be split so each unit has its own QR code", async ({ page }) => {
+    const source = (
+      await query(
+        `SELECT "categoryId","locationId" FROM "InventoryItem" WHERE "qrCode"='ceit-launch-item-1'`,
+      )
+    ).rows[0];
+    const id = randomUUID();
+    await query(
+      `INSERT INTO "InventoryItem" (id,name,"qrCode","categoryId","locationId","itemType",quantity,"updatedAt")
+       VALUES ($1,'Screwdriver set',$2,$3,$4,'SUPPLY',3,NOW())`,
+      [id, `ceit-split-${id.slice(0, 8)}`, source.categoryId, source.locationId],
+    );
+    await signIn(page);
+    await page.goto(`/dashboard/inventory/${id}?edit=1`);
+    await expect(
+      page.getByRole("heading", { name: "Give each unit its own QR code" }),
+    ).toBeVisible();
+    await page.getByLabel("Type SPLIT to give each unit its own record").fill("SPLIT");
+    await page.getByRole("button", { name: "Split into 3 units" }).click();
+
+    // Their labels open, already chosen.
+    await expect(page).toHaveURL(/\/dashboard\/inventory\/labels\?ids=.*created=3/);
+    await expect(page.locator(".sheet-label")).toHaveCount(3);
+    const units = (
+      await query(
+        `SELECT name,"itemType",quantity,"assetTag","qrCode" FROM "InventoryItem" WHERE name LIKE 'Screwdriver set (unit %' ORDER BY name`,
+      )
+    ).rows;
+    expect(units.map((unit) => unit.name)).toEqual([
+      "Screwdriver set (unit 1)",
+      "Screwdriver set (unit 2)",
+      "Screwdriver set (unit 3)",
+    ]);
+    expect(units.every((unit) => unit.itemType === "ASSET" && unit.quantity === 1)).toBe(true);
+    expect(new Set(units.map((unit) => unit.assetTag)).size).toBe(3);
+    expect(new Set(units.map((unit) => unit.qrCode)).size).toBe(3);
+  });
+});
+
+test.describe("report charts", () => {
+  test("reports show charts above their tables", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/dashboard/reports?kind=overview&generate=1");
+    await expect(page.locator(".report-chart").first()).toBeVisible();
+    await expect(page.getByText("Equipment status", { exact: true }).first()).toBeVisible();
+    const bar = page.locator(".report-chart .chart-bars li").first();
+    await expect(bar).toHaveAttribute("aria-label", /: \d+ records$/);
+    const item = await itemId("ceit-launch-item-20");
+    await query(
+      `INSERT INTO "BorrowRequest" (id,"inventoryItemId","borrowerName","studentNumber",contact,purpose,"requestedQuantity","expectedReturnDate","startsAt",status,"personalDataExpiresAt","updatedAt")
+       VALUES ($1,$2,'Chart Reader','CHART-1','09170000001','Class',1,NOW() + INTERVAL '30 hours',NOW() + INTERVAL '2 hours','REQUESTED',NOW() + INTERVAL '30 days',NOW())`,
+      [randomUUID(), item],
+    );
+    await page.goto("/dashboard/reports?kind=borrowing&generate=1");
+    await expect(page.getByText("Requests per month", { exact: true })).toBeVisible();
+    await expect(page.locator(".chart-columns li")).toHaveCount(6);
+  });
+});

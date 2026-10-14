@@ -142,12 +142,12 @@ export function NewInventoryForm({
             {
               value: "ASSET",
               title: "Equipment",
-              text: "Each unit gets its own asset tag and QR code, such as a PC, projector, or monitor.",
+              text: "Each unit gets its own asset tag and QR code, such as a PC, projector, or tool set. Choose this when you need to know which one was borrowed.",
             },
             {
               value: "SUPPLY",
               title: "Stock",
-              text: "Supplies counted by quantity, such as cables or markers. One QR code covers the whole stock.",
+              text: "Supplies counted by quantity, such as cables or markers. One QR code covers the whole stock, so units can't be told apart.",
             },
           ].map((option) => (
             <label

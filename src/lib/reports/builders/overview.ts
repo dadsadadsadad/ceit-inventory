@@ -18,6 +18,7 @@ import { warrantyWhere } from "@/lib/warranty";
 import { prisma } from "@/prisma";
 
 import { formatReportDateTime, formatReportDay, humanize, plural } from "../format";
+import { countChart, statusChart } from "../charts";
 import type { ReportModel, ReportTable } from "../model";
 import type { BuilderContext } from "./shared";
 
@@ -203,6 +204,19 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
         tone: warrantyEndingCount ? "alert" : undefined,
       },
       { label: "Acquisition value", value: peso.format(acquisition) },
+    ],
+    charts: [
+      statusChart(statusMap, "Equipment status"),
+      countChart(
+        "Equipment condition",
+        Object.values(ItemCondition).map((condition) => [
+          humanize(condition),
+          conditionMap.get(condition) ?? 0,
+        ]),
+        "records",
+      ),
+      countChart("Records by category", top(categories), "records"),
+      countChart("Records by room", top(rooms), "records"),
     ],
     tables: [
       {

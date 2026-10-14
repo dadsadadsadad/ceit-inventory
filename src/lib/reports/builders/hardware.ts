@@ -9,6 +9,7 @@ import { loadComputers } from "@/lib/computer-queries";
 import { manilaDateText } from "@/lib/manila-date";
 
 import { chips } from "../format";
+import { countChart } from "../charts";
 import { capRows, type ReportModel, type ReportTable } from "../model";
 import { filterNames, type BuilderContext } from "./shared";
 
@@ -112,6 +113,18 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
         tone: incompleteCount ? "alert" : undefined,
       },
     ],
+    // The first two parts as charts: how many PCs share each value.
+    charts: parts.slice(0, 2).map((component) =>
+      countChart(
+        `PCs by ${component.label.toLowerCase()}`,
+        groupHardware(computers, component.value).map((group): [string, number] => [
+          group.value,
+          group.count,
+        ]),
+        "PCs",
+        6,
+      ),
+    ),
     tables,
     csv:
       context.purpose === "csv"

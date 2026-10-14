@@ -385,6 +385,169 @@
   line-height: 1.95;
 }
 
+/* ------------------------------------------------------------------ report charts */
+/* Thin bars from one baseline, the value at the tip, quiet tracks; status bars wear the
+   dashboard's status colours and everything else the accent. */
+.report-charts {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}
+
+.report-chart {
+  align-content: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  break-inside: avoid;
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1rem 1.1rem 1.1rem;
+}
+
+.report-chart figcaption {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.report-chart figcaption strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.report-chart figcaption span {
+  font-size: 0.875rem;
+}
+
+.chart-bars,
+.chart-columns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chart-bars {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chart-bars li {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(5.5rem, 34%) minmax(0, 1fr) 3rem;
+}
+
+.chart-label {
+  color: var(--muted-strong);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.chart-value {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.chart-bars .chart-value {
+  text-align: right;
+}
+
+.chart-track {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  border-radius: 0 4px 4px 0;
+  display: block;
+  height: 0.85rem;
+}
+
+.chart-bar,
+.chart-column {
+  background: var(--chart-color, var(--accent));
+  display: block;
+}
+
+.chart-bar {
+  border-radius: 0 4px 4px 0;
+  height: 100%;
+}
+
+.chart-columns {
+  align-items: stretch;
+  display: grid;
+  gap: 0.5rem;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  height: 11rem;
+}
+
+.chart-columns li {
+  display: grid;
+  gap: 0.3rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center;
+  min-width: 0;
+}
+
+.chart-column-track {
+  align-items: flex-end;
+  border-bottom: 1px solid var(--border-input);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.chart-column {
+  border-radius: 4px 4px 0 0;
+  max-width: 1.5rem;
+  width: 70%;
+}
+
+.chart-columns .chart-label {
+  text-align: center;
+}
+
+[data-tone="ok"] {
+  --chart-color: var(--mix-ok);
+}
+
+[data-tone="working"] {
+  --chart-color: var(--mix-working);
+}
+
+[data-tone="deployed"] {
+  --chart-color: var(--mix-deployed);
+}
+
+[data-tone="defective"] {
+  --chart-color: var(--mix-defective);
+}
+
+[data-tone="not_tested"] {
+  --chart-color: var(--mix-not_tested);
+}
+
+[data-tone="retired"] {
+  --chart-color: var(--mix-retired);
+}
+
+[data-tone="lost"] {
+  --chart-color: var(--mix-lost);
+}
+
+@media print {
+  .chart-bar,
+  .chart-column,
+  .chart-track {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 .report-section {
   display: grid;
   gap: 0.6rem;

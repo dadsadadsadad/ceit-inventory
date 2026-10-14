@@ -342,17 +342,19 @@ export function ItemEditPanel({
         </FeedbackForm>
       </section>
 
-      {item.itemType === ItemType.ASSET && item.quantity > 1 && !item.isComputer ? (
+      {item.quantity > 1 && !item.isComputer ? (
         <section className="divider mt-6 border-t pt-5" aria-labelledby="individualize-heading">
-          {/* Split grouped equipment into individual records. */}
+          {/* Give each unit its own record, tag, and QR code. */}
           <h3 id="individualize-heading" className="text-sm font-semibold">
-            Create individual asset records
+            Give each unit its own QR code
           </h3>
           <p className="muted mt-2 text-xs leading-5">
-            This converts the current record into unit 1 and creates {item.quantity - 1} new records
-            in the same room. Every new unit gets the next compatible asset tag and a unique QR
-            code; move the units to their actual rooms afterward. This is unavailable once a
-            borrowing history exists.
+            {item.itemType === ItemType.SUPPLY
+              ? `Use this when the ${item.quantity} units are things borrowed one at a time, such as tool sets, so you can tell which one a student has. `
+              : ""}
+            This turns the record into unit 1 and adds {item.quantity - 1} more in the same room,
+            each with its own asset tag and QR code, then opens their labels to print. Move units to
+            their actual rooms afterward. This is unavailable once a borrowing history exists.
           </p>
           <FeedbackForm action={splitGroupedAsset} className="mt-3 space-y-3">
             <input type="hidden" name="id" value={item.id} />
@@ -362,13 +364,13 @@ export function ItemEditPanel({
               maxLength={16}
               className="field w-full rounded-lg px-3 py-2 text-sm"
               placeholder="Type SPLIT"
-              aria-label="Type SPLIT to create individual asset records"
+              aria-label="Type SPLIT to give each unit its own record"
             />
             <SubmitButton
-              pendingLabel="Creating individual records…"
+              pendingLabel="Creating unit records…"
               className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
             >
-              Split into {item.quantity} individual assets
+              Split into {item.quantity} units
             </SubmitButton>
           </FeedbackForm>
         </section>

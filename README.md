@@ -7,7 +7,7 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 ## What is included
 
 - Room and location management
-- Item categories, individually tracked equipment (one record, asset tag, and QR code per physical unit), and counted stock records (one record and one QR code per kind of stock)
+- Item categories, individually tracked equipment (one record, asset tag, and QR code per physical unit), and counted stock records (one record and one QR code per kind of stock). Things borrowed one at a time, such as tool sets, are added as equipment so each has its own QR code; an existing stock record can be **split into units** from its edit panel, which opens their labels to print
 - **Low-stock alerts** for stock: each record can set its own alert level (5 by default, 0 turns it off). Running low and out of stock show on the Inventory list, the item page, the dashboard, and in reports
 - **Warranty end dates** (optional) with a warranty report and an "ending soon" alert 60 days ahead
 - **Extra fields** (text, number, date, yes or no, or a list of choices) that staff add in Settings **or straight from any item's add or edit form**, fill in on any item, and can limit to one type or category in Settings
@@ -18,11 +18,13 @@ See [the code guide](docs/code-guide.md) for the folder layout, formatting comma
 - Item status, condition, and location updates with an audit history
 - QR labels: print one at four sizes (4 to 14 cm), or many at once on A4 sheets by clicking items in a filterable, paged grid of every item (small 40, medium 24, large 8, or extra large 2 per sheet)
 - Phone camera scanning with a cross-browser decoder and a manual-code fallback
+- The Inventory list as a **table, cards, or a compact list**, remembered on each device
 - Multi-word search (every word must match, across name, tag, serial, room, MAC/IP, and more), filters, sorting, and page navigation for status, room, category, type, condition, items that need attention, and items not checked in 90+ days
 - Bulk status, condition, location, and inspection changes for selected items, including **Record inspection** for a whole room
 - CSV/XLSX import that copes with the files people really have: any column order, missing or extra columns, empty rows, totals, and untidy values. **Check file** reports exactly what would happen without saving anything, and **Import** saves every row that can be understood
 - **Hardware and Software views** next to the Inventory list: every processor, memory size, storage, graphics part, operating system, and installed program, grouped, searchable, and showing which PCs have it, with license expiry for software
-- **Reports** you generate on the page first and then print right there or download as a PDF or CSV: overview, inventory, stock, warranty, PC register, hardware, software, borrowing, maintenance, and audit trail, each with its own filters and a set of one-click quick reports (overdue loans, due today, low stock, warranties ending soon, licenses ending soon, PCs missing details, and more)
+- **Reports** you generate on the page first and then print right there or download as a PDF or CSV: overview, inventory, stock, warranty, PC register, hardware, software, borrowing, maintenance, and audit trail, each with **charts** (bars by status, room, category, priority, and more, and columns for the last six months) that look the same on the page and in the PDF, its own filters, and a set of one-click quick reports (overdue loans, due today, low stock, warranties ending soon, licenses ending soon, PCs missing details, and more)
+- Reporting a maintenance issue suggests equipment as you type part of its name, asset tag, serial number, or room
 - Filters that apply as you choose them and live in the address bar, on Inventory, Borrowing, Maintenance, Users, Hardware, Software, Labels, Reports, and the audit trail
 - An audit trail that opens on the important changes, groups events by day, and keeps routine events (QR scans, label prints, report downloads, sign-ins) one click away
 - Borrowing limits: reservations at most 3 days ahead, loans at most 7 days (14 with an extension), at most 3 open requests per student, no new requests while something is overdue, and missed pickups release the equipment automatically. See [the launch notes](docs/launch-checklist.md) for the exact rules and how to change them

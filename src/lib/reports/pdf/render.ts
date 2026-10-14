@@ -1,9 +1,10 @@
 import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 
 import { formatReportDateTime } from "../format";
-import type { ReportColumn, ReportMetric, ReportModel, ReportTable } from "../model";
+import { hasChartData } from "../charts";
+import type { ReportChart, ReportColumn, ReportMetric, ReportModel, ReportTable } from "../model";
 import { capLines, pdfText, wrapLine } from "./text";
-import { contentWidth, pageLayout, pdfTheme } from "./theme";
+import { contentWidth, pageLayout, pdfChartTones, pdfTheme } from "./theme";
 
 type Fonts = { bold: PDFFont; regular: PDFFont; serif: PDFFont };
 type CellLine = { kind: "plain" | "primary" | "secondary"; text: string };
@@ -245,6 +246,163 @@ class Sheet {
     }
   }
 
+  // Charts two to a row, drawn like the page: thin bars with the value at the tip.
+  charts(charts: ReportChart[]) {
+    const drawable = charts.filter(hasChartData);
+    if (!drawable.length) {
+      return;
+    }
+    const gap = 12;
+    const width = (contentWidth - gap) / 2;
+    for (let start = 0; start < drawable.length; start += 2) {
+      const pair = drawable.slice(start, start + 2);
+      const height = Math.max(...pair.map((chart) => this.chartHeight(chart)));
+      this.ensure(height + 14);
+      pair.forEach((chart, index) =>
+        this.chart(chart, margin + index * (width + gap), width, height),
+      );
+      this.cursor -= height + 12;
+    }
+    this.cursor -= 6;
+  }
+
+  private chartHeight(chart: ReportChart) {
+    const header = chart.note ? 40 : 30;
+    return chart.kind === "bars" ? header + chart.data.length * 16 + 12 : header + 128;
+  }
+
+  private chart(chart: ReportChart, x: number, width: number, height: number) {
+    const { page, fonts } = this;
+    const top = this.cursor;
+    page.drawRectangle({
+      x,
+      y: top - height,
+      width,
+      height,
+      borderColor: pdfTheme.hairline,
+      borderWidth: 0.8,
+      color: pdfTheme.white,
+    });
+    page.drawText(pdfText(chart.title, 48), {
+      x: x + 10,
+      y: top - 18,
+      size: 11,
+      font: fonts.serif,
+      color: pdfTheme.ink,
+    });
+    if (chart.note) {
+      page.drawText(pdfText(chart.note, 64), {
+        x: x + 10,
+        y: top - 30,
+        size: 7.2,
+        font: fonts.regular,
+        color: pdfTheme.muted,
+      });
+    }
+    const bodyTop = top - (chart.note ? 40 : 30);
+    const max = Math.max(1, ...chart.data.map((entry) => entry.value));
+    const color = (entry: ReportChart["data"][number]) =>
+      entry.tone ? pdfChartTones[entry.tone] : pdfChartTones.accent;
+
+    if (chart.kind === "bars") {
+      const labelWidth = Math.min(width * 0.36, 110);
+      const valueWidth = 30;
+      const trackX = x + 10 + labelWidth + 6;
+      const trackWidth = width - 20 - labelWidth - 6 - valueWidth;
+      chart.data.forEach((entry, index) => {
+        const rowTop = bodyTop - index * 16;
+        const label = this.fit(entry.label, labelWidth, 7.8);
+        page.drawText(label, {
+          x: x + 10,
+          y: rowTop - 10,
+          size: 7.8,
+          font: fonts.regular,
+          color: pdfTheme.muted,
+        });
+        page.drawRectangle({
+          x: trackX,
+          y: rowTop - 12,
+          width: trackWidth,
+          height: 8,
+          color: pdfTheme.chartTrack,
+        });
+        const barWidth = entry.value ? Math.max(2, (entry.value / max) * trackWidth) : 0;
+        if (barWidth) {
+          page.drawRectangle({
+            x: trackX,
+            y: rowTop - 12,
+            width: barWidth,
+            height: 8,
+            color: color(entry),
+          });
+        }
+        const value = entry.value.toLocaleString();
+        page.drawText(value, {
+          x: x + width - 10 - fonts.bold.widthOfTextAtSize(value, 8),
+          y: rowTop - 10,
+          size: 8,
+          font: fonts.bold,
+          color: pdfTheme.ink,
+        });
+      });
+      return;
+    }
+
+    // Columns over time: values on the caps, labels under a single baseline.
+    const baseline = top - height + 22;
+    const plotHeight = bodyTop - baseline - 16;
+    const slot = (width - 20) / chart.data.length;
+    const barWidth = Math.min(16, slot * 0.6);
+    page.drawLine({
+      start: { x: x + 10, y: baseline },
+      end: { x: x + width - 10, y: baseline },
+      thickness: 0.6,
+      color: pdfTheme.hairline,
+    });
+    chart.data.forEach((entry, index) => {
+      const centre = x + 10 + slot * index + slot / 2;
+      const barHeight = entry.value ? Math.max(2, (entry.value / max) * plotHeight) : 0;
+      if (barHeight) {
+        page.drawRectangle({
+          x: centre - barWidth / 2,
+          y: baseline,
+          width: barWidth,
+          height: barHeight,
+          color: color(entry),
+        });
+      }
+      const value = entry.value.toLocaleString();
+      page.drawText(value, {
+        x: centre - fonts.bold.widthOfTextAtSize(value, 7.5) / 2,
+        y: baseline + barHeight + 4,
+        size: 7.5,
+        font: fonts.bold,
+        color: pdfTheme.ink,
+      });
+      const label = this.fit(entry.label, slot - 2, 7.2);
+      page.drawText(label, {
+        x: centre - fonts.regular.widthOfTextAtSize(label, 7.2) / 2,
+        y: baseline - 12,
+        size: 7.2,
+        font: fonts.regular,
+        color: pdfTheme.muted,
+      });
+    });
+  }
+
+  // Shorten text with "..." until it fits the width.
+  private fit(text: string, width: number, size: number) {
+    const measure = (value: string) => this.fonts.regular.widthOfTextAtSize(value, size);
+    let value = pdfText(text, 80);
+    if (measure(value) <= width) {
+      return value;
+    }
+    while (value.length > 1 && measure(`${value}...`) > width) {
+      value = value.slice(0, -1).trimEnd();
+    }
+    return `${value}...`;
+  }
+
   // A section heading with its row count, then the table.
   table(table: ReportTable) {
     const { fonts } = this;
@@ -449,6 +607,7 @@ export async function renderReportPdf(report: ReportModel) {
   const sheet = new Sheet(document, fonts, report);
   sheet.filters();
   sheet.metrics(report.metrics);
+  sheet.charts(report.charts ?? []);
   report.tables.forEach((table) => sheet.table(table));
   sheet.finish();
   return document.save();

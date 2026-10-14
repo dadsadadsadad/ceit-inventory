@@ -81,6 +81,18 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
       { label: "Warranty ended", value: expired.toLocaleString() },
       { label: "Still covered", value: active.toLocaleString() },
     ],
+    charts: [
+      {
+        title: "Warranty status",
+        kind: "bars",
+        unit: "records",
+        data: [
+          { label: "Under warranty", value: active, tone: "ok" },
+          { label: filterLabels.ending, value: ending, tone: "not_tested" },
+          { label: "Ended", value: expired, tone: "defective" },
+        ],
+      },
+    ],
     tables: [
       {
         heading: "Warranties",

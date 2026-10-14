@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
 import { formatManilaDate } from "@/lib/manila-date";
-import type { ReportModel, ReportTable } from "@/lib/reports/model";
+import { hasChartData } from "@/lib/reports/charts";
+import type { ReportChart, ReportModel, ReportTable } from "@/lib/reports/model";
 
 function Cell({ text, primary }: { primary?: boolean; text: string }) {
   const [first, ...rest] = text.split("\n");
@@ -14,6 +15,60 @@ function Cell({ text, primary }: { primary?: boolean; text: string }) {
         </small>
       ))}
     </>
+  );
+}
+
+// A bar or column chart. Every value is written beside its mark and repeated in the tables below.
+function Chart({ chart }: { chart: ReportChart }) {
+  const max = Math.max(1, ...chart.data.map((entry) => entry.value));
+  const describe = (entry: ReportChart["data"][number]) =>
+    `${entry.label}: ${entry.value.toLocaleString()} ${chart.unit}`;
+  return (
+    <figure className="report-chart" data-kind={chart.kind}>
+      <figcaption>
+        <strong>{chart.title}</strong>
+        {chart.note ? <span className="muted">{chart.note}</span> : null}
+      </figcaption>
+      {chart.kind === "bars" ? (
+        <ul className="chart-bars">
+          {chart.data.map((entry) => (
+            <li key={entry.label} title={describe(entry)} aria-label={describe(entry)}>
+              <span className="chart-label">{entry.label}</span>
+              <span className="chart-track" aria-hidden="true">
+                <span
+                  className="chart-bar"
+                  data-tone={entry.tone}
+                  style={{ width: `${Math.max(entry.value ? 2 : 0, (entry.value / max) * 100)}%` }}
+                />
+              </span>
+              <span className="chart-value" aria-hidden="true">
+                {entry.value.toLocaleString()}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="chart-columns">
+          {chart.data.map((entry) => (
+            <li key={entry.label} title={describe(entry)} aria-label={describe(entry)}>
+              <span className="chart-value" aria-hidden="true">
+                {entry.value.toLocaleString()}
+              </span>
+              <span className="chart-column-track" aria-hidden="true">
+                <span
+                  className="chart-column"
+                  data-tone={entry.tone}
+                  style={{ height: `${Math.max(entry.value ? 3 : 0, (entry.value / max) * 100)}%` }}
+                />
+              </span>
+              <span className="chart-label" aria-hidden="true">
+                {entry.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </figure>
   );
 }
 
@@ -131,6 +186,14 @@ export function ReportSheet({ actions, report }: { actions: ReactNode; report: R
             </div>
           ))}
         </dl>
+      ) : null}
+
+      {report.charts?.some(hasChartData) ? (
+        <div className="report-charts" aria-label="Charts">
+          {report.charts.filter(hasChartData).map((chart) => (
+            <Chart key={chart.title} chart={chart} />
+          ))}
+        </div>
       ) : null}
 
       {report.tables.map((table) => (

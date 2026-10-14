@@ -79,6 +79,18 @@ export async function buildStockReport(context: BuilderContext): Promise<ReportM
         tone: out ? "alert" : undefined,
       },
     ],
+    charts: [
+      {
+        title: "Stock levels",
+        kind: "bars",
+        unit: "stock records",
+        data: [
+          { label: "Enough in stock", value: total - low, tone: "ok" },
+          { label: "Running low", value: low - out, tone: "not_tested" },
+          { label: "Out of stock", value: out, tone: "defective" },
+        ],
+      },
+    ],
     tables: [
       {
         heading: "Stock",

@@ -8,8 +8,9 @@ import { reportDateFilter } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatReportDateTime, humanize } from "../format";
+import { countChart } from "../charts";
 import type { ReportModel } from "../model";
-import { filterNames, loadCapped, type BuilderContext } from "./shared";
+import { countsByRoom, filterNames, loadCapped, type BuilderContext } from "./shared";
 
 /** A PC with no processor, memory, or storage recorded, or no hardware profile at all. */
 export const incompletePcWhere: Prisma.InventoryItemWhereInput = {
@@ -39,7 +40,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
     ],
   };
 
-  const [{ rows: pcs, total }, attention, incomplete, names] = await Promise.all([
+  const [{ rows: pcs, total }, attention, incomplete, names, byRoom, systems] = await Promise.all([
     loadCapped(
       context,
       {
@@ -61,6 +62,12 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
     prisma.inventoryItem.count({ where: { AND: [where, inventoryAttentionWhere] } }),
     prisma.inventoryItem.count({ where: { AND: [where, incompletePcWhere] } }),
     filterNames(filters),
+    countsByRoom(where),
+    prisma.computer.groupBy({
+      by: ["operatingSystem"],
+      where: { item: where },
+      _count: { _all: true },
+    }),
   ]);
 
   const hardware = (item: (typeof pcs)[number]) => {
@@ -106,6 +113,17 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
         value: attention.toLocaleString(),
         tone: attention ? "alert" : undefined,
       },
+    ],
+    charts: [
+      countChart("PCs by room", byRoom, "PCs"),
+      countChart(
+        "PCs by operating system",
+        systems.map((entry): [string, number] => [
+          entry.operatingSystem?.trim() || "Not recorded",
+          entry._count._all,
+        ]),
+        "PCs",
+      ),
     ],
     tables: [
       {

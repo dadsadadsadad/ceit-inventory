@@ -66,6 +66,9 @@ function resolutionItemStatus(formData: FormData) {
 export async function createMaintenanceTicket(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
+    if (!String(formData.get("itemId") ?? "").trim()) {
+      throw new FormError("Choose the equipment from the list under the search box.");
+    }
     const itemId = id(formData, "itemId");
     const title = text(formData, "title", 255, true);
     const description = text(formData, "description", 5_000, true);

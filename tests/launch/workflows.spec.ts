@@ -98,24 +98,36 @@ test("inventory handles repeated filters and keeps bulk selection across sorting
   await expect(page.locator('input[data-bulk-selection-item="true"]')).toHaveCount(0);
 });
 
-test("maintenance finds equipment on demand and accepts an exact item link", async ({ page }) => {
+test("maintenance suggests equipment as you type and accepts an exact item link", async ({
+  page,
+}) => {
   await signIn(page);
   await page.goto("/dashboard/maintenance?item=------------------------------------");
   await expect(
     page.getByRole("heading", { name: "Maintenance requests", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Inventory item" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Equipment" })).toHaveCount(0);
   await page.getByRole("link", { name: "Report an issue", exact: true }).click();
-  await page.getByRole("textbox", { name: "Find equipment", exact: true }).fill("Lab equipment 27");
-  await page.getByRole("button", { name: "Find items", exact: true }).click();
-  const picker = page.getByRole("combobox", { name: "Inventory item", exact: false });
-  await expect(picker.locator("option")).toHaveCount(2);
-  await expect(picker.locator("option").last()).toContainText("Lab equipment 27");
+  const search = page.getByRole("combobox", { name: "Equipment" });
+  // Part of a name is enough; matches appear under the box while typing.
+  await search.fill("equipment 27");
+  const option = page.getByRole("option", { name: /Lab equipment 27/ });
+  await expect(option).toBeVisible();
+  await option.click();
   const item = (
     await query('SELECT id FROM "InventoryItem" WHERE "qrCode"=$1', ["ceit-launch-item-27"])
   ).rows[0];
+  const chosen = page.locator('input[type="hidden"][name="itemId"]');
+  await expect(chosen).toHaveValue(item.id);
+  await expect(page.locator(".item-picker-chip")).toContainText("Lab equipment 27");
+  // "Change" goes back to searching.
+  await page.getByRole("button", { name: "Change" }).click();
+  await expect(search).toBeFocused();
+  await expect(chosen).toHaveValue("");
+
   await page.goto(`/dashboard/maintenance?item=${item.id}`);
-  await expect(picker).toHaveValue(item.id);
+  await expect(page.locator(".item-picker-chip")).toContainText("Lab equipment 27");
+  await expect(chosen).toHaveValue(item.id);
 });
 
 test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ page }) => {

@@ -907,6 +907,204 @@ a.pc-chip:hover {
   text-underline-offset: 0.25em;
 }
 
+/* ------------------------------------------------------------------ inventory views */
+.view-switch {
+  background: var(--surface-soft);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+}
+
+.view-switch-option {
+  align-items: center;
+  border-radius: calc(var(--radius-control) - 0.15rem);
+  color: var(--muted-strong);
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 650;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0 0.7rem;
+  transition:
+    background-color var(--interaction-duration) ease,
+    color var(--interaction-duration) ease;
+}
+
+.view-switch-option:hover {
+  color: var(--accent);
+}
+
+.view-switch-option[aria-current="true"] {
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  color: var(--accent);
+}
+
+@media (max-width: 479px) {
+  .view-switch-option span {
+    display: none;
+  }
+}
+
+/* Cards: one tile per item, as many across as fit. */
+.record-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+}
+
+.record-tile {
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1rem;
+  transition:
+    border-color var(--interaction-duration) ease,
+    box-shadow var(--interaction-duration) ease;
+}
+
+.record-tile:hover,
+.record-tile:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.record-tile:has(input:checked) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.record-tile-head {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.record-tile-head .status-pill {
+  margin-left: auto;
+}
+
+.record-tile-select {
+  flex: none;
+}
+
+.record-tile-name {
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.record-tile-facts {
+  border-top: 1px dashed var(--border-input);
+  display: grid;
+  gap: 0.45rem 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.5rem 0 0;
+  padding-top: 0.65rem;
+}
+
+.record-tile-facts dt {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.record-tile-facts > div:first-child {
+  grid-column: 1 / -1;
+}
+
+.record-tile-facts dd {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Compact: one tight line per item. */
+.record-compact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.record-compact-row {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 2.9rem;
+  padding: 0.45rem 1.25rem;
+  transition: background-color var(--interaction-duration) ease;
+}
+
+.record-compact-row:first-child {
+  border-top: 0;
+}
+
+.record-compact-row:hover,
+.record-compact-row:focus-visible {
+  background: var(--surface-soft);
+  outline: none;
+}
+
+.record-compact-row:has(input:checked) {
+  background: var(--accent-soft);
+}
+
+.record-compact-row:has(input) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.record-compact-name {
+  font-size: 0.9375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-compact-tag,
+.record-compact-room,
+.record-compact-stock {
+  display: none;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .record-compact-row {
+    grid-template-columns: minmax(0, 2fr) minmax(9rem, 1fr) minmax(8rem, 1fr) 7rem 7.5rem;
+  }
+
+  .record-compact-row:has(input) {
+    grid-template-columns: auto minmax(0, 2fr) minmax(9rem, 1fr) minmax(8rem, 1fr) 7rem 7.5rem;
+  }
+
+  .record-compact-tag,
+  .record-compact-room,
+  .record-compact-stock {
+    display: flex;
+  }
+
+  .record-compact-room {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 .is-selected {
   background: var(--accent-soft);
 }
@@ -1428,19 +1626,32 @@ a.pc-chip:hover {
 }
 
 /* ------------------------------------------------------------------ borrowing request cards */
+/* Each request is its own bordered card with space around it, so it is clear where one ends. */
 .request-list {
+  background: var(--surface-soft);
   display: grid;
+  gap: 1rem;
+  padding: 1rem;
 }
 
 .request-card {
-  border-top: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
 }
 
-.request-card:first-child {
-  border-top: 0;
+/* The left edge follows the status colours: waiting on staff, out on loan, or finished. */
+.request-card:is([data-status="BORROWED"], [data-status="RESERVED"]) {
+  border-left-color: var(--status-deployed);
+}
+
+.request-card:is([data-status="RETURNED"], [data-status="DECLINED"], [data-status="CANCELLED"]) {
+  border-left-color: var(--border-input);
 }
 
 .request-card-head {
@@ -1648,4 +1859,102 @@ a.pc-chip:hover {
   .filter-spread > * {
     flex-basis: 9rem;
   }
+}
+
+/* ------------------------------------------------------------------ item picker */
+/* A search box whose matches drop down underneath as you type. */
+.item-picker {
+  min-width: 0;
+  position: relative;
+}
+
+.item-picker-box {
+  display: block;
+  position: relative;
+}
+
+.item-picker-box > svg {
+  color: var(--muted);
+  left: 0.8rem;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.item-picker-box > .field {
+  padding-left: 2.3rem;
+}
+
+.item-picker-list {
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-float);
+  left: 0;
+  list-style: none;
+  margin: 0.35rem 0 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.3rem;
+  position: absolute;
+  right: 0;
+  z-index: 40;
+}
+
+.item-picker-option {
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.item-picker-option strong,
+.item-picker-chip strong {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.item-picker-option small,
+.item-picker-chip small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.875rem;
+}
+
+.item-picker-option[aria-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.item-picker-note {
+  color: var(--muted);
+  font-size: 0.875rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.item-picker-chosen {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.item-picker-chip {
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-control);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  min-height: 2.875rem;
+  padding: 0.45rem 0.8rem;
+}
+
+.item-picker-chip button {
+  align-items: center;
+  display: inline-flex;
+  flex: none;
+  gap: 0.25rem;
 }

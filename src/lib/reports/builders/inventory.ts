@@ -11,8 +11,15 @@ import { formatCustomValue, readCustomValues } from "@/lib/custom-fields";
 import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatReportDay, formatReportDateTime, humanize } from "../format";
+import { countChart, statusChart } from "../charts";
 import type { ReportModel } from "../model";
-import { filterNames, loadCapped, type BuilderContext } from "./shared";
+import {
+  countsByCategory,
+  countsByRoom,
+  filterNames,
+  loadCapped,
+  type BuilderContext,
+} from "./shared";
 
 const warrantyChip = {
   expired: "ended",
@@ -41,28 +48,38 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
     ...(filters.pcOnly ? { isComputer: true } : {}),
   };
 
-  const [{ rows: items, total }, summary, statusCounts, attention, names, customFields] =
-    await Promise.all([
-      loadCapped(context, {
-        find: (take) =>
-          prisma.inventoryItem.findMany({
-            where,
-            include: { category: true, location: true, computer: true },
-            orderBy: [{ location: { name: "asc" } }, { name: "asc" }, { assetTag: "asc" }],
-            take,
-          }),
-        count: () => prisma.inventoryItem.count({ where }),
-      }),
-      prisma.inventoryItem.aggregate({
-        where,
-        _sum: { quantity: true },
-        _count: { _all: true },
-      }),
-      prisma.inventoryItem.groupBy({ by: ["status"], where, _count: { _all: true } }),
-      prisma.inventoryItem.count({ where: { AND: [where, inventoryAttentionWhere] } }),
-      filterNames(filters),
-      loadCustomFields(),
-    ]);
+  const [
+    { rows: items, total },
+    summary,
+    statusCounts,
+    attention,
+    names,
+    customFields,
+    byCategory,
+    byRoom,
+  ] = await Promise.all([
+    loadCapped(context, {
+      find: (take) =>
+        prisma.inventoryItem.findMany({
+          where,
+          include: { category: true, location: true, computer: true },
+          orderBy: [{ location: { name: "asc" } }, { name: "asc" }, { assetTag: "asc" }],
+          take,
+        }),
+      count: () => prisma.inventoryItem.count({ where }),
+    }),
+    prisma.inventoryItem.aggregate({
+      where,
+      _sum: { quantity: true },
+      _count: { _all: true },
+    }),
+    prisma.inventoryItem.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.inventoryItem.count({ where: { AND: [where, inventoryAttentionWhere] } }),
+    filterNames(filters),
+    loadCustomFields(),
+    countsByCategory(where),
+    countsByRoom(where),
+  ]);
   const statusMap = new Map(statusCounts.map((entry) => [entry.status, entry._count._all]));
   const pcs = items.filter((item) => item.isComputer).length;
 
@@ -93,6 +110,11 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
         value: attention.toLocaleString(),
         tone: attention ? "alert" : undefined,
       },
+    ],
+    charts: [
+      statusChart(statusMap),
+      countChart("Records by category", byCategory, "records"),
+      countChart("Records by room", byRoom, "records"),
     ],
     tables: [
       {
