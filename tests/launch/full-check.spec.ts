@@ -204,52 +204,73 @@ test.describe("public pages and missing records", () => {
 });
 
 test.describe("QR labels", () => {
-  test("many labels can be picked one by one, by category, and in four sizes", async ({ page }) => {
+  test("labels are chosen from a grid of every item, with filters, paging, and four sizes", async ({
+    page,
+  }) => {
     await signIn(page);
     await page.goto("/dashboard/inventory/labels");
-    const sheets = page.locator(".label-sheet");
+    const tiles = page.locator(".label-tile");
     const labels = page.locator(".sheet-label");
+    const sheets = page.locator(".label-sheet");
+    const tile = (name: string) =>
+      page.locator(".label-tile", { has: page.getByText(name, { exact: true }) });
 
-    // Pick two items by searching, without choosing a room.
-    const search = page.getByLabel("Pick items one by one");
-    await search.fill("Lab equipment 3");
-    await page.locator("label.label-result", { hasText: "Lab equipment 3 ·" }).click();
+    // Every item is listed at first, 24 to a page, with nothing chosen.
+    await expect(tiles).toHaveCount(24);
+    await expect(page.getByText("No labels selected yet.")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Items pages" })).toBeVisible();
+
+    // Click to choose, click again to take it out.
+    await tile("Classroom projector").click();
+    await expect(tile("Classroom projector")).toHaveAttribute("aria-pressed", "true");
     await expect(labels).toHaveCount(1);
-    await search.fill("Lab equipment 4");
-    await page.locator("label.label-result", { hasText: "Lab equipment 4 ·" }).click();
+    // Choosing keeps the place: focus stays on the tile and the label size stays shown.
+    await expect(tile("Classroom projector")).toBeFocused();
+    await expect(page.getByRole("combobox", { name: "Label size" })).toHaveValue("");
+    await expect(
+      page.getByRole("combobox", { name: "Label size" }).locator("option:checked"),
+    ).toHaveText(/Medium/);
+    await tile("Classroom projector").click();
+    await expect(labels).toHaveCount(0);
+
+    // A filter narrows the grid and keeps what is already chosen.
+    await tile("Lab equipment 10").click();
+    await expect(labels).toHaveCount(1);
+    await page.getByLabel("Search", { exact: true }).fill("INV-TST-OK-01-0004");
+    await expect(tiles).toHaveCount(1);
+    await tile("Lab equipment 4").click();
     await expect(labels).toHaveCount(2);
-    await expect(page.getByText("2 picked")).toBeVisible();
+    await page.getByRole("link", { name: "Show all items" }).first().click();
+    await expect(tiles).toHaveCount(24);
+    await expect(labels).toHaveCount(2);
+    await expect(tile("Lab equipment 10")).toHaveAttribute("aria-pressed", "true");
+
+    // Choose many at once, across pages.
+    await page.getByRole("button", { name: "Clear selection" }).click();
+    await expect(labels).toHaveCount(0);
+    await page.getByRole("button", { name: "Select this page" }).click();
+    await expect(labels).toHaveCount(24);
+    await page
+      .getByRole("navigation", { name: "Items pages" })
+      .getByRole("link", { name: "Next" })
+      .click();
+    await expect(tiles).toHaveCount(3);
+    await page.getByRole("button", { name: "Select this page" }).click();
+    await expect(labels).toHaveCount(27);
     await expect(page.getByRole("button", { name: "Print labels" })).toBeVisible();
 
-    // Untick one to remove it.
-    await page
-      .locator(".label-choice-group label.filter-chip", { hasText: "Lab equipment 3" })
-      .first()
-      .click();
-    await expect(labels).toHaveCount(1);
-
-    // Clearing the picks prints a whole category instead.
-    await page.getByRole("link", { name: "Clear picked items" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/inventory\/labels$/);
-    await expect(page.getByText(/\d+ picked/)).toHaveCount(0);
-    await page
-      .getByRole("combobox", { name: "Category", exact: true })
-      .selectOption({ label: "Launch test equipment" });
-    await expect(labels).toHaveCount(27);
-    await expect(sheets).toHaveCount(2);
-
-    // The sizes: 40, 24, 8, and 2 labels per sheet.
+    // The sizes: 40, 24, 8, and 2 labels per sheet, keeping the choice.
     const size = page.getByRole("combobox", { name: "Label size" });
     for (const [layout, count] of [
       ["small", 1],
       ["large", 4],
       ["poster", 14],
-      ["compact", 2],
+      ["", 2],
     ] as const) {
       await size.selectOption(layout);
       await expect(sheets).toHaveCount(count);
     }
-    // Every label still fits inside its box at the smallest size.
+    await expect(labels).toHaveCount(27);
     await size.selectOption("small");
     await expect(sheets).toHaveCount(1);
     const overflow = await labels.evaluateAll((elements) =>

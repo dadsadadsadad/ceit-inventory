@@ -82,11 +82,11 @@ export default async function ItemLabelPage({
               <span className="block text-sm font-semibold">Label size</span>
               <select
                 name="size"
-                defaultValue={size}
+                defaultValue={size === "medium" ? "" : size}
                 className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
               >
                 {Object.entries(labelSizes).map(([key, name]) => (
-                  <option key={key} value={key}>
+                  <option key={key} value={key === "medium" ? "" : key}>
                     {name}
                   </option>
                 ))}

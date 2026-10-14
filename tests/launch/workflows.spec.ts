@@ -305,7 +305,7 @@ test("batch labels keep all 27 items across two sheets", async ({ page }) => {
   await page
     .getByRole("combobox", { name: "Room", exact: true })
     .selectOption({ label: "Launch test lab" });
-  await page.getByRole("button", { name: "Preview labels" }).click();
+  await page.getByRole("button", { name: "Select all 27" }).click();
   await expect(page.locator(".sheet-label")).toHaveCount(27);
   await expect(page.locator(".label-sheet")).toHaveCount(2);
   await page.emulateMedia({ media: "print" });
@@ -329,7 +329,6 @@ test("batch labels keep all 27 items across two sheets", async ({ page }) => {
   expect((await PDFDocument.load(compact)).getPageCount()).toBe(2);
   await page.emulateMedia({ media: "screen" });
   await page.getByRole("combobox", { name: "Label size" }).selectOption("large");
-  await page.getByRole("button", { name: "Preview labels" }).click();
   await expect(page.locator(".label-sheet")).toHaveCount(4);
   await page.emulateMedia({ media: "print" });
   const large = await page.pdf({

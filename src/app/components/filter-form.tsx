@@ -38,6 +38,13 @@ function applyQueryToForm(form: HTMLFormElement, query: URLSearchParams) {
     } else if (element instanceof HTMLInputElement && element.type === "radio") {
       // A radio group with nothing in the URL goes back to its default choice.
       element.checked = values.length ? values.includes(element.value) : element.defaultChecked;
+    } else if (element instanceof HTMLSelectElement) {
+      // A choice missing from the URL is the standard one: an empty option, else the first.
+      const options = Array.from(element.options);
+      const wanted = values[0] ?? "";
+      element.value = options.some((option) => option.value === wanted)
+        ? wanted
+        : ((options.find((option) => option.value === "") ?? options[0])?.value ?? "");
     } else {
       element.value = values[0] ?? "";
     }

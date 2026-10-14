@@ -989,23 +989,26 @@
   font-size: 10pt;
 }
 
-/* The label picker: room, category, and size in a row; picking items below. */
+/* The label picker: search, room, category, and size in a row, then a grid of item tiles. */
 .label-picker {
-  display: grid;
-  gap: 1.1rem;
-}
-
-.label-picker-row {
+  align-items: end;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
 }
 
-.label-picker-items {
-  border-top: 1px dashed var(--border-input);
-  display: grid;
-  gap: 0.85rem;
-  padding-top: 1rem;
+.label-picker > .label-picker-search {
+  grid-column: span 2;
+}
+
+.label-picker > .label-picker-reset {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 639px) {
+  .label-picker > .label-picker-search {
+    grid-column: 1 / -1;
+  }
 }
 
 .label-search {
@@ -1026,23 +1029,125 @@
   padding-left: 2.3rem;
 }
 
-.label-choice-group {
-  border: 0;
+.label-grid-block {
   display: grid;
+  gap: 0.9rem;
+}
+
+.label-grid-block[aria-busy="true"] .label-grid {
+  opacity: 0.75;
+}
+
+.label-grid-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: space-between;
+}
+
+.label-grid-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.label-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  list-style: none;
   margin: 0;
-  min-width: 0;
   padding: 0;
+  transition: opacity var(--interaction-duration) ease;
 }
 
-.label-choice-group legend {
-  margin-bottom: 0.5rem;
-  padding: 0;
+.label-tile {
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  cursor: pointer;
+  display: grid;
+  gap: 0.2rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 6.25rem;
+  padding: 0.75rem 0.8rem;
+  position: relative;
+  text-align: left;
+  transition:
+    background-color var(--interaction-duration) ease,
+    border-color var(--interaction-duration) ease,
+    box-shadow var(--interaction-duration) ease;
+  width: 100%;
 }
 
-.label-result small {
+.label-tile:hover {
+  border-color: var(--accent);
+}
+
+.label-tile:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.label-tile[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.label-tile-check {
+  align-items: center;
+  border: 1.5px solid var(--border-input);
+  border-radius: 0.3rem;
+  color: var(--accent-on-strong);
+  display: inline-flex;
+  height: 1.15rem;
+  justify-content: center;
+  position: absolute;
+  right: 0.65rem;
+  top: 0.65rem;
+  width: 1.15rem;
+}
+
+.label-tile[aria-pressed="true"] .label-tile-check {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.label-tile-symbol {
+  color: var(--muted);
+  grid-row: 1 / span 3;
+  padding-right: 0.55rem;
+  padding-top: 0.1rem;
+}
+
+.label-tile[aria-pressed="true"] .label-tile-symbol {
+  color: var(--accent);
+}
+
+.label-tile-name {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  padding-right: 1.5rem;
+}
+
+.label-tile-tag {
+  color: var(--muted-strong);
+  font-family: var(--font-tag);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.label-tile-meta {
   color: var(--muted);
   font-size: 0.875rem;
+  line-height: 1.35;
 }
 
 @page {
