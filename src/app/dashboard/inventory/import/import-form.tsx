@@ -21,7 +21,6 @@ function rowsText(count: number) {
   return `${count.toLocaleString()} ${count === 1 ? "row" : "rows"}`;
 }
 
-// Upload a spreadsheet, check it, and show what was understood, adjusted and skipped.
 export function ImportForm() {
   const preserveFields = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -95,7 +94,6 @@ export function ImportForm() {
 
       <label className="block">
         <span className="text-sm font-semibold">CSV or Excel file</span>
-        {/* Choose the CSV or Excel file to import. */}
         <input
           required
           name="file"
@@ -105,7 +103,6 @@ export function ImportForm() {
         />
       </label>
 
-      {/* Defaults for rows that leave these out. */}
       <FormSection
         title="Defaults for missing details"
         hint="Used when a row, or the whole file, has no category, location, or room"
@@ -140,8 +137,8 @@ export function ImportForm() {
           </label>
         </div>
         <p className="muted mt-3 text-xs leading-5">
-          Leave these empty and rows without a category or location are filed under “Uncategorized”
-          and “Unassigned”, which you can fix later.
+          Leave these empty and rows without a category or location are filed under
+          &quot;Uncategorized&quot; and &quot;Unassigned&quot;, which you can fix later.
         </p>
       </FormSection>
 
@@ -199,8 +196,9 @@ export function ImportForm() {
               other row is still imported.
             </li>
             <li>
-              <strong>Odd values</strong> such as “₱1,200”, “8GB”, “1/15/2026”, or “broken” are
-              understood. If one cannot be, that detail is left blank and you are told.
+              <strong>Odd values</strong> such as &quot;₱1,200&quot;, &quot;8GB&quot;,
+              &quot;1/15/2026&quot;, or &quot;broken&quot; are understood. If one cannot be, that
+              detail is left blank and you are told.
             </li>
             <li>
               <strong>Equipment</strong> with a quantity above 1 becomes that many separate items,
@@ -215,7 +213,6 @@ export function ImportForm() {
         </div>
       </details>
 
-      {/* Check the file without saving, or import every row that is understood. */}
       <div className="flex flex-wrap gap-3">
         <button
           name="intent"
@@ -224,7 +221,7 @@ export function ImportForm() {
           onClick={() => setIntent("check")}
           className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
         >
-          {pending && intent === "check" ? "Checking file…" : "Check file"}
+          {pending && intent === "check" ? "Checking file..." : "Check file"}
         </button>
         <button
           name="intent"
@@ -233,11 +230,10 @@ export function ImportForm() {
           onClick={() => setIntent("import")}
           className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
         >
-          {pending && intent === "import" ? "Importing…" : "Import"}
+          {pending && intent === "import" ? "Importing..." : "Import"}
         </button>
       </div>
 
-      {/* What happened. */}
       {hasResult ? (
         <div
           className={`notice ${result.imported && !result.errors.length ? "notice-success" : ""} rounded-lg px-4 py-3 text-sm`}

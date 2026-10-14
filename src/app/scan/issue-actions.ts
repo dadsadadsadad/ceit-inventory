@@ -11,7 +11,6 @@ import { isInventoryQrCode } from "@/lib/qr-code";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { runTransaction } from "@/lib/database-transaction";
 
-// Validate the issue and send it to maintenance.
 export async function submitIssueReport(formData: FormData) {
   return formAction(async () => {
     const text = (key: string) => stripControlCharacters(String(formData.get(key) ?? "")).trim();
@@ -36,9 +35,9 @@ export async function submitIssueReport(formData: FormData) {
       throw new FormError("Describe the issue in 10 to 2,000 characters.");
     }
     await enforcePublicRequestRateLimit(PublicRequestKind.ISSUE);
-    // Reuse an identical open report.
-    const itemId = await runTransaction(async (transaction) => {
-      const item = await transaction.inventoryItem.findUnique({
+    // reuse an identical open report
+    const itemId = await runTransaction(async (tx) => {
+      const item = await tx.inventoryItem.findUnique({
         where: { qrCode },
         select: { id: true, status: true },
       });
@@ -47,7 +46,7 @@ export async function submitIssueReport(formData: FormData) {
           "This item is no longer accepting issue reports. Please contact CEIT staff.",
         );
       }
-      const duplicate = await transaction.maintenanceTicket.findFirst({
+      const duplicate = await tx.maintenanceTicket.findFirst({
         where: {
           inventoryItemId: item.id,
           source: "QR",
@@ -57,7 +56,7 @@ export async function submitIssueReport(formData: FormData) {
         },
       });
       if (!duplicate) {
-        const ticket = await transaction.maintenanceTicket.create({
+        const ticket = await tx.maintenanceTicket.create({
           data: {
             inventoryItemId: item.id,
             title,
@@ -66,7 +65,7 @@ export async function submitIssueReport(formData: FormData) {
             reportedByName: reporterName,
           },
         });
-        await transaction.inventoryAudit.create({
+        await tx.inventoryAudit.create({
           data: auditEventData({
             action: "REQUESTED",
             entity: {

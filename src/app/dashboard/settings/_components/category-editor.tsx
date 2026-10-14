@@ -4,7 +4,6 @@ import { SubmitButton } from "@/app/components/submit-button";
 
 import { deleteCategory, setCategoryActive, updateCategory } from "../actions";
 
-// Edit a category or stop using it for new items.
 export function CategoryEditor({
   category,
 }: {
@@ -37,7 +36,6 @@ export function CategoryEditor({
           ) : null}
         </span>
       </summary>
-      {/* Save category details. */}
       <FeedbackForm
         resetOnSuccess={false}
         action={updateCategory}
@@ -78,24 +76,22 @@ export function CategoryEditor({
           />
         </label>
         <SubmitButton
-          pendingLabel="Saving…"
+          pendingLabel="Saving..."
           className="secondary-button rounded-lg px-4 py-2 text-sm font-semibold"
         >
           Save
         </SubmitButton>
       </FeedbackForm>
-      {/* Enable or disable this category. */}
       <FeedbackForm action={setCategoryActive} className="mt-3">
         <input type="hidden" name="id" value={category.id} />
         <input type="hidden" name="isActive" value={String(!category.isActive)} />
-        <SubmitButton pendingLabel="Updating…" className="accent-link text-xs font-semibold">
+        <SubmitButton pendingLabel="Updating..." className="accent-link text-xs font-semibold">
           {category.isActive ? "Deactivate category" : "Reactivate category"}
         </SubmitButton>
         {category.isActive && category._count.items > 0 ? (
           <span className="muted ml-2 text-xs">Existing records keep this category.</span>
         ) : null}
       </FeedbackForm>
-      {/* Delete an unused category. */}
       <FeedbackForm action={deleteCategory} className="divider mt-4 border-t pt-4">
         <input type="hidden" name="id" value={category.id} />
         <div className="flex flex-wrap items-end gap-3">
@@ -115,7 +111,7 @@ export function CategoryEditor({
           </label>
           <SubmitButton
             disabled={category._count.items > 0}
-            pendingLabel="Deleting…"
+            pendingLabel="Deleting..."
             className="danger-button rounded-lg px-4 py-2 text-sm font-semibold"
           >
             Delete category

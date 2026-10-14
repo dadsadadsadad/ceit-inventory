@@ -20,11 +20,11 @@ import { prisma } from "@/prisma";
 
 const qrCodePattern = /^[a-z0-9_-]{8,128}$/i;
 const studentNumberPattern = /^[a-z0-9][a-z0-9./-]*$/i;
-const maximumBorrowQuantity = 1_000;
+const maxBorrowQuantity = 1_000;
 
-function readText(formData: FormData, key: string, maximumLength: number) {
+function readText(formData: FormData, key: string, maxLength: number) {
   const value = stripControlCharacters(String(formData.get(key) ?? "")).trim();
-  if (value.length > maximumLength) {
+  if (value.length > maxLength) {
     throw new FormError("One of the submitted fields is too long.");
   }
   return value;
@@ -34,11 +34,11 @@ function requiredText(
   formData: FormData,
   key: string,
   label: string,
-  maximumLength: number,
-  minimumLength = 1,
+  maxLength: number,
+  minLength = 1,
 ) {
-  const value = readText(formData, key, maximumLength);
-  if (value.length < minimumLength) {
+  const value = readText(formData, key, maxLength);
+  if (value.length < minLength) {
     throw new FormError(`${label} is required.`);
   }
   return value;
@@ -52,7 +52,6 @@ function readQrCode(formData: FormData) {
   return qrCode;
 }
 
-// Normalize the student number used to match requests.
 function readStudentNumber(formData: FormData) {
   const studentNumber = requiredText(formData, "studentNumber", "Student number", 64, 3);
   if (!studentNumberPattern.test(studentNumber)) {
@@ -61,7 +60,6 @@ function readStudentNumber(formData: FormData) {
   return studentNumber.toUpperCase();
 }
 
-// Validate and normalize the contact number.
 function readContact(formData: FormData) {
   const contact = requiredText(formData, "contact", "Contact number", 32, 7);
   if (!normalizeContactNumber(contact)) {
@@ -70,14 +68,13 @@ function readContact(formData: FormData) {
   return contact;
 }
 
-// Require a positive borrowing quantity.
 function readQuantity(formData: FormData) {
   const value = requiredText(formData, "requestedQuantity", "Quantity", 12);
   if (!/^\d+$/.test(value)) {
     throw new FormError("Quantity must be a whole number.");
   }
   const quantity = Number(value);
-  if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > maximumBorrowQuantity) {
+  if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > maxBorrowQuantity) {
     throw new FormError("Choose a quantity between 1 and 1,000.");
   }
   return quantity;
@@ -91,7 +88,7 @@ function isSerializationFailure(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
 }
 
-// Show a useful request error without database details.
+// don't leak db errors
 function publicBorrowError(error: unknown) {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
     return error;
@@ -124,13 +121,12 @@ type BorrowRequestInput = {
   studentNumber: string;
 };
 
-// Check availability and save the request in one transaction.
 async function createBorrowRequest(input: BorrowRequestInput) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       await prisma.$transaction(
-        async (transaction) => {
-          const item = await transaction.inventoryItem.findUnique({
+        async (tx) => {
+          const item = await tx.inventoryItem.findUnique({
             where: { qrCode: input.qrCode },
             select: {
               id: true,
@@ -152,10 +148,9 @@ async function createBorrowRequest(input: BorrowRequestInput) {
             itemUnavailable();
           }
 
-          // Requests that nobody acted on in time no longer count against the student,
-          // because a student cannot cancel them.
+          // lapsed requests don't count, students can't cancel them
           const now = new Date();
-          const studentRequests = await transaction.borrowRequest.findMany({
+          const studentRequests = await tx.borrowRequest.findMany({
             where: {
               studentNumber: input.studentNumber,
               status: {
@@ -195,9 +190,9 @@ async function createBorrowRequest(input: BorrowRequestInput) {
                 request.status === borrowStatus.RETURN_REQUESTED ||
                 request.expectedReturnDate > now),
           );
-          if (openRequests.length >= input.policy.maximumActiveRequestsPerStudent) {
+          if (openRequests.length >= input.policy.maxActiveRequestsPerStudent) {
             throw new FormError(
-              `You already have ${input.policy.maximumActiveRequestsPerStudent} open requests or loans. Wait for CEIT staff to process them, or return equipment, before requesting more.`,
+              `You already have ${input.policy.maxActiveRequestsPerStudent} open requests or loans. Wait for CEIT staff to process them, or return equipment, before requesting more.`,
             );
           }
           const overlapsExisting = openRequests.some(
@@ -211,14 +206,14 @@ async function createBorrowRequest(input: BorrowRequestInput) {
           }
 
           await checkLoanAvailability(
-            transaction,
+            tx,
             item.id,
             input.startsAt,
             input.expectedReturnDate,
             input.requestedQuantity,
           );
 
-          const request = await transaction.borrowRequest.create({
+          const request = await tx.borrowRequest.create({
             data: {
               inventoryItemId: item.id,
               borrowerName: input.borrowerName,
@@ -233,7 +228,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
               status: borrowStatus.REQUESTED,
             },
           });
-          await transaction.inventoryAudit.create({
+          await tx.inventoryAudit.create({
             data: auditEventData({
               action: "REQUESTED",
               entity: {
@@ -268,7 +263,6 @@ async function createBorrowRequest(input: BorrowRequestInput) {
   }
 }
 
-// Validate the public borrow form before creating a request.
 export async function submitBorrowRequest(formData: FormData) {
   return formAction(async () => {
     if (readText(formData, "website", 255)) {
@@ -307,9 +301,7 @@ export async function submitBorrowRequest(formData: FormData) {
       isReservation,
     };
 
-    // Validate the form first. Correcting an ordinary typo must not consume the
-    // public request quota, while valid submissions remain rate limited before
-    // they can write to the database.
+    // validate before rate limiting so a typo doesn't use up the quota
     await enforcePublicRequestRateLimit(PublicRequestKind.BORROW);
     await createBorrowRequest(input);
     refreshInventoryViews();
@@ -317,7 +309,6 @@ export async function submitBorrowRequest(formData: FormData) {
   });
 }
 
-// Find the active loan and ask staff to confirm its return.
 export async function submitReturnRequest(formData: FormData) {
   return formAction(async () => {
     if (readText(formData, "website", 255)) {
@@ -330,13 +321,13 @@ export async function submitReturnRequest(formData: FormData) {
     const contact = readContact(formData);
     const returnRequestNotes = readText(formData, "returnRequestNotes", 1_000);
 
-    // Like borrowing, only valid forms enter the public request quota.
+    // same as borrow, validate first
     await enforcePublicRequestRateLimit(PublicRequestKind.RETURN);
 
     try {
       await prisma.$transaction(
-        async (transaction) => {
-          const candidates = await transaction.borrowRequest.findMany({
+        async (tx) => {
+          const candidates = await tx.borrowRequest.findMany({
             where: {
               studentNumber,
               status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
@@ -358,7 +349,7 @@ export async function submitReturnRequest(formData: FormData) {
               "A return request for this item is already waiting for staff confirmation.",
             );
           }
-          await transaction.borrowRequest.update({
+          await tx.borrowRequest.update({
             where: { id: request.id },
             data: {
               status: borrowStatus.RETURN_REQUESTED,
@@ -366,7 +357,7 @@ export async function submitReturnRequest(formData: FormData) {
               returnRequestNotes: returnRequestNotes || null,
             },
           });
-          await transaction.inventoryAudit.create({
+          await tx.inventoryAudit.create({
             data: auditEventData({
               action: "REQUESTED",
               entity: {

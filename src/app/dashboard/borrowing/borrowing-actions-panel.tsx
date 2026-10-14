@@ -19,7 +19,6 @@ import { ReminderControls } from "./reminder-controls";
 
 const hoursMs = 60 * 60 * 1000;
 
-// Staff confirm who is at the desk before equipment leaves, because anyone can type a student number.
 function IdCheck({ id }: { id: string }) {
   return (
     <label className="id-check" htmlFor={id}>
@@ -29,7 +28,6 @@ function IdCheck({ id }: { id: string }) {
   );
 }
 
-// Show the staff actions allowed for this request's status.
 export function BorrowingActions({ request }: { request: BorrowingRecord }) {
   const now = new Date();
   const expired = request.expectedReturnDate <= now;
@@ -58,7 +56,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
               <input type="hidden" name="requestId" value={request.id} />
               <IdCheck id={`id-check-${request.id}`} />
               <SubmitButton
-                pendingLabel="Checking out…"
+                pendingLabel="Checking out..."
                 className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
               >
                 Check out equipment
@@ -82,7 +80,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
             className="field min-w-0 flex-1 rounded-lg px-3 py-2 text-sm"
           />
           <SubmitButton
-            pendingLabel="Cancelling…"
+            pendingLabel="Cancelling..."
             className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             Cancel reservation
@@ -119,7 +117,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
           {request.isReservation ? null : <IdCheck id={`id-check-${request.id}`} />}
           <SubmitButton
             disabled={expired || lapsed}
-            pendingLabel={request.isReservation ? "Approving…" : "Checking out…"}
+            pendingLabel={request.isReservation ? "Approving..." : "Checking out..."}
             className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             {expired
@@ -148,7 +146,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
             placeholder="Reason or staff note"
           />
           <SubmitButton
-            pendingLabel="Declining…"
+            pendingLabel="Declining..."
             className="danger-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             Decline
@@ -165,7 +163,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
     const suggestedReturn = new Date(
       Math.max(request.expectedReturnDate.getTime(), now.getTime()) + 24 * hoursMs,
     );
-    // Offer a reminder from a day before the return time until the equipment is back.
+    // show the reminder from a day before it's due
     const dueSoon = request.expectedReturnDate.getTime() - now.getTime() < 24 * hoursMs;
     return (
       <div className="request-actions">
@@ -186,7 +184,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
             placeholder="Optional return note"
           />
           <SubmitButton
-            pendingLabel="Recording…"
+            pendingLabel="Recording..."
             className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             {request.status === borrowStatus.RETURN_REQUESTED
@@ -245,7 +243,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
               />
             </label>
             <SubmitButton
-              pendingLabel="Saving…"
+              pendingLabel="Saving..."
               className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
             >
               Save return time

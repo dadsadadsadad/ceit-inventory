@@ -6,7 +6,7 @@ import { useEffect } from "react";
 const interactiveSelector =
   "a, button, input, select, textarea, label, summary, [data-row-navigation-ignore]";
 
-// Open a row without hijacking its buttons or checkboxes.
+// ignore clicks on buttons and checkboxes inside the row
 export function InventoryRowNavigation() {
   const router = useRouter();
 

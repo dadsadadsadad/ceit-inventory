@@ -18,7 +18,6 @@ const periodLabels: Record<(typeof exportPeriods)[number], string> = {
   "this-year": "This year",
 };
 
-// Search, quick views, and the less common filters for the audit trail.
 export function AuditFilters({ filters }: { filters: AuditTrailFilters }) {
   const advancedOpen = Boolean(
     filters.actor || filters.action || filters.from || filters.to || filters.period !== "all",
@@ -34,7 +33,7 @@ export function AuditFilters({ filters }: { filters: AuditTrailFilters }) {
           defaultValue={filters.query ?? ""}
           maxLength={120}
           className="field w-full rounded-lg px-3 py-2.5 text-sm"
-          placeholder="Search events, people, items, or asset tags…"
+          placeholder="Search events, people, items, or asset tags..."
         />
       </label>
 

@@ -6,10 +6,9 @@ import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 import { ImportForm } from "./import-form";
 
-// A large file is read and saved row by row, so give the import room to finish.
+// big files take a while
 export const maxDuration = 60;
 
-// Staff page for spreadsheet imports.
 export default async function ImportInventoryPage() {
   await requireInventoryManagementPageAccess();
 
@@ -30,7 +29,6 @@ export default async function ImportInventoryPage() {
           </p>
         </header>
 
-        {/* Spreadsheet upload and validation results. */}
         <ImportForm />
       </div>
     </div>

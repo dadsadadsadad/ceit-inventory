@@ -3,13 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-/**
- * Shows a thin progress bar the moment a link to another page is pressed, before the server has
- * answered, so every click gets an immediate response (including on a phone, where the menu
- * closes and there is no other cue). The bar is a CSS rule on `html[data-navigating]`; this
- * component only switches the attribute on when an internal link is pressed and off when the new
- * page arrives.
- */
+// shows the top progress bar as soon as an internal link is clicked (css on html[data-navigating])
 export function NavigationFeedback() {
   const pathname = usePathname();
 
@@ -37,13 +31,13 @@ export function NavigationFeedback() {
         (link.target && link.target !== "_self") ||
         link.hasAttribute("download") ||
         link.origin !== window.location.origin ||
-        // Changing only the filters or the hash is already instant and shows its own state.
+        // same page with new params or hash, no bar needed
         link.pathname === window.location.pathname
       ) {
         return;
       }
       root.setAttribute("data-navigating", "true");
-      // A cancelled or failed navigation must not leave the bar running.
+      // clear it if navigation fails
       clearTimeout(timeout);
       timeout = setTimeout(() => root.removeAttribute("data-navigating"), 10_000);
     }

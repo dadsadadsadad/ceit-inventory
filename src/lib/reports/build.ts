@@ -34,16 +34,13 @@ const builders: Record<ReportKind, (context: BuilderContext) => Promise<ReportMo
   warranty: buildWarrantyReport,
 };
 
-/**
- * Build one report from the page's query string. Throws a `ReportRequestError` for a request that
- * can not be answered, such as an unknown report or a download that is too large.
- */
+// throws ReportRequestError for unknown reports or downloads that are too big
 export async function buildReport(
   parameters: URLSearchParams,
   purpose: ReportPurpose,
   now = new Date(),
 ) {
-  // Older links called the borrowing report "borrowings".
+  // old name
   const requested = parameters.get("kind") ?? "overview";
   const kind = requested === "borrowings" ? "borrowing" : requested;
   if (!isReportKind(kind)) {
@@ -58,7 +55,6 @@ export async function buildReport(
   return builders[kind]({ filters, now, parameters, purpose });
 }
 
-/** The download name: the report, "-filtered" when narrowed, and today's date in Manila. */
 export function downloadName(report: ReportModel, extension: "csv" | "pdf", now = new Date()) {
   return reportFilename(
     reportKindInfo[report.kind].stem,

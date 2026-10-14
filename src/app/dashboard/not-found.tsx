@@ -3,7 +3,7 @@ import { SearchX } from "lucide-react";
 
 import { EmptyState } from "@/app/components/empty-state";
 
-// A missing record inside the workspace keeps the navigation, so staff can carry on.
+// keeps the sidebar so staff aren't stuck
 export default function DashboardNotFound() {
   return (
     <div className="page">

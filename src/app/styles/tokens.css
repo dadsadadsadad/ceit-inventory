@@ -1,13 +1,6 @@
 @import "tailwindcss";
 
-/*
-  Design tokens for the CEIT Inventory "ledger" look: warm paper and dark ink, one orange accent,
-  a serif for titles and numbers, a clean sans for the interface, and a mono for asset tags.
-
-  The accent tokens (--accent, --accent-hover, --accent-soft, --accent-strong, --accent-strong-hover,
-  --accent-text, --accent-on-strong, --border-strong) are also written by the appearance picker in
-  src/lib/appearance.ts, so everything that should follow the accent reads them from here.
-*/
+/* the accent vars are also set from js by the appearance picker (lib/appearance.ts) */
 
 :root {
   --font-ui: var(--font-workspace), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -43,7 +36,7 @@
   --mix-lost: #b46c90;
 }
 
-/* Paper: the light theme. */
+/* light */
 :root,
 html[data-theme="light"] {
   color-scheme: light;
@@ -73,7 +66,7 @@ html[data-theme="light"] {
   --accent-on-strong: #ffffff;
 }
 
-/* Ink: the dark theme. */
+/* dark */
 html[data-theme="dark"] {
   color-scheme: dark;
   --background: #131110;
@@ -91,7 +84,7 @@ html[data-theme="dark"] {
   --border-strong: rgb(255 155 80 / 48%);
   --shadow: 0 1px 0 rgb(0 0 0 / 30%), 0 14px 30px -16px rgb(0 0 0 / 70%);
   --shadow-float: 0 22px 60px -12px rgb(0 0 0 / 75%);
-  /* The grain is dark ink, which cannot show on a dark page, so it is switched off there. */
+  /* no grain on dark */
   --grain-opacity: 0;
 
   --accent: #ff9b50;

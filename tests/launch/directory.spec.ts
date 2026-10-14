@@ -29,7 +29,7 @@ const categoryName = "Directory test computers";
 const roomName = "Directory test room";
 const marker = "Zq-Directory";
 
-// Three PCs with shared and distinct parts, and software with different license states.
+// 3 pcs with some shared parts and different license states
 test.beforeAll(async () => {
   await cleanUp();
   const category = (
@@ -127,7 +127,7 @@ test("software groups the same title across PCs and filters by license", async (
   await page.goto(`/dashboard/inventory/software?q=${encodeURIComponent("Zq")}`);
   const list = page.getByRole("region", { name: "Installed software" });
 
-  // "Zq Studio" and "zq studio" count as one title across all three PCs.
+  // case insensitive title grouping
   const studio = list.getByRole("listitem").filter({ hasText: "Zq Studio" }).first();
   await expect(studio).toContainText("3 PCs");
   await expect(studio).toContainText("2 versions");
@@ -136,7 +136,6 @@ test("software groups the same title across PCs and filters by license", async (
   await expect(list.getByRole("heading", { name: /^zq studio$/i })).toHaveCount(1);
   await expect(list.getByRole("heading", { name: "Zq Notes" })).toBeVisible();
 
-  // License filter: expired shows only Studio; the select applies without a submit button.
   await page.locator('select[name="license"]').selectOption("expired");
   await expect(page).toHaveURL(/license=expired/);
   await expect(list.getByRole("heading", { name: /^zq studio$/i })).toBeVisible();
@@ -148,7 +147,7 @@ test("software groups the same title across PCs and filters by license", async (
   await expect(list.getByRole("heading", { name: "Zq Render" })).toBeVisible();
   await expect(list.getByRole("heading", { name: /^zq studio$/i })).toHaveCount(0);
 
-  // Search matches a PC name, so the directory answers "what is on this machine?".
+  // search by pc name
   await page.goto(
     `/dashboard/inventory/software?q=${encodeURIComponent(`${marker} PC B`)}&sort=installs`,
   );
@@ -156,7 +155,6 @@ test("software groups the same title across PCs and filters by license", async (
   await expect(list.getByRole("heading", { name: "Zq Notes" })).toBeVisible();
   await expect(list.getByRole("heading", { name: "Zq Render" })).toHaveCount(0);
 
-  // Records can be opened as a report with the same filters.
   await expect(page.getByRole("link", { name: "Open as report" })).toHaveAttribute(
     "href",
     /kind=software/,
@@ -176,22 +174,18 @@ test("hardware lists components and which PCs have them", async ({ page }) => {
   await expect(processorGroup).toContainText(`${marker} PC B`);
   await expect(processorGroup).not.toContainText(`${marker} PC C`);
 
-  // The By PC view shows every machine, including one with an incomplete profile.
   await page.getByRole("radio", { name: "By PC" }).check({ force: true });
   await expect(page).toHaveURL(/view=pcs/);
   const machines = page.getByRole("region", { name: "PCs and their hardware" });
   await expect(machines).toContainText(`${marker} PC C`);
 
-  // The "incomplete" filter keeps only machines with missing hardware details.
   await page.getByLabel("Only PCs missing details").check();
   await expect(page).toHaveURL(/incomplete=1/);
   await expect(machines).toContainText(`${marker} PC C`);
   await expect(machines).not.toContainText(`${marker} PC A`);
 });
 
-test("the audit trail starts with important events and tucks routine ones away", async ({
-  page,
-}) => {
+test("audit trail shows important events first", async ({ page }) => {
   await query(
     `INSERT INTO "InventoryAudit" (id,action,summary,"entityType","entityLabel") VALUES
      (gen_random_uuid(),'SCANNED','Audit view test routine scan.','inventory-item','Audit view test scan'),
@@ -206,7 +200,6 @@ test("the audit trail starts with important events and tucks routine ones away",
   await expect(events).not.toContainText("Audit view test routine scan.");
   await expect(page.getByRole("heading", { name: "Today", level: 2 })).toBeVisible();
 
-  // Quick views apply instantly and narrow the list.
   await page.getByRole("radio", { name: "Borrowing" }).check({ force: true });
   await expect(page).toHaveURL(/view=borrowing/);
   await expect(events).toContainText("Audit view test borrowing event.");
@@ -221,7 +214,7 @@ test("the audit trail starts with important events and tucks routine ones away",
   await expect(events).toContainText("Audit view test routine scan.");
   await expect(events).toContainText("Audit view test record edit.");
 
-  // An unknown view falls back to the default with a notice instead of an error page.
+  // unknown view falls back with a notice
   await page.goto("/dashboard/activity?view=nonsense");
   await expect(page.getByRole("alert").filter({ hasText: "Invalid audit view" })).toBeVisible();
 });

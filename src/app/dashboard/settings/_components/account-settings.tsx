@@ -4,11 +4,9 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { updateOwnAccount } from "../actions";
 import { PasswordInput } from "@/app/components/password-input";
 
-// Change the signed-in account's details and password.
 export function AccountSettings({ email, username }: { email: string; username: string }) {
   return (
     <section className="card rounded-lg p-5 sm:p-6">
-      {/* Signed-in account settings. */}
       <div>
         <p className="eyebrow">Your account</p>
         <h2 className="mt-2 text-lg font-semibold">Sign-in details</h2>
@@ -47,7 +45,7 @@ export function AccountSettings({ email, username }: { email: string; username: 
               minLength={3}
               maxLength={32}
               pattern={"[A-Za-z0-9._\\-]{3,32}"}
-              title="Use 3–32 letters, numbers, periods, underscores, or hyphens."
+              title="Use 3-32 letters, numbers, periods, underscores, or hyphens."
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
@@ -86,7 +84,7 @@ export function AccountSettings({ email, username }: { email: string; username: 
           password.
         </p>
         <SubmitButton
-          pendingLabel="Updating account…"
+          pendingLabel="Updating account..."
           className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
         >
           Update account

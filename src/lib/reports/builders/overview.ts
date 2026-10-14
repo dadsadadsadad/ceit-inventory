@@ -47,7 +47,7 @@ function firstOf(heading: string, shown: number, total: number) {
   return total > shown ? `Showing the first ${shown} of ${total.toLocaleString()}.` : undefined;
 }
 
-// Where everything stands today. Nothing here depends on filters.
+// ignores filters
 export async function buildOverviewReport(context: BuilderContext): Promise<ReportModel> {
   const { now } = context;
   const out = { status: { in: outStatuses } };

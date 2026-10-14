@@ -1,8 +1,4 @@
-/**
- * Page numbers for a pager. `null` marks a gap ("…") between non-adjacent pages.
- * The first and last page are always present; with many pages the current page shows
- * two neighbours on each side.
- */
+// null = gap. always shows first and last, plus 2 pages around the current one
 export function paginationEntries(totalPages: number, currentPage: number) {
   const pages = new Set<number>([1, totalPages]);
 
@@ -11,6 +7,7 @@ export function paginationEntries(totalPages: number, currentPage: number) {
       pages.add(page);
     }
   } else {
+    // 5 page window around the current page, pinned at the ends
     const start =
       currentPage <= 3 ? 1 : currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 2;
     const end = currentPage <= 3 ? 5 : currentPage >= totalPages - 2 ? totalPages : currentPage + 2;

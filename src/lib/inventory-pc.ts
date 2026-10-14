@@ -13,7 +13,7 @@ export function isSingleTrackedAsset({
   return itemType === ItemType.ASSET && quantity === 1;
 }
 
-// Allow computer details only for a single tagged asset.
+// only single tagged assets can have pc details
 export function canHaveComputerDetails(item: ItemForPcProfile) {
   return item.isComputer && isSingleTrackedAsset(item);
 }

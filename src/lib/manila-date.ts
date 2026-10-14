@@ -23,7 +23,6 @@ export function manilaCalendarDate(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-/** The hour of the day in the Philippines, from 0 to 23. */
 export function manilaHour(date = new Date()) {
   return (date.getUTCHours() + 8) % 24;
 }
@@ -38,11 +37,9 @@ export function startOfManilaDay(date = new Date()) {
   return new Date(`${manilaCalendarDate(date)}T00:00:00+08:00`);
 }
 
-// The Philippines does not observe daylight saving time, so a fixed UTC+8 offset is exact.
-// This avoids creating a formatter for every cell of a large export.
+// no dst in the philippines so a fixed +8 is fine, and faster than Intl for big exports
 const manilaOffsetMs = 8 * 60 * 60 * 1000;
 
-/** "Today", "Yesterday", or a readable date such as "Monday, October 5". */
 export function manilaDayLabel(value: Date, now = new Date()) {
   const day = manilaDateText(value);
   if (day === manilaDateText(now)) {

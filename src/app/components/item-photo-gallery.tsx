@@ -17,7 +17,6 @@ type ItemPhotoGalleryProps = {
 const focusableSelector =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
-// Show item photos and the enlarged viewer.
 export function ItemPhotoGallery({
   itemId,
   itemName,
@@ -37,26 +36,23 @@ export function ItemPhotoGallery({
     return `/dashboard/inventory/${itemId}/photos/${photo.id}`;
   }
 
-  // Close the photo viewer and return focus to its opener.
+  // return focus to the thumbnail on close
   function closeViewer() {
     setSelectedIndex(null);
     window.requestAnimationFrame(() => openerRef.current?.focus());
   }
 
-  // Open the selected photo in the larger viewer.
   function openViewer(index: number, opener: HTMLButtonElement) {
     openerRef.current = opener;
     setSelectedIndex(index);
   }
 
-  // Move to the previous photo, wrapping at the start.
   function previousPhoto() {
     setSelectedIndex((index) =>
       index === null ? index : (index - 1 + photos.length) % photos.length,
     );
   }
 
-  // Move to the next photo, wrapping at the end.
   function nextPhoto() {
     setSelectedIndex((index) => (index === null ? index : (index + 1) % photos.length));
   }
@@ -179,7 +175,6 @@ export function ItemPhotoGallery({
               }}
             >
               <style>{"body { overflow: hidden; }"}</style>
-              {/* Enlarged photo viewer. */}
               <section
                 id={dialogId}
                 className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-[var(--surface)] shadow-2xl"
@@ -206,7 +201,6 @@ export function ItemPhotoGallery({
                     <X className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
-                {/* Selected photo and previous/next controls. */}
                 <div className="relative grid min-h-0 flex-1 place-items-center bg-black/5 p-3 sm:p-5">
                   <img
                     src={imageUrl(selectedPhoto)}

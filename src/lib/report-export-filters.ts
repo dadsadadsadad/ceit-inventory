@@ -39,11 +39,10 @@ export const borrowingReportStates = [
   "cancelled",
 ] as const;
 
-/** How far ahead "ending within" looks for warranties and licenses, in days. */
+// days
 export const reportWindows = [30, 60, 90, 180, 365] as const;
 export type ReportWindow = (typeof reportWindows)[number];
 
-/** Details a record can be missing, for finding gaps in the register. */
 export const missingDetails = [
   "price",
   "purchaseDate",
@@ -55,14 +54,13 @@ export const missingDetails = [
 ] as const;
 export type MissingDetail = (typeof missingDetails)[number];
 
-/** The most a purchase price can be, the same as the item form allows. */
-export const maximumReportPrice = 99_999_999.99;
+// same max as the item form
+export const maxReportPrice = 99_999_999.99;
 
 export type ExportPeriod = (typeof exportPeriods)[number];
 export type BorrowingReportState = (typeof borrowingReportStates)[number];
 export type ExportDateRange = { from?: Date; toExclusive?: Date };
 export type ReportExportFilters = {
-  /** Only items that need attention (defective, untested, poor condition, or awaiting repair). */
   attention: boolean;
   borrowingState: BorrowingReportState;
   borrowingStatus?: BorrowStatus;
@@ -70,9 +68,7 @@ export type ReportExportFilters = {
   component?: HardwareComponent;
   condition?: ItemCondition;
   dateRange: ExportDateRange;
-  /** Retired and lost PCs are left out of the hardware and software reports unless asked for. */
   includeRetired: boolean;
-  /** Only PCs missing a processor, memory, or storage. */
   incomplete: boolean;
   inventoryStatus?: ItemStatus;
   itemType?: ItemType;
@@ -81,24 +77,22 @@ export type ReportExportFilters = {
   maintenancePriority?: MaintenancePriority;
   maintenanceSource?: "QR" | "STAFF";
   maintenanceStatus?: MaintenanceStatus;
-  /** Only records missing this detail. */
   missing?: MissingDetail;
   pcOnly: boolean;
   period: ExportPeriod;
-  /** Purchase price range in pesos, inclusive. */
+  // inclusive
   priceMax?: number;
   priceMin?: number;
-  /** When equipment was bought (its purchase date), separate from when the record was added. */
+  // purchase date, not when the record was added
   purchased: ExportDateRange;
   query?: string;
-  /** "low" for stock at or below its alert level (which includes none left), "out" for none left. */
+  // low includes out
   stock?: "low" | "out";
   warranty?: WarrantyFilter;
-  /** Warranties or licenses ending within this many days (from today). */
   within?: ReportWindow;
 };
 
-type QueryParameters = Pick<URLSearchParams, "get">;
+type QueryParams = Pick<URLSearchParams, "get">;
 
 function isExportPeriod(value: string): value is ExportPeriod {
   return exportPeriods.includes(value as ExportPeriod);
@@ -132,7 +126,7 @@ function startOfDate(value: string) {
   return new Date(`${value}T00:00:00+08:00`);
 }
 
-// Include the full end date without including the next day.
+// end date is inclusive
 function dateRange(from?: string, to?: string): ExportDateRange {
   if (from && to && from > to) {
     throw new Error("Start date must be on or before end date.");
@@ -143,7 +137,7 @@ function dateRange(from?: string, to?: string): ExportDateRange {
   };
 }
 
-/** A date range from two YYYY-MM-DD values for list pages; anything invalid is ignored. */
+// invalid dates are ignored
 export function lenientDateRange(from?: string, to?: string): ExportDateRange {
   try {
     return dateRange(
@@ -155,7 +149,6 @@ export function lenientDateRange(from?: string, to?: string): ExportDateRange {
   }
 }
 
-// Convert a timeframe preset into Manila date boundaries.
 function periodRange(period: ExportPeriod, now: Date): ExportDateRange {
   if (period === "all") {
     return {};
@@ -241,15 +234,15 @@ function optionalPrice(value: string | null, label: string) {
     return undefined;
   }
   const amount = Number(text);
-  if (!Number.isFinite(amount) || amount < 0 || amount > maximumReportPrice) {
+  if (!Number.isFinite(amount) || amount < 0 || amount > maxReportPrice) {
     throw new Error(`${label} must be a peso amount from 0 to 99,999,999.99.`);
   }
   return Math.round(amount * 100) / 100;
 }
 
-// Validate the selected report filters and dates.
+// reads and validates every report filter from the query string
 export function parseReportExportFilters(
-  parameters: QueryParameters,
+  parameters: QueryParams,
   now = new Date(),
 ): ReportExportFilters {
   const source = parameters.get("maintenanceSource");
@@ -336,7 +329,7 @@ export function parseReportExportFilters(
   };
 }
 
-// A return request still counts as borrowed until staff confirm it.
+// return requests still count as borrowed
 export function borrowingReportStatusFilter(
   filters: Pick<ReportExportFilters, "borrowingState" | "borrowingStatus">,
 ) {
@@ -390,12 +383,11 @@ export function reportDateWhere(range: ExportDateRange) {
   };
 }
 
-// Leave the query unrestricted when no dates are selected.
 export function reportDateFilter(range: ExportDateRange) {
   return range.from || range.toExclusive ? reportDateWhere(range) : undefined;
 }
 
-// CSV and PDF use the same date for each borrowing view.
+// which date each borrowing view filters on
 export function borrowingReportDateWhere(
   filters: ReportExportFilters,
   range = reportDateFilter(filters.dateRange),

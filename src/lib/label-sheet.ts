@@ -1,7 +1,4 @@
-/**
- * Label sizes for printing on A4. The key is what the address keeps (`layout=`); "compact" and
- * "large" are the original two, so older links still work.
- */
+// keys are the layout= param, compact and large are the old ones
 export const labelLayouts = {
   small: { name: "Small 2 cm · 40 per sheet", perPage: 40 },
   compact: { name: "Medium 2.4 cm · 24 per sheet", perPage: 24 },
@@ -17,9 +14,8 @@ export function labelLayoutOf(value: string | null | undefined): LabelLayout {
   return value && Object.hasOwn(labelLayouts, value) ? (value as LabelLayout) : defaultLabelLayout;
 }
 
-export const maximumLabelCount = 100;
+export const maxLabelCount = 100;
 
-// Split labels so they stay on their assigned print sheets.
 export function labelPages<T>(items: T[], perPage: number): T[][] {
   if (!Number.isInteger(perPage) || perPage < 1) {
     throw new Error("Invalid label layout.");
@@ -29,7 +25,7 @@ export function labelPages<T>(items: T[], perPage: number): T[][] {
   );
 }
 
-/** The ids chosen for a batch, from `ids=a,b` (a link from Inventory) or repeated `ids=` boxes. */
+// ids=a,b or repeated ids=
 export function selectedLabelIds(value: string | string[] | undefined) {
   const values = Array.isArray(value) ? value : value ? [value] : [];
   return [

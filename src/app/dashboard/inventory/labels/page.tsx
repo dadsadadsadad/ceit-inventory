@@ -18,7 +18,7 @@ import {
   labelLayoutOf,
   labelLayouts,
   labelPages,
-  maximumLabelCount,
+  maxLabelCount,
   selectedLabelIds,
 } from "@/lib/label-sheet";
 import { firstParam, pageParam, textParam } from "@/lib/search-params";
@@ -42,7 +42,6 @@ type Search = {
 
 const tilesPerPage = 24;
 
-// Pick items from a grid of every item, then lay their labels out on printable sheets.
 export default async function LabelsPage({ searchParams }: { searchParams: Promise<Search> }) {
   await requireInventoryAccess();
   const search = await searchParams;
@@ -53,13 +52,12 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   const query = textParam(search.q);
   const created = Number(firstParam(search.created));
   const requestedPage = pageParam(search.page);
-  const invalidSelection = ids.length > maximumLabelCount || ids.some((id) => !isUuid(id));
+  const invalidSelection = ids.length > maxLabelCount || ids.some((id) => !isUuid(id));
   const invalidFilter =
     Boolean(location && !isUuid(location)) || Boolean(category && !isUuid(category));
   const selection = invalidSelection ? [] : ids;
   const filtered = Boolean(query || location || category);
 
-  // The grid shows every item still in use; the filters narrow it.
   const where: Prisma.InventoryItemWhereInput = invalidFilter
     ? { id: { in: [] } }
     : {
@@ -75,7 +73,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
           ]),
         ],
       };
-  // Register order: asset tags are zero-padded, so "…0002" comes before "…0010".
+  // tags are zero padded so string order works
   const order: Prisma.InventoryItemOrderByWithRelationInput[] = [
     { assetTag: { sort: "asc", nulls: "last" } },
     { name: "asc" },
@@ -120,8 +118,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
       skip: (currentPage - 1) * tilesPerPage,
       take: tilesPerPage,
     }),
-    // "Select all" is offered only when the matches fit in one batch.
-    totalMatching <= maximumLabelCount
+    totalMatching <= maxLabelCount
       ? prisma.inventoryItem.findMany({ where, select: { id: true }, orderBy: order })
       : Promise.resolve(null),
   ]);
@@ -144,7 +141,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
       )
     : [];
 
-  // Links keep the selection and the size; "Show all items" drops only the filters.
+  // keep the selection and size, drop the filters
   const linkFor = (changes: Record<string, string | number | undefined>) => {
     const values: Record<string, string | number | undefined> = {
       q: query,
@@ -168,7 +165,6 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   return (
     <div className={`page label-sheet-page label-layout-${layout}`}>
       <div className="page-inner space-y-6">
-        {/* Label-sheet title and print controls. */}
         <header className="no-print flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
@@ -195,7 +191,6 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
         ) : null}
 
         <section className="no-print card overflow-hidden rounded-lg" aria-label="Choose labels">
-          {/* Narrow the list and choose the size. Choices apply as soon as they are made. */}
           <FilterForm label="Label filters" className="label-picker p-5">
             {selection.length ? (
               <input type="hidden" name="ids" value={selection.join(",")} />
@@ -278,7 +273,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
                 category: item.category.name,
               }))}
               matchingIds={matching ? matching.map((item) => item.id) : null}
-              maximum={maximumLabelCount}
+              max={maxLabelCount}
               selected={selection}
               totalMatching={totalMatching}
             />
@@ -301,13 +296,13 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
         {invalidSelection || invalidFilter ? (
           <p className="notice no-print rounded-lg p-4" role="alert">
             Some of the chosen items or filters could not be read. Choose them again from the list
-            above (up to {maximumLabelCount} labels at a time).
+            above (up to {maxLabelCount} labels at a time).
           </p>
         ) : null}
         {!appUrl ? (
           <p className="notice no-print rounded-lg p-4" role="alert">
-            The website address for QR labels hasn’t been configured. Ask your administrator to set
-            it before printing.
+            The website address for QR labels hasn&apos;t been configured. Ask your administrator to
+            set it before printing.
           </p>
         ) : null}
         {labels.length ? (
@@ -325,10 +320,9 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
                   aria-label={`Label sheet ${index + 1}`}
                   key={index}
                 >
-                  {/* One printable sheet. */}
                   {sheet.map((item) => (
                     <article className="sheet-label" key={item.id}>
-                      {/* Loaded at once, so every code is there when the sheet prints. */}
+                      {/* eager so every code is loaded before printing */}
                       <Image
                         unoptimized
                         loading="eager"
@@ -357,8 +351,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
         ) : appUrl ? (
           <div className="no-print">
             <EmptyState icon={QrCode} title="No labels selected yet.">
-              Click items in the list above to choose their labels. Use “Select this page” or
-              “Select all” to choose many at once.
+              Click items in the list above to choose their labels. Use &quot;Select this page&quot;
+              or &quot;Select all&quot; to choose many at once.
             </EmptyState>
           </div>
         ) : null}

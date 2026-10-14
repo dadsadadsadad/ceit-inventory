@@ -10,11 +10,10 @@ import { prisma } from "@/prisma";
 
 import { requiredId } from "./shared";
 
-const maximumItemPhotos = 4;
-const maximumPhotoBytes = 3 * 1024 * 1024;
+const maxItemPhotos = 4;
+const maxPhotoBytes = 3 * 1024 * 1024;
 const supportedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-// Photo validation and uploads.
 function photoFileName(value: string) {
   const name = value
     .replaceAll(/[^a-zA-Z0-9._-]/g, "_")
@@ -23,7 +22,7 @@ function photoFileName(value: string) {
   return name || "item-photo";
 }
 
-// Check the file contents against its image type.
+// check magic bytes match the mime type
 function imageTypeMatchesBytes(contentType: string, bytes: Uint8Array) {
   if (contentType === "image/jpeg") {
     return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -55,7 +54,6 @@ function imageTypeMatchesBytes(contentType: string, bytes: Uint8Array) {
   );
 }
 
-// Validate and attach an item photo.
 export async function uploadInventoryItemPhoto(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -64,7 +62,7 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
     if (!(file instanceof File) || file.size === 0) {
       throw new FormError("Choose an image to upload.");
     }
-    if (file.size > maximumPhotoBytes) {
+    if (file.size > maxPhotoBytes) {
       throw new FormError("Each photo must be 3 MB or smaller.");
     }
     if (!supportedPhotoTypes.has(file.type)) {
@@ -77,18 +75,18 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
     }
 
     await prisma.$transaction(
-      async (transaction) => {
+      async (tx) => {
         const [item, photoCount] = await Promise.all([
-          transaction.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } }),
-          transaction.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
+          tx.inventoryItem.findUnique({ where: { id: itemId }, select: { id: true } }),
+          tx.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
         ]);
         if (!item) {
           throw new FormError("This inventory item no longer exists.");
         }
-        if (photoCount >= maximumItemPhotos) {
-          throw new FormError(`Each item can have up to ${maximumItemPhotos} photos.`);
+        if (photoCount >= maxItemPhotos) {
+          throw new FormError(`Each item can have up to ${maxItemPhotos} photos.`);
         }
-        await transaction.inventoryItemPhoto.create({
+        await tx.inventoryItemPhoto.create({
           data: {
             inventoryItemId: itemId,
             fileName: photoFileName(file.name),
@@ -97,7 +95,7 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
             data: Buffer.from(bytes),
           },
         });
-        await transaction.inventoryAudit.create({
+        await tx.inventoryAudit.create({
           data: {
             itemId,
             action: AuditAction.UPDATED,
@@ -111,7 +109,7 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
             },
           },
         });
-        // Serializable, so two uploads at once cannot both slip under the photo limit.
+        // serializable so two uploads can't both pass the photo limit
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -120,7 +118,6 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
   });
 }
 
-// Remove the selected photo from this item.
 export async function deleteInventoryItemPhoto(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();

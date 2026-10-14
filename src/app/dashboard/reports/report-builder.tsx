@@ -34,7 +34,6 @@ export type ReportBuilderOptions = {
 };
 
 type Props = {
-  /** The filters in the address bar, which the form starts from. */
   initial: Record<string, string>;
   options: ReportBuilderOptions;
 };
@@ -51,7 +50,6 @@ const dateNotes: Partial<Record<ReportKind, string>> = {
   activity: "Dates filter by when the event happened.",
 };
 
-// Choose a report, narrow it down, and generate it on this page.
 export function ReportBuilder({ initial, options }: Props) {
   const router = useRouter();
   const [kind, setKind] = useState<ReportKind>(
@@ -152,7 +150,7 @@ export function ReportBuilder({ initial, options }: Props) {
                 name="q"
                 defaultValue={initial.q ?? ""}
                 maxLength={120}
-                placeholder="Name, asset tag, person, room…"
+                placeholder="Name, asset tag, person, room..."
                 className={field}
               />
             </label>
@@ -193,7 +191,7 @@ export function ReportBuilder({ initial, options }: Props) {
                 "missing",
                 "Missing",
                 options.missingDetails,
-                // Record health lists every gap by default; other reports list every record.
+                // record health defaults to every missing detail
                 kind === "health" ? "Anything missing" : "Any record",
               )
             : null}

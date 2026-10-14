@@ -4,13 +4,12 @@ import { startOfManilaDay } from "./manila-date";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
-/** Loans that are out right now. A return request is still a loan until staff confirm it. */
+// return requests still count as out until confirmed
 export const outLoanStatuses: BorrowStatus[] = [
   BorrowStatus.BORROWED,
   BorrowStatus.RETURN_REQUESTED,
 ];
 
-/** Loans due back later today (Philippine time) that are not yet late. */
 export function dueTodayWhere(now = new Date()): Prisma.BorrowRequestWhereInput {
   const endOfToday = new Date(startOfManilaDay(now).getTime() + dayMs);
   return {
@@ -19,7 +18,7 @@ export function dueTodayWhere(now = new Date()): Prisma.BorrowRequestWhereInput 
   };
 }
 
-/** The text staff can send a borrower: friendly, specific, and with no private details. */
+// no private details in the message
 export function reminderMessage(input: {
   borrowerName: string;
   dueAt: Date;

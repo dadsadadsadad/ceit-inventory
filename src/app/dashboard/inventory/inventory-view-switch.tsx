@@ -11,7 +11,6 @@ const views: { value: InventoryView; label: string; Icon: typeof List }[] = [
   { value: "compact", label: "Compact", Icon: Rows3 },
 ];
 
-/** Switch between the table, cards, and a compact list. The choice is remembered on this device. */
 export function InventoryViewSwitch({
   current,
   hrefFor,

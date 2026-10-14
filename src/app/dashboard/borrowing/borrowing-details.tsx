@@ -16,7 +16,6 @@ export function formatDateTime(value: Date) {
   });
 }
 
-// Describe whether the requested equipment is available.
 export function inventoryAvailabilityLabel(item: BorrowingRecord["inventoryItem"]) {
   if (item.status === "DEPLOYED") {
     return "Checked out";
@@ -27,7 +26,6 @@ export function inventoryAvailabilityLabel(item: BorrowingRecord["inventoryItem"
   return `${item.quantity} available`;
 }
 
-// Show the borrower's name and contact details.
 export function BorrowerDetails({ request }: { request: BorrowingRecord }) {
   return (
     <div className="space-y-1 text-sm">
@@ -38,7 +36,6 @@ export function BorrowerDetails({ request }: { request: BorrowingRecord }) {
   );
 }
 
-// Show pickup, return, and reservation dates.
 export function BorrowSchedule({ request }: { request: BorrowingRecord }) {
   const overdue =
     [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED].some(

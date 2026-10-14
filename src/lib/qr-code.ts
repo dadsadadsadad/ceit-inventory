@@ -20,7 +20,7 @@ function validHttpOrigin(value: string | undefined) {
   }
 }
 
-// Accept a printed code or a trusted inventory URL.
+// accepts a code or one of our urls
 export function inventoryQrCodeFromScan(
   value: string,
   currentOrigin: string,
@@ -41,6 +41,7 @@ export function inventoryQrCodeFromScan(
     if (!trustedOrigins.has(url.origin)) {
       return "";
     }
+    // only /scan/<code>
     const segments = url.pathname.split("/").filter(Boolean);
     if (segments.length !== 2 || segments[0] !== "scan") {
       return "";

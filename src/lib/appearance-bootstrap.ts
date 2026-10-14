@@ -1,4 +1,4 @@
-// Restore saved colors before React renders.
+// runs before react to apply the saved theme, keep in sync with appearance.ts
 export const appearanceBootstrap = `
 try {
   const root = document.documentElement;
@@ -118,7 +118,7 @@ try {
   }
 } catch {}
 try {
-  // Contrast and motion choices were retired; forget any a device still has saved.
+  // contrast and motion options were removed, clear old values
   localStorage.removeItem("ceit-contrast");
   localStorage.removeItem("ceit-motion");
 } catch {}

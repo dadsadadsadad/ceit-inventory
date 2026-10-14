@@ -1,9 +1,6 @@
 import "server-only";
 
-/**
- * The visitor's network address, for rate limits. On Vercel these headers are set by the
- * platform itself, so a visitor cannot pretend to be somewhere else by sending their own.
- */
+// vercel sets these headers itself so they can't be spoofed
 export function clientAddress(requestHeaders: Pick<Headers, "get">) {
   const first = (name: string) => requestHeaders.get(name)?.split(",")[0]?.trim();
   return (
@@ -11,7 +8,6 @@ export function clientAddress(requestHeaders: Pick<Headers, "get">) {
   );
 }
 
-/** The key that turns addresses into anonymous rate-limit fingerprints. */
 export function rateLimitSecret() {
   const secret =
     process.env.REQUEST_RATE_LIMIT_SECRET ??

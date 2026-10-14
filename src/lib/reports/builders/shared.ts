@@ -6,7 +6,6 @@ import { prisma } from "@/prisma";
 import { recentMonths } from "../charts";
 import { reportRowLimits, type ReportPurpose, ReportRequestError } from "../model";
 
-/** What a builder needs to know about the request it is answering. */
 export type BuilderContext = {
   filters: ReportExportFilters;
   now: Date;
@@ -14,7 +13,6 @@ export type BuilderContext = {
   purpose: ReportPurpose;
 };
 
-/** The room and category names behind the ids in the filters, for the filter summary. */
 export async function filterNames(filters: Pick<ReportExportFilters, "categoryId" | "locationId">) {
   const [category, location] = await Promise.all([
     filters.categoryId
@@ -27,10 +25,7 @@ export async function filterNames(filters: Pick<ReportExportFilters, "categoryId
   return { category: category?.name, location: location?.name };
 }
 
-/**
- * Read one page of records for a preview, or everything a download can hold. A preview also
- * counts what it left out; a download that would not fit is refused rather than cut short.
- */
+// previews get one page plus a count, downloads get everything or an error
 export async function loadCapped<T>(
   context: Pick<BuilderContext, "purpose">,
   query: { count: () => Promise<number>; find: (take: number) => Promise<T[]> },
@@ -51,7 +46,7 @@ export async function loadCapped<T>(
   return { rows, total: rows.length };
 }
 
-/** How many matching records each room holds, for a chart. Counts everything, not one page. */
+// counts all matches, not just the page
 export async function countsByRoom(where: Prisma.InventoryItemWhereInput) {
   const groups = await prisma.inventoryItem.groupBy({
     by: ["locationId"],
@@ -69,7 +64,6 @@ export async function countsByRoom(where: Prisma.InventoryItemWhereInput) {
   ]);
 }
 
-/** How many matching records each category holds, for a chart. */
 export async function countsByCategory(where: Prisma.InventoryItemWhereInput) {
   const groups = await prisma.inventoryItem.groupBy({
     by: ["categoryId"],
@@ -87,7 +81,6 @@ export async function countsByCategory(where: Prisma.InventoryItemWhereInput) {
   ]);
 }
 
-/** One count per recent month, for a chart over time. */
 export async function monthlyCounts(
   now: Date,
   count: (range: { gte: Date; lt: Date }) => Promise<number>,
@@ -100,13 +93,12 @@ export async function monthlyCounts(
   return periods.map((period, index): [string, number] => [period.label, values[index]]);
 }
 
-/** Item names for the equipment that appears most often in a grouped count. */
 export async function namedItemCounts(groups: { count: number; inventoryItemId: string }[]) {
   const items = await prisma.inventoryItem.findMany({
     where: { id: { in: groups.map((group) => group.inventoryItemId) } },
     select: { id: true, name: true, assetTag: true },
   });
-  // The asset tag is added only where two items share a name, so labels stay short.
+  // only add the tag when two items have the same name
   const repeated = new Set(
     items.map((item) => item.name).filter((name, index, all) => all.indexOf(name) !== index),
   );

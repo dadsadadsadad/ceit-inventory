@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 const resultLimit = 10;
 
-/** Equipment matching what staff have typed so far, for pickers that suggest as you type. */
+// item search for the picker
 export async function GET(request: Request) {
   if (!(await getCurrentInventoryUser())) {
     return new NextResponse(null, { status: 401 });

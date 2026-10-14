@@ -1,15 +1,12 @@
 import { rgb } from "pdf-lib";
 
-// Converts a hex colour from the website's stylesheet into the 0-1 channels pdf-lib expects.
+// hex -> 0-1 rgb for pdf-lib
 function hex(value: string) {
   const channel = (start: number) => parseInt(value.slice(start, start + 2), 16) / 255;
   return rgb(channel(1), channel(3), channel(5));
 }
 
-/**
- * The colours and sizes of a PDF report. They are the website's paper-and-ink palette from
- * src/app/styles/tokens.css, so a printed report looks like it came from the same place.
- */
+// same colors as tokens.css
 export const pdfTheme = {
   accent: hex("#b83f0b"),
   accentBright: hex("#ff9b50"),
@@ -25,7 +22,6 @@ export const pdfTheme = {
   chartTrack: hex("#efe9dc"),
 } as const;
 
-/** Chart colours: the accent, and the dashboard's status colours (tokens.css --mix-*). */
 export const pdfChartTones = {
   accent: hex("#b83f0b"),
   ok: hex("#3f9d83"),
@@ -37,7 +33,6 @@ export const pdfChartTones = {
   lost: hex("#b46c90"),
 } as const;
 
-/** A4 in points. */
 export const pageLayout = {
   bottom: 56,
   height: 841.89,

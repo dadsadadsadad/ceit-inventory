@@ -1,10 +1,7 @@
-/**
- * The shape of a page while its data loads, so the layout does not jump when the real page
- * arrives. Each variant matches a family of pages: a record list, a dashboard of panels, or a form.
- */
+// loading placeholders shaped like the real pages
 export function PageSkeleton({
   variant,
-  label = "Loading…",
+  label = "Loading...",
 }: {
   variant: "cards" | "detail" | "form" | "list";
   label?: string;

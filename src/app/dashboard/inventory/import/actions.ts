@@ -40,20 +40,17 @@ import {
   optionalDate,
   type Warn,
 } from "@/lib/import/values";
-import { maximumNewUnits } from "../actions/shared";
+import { maxNewUnits } from "../actions/shared";
 import { prisma } from "@/prisma";
 
 export type ImportResult = {
   errors: string[];
-  /** Things that were adjusted so a row could still be imported. */
   warnings: string[];
-  /** What was done with the file as a whole: sheet used, extra columns, blank rows. */
   notices: string[];
-  /** Columns that were understood, as "heading in the file" and the field it fills. */
+  // heading in file -> field
   matched: { header: string; label: string }[];
-  /** Rows read from the file. */
   imported: number;
-  /** Records made from those rows (a row of five identical units makes five). */
+  // can be more than rows since quantity makes units
   records: number;
   previewed: boolean;
   skipped: number;
@@ -72,19 +69,19 @@ const emptyImportResult: ImportResult = {
 type SetupRecord = { id: string; isActive: boolean };
 type ValueReader = (column: ImportField) => string;
 
-const maximumFileBytes = 10 * 1024 * 1024;
-const maximumRows = 1_000;
-// Rows of "quantity 50" multiply, so the records one file may create are capped as well.
-const maximumRecords = 2_000;
-// Rows scanned past the heading; a sheet padded with formatting can report far more than it holds.
-const maximumScannedRows = 25_000;
-const maximumXlsxArchiveEntries = 2_000;
-const maximumXlsxUncompressedBytes = 50 * 1024 * 1024;
-const maximumReported = 20;
+const maxFileBytes = 10 * 1024 * 1024;
+const maxRows = 1_000;
+// quantity multiplies rows so cap total records too
+const maxRecords = 2_000;
+// formatted sheets can report way more rows than they have
+const maxScannedRows = 25_000;
+const maxXlsxArchiveEntries = 2_000;
+const maxXlsxUncompressedBytes = 50 * 1024 * 1024;
+const maxReported = 20;
 const fallbackCategoryName = "Uncategorized";
 const fallbackLocationName = "Unassigned";
 
-// Read a spreadsheet cell, including rich text and formula results.
+// handles rich text and formula results
 function cellText(value: ExcelJS.CellValue | undefined): string {
   return stripControlCharacters(rawCellText(value));
 }
@@ -125,19 +122,19 @@ function formText(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
-function boundedText(value: string, field: string, maximumLength = 2_000) {
+function boundedText(value: string, field: string, maxLength = 2_000) {
   const result = value.trim();
-  if (result.length > maximumLength) {
+  if (result.length > maxLength) {
     throw new ImportRowError(`${field} is too long.`);
   }
   return result;
 }
 
-function optionalText(value: string, field: string, maximumLength = 2_000) {
-  return boundedText(value, field, maximumLength) || null;
+function optionalText(value: string, field: string, maxLength = 2_000) {
+  return boundedText(value, field, maxLength) || null;
 }
 
-// Map older inspection labels to current status values.
+// old inspection labels -> statuses
 function legacyInspectionState(value: string) {
   switch (normalizeHeader(value)) {
     case "defective":
@@ -155,7 +152,7 @@ function legacyInspectionState(value: string) {
   }
 }
 
-// Keep useful details from older spreadsheet columns and from columns we have no field for.
+// keep old/unknown columns in the notes
 function combinedNotes(primaryNotes: string, values: Array<[string, string]>) {
   const context = values.filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
   return optionalText([primaryNotes, ...context].filter(Boolean).join("\n"), "notes", 5_000);
@@ -172,10 +169,7 @@ function rowCells(row: ExcelJS.Row): HeaderCell[] {
   return cells;
 }
 
-/**
- * The heading row: whichever of the first rows (on any sheet) names the most inventory fields,
- * provided it names the item. Title rows above the table and several sheets are both fine.
- */
+// header row = the row (on any sheet) that matches the most fields and has the item name
 function findInventorySheet(workbook: ExcelJS.Workbook) {
   let best: { headerRowNumber: number; match: HeaderMatch; sheet: ExcelJS.Worksheet } | null = null;
   for (const sheet of workbook.worksheets) {
@@ -189,7 +183,7 @@ function findInventorySheet(workbook: ExcelJS.Workbook) {
   return best;
 }
 
-// The headings of the first sheet, to show when nothing in the file looks like an item name.
+// used in the error when no name column is found
 function foundHeadings(workbook: ExcelJS.Workbook) {
   const sheet = workbook.worksheets[0];
   if (!sheet) {
@@ -211,14 +205,14 @@ function isXlsxFile(data: Buffer) {
   );
 }
 
-// Check workbook size before unpacking the file.
+// check size before unzipping
 async function validateXlsxArchive(data: Buffer) {
   const archive = await yauzl.fromBufferPromise(data, {
     lazyEntries: true,
     validateEntrySizes: true,
   });
   try {
-    if (archive.entryCount > maximumXlsxArchiveEntries) {
+    if (archive.entryCount > maxXlsxArchiveEntries) {
       throw new Error("The Excel workbook contains too many files.");
     }
     let uncompressedBytes = 0;
@@ -227,7 +221,7 @@ async function validateXlsxArchive(data: Buffer) {
         continue;
       }
       uncompressedBytes += entry.uncompressedSize;
-      if (uncompressedBytes > maximumXlsxUncompressedBytes) {
+      if (uncompressedBytes > maxXlsxUncompressedBytes) {
         throw new Error("The Excel workbook expands beyond the allowed size.");
       }
     }
@@ -236,7 +230,6 @@ async function validateXlsxArchive(data: Buffer) {
   }
 }
 
-// Explain why an import row could not be saved.
 function messageForImportError(error: unknown) {
   if (error instanceof ImportRowError) {
     return error.message;
@@ -276,7 +269,6 @@ type ParsedRow = {
   locationName: string;
   roomNumber: string | null;
   suppliedAssetTag: string | null;
-  /** How many identical tracked units this row makes. */
   units: number;
 };
 
@@ -289,7 +281,7 @@ type RowSettings = {
   locationIsRoomNumber: boolean;
 };
 
-// Read one spreadsheet row. Only the item name is required; everything else has a sensible default.
+// only name is required
 function parseImportRow(
   valueAt: ValueReader,
   cellAt: (column: number) => string,
@@ -342,9 +334,9 @@ function parseImportRow(
     }
     units = Math.max(quantity, 1);
     quantity = 1;
-    if (units > maximumNewUnits) {
+    if (units > maxNewUnits) {
       throw new ImportRowError(
-        `a quantity above ${maximumNewUnits} is too many tracked units for one row. Split it into several rows, or mark the row as stock.`,
+        `a quantity above ${maxNewUnits} is too many tracked units for one row. Split it into several rows, or mark the row as stock.`,
       );
     }
   }
@@ -383,13 +375,12 @@ function parseImportRow(
   const lastCheckedAt =
     optionalDate(valueAt("lastCheckedAt"), "Last checked date", warn) ?? new Date();
 
-  // A tag that does not follow this system's format is replaced by a generated one; the original
-  // is kept in the notes so nothing is lost.
+  // bad tag format gets replaced, the original goes in the notes
   let suppliedAssetTag = suppliedAssetTagText;
   let originalTag = "";
   if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
     warn(
-      `Asset tag “${suppliedAssetTag.slice(0, 40)}” is not in the INV-… format, so a new tag was generated and the old one was kept in the notes.`,
+      `Asset tag "${suppliedAssetTag.slice(0, 40)}" is not in the INV-... format, so a new tag was generated and the old one was kept in the notes.`,
     );
     originalTag = suppliedAssetTag;
     suppliedAssetTag = null;
@@ -466,21 +457,21 @@ function parseImportRow(
 }
 
 function missingSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} “${name}” does not exist. Tick “Create missing categories and locations”, or add it in Settings first.`;
+  return `${kind} "${name}" does not exist. Tick "Create missing categories and locations", or add it in Settings first.`;
 }
 
 function inactiveSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} “${name}” is inactive. Reactivate it in Settings first.`;
+  return `${kind} "${name}" is inactive. Reactivate it in Settings first.`;
 }
 
-// Find the category, creating it only when the import is allowed to.
+// create only if allowed
 async function resolveCategory(
-  transaction: Prisma.TransactionClient,
+  tx: Prisma.TransactionClient,
   name: string,
   actor: InventoryUser,
   allowCreate: boolean,
 ): Promise<SetupRecord> {
-  let category: SetupRecord | null = await transaction.category.findFirst({
+  let category: SetupRecord | null = await tx.category.findFirst({
     where: { name: { equals: name, mode: "insensitive" } },
     select: { id: true, isActive: true },
   });
@@ -488,8 +479,8 @@ async function resolveCategory(
     if (!allowCreate) {
       throw new ImportRowError(missingSetupMessage("category", name));
     }
-    const codes = await transaction.category.findMany({ select: { assetTagCode: true } });
-    category = await transaction.category.create({
+    const codes = await tx.category.findMany({ select: { assetTagCode: true } });
+    category = await tx.category.create({
       data: {
         name,
         assetTagCode: nextCategoryAssetTagCode(
@@ -499,7 +490,7 @@ async function resolveCategory(
       },
       select: { id: true, isActive: true },
     });
-    await transaction.inventoryAudit.create({
+    await tx.inventoryAudit.create({
       data: auditEventData({
         action: "CREATED",
         actor,
@@ -515,15 +506,15 @@ async function resolveCategory(
   return category;
 }
 
-// Find the location, creating it only when the import is allowed to.
+// create only if allowed
 async function resolveLocation(
-  transaction: Prisma.TransactionClient,
+  tx: Prisma.TransactionClient,
   name: string,
   roomNumber: string | null,
   actor: InventoryUser,
   allowCreate: boolean,
 ): Promise<SetupRecord> {
-  let location: SetupRecord | null = await transaction.location.findFirst({
+  let location: SetupRecord | null = await tx.location.findFirst({
     where: { name: { equals: name, mode: "insensitive" } },
     select: { id: true, isActive: true },
   });
@@ -531,8 +522,8 @@ async function resolveLocation(
     if (!allowCreate) {
       throw new ImportRowError(missingSetupMessage("location", name));
     }
-    const codes = await transaction.location.findMany({ select: { assetTagCode: true } });
-    location = await transaction.location.create({
+    const codes = await tx.location.findMany({ select: { assetTagCode: true } });
+    location = await tx.location.create({
       data: {
         name,
         assetTagCode: nextLocationAssetTagCode(codes.map((entry) => entry.assetTagCode)),
@@ -540,7 +531,7 @@ async function resolveLocation(
       },
       select: { id: true, isActive: true },
     });
-    await transaction.inventoryAudit.create({
+    await tx.inventoryAudit.create({
       data: auditEventData({
         action: "CREATED",
         actor,
@@ -556,7 +547,6 @@ async function resolveLocation(
   return location;
 }
 
-// Save one validated row (one record, or several identical units) with generated tags and audit entries.
 async function saveImportedRow(
   client: Prisma.TransactionClient,
   row: ParsedRow,
@@ -620,7 +610,7 @@ type PreviewRow = {
   serialNumber: string | null;
 };
 
-// Compare validated preview rows with records that already exist.
+// check for duplicates against existing records
 async function existingIdentifierProblems(rows: PreviewRow[]) {
   const assetTags = rows.flatMap((row) => (row.assetTag ? [row.assetTag] : []));
   const serials = rows.flatMap((row) => (row.serialNumber ? [row.serialNumber] : []));
@@ -672,13 +662,12 @@ function plural(count: number, one: string, many = `${one}s`) {
 }
 
 function listed(values: string[], limit = 6) {
-  const shown = values.slice(0, limit).map((value) => `“${value}”`);
+  const shown = values.slice(0, limit).map((value) => `"${value}"`);
   return values.length > limit
     ? `${shown.join(", ")} and ${values.length - limit} more`
     : shown.join(", ");
 }
 
-// Read the file and import (or just check) every row that can be understood.
 export async function importInventory(
   _previousState: ImportResult,
   formData: FormData,
@@ -714,7 +703,7 @@ export async function importInventory(
   if (!(file instanceof File) || !file.size) {
     return fail("Choose a non-empty CSV or Excel file.");
   }
-  if (file.size > maximumFileBytes) {
+  if (file.size > maxFileBytes) {
     return fail("The import file must be 10 MB or smaller.");
   }
 
@@ -755,15 +744,14 @@ export async function importInventory(
     const headings = foundHeadings(workbook);
     return fail(
       headings.length
-        ? `I could not find a column for the item name. The headings I can see are ${listed(headings, 12)}. Add or rename one to “Name” (“Item”, “Item name”, or “Equipment” also work) and try again.`
+        ? `No column for the item name was found. The headings in the file are ${listed(headings, 12)}. Add or rename one to "Name" ("Item", "Item name", or "Equipment" also work) and try again.`
         : "The file looks empty. It needs a heading row with at least an item name column, then one row per item.",
     );
   }
   const { sheet, headerRowNumber, match } = source;
   const { columns } = match;
 
-  // Extra columns: one that matches a field from Settings fills it, the rest are kept in the
-  // notes (or ignored if staff prefer).
+  // extra columns fill matching custom fields, the rest go in notes
   const customDefinitions = await loadCustomFields();
   const customByHeader = new Map(
     customDefinitions.map((field) => [normalizeHeader(field.label), field]),
@@ -793,7 +781,7 @@ export async function importInventory(
 
   const categoryCache = new Map<string, SetupRecord>();
   const locationCache = new Map<string, SetupRecord>();
-  // A check reads setup records once so every row is compared with Settings.
+  // load settings once for the whole check
   const [knownCategories, knownLocations] = previewOnly
     ? await Promise.all([
         prisma.category.findMany({ select: { name: true, isActive: true } }),
@@ -822,7 +810,7 @@ export async function importInventory(
   let dataRows = 0;
   let cutOff = false;
 
-  const lastRow = Math.min(sheet.rowCount, headerRowNumber + maximumScannedRows);
+  const lastRow = Math.min(sheet.rowCount, headerRowNumber + maxScannedRows);
   for (let rowNumber = headerRowNumber + 1; rowNumber <= lastRow; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
     const cellAt = (column: number) => cellText(row.getCell(column).value);
@@ -848,7 +836,7 @@ export async function importInventory(
       continue;
     }
     dataRows += 1;
-    if (dataRows > maximumRows || records >= maximumRecords) {
+    if (dataRows > maxRows || records >= maxRecords) {
       cutOff = true;
       break;
     }
@@ -914,27 +902,20 @@ export async function importInventory(
       }
 
       const result = await prisma.$transaction(
-        async (transaction) => {
+        async (tx) => {
           const category =
             categoryCache.get(categoryKey) ??
-            (await resolveCategory(transaction, parsed.categoryName, actor, allowCreateSetup));
+            (await resolveCategory(tx, parsed.categoryName, actor, allowCreateSetup));
           const location =
             locationCache.get(locationKey) ??
             (await resolveLocation(
-              transaction,
+              tx,
               parsed.locationName,
               parsed.roomNumber,
               actor,
               allowCreateSetup,
             ));
-          await saveImportedRow(
-            transaction,
-            parsed,
-            category,
-            location,
-            customDefinitions,
-            savedSource,
-          );
+          await saveImportedRow(tx, parsed, category, location, customDefinitions, savedSource);
           return { category, location };
         },
         { timeout: 20_000 },
@@ -946,7 +927,7 @@ export async function importInventory(
       records += parsed.units;
     } catch (error) {
       skipped += 1;
-      // Warnings from a row that did not import would only confuse.
+      // don't show warnings for rows that failed
       for (
         let index = warnings.length - 1;
         index >= 0 && warnings[index].rowNumber === rowNumber;
@@ -975,17 +956,17 @@ export async function importInventory(
   const notices: string[] = [];
   notices.push(
     workbook.worksheets.length > 1
-      ? `Read the “${sheet.name}” sheet (heading on row ${headerRowNumber}).`
+      ? `Read the "${sheet.name}" sheet (heading on row ${headerRowNumber}).`
       : `Heading found on row ${headerRowNumber}.`,
   );
   if (fallbacks.category) {
     notices.push(
-      `${plural(fallbacks.category, "row")} had no category and ${fallbacks.category === 1 ? "was" : "were"} filed under “${fallbackCategoryName}”. Add a Category column or a default category to avoid this.`,
+      `${plural(fallbacks.category, "row")} had no category and ${fallbacks.category === 1 ? "was" : "were"} filed under "${fallbackCategoryName}". Add a Category column or a default category to avoid this.`,
     );
   }
   if (fallbacks.location) {
     notices.push(
-      `${plural(fallbacks.location, "row")} had no location and ${fallbacks.location === 1 ? "was" : "were"} placed in “${fallbackLocationName}”. Add a Location column or a default location to avoid this.`,
+      `${plural(fallbacks.location, "row")} had no location and ${fallbacks.location === 1 ? "was" : "were"} placed in "${fallbackLocationName}". Add a Location column or a default location to avoid this.`,
     );
   }
   if (customColumns.length) {
@@ -1009,7 +990,7 @@ export async function importInventory(
   }
   if (cutOff) {
     notices.push(
-      `Only the first ${maximumRows.toLocaleString()} rows (or ${maximumRecords.toLocaleString()} items, when rows make several) are read at a time. Put the remaining rows in a second file and import that next.`,
+      `Only the first ${maxRows.toLocaleString()} rows (or ${maxRecords.toLocaleString()} items, when rows make several) are read at a time. Put the remaining rows in a second file and import that next.`,
     );
   }
   if (!dataRows && !skipped) {
@@ -1027,20 +1008,18 @@ export async function importInventory(
   problems.sort((left, right) => left.rowNumber - right.rowNumber);
   warnings.sort((left, right) => left.rowNumber - right.rowNumber);
   const errors = problems
-    .slice(0, maximumReported)
+    .slice(0, maxReported)
     .map((problem) => `Row ${problem.rowNumber}: ${problem.message}`);
-  if (problems.length > maximumReported) {
+  if (problems.length > maxReported) {
     errors.push(
-      `…and ${problems.length - maximumReported} more rows need correction. Fix these first, then check again.`,
+      `...and ${problems.length - maxReported} more rows need correction. Fix these first, then check again.`,
     );
   }
   const warningLines = warnings
-    .slice(0, maximumReported)
+    .slice(0, maxReported)
     .map((warning) => `Row ${warning.rowNumber}: ${warning.message}`);
-  if (warnings.length > maximumReported) {
-    warningLines.push(
-      `…and ${warnings.length - maximumReported} more adjustments of the same kind.`,
-    );
+  if (warnings.length > maxReported) {
+    warningLines.push(`...and ${warnings.length - maxReported} more adjustments of the same kind.`);
   }
   return {
     errors,

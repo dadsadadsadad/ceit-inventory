@@ -8,7 +8,6 @@ import { SubmitButton } from "@/app/components/submit-button";
 
 import { markReminded } from "./actions";
 
-// A ready-made reminder staff can copy or text, and a way to note that it was sent.
 export function ReminderControls({
   contact,
   message,
@@ -29,7 +28,7 @@ export function ReminderControls({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Clipboard access can be blocked; the message is shown below so it can be selected.
+      // clipboard can be blocked, the text is shown below anyway
     }
   }
 
@@ -67,7 +66,7 @@ export function ReminderControls({
         <FeedbackForm action={markReminded} successMessage="Reminder noted." resetOnSuccess={false}>
           <input type="hidden" name="requestId" value={requestId} />
           <SubmitButton
-            pendingLabel="Saving…"
+            pendingLabel="Saving..."
             className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             I reminded them

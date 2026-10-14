@@ -9,7 +9,6 @@ import { QrScanner } from "./qr-scanner";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Scan an item · CEIT Inventory" };
 
-// Open the camera and manual QR lookup.
 export default async function ScanPage() {
   await requireInventoryAccess();
   const trustedQrOrigin = inventoryLabelAppOrigin(
@@ -31,7 +30,6 @@ export default async function ScanPage() {
             reporting a problem are one tap away.
           </p>
         </header>
-        {/* Camera scanner and manual lookup. */}
         <QrScanner trustedQrOrigin={trustedQrOrigin} />
       </div>
     </main>

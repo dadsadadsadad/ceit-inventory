@@ -17,7 +17,6 @@ function PcChip({ pc }: { pc: DirectoryPc }) {
   );
 }
 
-/** The PCs behind a hardware or software entry: a few chips, with the rest one click away. */
 export function PcChips({ pcs }: { pcs: DirectoryPc[] }) {
   const shown = pcs.slice(0, visibleCount);
   const rest = pcs.slice(visibleCount);

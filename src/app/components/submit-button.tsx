@@ -7,11 +7,10 @@ import { useOptimisticChanges } from "./optimistic-state";
 
 type SubmitButtonProps = ComponentProps<"button"> & { pendingLabel?: string };
 
-// Disable repeat clicks while a form is saving.
 export function SubmitButton({
   children,
   className = "",
-  pendingLabel = "Saving…",
+  pendingLabel = "Saving...",
   disabled,
   ...props
 }: SubmitButtonProps) {

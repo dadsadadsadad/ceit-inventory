@@ -6,8 +6,6 @@ import { everyTermMatches, searchTerms } from "./search-terms";
 import { lowStockWhere, outOfStockWhere } from "./stock-queries";
 import { isWarrantyFilter, warrantyWhere } from "./warranty";
 
-/** The searches behind the inventory, borrowing, and maintenance lists and their reports. */
-
 export type InventorySearch = {
   attention?: string;
   category?: string;
@@ -16,10 +14,8 @@ export type InventorySearch = {
   itemType?: string;
   location?: string;
   q?: string;
-  /** "low" for stock at or below its alert level, "out" for stock with none left. */
   stock?: string;
   status?: string;
-  /** A warranty state: expired, ending, active, or none. */
   warranty?: string;
 };
 
@@ -35,7 +31,7 @@ export function isItemCondition(value?: string): value is ItemCondition {
   return Boolean(value && Object.values(ItemCondition).includes(value as ItemCondition));
 }
 
-// Build the inventory query from the active filters.
+// builds the prisma where for the inventory list and its report
 export function inventoryWhere(search: InventorySearch) {
   const terms = searchTerms(search.q?.trim().slice(0, 120));
   const where: Prisma.InventoryItemWhereInput = {};
@@ -93,7 +89,6 @@ export function inventoryWhere(search: InventorySearch) {
   return where;
 }
 
-/** Borrower, student number, contact, or the equipment's name or asset tag. */
 export function borrowSearchWhere(query: string | undefined): Prisma.BorrowRequestWhereInput[] {
   return everyTermMatches<Prisma.BorrowRequestWhereInput>(searchTerms(query), (term) => [
     { borrowerName: { contains: term, mode: "insensitive" } },
@@ -104,7 +99,6 @@ export function borrowSearchWhere(query: string | undefined): Prisma.BorrowReque
   ]);
 }
 
-/** The issue title or description, or the equipment's name or asset tag. */
 export function maintenanceSearchWhere(
   query: string | undefined,
 ): Prisma.MaintenanceTicketWhereInput[] {

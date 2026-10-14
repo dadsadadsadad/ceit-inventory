@@ -2,7 +2,7 @@ export const metadata = { title: "Audit trail · CEIT Inventory" };
 
 import { Pager } from "@/app/components/pager";
 import {
-  auditTrailSearchParameters,
+  auditTrailSearchParams,
   auditTrailWhere,
   parseAuditTrailFilters,
   type AuditTrailFilters,
@@ -34,11 +34,10 @@ function searchParameters(search: SearchParams) {
 }
 
 function pageLink(filters: AuditTrailFilters, page: number) {
-  const query = auditTrailSearchParameters(filters, page).toString();
+  const query = auditTrailSearchParams(filters, page).toString();
   return query ? `/dashboard/activity?${query}` : "/dashboard/activity";
 }
 
-// Who changed what, and when: the important events first, everything else a click away.
 export default async function AuditTrailPage({
   searchParams,
 }: {
@@ -86,11 +85,11 @@ export default async function AuditTrailPage({
   }
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const exportParameters = auditTrailSearchParameters(filters);
-  exportParameters.set("kind", "activity");
-  const exportHref = `/dashboard/reports/export?${exportParameters.toString()}`;
-  const pdfExportHref = `/dashboard/reports/export/pdf?${exportParameters.toString()}`;
-  const printHref = `/dashboard/reports?${exportParameters.toString()}&generate=1`;
+  const exportParams = auditTrailSearchParams(filters);
+  exportParams.set("kind", "activity");
+  const exportHref = `/dashboard/reports/export?${exportParams.toString()}`;
+  const pdfExportHref = `/dashboard/reports/export/pdf?${exportParams.toString()}`;
+  const printHref = `/dashboard/reports?${exportParams.toString()}&generate=1`;
 
   return (
     <div className="page activity-page">

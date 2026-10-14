@@ -12,7 +12,6 @@ import { countChart } from "../charts";
 import type { ReportModel } from "../model";
 import { countsByRoom, filterNames, loadCapped, type BuilderContext } from "./shared";
 
-/** A PC with no processor, memory, or storage recorded, or no hardware profile at all. */
 export const incompletePcWhere: Prisma.InventoryItemWhereInput = {
   OR: [
     { computer: { is: null } },
@@ -22,7 +21,6 @@ export const incompletePcWhere: Prisma.InventoryItemWhereInput = {
 
 const listedSoftware = 10;
 
-// One entry per PC: hardware, operating system, and what is installed.
 export async function buildPcRegisterReport(context: BuilderContext): Promise<ReportModel> {
   const { filters } = context;
   const created = reportDateFilter(filters.dateRange);
@@ -94,7 +92,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
     title: "PC register",
     description: "Every PC with its hardware, operating system, and installed software.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
       names.location && `Room: ${names.location}`,
       filters.incomplete && "Missing hardware details",

@@ -59,7 +59,6 @@ describe("report builders", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     database.customField.findMany.mockResolvedValue([]);
-    // The charts' counts: nothing to group unless a test says otherwise.
     database.inventoryItem.groupBy.mockResolvedValue([]);
     database.inventoryItem.findMany.mockResolvedValue([]);
     database.category.findMany.mockResolvedValue([]);
@@ -223,7 +222,7 @@ describe("report builders", () => {
         `kind=inventory&inventoryStatus=OK&category=${id}&location=${id}&attention=1&q=epson`,
       );
       expect(report.filters).toEqual([
-        "Search: “epson”",
+        'Search: "epson"',
         "Status: OK",
         "Category: Projectors",
         "Room: Lab 2",

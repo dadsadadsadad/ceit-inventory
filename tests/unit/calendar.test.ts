@@ -40,13 +40,13 @@ describe("calendar months", () => {
   });
 
   it("lays a month out in whole weeks, Sunday first", () => {
-    // October 2026 starts on a Thursday and has 31 days: 4 leading + 31 + 0 trailing = 5 weeks.
+    // oct 2026: starts thursday, 31 days = 5 weeks
     const grid = monthGrid("2026-10");
     expect(grid).toHaveLength(35);
     expect(grid[0]).toEqual({ day: "2026-09-27", inMonth: false });
     expect(grid[4]).toEqual({ day: "2026-10-01", inMonth: true });
     expect(grid.filter((cell) => cell.inMonth)).toHaveLength(31);
-    // February 2026 starts on a Sunday and has 28 days: exactly four weeks.
+    // feb 2026: starts sunday, 28 days = 4 weeks
     expect(monthGrid("2026-02")).toHaveLength(28);
   });
 });

@@ -4,7 +4,7 @@ import { stripControlCharacters } from "@/lib/clean-text";
 import { FormError } from "@/lib/form-action";
 import { isUuid } from "@/lib/ids";
 
-/** "assetTagCode" becomes "Asset tag code"; a trailing "Id" is dropped ("categoryId" → "Category"). */
+// "categoryId" -> "Category"
 export function fieldLabel(key: string) {
   const words = key
     .replace(/Id$/, "")
@@ -14,15 +14,15 @@ export function fieldLabel(key: string) {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** A trimmed text field, or `null` when it is blank. Throws a form error when it is too long. */
+// trimmed, null if blank, throws if too long
 export function optionalText(
   formData: FormData,
   key: string,
-  maximumLength = 2_000,
+  maxLength = 2_000,
   label = fieldLabel(key),
 ) {
   const value = stripControlCharacters(String(formData.get(key) ?? "")).trim();
-  if (value.length > maximumLength) {
+  if (value.length > maxLength) {
     throw new FormError(`${label} is too long.`);
   }
   return value || null;
@@ -31,17 +31,16 @@ export function optionalText(
 export function requiredText(
   formData: FormData,
   key: string,
-  maximumLength = 255,
+  maxLength = 255,
   label = fieldLabel(key),
 ) {
-  const value = optionalText(formData, key, maximumLength, label);
+  const value = optionalText(formData, key, maxLength, label);
   if (!value) {
     throw new FormError(`${label} is required.`);
   }
   return value;
 }
 
-/** A required record ID. `message` is shown when the value is not a valid UUID. */
 export function requiredUuid(formData: FormData, key: string, message: string) {
   const value = requiredText(formData, key, 64);
   if (!isUuid(value)) {

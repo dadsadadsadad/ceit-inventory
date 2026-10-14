@@ -1,4 +1,4 @@
-/** The reports staff can generate, and which filters each one understands. Safe to import anywhere. */
+// no server imports here, used on the client too
 
 export const reportKinds = [
   "overview",
@@ -16,7 +16,6 @@ export const reportKinds = [
 ] as const;
 export type ReportKind = (typeof reportKinds)[number];
 
-/** The filter controls the report builder shows for a report. */
 export type ReportControl =
   | "dates"
   | "search"
@@ -50,7 +49,6 @@ export type ReportKindInfo = {
   description: string;
   id: ReportKind;
   label: string;
-  /** The download file name without the date. */
   stem: string;
 };
 
@@ -182,7 +180,6 @@ export function isReportKind(value: string | null | undefined): value is ReportK
   return reportKinds.includes(value as ReportKind);
 }
 
-/** One-click reports that answer common questions. They open the builder already filled in. */
 export const quickReports: {
   description: string;
   label: string;

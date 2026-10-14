@@ -18,7 +18,6 @@ import { isWarrantyFilter } from "@/lib/warranty";
 
 type Option = { id: string; name: string };
 
-// Search box, quick filters, and the extra filters for the inventory list.
 export function InventoryFilters({
   bulkMode,
   categories,
@@ -50,7 +49,6 @@ export function InventoryFilters({
 
   return (
     <>
-      {/* Search, filter, and sort the inventory. Choices apply as soon as they are made. */}
       <FilterForm
         className="card grid gap-3 rounded-lg p-4 min-[360px]:grid-cols-2 xl:grid-cols-4 xl:items-end"
         label="Inventory filters"
@@ -72,7 +70,7 @@ export function InventoryFilters({
             defaultValue={search.q?.slice(0, 120) ?? ""}
             maxLength={120}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Name, asset tag, serial, room, MAC…"
+            placeholder="Name, asset tag, serial, room, MAC..."
           />
         </label>
         <label>

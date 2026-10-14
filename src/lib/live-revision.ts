@@ -5,11 +5,10 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/prisma";
 import { liveScopeTables, type LiveUpdateScope } from "./live-update-scope";
 
-// Database-backed revisions work across workers and include additions, edits and deletions.
-// Coalesce simultaneous viewers without retaining public QR codes indefinitely.
+// db based so it works across workers, cached briefly so viewers share one query
 const cache = new Map<string, { expires: number; value: Promise<string> }>();
 
-/** The revision for a QR code that matches no item, so nobody keeps a stream open for it. */
+// revision for unknown codes
 export const missingItemRevision = "missing";
 
 export function liveRevision(qrCode?: string, scope: LiveUpdateScope = "dashboard") {
@@ -19,9 +18,10 @@ export function liveRevision(qrCode?: string, scope: LiveUpdateScope = "dashboar
     return existing.value;
   }
   const value = readRevision(qrCode, scope);
-  // Coalesce the entire query, even if the database takes longer than the TTL.
+  // cache the promise so slow queries are still shared
   const entry = { expires: Infinity, value };
   cache.set(key, entry);
+  // drop the oldest entry
   if (cache.size > 200) {
     cache.delete(cache.keys().next().value!);
   }
@@ -39,11 +39,12 @@ export function liveRevision(qrCode?: string, scope: LiveUpdateScope = "dashboar
 }
 
 async function readRevision(qrCode: string | undefined, scope: LiveUpdateScope) {
-  // The schema is validated by src/prisma.ts before this module can query it.
+  // schema name is validated in src/prisma.ts
   const schema = process.env.INVENTORY_DB_SCHEMA ?? "public";
   const table = (name: string) => Prisma.raw(`"${schema}"."${name}"`);
   let snapshot: unknown;
   if (qrCode) {
+    // item, its category/room and its loans
     snapshot = await prisma.$queryRaw(Prisma.sql`
       SELECT i."updatedAt", i.status, i.quantity, c."updatedAt" AS category, l."updatedAt" AS location,
         (SELECT concat(count(*), ':', max(b."updatedAt"))
@@ -57,6 +58,7 @@ async function readRevision(qrCode: string | undefined, scope: LiveUpdateScope) 
       return missingItemRevision;
     }
   } else {
+    // row count + latest timestamp per table, any change changes the hash
     const parts = liveScopeTables[scope].map((name) => {
       const timestamp =
         name === "InventoryAudit" || name === "InventoryItemPhoto" ? "createdAt" : "updatedAt";
@@ -69,6 +71,6 @@ async function readRevision(qrCode: string | undefined, scope: LiveUpdateScope) 
       Prisma.sql`${Prisma.join(parts, " UNION ALL ")} ORDER BY entity`,
     );
   }
-  // Only an opaque revision leaves the server; never staff/borrower data.
+  // only a hash goes to the client
   return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
 }

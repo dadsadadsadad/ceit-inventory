@@ -4,7 +4,6 @@ import { SubmitButton } from "@/app/components/submit-button";
 
 import { deleteLocation, setLocationActive, updateLocation } from "../actions";
 
-// Edit a room and manage whether it is available.
 export function LocationEditor({
   location,
 }: {
@@ -40,7 +39,6 @@ export function LocationEditor({
           ) : null}
         </span>
       </summary>
-      {/* Save room details. */}
       <FeedbackForm
         resetOnSuccess={false}
         action={updateLocation}
@@ -90,24 +88,22 @@ export function LocationEditor({
           />
         </label>
         <SubmitButton
-          pendingLabel="Saving…"
+          pendingLabel="Saving..."
           className="secondary-button justify-self-start rounded-lg px-4 py-2 text-sm font-semibold"
         >
           Save location
         </SubmitButton>
       </FeedbackForm>
-      {/* Enable or disable this room. */}
       <FeedbackForm action={setLocationActive} className="mt-3">
         <input type="hidden" name="id" value={location.id} />
         <input type="hidden" name="isActive" value={String(!location.isActive)} />
-        <SubmitButton pendingLabel="Updating…" className="accent-link text-xs font-semibold">
+        <SubmitButton pendingLabel="Updating..." className="accent-link text-xs font-semibold">
           {location.isActive ? "Deactivate location" : "Reactivate location"}
         </SubmitButton>
         {location.isActive && location._count.items > 0 ? (
           <span className="muted ml-2 text-xs">Existing records remain assigned here.</span>
         ) : null}
       </FeedbackForm>
-      {/* Delete an unused room. */}
       <FeedbackForm action={deleteLocation} className="divider mt-4 border-t pt-4">
         <input type="hidden" name="id" value={location.id} />
         <div className="flex flex-wrap items-end gap-3">
@@ -127,7 +123,7 @@ export function LocationEditor({
           </label>
           <SubmitButton
             disabled={hasAssignedItems}
-            pendingLabel="Deleting…"
+            pendingLabel="Deleting..."
             className="danger-button rounded-lg px-4 py-2 text-sm font-semibold"
           >
             Delete location

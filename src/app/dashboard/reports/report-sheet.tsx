@@ -18,7 +18,7 @@ function Cell({ text, primary }: { primary?: boolean; text: string }) {
   );
 }
 
-// A bar or column chart. Every value is written beside its mark and repeated in the tables below.
+// values are also in the tables below
 function Chart({ chart }: { chart: ReportChart }) {
   const max = Math.max(1, ...chart.data.map((entry) => entry.value));
   const describe = (entry: ReportChart["data"][number]) =>
@@ -74,7 +74,7 @@ function Chart({ chart }: { chart: ReportChart }) {
   );
 }
 
-// Column widths follow the PDF's proportions, so every table in a report lines up the same way.
+// same column widths as the pdf
 function columnShares(table: ReportTable) {
   const total = table.columns.reduce((sum, column) => sum + column.width, 0);
   return table.columns.map((column) => `${((column.width / total) * 100).toFixed(2)}%`);
@@ -143,7 +143,6 @@ function Table({ table }: { table: ReportTable }) {
   );
 }
 
-// The generated report, shown on the page the way the PDF will look.
 export function ReportSheet({ actions, report }: { actions: ReactNode; report: ReportModel }) {
   return (
     <article className="report-sheet" aria-label={`${report.title} report`}>

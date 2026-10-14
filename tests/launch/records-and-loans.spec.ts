@@ -37,9 +37,7 @@ test.beforeEach(async () => {
   );
 });
 
-test("import checking explains row problems, adjusts odd values, and checks Settings and existing records", async ({
-  page,
-}) => {
+test("import check reports row problems and duplicates", async ({ page }) => {
   await signIn(page);
   await page.goto("/dashboard/inventory/import");
   const csv = [
@@ -57,17 +55,14 @@ test("import checking explains row problems, adjusts odd values, and checks Sett
   });
   await page.getByLabel("Create missing categories and locations", { exact: false }).uncheck();
   await page.getByRole("button", { name: "Check file" }).click();
-  // A bad date and an unreadable memory size are adjusted, not fatal; the other two rows are skipped.
   await expect(page.getByText("3 rows look good", { exact: false })).toBeVisible();
   await expect(page.getByText("2 skipped", { exact: false })).toBeVisible();
-  await expect(page.getByText("category “Review missing category” does not exist")).toBeVisible();
+  await expect(page.getByText('category "Review missing category" does not exist')).toBeVisible();
   await expect(
     page.getByText("asset tag INV-TST-OK-01-0001 is already assigned to a record."),
   ).toBeVisible();
-  await expect(
-    page.getByText("Purchase date “2026-13-45” is not a date I could read"),
-  ).toBeVisible();
-  await expect(page.getByText("Memory “lots” is not a size I could read")).toBeVisible();
+  await expect(page.getByText('Purchase date "2026-13-45" is not a valid date')).toBeVisible();
+  await expect(page.getByText('Memory "lots" is not a valid size')).toBeVisible();
   expect(
     (
       await query(
@@ -82,7 +77,7 @@ test("saving an edit keeps the Philippine inspection date and logs only real cha
   page,
 }) => {
   const id = await itemId("ceit-launch-item-5");
-  // 02:30 on 21 September in Manila is still 20 September in UTC.
+  // 02:30 manila on the 21st is still the 20th in utc
   await query('UPDATE "InventoryItem" SET "lastCheckedAt"=$1, name=$2 WHERE id=$3', [
     "2026-09-20 18:30:00",
     "Lab equipment 5",
@@ -128,7 +123,6 @@ test("overdue loans are listed, can get a new return time, and cannot overlap a 
   await expect(table).toHaveCount(1);
   await expect(table.first()).toContainText("Overdue");
 
-  // A later reservation by someone else blocks an extension through it.
   await query(
     `INSERT INTO "BorrowRequest" (id,"inventoryItemId","borrowerName","studentNumber",contact,purpose,"requestedQuantity","expectedReturnDate","startsAt","isReservation",status,"personalDataExpiresAt","updatedAt")
      VALUES (gen_random_uuid(),$1,'Next Student','2024-00098','09170000001','Later booking',1,NOW() + INTERVAL '3 days 2 hours',NOW() + INTERVAL '3 days','true','RESERVED',NOW() + INTERVAL '400 days',NOW())`,
@@ -191,7 +185,6 @@ test("search matches every word and the needs-attention filter shares one defini
     ).toBeVisible();
     await expect(page.getByText("1 record ·")).toBeVisible();
 
-    // Retired equipment in poor condition does not need attention.
     await page.goto("/dashboard/inventory?attention=1");
     await expect(page.getByText("2 records ·")).toBeVisible();
     await expect(page.locator(".record-table")).toContainText("Lab equipment 8");

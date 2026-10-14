@@ -13,7 +13,6 @@ const { bottom, margin } = pageLayout;
 const maxCellLines = 14;
 const cellPadding = 6;
 
-/** Draws a report onto A4 pages: cover band, filters, metric cards, then the tables. */
 class Sheet {
   private cursor = 0;
   private page: PDFPage;
@@ -27,7 +26,7 @@ class Sheet {
     this.cover();
   }
 
-  // The dark band with the wordmark, report name, and description.
+  // header band
   private cover() {
     const { page, fonts, report } = this;
     const bandHeight = 150;
@@ -80,7 +79,6 @@ class Sheet {
     this.cursor = top - bandHeight - 30;
   }
 
-  // "CEIT." with the dot in the accent colour, like the site's logo.
   private wordmark(
     y: number,
     color: typeof pdfTheme.ink,
@@ -92,7 +90,6 @@ class Sheet {
     page.drawText(".", { x: margin + width, y, size: 15, font: fonts.serif, color: dot });
   }
 
-  // Start a new page with a slim running header.
   private newPage() {
     const { fonts, report } = this;
     this.page = this.document.addPage([pageLayout.width, pageLayout.height]);
@@ -117,12 +114,12 @@ class Sheet {
   }
 
   private ensure(height: number) {
+    // row won't fit, new page and repeat the header
     if (this.cursor - height < bottom) {
       this.newPage();
     }
   }
 
-  // Filter pills, or a line saying nothing is filtered.
   filters() {
     const { page, fonts, report } = this;
     const labelSize = 7.5;
@@ -176,7 +173,7 @@ class Sheet {
     this.cursor -= 22 + (line + 1) * rowHeight;
   }
 
-  // Summary numbers in cards, four to a row.
+  // metric cards, 4 per row
   metrics(metrics: ReportMetric[]) {
     if (!metrics.length) {
       return;
@@ -246,7 +243,7 @@ class Sheet {
     }
   }
 
-  // Charts two to a row, drawn like the page: thin bars with the value at the tip.
+  // charts, 2 per row
   charts(charts: ReportChart[]) {
     const drawable = charts.filter(hasChartData);
     if (!drawable.length) {
@@ -348,7 +345,6 @@ class Sheet {
       return;
     }
 
-    // Columns over time: values on the caps, labels under a single baseline.
     const baseline = top - height + 22;
     const plotHeight = bodyTop - baseline - 16;
     const slot = (width - 20) / chart.data.length;
@@ -390,7 +386,6 @@ class Sheet {
     });
   }
 
-  // Shorten text with "..." until it fits the width.
   private fit(text: string, width: number, size: number) {
     const measure = (value: string) => this.fonts.regular.widthOfTextAtSize(value, size);
     let value = pdfText(text, 80);
@@ -403,7 +398,6 @@ class Sheet {
     return `${value}...`;
   }
 
-  // A section heading with its row count, then the table.
   table(table: ReportTable) {
     const { fonts } = this;
     this.ensure(110);
@@ -461,7 +455,6 @@ class Sheet {
     return columns.map((column) => (contentWidth * column.width) / total);
   }
 
-  // The lines of one cell: the first names the record in primary columns, the rest are details.
   private cellLines(text: string, column: ReportColumn, width: number, size: number) {
     const { fonts } = this;
     const lines: CellLine[] = [];
@@ -486,6 +479,7 @@ class Sheet {
     const size = 8.4;
     const lineHeight = size * 1.42;
     const widths = this.widths(table.columns);
+    // left edge of each column
     const xs = widths.reduce<number[]>((all, width) => [...all, all.at(-1)! + width], [margin]);
 
     const header = () => {
@@ -562,7 +556,7 @@ class Sheet {
     this.cursor -= 14;
   }
 
-  // Footers carry the page number, which is only known once every page exists.
+  // page numbers go in at the end once the total is known
   finish() {
     const { fonts, report } = this;
     const pages = this.document.getPages();
@@ -592,7 +586,6 @@ class Sheet {
   }
 }
 
-/** Turn a report into PDF bytes. */
 export async function renderReportPdf(report: ReportModel) {
   const document = await PDFDocument.create();
   document.setTitle(`CEIT ${report.title}`);

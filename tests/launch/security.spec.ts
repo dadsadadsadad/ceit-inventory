@@ -35,7 +35,7 @@ async function itemId(qrCode: string) {
     .id as string;
 }
 
-// Chromium accepts secure cookies on loopback HTTP; the request client does not, so send it by hand.
+// the request client won't send secure cookies over http, set it manually
 async function authed(page: Page, path: string) {
   return page.request.get(path, {
     headers: {
@@ -74,7 +74,6 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.getByLabel("Student number").fill("SEC-CRAFT-1");
     await page.getByLabel("Contact number").fill("09123456789");
     await page.getByLabel("Purpose", { exact: false }).fill("Trying to borrow it right now");
-    // Switch the form to "borrow now" by hand, as a script or a curious student could.
     await page.evaluate(() => {
       const now = document.querySelector<HTMLInputElement>(
         'input[name="borrowWhen"][value="now"]',
@@ -82,7 +81,7 @@ test.describe("borrowing rules cannot be bypassed", () => {
       now.disabled = false;
       now.checked = true;
     });
-    // The browser's own limits on the dates would stop the form first; the server must not need them.
+    // skip browser date limits, the server has to check
     await page.locator("form.request-form").evaluate((form) => form.setAttribute("novalidate", ""));
     await page.getByRole("button", { name: /Request reservation|Send borrowing request/ }).click();
     await expect(
@@ -130,7 +129,6 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.getByLabel("Student number").fill("SEC-BACK-1");
     await page.getByLabel("Contact number").fill("09123456789");
     await page.getByLabel("Purpose", { exact: false }).fill("Return before pickup");
-    // The browser's own limits would stop this, so skip them and let the server decide.
     await page.locator("form.request-form").evaluate((form) => form.setAttribute("novalidate", ""));
     await page.getByRole("button", { name: "Request reservation", exact: true }).click();
     await expect(
@@ -192,7 +190,6 @@ test.describe("hostile input is only ever data", () => {
         );
         expect(response?.status(), `${path} with ${JSON.stringify(payload)}`).toBeLessThan(500);
         await expect(page.locator("h1").first()).toBeVisible();
-        // A null byte used to make the page's database query fail and show an error notice.
         if (payload.includes("%00")) {
           await expect(page.locator('main [role="alert"]'), `${path} with ${payload}`).toHaveCount(
             0,
@@ -203,7 +200,6 @@ test.describe("hostile input is only ever data", () => {
     expect(
       await page.evaluate(() => (window as unknown as { __xss?: number }).__xss),
     ).toBeUndefined();
-    // Nothing was dropped.
     expect(
       (await query('SELECT COUNT(*)::int AS count FROM "InventoryItem"')).rows[0].count,
     ).toBeGreaterThan(20);
@@ -313,7 +309,6 @@ test.describe("access is checked everywhere", () => {
     await query(
       `UPDATE "User" SET "lockedUntil"=NULL, "failedSignInCount"=0, "firstFailedSignInAt"=NULL WHERE username='launch.staff'`,
     );
-    // A query-shaped username is just a username that does not exist.
     expect(await failed("' OR '1'='1")).toBe("invalid-credentials");
     expect(await failed("admin'--@example.com")).toBe("invalid-credentials");
     await page.goto("/dashboard");
@@ -323,7 +318,6 @@ test.describe("access is checked everywhere", () => {
 
 test.describe("the dashboard calendar", () => {
   test("shows loans, takes events, and treats their text as text", async ({ page }) => {
-    // A loan due back later today (Manila) lands on today's cell.
     const id = await itemId("ceit-launch-item-15");
     await query("UPDATE \"InventoryItem\" SET status='DEPLOYED' WHERE id=$1", [id]);
     await query(
@@ -344,7 +338,6 @@ test.describe("the dashboard calendar", () => {
       await page.evaluate(() => document.querySelectorAll(".dashboard-calendar b").length),
     ).toBe(0);
 
-    // It is saved for everyone, and can be removed again.
     await page.reload();
     await expect(
       page.getByRole("region", { name: "Calendar" }).getByText(title, { exact: true }),
@@ -358,7 +351,6 @@ test.describe("the dashboard calendar", () => {
       page.getByRole("region", { name: "Calendar" }).getByText(title, { exact: true }),
     ).toHaveCount(0);
 
-    // Next month opens without leaving the page, and the notepad sits beneath the calendar.
     await calendar.getByRole("button", { name: "Next month" }).click();
     await expect(calendar.getByText(/loading/)).toHaveCount(0);
     const boxes = await page.evaluate(() => {
@@ -384,7 +376,7 @@ test.describe("guessing passwords is slowed down", () => {
       await expect(page).toHaveURL(/\/auth\/login\?error=|\/dashboard$/);
       return new URL(page.url()).searchParams.get("error");
     };
-    // Many different usernames, each guessed once: the accounts never lock, but the device does.
+    // different usernames once each: accounts don't lock but the ip does
     for (let guess = 1; guess <= 30; guess += 1) {
       expect(await attempt(`guess.${guess}`, "Not-the-password9")).toBe("invalid-credentials");
     }
@@ -392,7 +384,7 @@ test.describe("guessing passwords is slowed down", () => {
       "too-many-attempts",
     );
     await expect(page.getByText(/Too many failed sign-in attempts/)).toBeVisible();
-    // After the window it works again; here the counter is cleared to the same effect.
+    // clear the counter instead of waiting
     await query('DELETE FROM "PublicRequestAttempt"');
     expect(await attempt("launch.admin", process.env.CEIT_TEST_PASSWORD!)).toBeNull();
   });

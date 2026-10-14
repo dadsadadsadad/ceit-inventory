@@ -1,7 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Public tests only change their own browser's preferences, so the same suite
-// can verify a deployed release without signing in or editing inventory data.
+// public tests don't sign in or edit data, so they can also run against the live site
 const deployedBaseURL = process.env.CEIT_E2E_BASE_URL;
 
 export default defineConfig({

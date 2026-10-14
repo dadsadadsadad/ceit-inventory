@@ -2,7 +2,7 @@ import { auditEventData } from "@/lib/audit-event";
 import type { InventoryUser } from "@/lib/inventory-auth";
 import { prisma } from "@/prisma";
 
-// A logging failure should not block the download.
+// don't block the download if logging fails
 export async function recordExport(user: InventoryUser, kind: string, format: "CSV" | "PDF") {
   try {
     await prisma.inventoryAudit.create({

@@ -21,7 +21,6 @@ import { StockCard } from "./_components/stock-card";
 
 export const dynamic = "force-dynamic";
 
-// Load one item with its history and editing forms.
 export default async function InventoryItemPage({
   params,
   searchParams,
@@ -51,7 +50,6 @@ export default async function InventoryItemPage({
   return (
     <div className="page item-detail-page">
       <div className="page-inner space-y-6">
-        {/* Item title, status, and label links. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">

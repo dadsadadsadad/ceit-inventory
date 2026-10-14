@@ -9,11 +9,9 @@ import { prisma } from "@/prisma";
 import { getCurrentInventoryUser } from "@/lib/inventory-auth";
 
 const scanDeduplicationWindowMs = 15_000;
-// Anyone holding a label can open its page and trigger this, so an anonymous open is recorded
-// only now and then; otherwise it could fill the audit trail.
+// anyone can open a label page, so anonymous scans are only logged every so often
 const anonymousScanWindowMs = 5 * 60 * 1000;
 
-// Add the QR visit to the item's audit history.
 export async function recordInventoryScan(itemId: string) {
   const actor = await getCurrentInventoryUser();
   if (!isUuid(itemId)) {
@@ -29,9 +27,9 @@ export async function recordInventoryScan(itemId: string) {
   }
 
   try {
-    // Checked and written together, so many opens at the same moment still record one scan.
-    await runTransaction(async (transaction) => {
-      const recentScan = await transaction.inventoryAudit.findFirst({
+    // check + insert together so simultaneous opens log once
+    await runTransaction(async (tx) => {
+      const recentScan = await tx.inventoryAudit.findFirst({
         where: {
           itemId: item.id,
           action: AuditAction.SCANNED,
@@ -45,7 +43,7 @@ export async function recordInventoryScan(itemId: string) {
       if (recentScan) {
         return;
       }
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: {
           itemId: item.id,
           action: AuditAction.SCANNED,
@@ -57,7 +55,7 @@ export async function recordInventoryScan(itemId: string) {
       });
     });
   } catch (error) {
-    // A scan record is a courtesy; the page works without it.
+    // logging is optional, don't break the page
     console.error("Unable to record a QR scan", error);
   }
 }

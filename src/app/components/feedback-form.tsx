@@ -11,13 +11,12 @@ type ActionState = { error: string | null; success: boolean };
 const initialState: ActionState = { error: null, success: false };
 export const SavingEntityContext = createContext<string | undefined>(undefined);
 
-// Let Next.js redirects pass through form error handling.
+// let next redirects through
 function isRedirect(error: unknown) {
   const details = error as { digest?: unknown; message?: unknown } | null;
   return String(details?.digest ?? details?.message ?? "").startsWith("NEXT_REDIRECT");
 }
 
-// Use a fallback when the error has no usable message.
 function safeErrorMessage(error: unknown) {
   if (!(error instanceof Error)) {
     return "Unable to save this change. Please try again.";
@@ -29,7 +28,6 @@ function safeErrorMessage(error: unknown) {
   return message;
 }
 
-// Submit a form and show its result without losing failed inputs.
 export function FeedbackForm({
   action,
   children,
@@ -174,8 +172,7 @@ export function FeedbackForm({
     }
   }, [state]);
 
-  // React preserves uncontrolled field values across RSC refreshes. Synchronize only
-  // pristine forms, so remote updates appear without erasing unfinished input.
+  // only sync untouched forms so a refresh doesn't wipe what someone is typing
   useEffect(() => {
     if (revision === undefined || dirtyRef.current || pending) {
       return;
@@ -213,7 +210,6 @@ export function FeedbackForm({
         className={className}
         aria-busy={pending || undefined}
         onChange={(event) => {
-          // Selection alone is safe to preserve through incoming inventory updates.
           if (
             event.target instanceof HTMLInputElement &&
             event.target.hasAttribute("data-bulk-selection-item")
@@ -240,7 +236,7 @@ export function FeedbackForm({
       >
         {preview ? (
           <article className="optimistic-preview" data-optimistic="true" aria-live="polite">
-            <span className="eyebrow">Adding record…</span>
+            <span className="eyebrow">Adding record...</span>
             <h3 className="mt-1 font-semibold">{preview.title}</h3>
             {preview.details ? <p className="muted mt-1 text-sm">{preview.details}</p> : null}
             <p className="muted mt-2 text-sm">
@@ -262,7 +258,6 @@ export function FeedbackForm({
               className="notice notice-error form-feedback rounded-lg px-3 py-2 text-sm"
               role="alert"
             >
-              {/* Focus the error message after a failed submission. */}
               {state.error}
             </p>
             {revision !== undefined ? (
@@ -284,7 +279,6 @@ export function FeedbackForm({
             className="notice notice-success form-feedback rounded-lg px-3 py-2 text-sm"
             role="status"
           >
-            {/* Confirmation after a successful submission. */}
             {successMessage}
           </p>
         ) : null}

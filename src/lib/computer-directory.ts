@@ -1,5 +1,3 @@
-/** Pure grouping rules behind the Hardware and Software views (and their reports). */
-
 export type DirectoryPc = {
   assetTag: string | null;
   id: string;
@@ -7,7 +5,7 @@ export type DirectoryPc = {
   room: string;
 };
 
-// ---------------------------------------------------------------- software
+// software
 
 export const licenseWarningDays = 30;
 
@@ -50,7 +48,7 @@ export function licenseStateLabel(state: LicenseState) {
 
 export type SoftwareEntry = {
   installedAt: Date | null;
-  /** Whether this copy is marked as licensed; empty when nobody has said. */
+  // null = not set
   isLicensed: boolean | null;
   licenseExpiresAt: Date | null;
   licenseKeyHint: string | null;
@@ -60,13 +58,11 @@ export type SoftwareEntry = {
 };
 
 export type SoftwareGroup = {
-  /** The title as most PCs spell it. */
+  // most common spelling
   name: string;
   installs: SoftwareEntry[];
   rooms: string[];
-  /** The earliest license expiry among the installations, if any has one. */
   soonestExpiry: Date | null;
-  /** The most urgent license state among the installations. */
   state: LicenseState;
   versions: { count: number; version: string }[];
 };
@@ -81,7 +77,7 @@ function mostCommon(values: string[]) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
 }
 
-/** One group per software title, ignoring capitalization and surrounding spaces. */
+// group by title, case and whitespace insensitive
 export function groupSoftware(entries: SoftwareEntry[], now = new Date()): SoftwareGroup[] {
   const groups = new Map<string, SoftwareEntry[]>();
   for (const entry of entries) {
@@ -130,7 +126,7 @@ export function sortSoftwareGroups(groups: SoftwareGroup[], sort: SoftwareSort) 
       return b.installs.length - a.installs.length || byName(a, b);
     }
     if (sort === "expiry") {
-      // Soonest expiry first, with titles that have no license date last.
+      // soonest expiry first, no date last
       const left = a.soonestExpiry?.getTime() ?? Infinity;
       const right = b.soonestExpiry?.getTime() ?? Infinity;
       return left - right || byName(a, b);
@@ -139,7 +135,7 @@ export function sortSoftwareGroups(groups: SoftwareGroup[], sort: SoftwareSort) 
   });
 }
 
-// ---------------------------------------------------------------- hardware
+// hardware
 
 export type HardwareComponent = "processor" | "memory" | "storage" | "graphics" | "os";
 
@@ -171,7 +167,6 @@ function clean(value: string | null | undefined) {
   return text ? text : null;
 }
 
-/** How one PC describes a component, or `null` when nothing was recorded. */
 export function componentValue(computer: DirectoryComputer, component: HardwareComponent) {
   switch (component) {
     case "processor":
@@ -195,12 +190,11 @@ export function componentValue(computer: DirectoryComputer, component: HardwareC
 export type HardwareGroup = {
   count: number;
   pcs: DirectoryPc[];
-  /** `false` for the group of PCs that have nothing recorded for this component. */
   recorded: boolean;
   value: string;
 };
 
-/** PCs grouped by what they report for one component: most common first, unrecorded last. */
+// most common first, not recorded last
 export function groupHardware(
   computers: DirectoryComputer[],
   component: HardwareComponent,
@@ -241,7 +235,7 @@ function sortPcs(pcs: DirectoryPc[]) {
   );
 }
 
-/** A PC profile is incomplete when its processor, memory, or storage is missing. */
+// missing cpu, memory or storage
 export function isIncompleteProfile(computer: DirectoryComputer) {
   return (
     componentValue(computer, "processor") === null ||

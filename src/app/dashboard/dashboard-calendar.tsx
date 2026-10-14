@@ -32,11 +32,7 @@ function countText(count: number) {
   return count === 0 ? "nothing planned" : `${count} ${count === 1 ? "thing" : "things"}`;
 }
 
-/**
- * A month of what is coming up: loans due back, reservations to hand over, licenses and
- * warranties that end, and events staff add themselves. The current month arrives with the page;
- * other months are fetched when they are opened.
- */
+// current month comes with the page, other months are fetched
 export function DashboardCalendar({
   canEdit,
   initialEntries,
@@ -52,7 +48,7 @@ export function DashboardCalendar({
   const [selected, setSelected] = useState(today);
   const [fetched, setFetched] = useState<{ entries: CalendarEntry[]; month: string } | null>(null);
   const [failedMonth, setFailedMonth] = useState<string | null>(null);
-  // Bumped after a successful save, so a month fetched earlier is read again.
+  // bump after saving so cached months refetch
   const [version, setVersion] = useState(0);
 
   const visibleFromPage = month === initialMonth;
@@ -144,7 +140,7 @@ export function DashboardCalendar({
 
       <p className="cal-month" aria-live="polite">
         {monthTitle(month)}
-        {loading ? <span className="muted"> · loading…</span> : null}
+        {loading ? <span className="muted"> · loading...</span> : null}
         {failed ? (
           <span className="cal-error">
             {" "}
@@ -265,7 +261,7 @@ export function DashboardCalendar({
               placeholder="Note (optional)"
             />
             <SubmitButton
-              pendingLabel="Adding…"
+              pendingLabel="Adding..."
               className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
             >
               Add to {monthTitle(month).split(" ")[0]} {dayNumber(activeDay)}

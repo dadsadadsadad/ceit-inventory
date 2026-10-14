@@ -8,7 +8,7 @@ import {
   getAccentColors,
   hexToHsv,
   hsvToHex,
-  minimumContrast,
+  minContrast,
   defaultPreferences,
   parsePreferences,
   preferenceAttributes,
@@ -19,7 +19,7 @@ import {
   type Theme,
 } from "@/lib/appearance";
 
-// Run the script that restores the saved look before the page paints, against a stand-in page.
+// run the bootstrap script against a fake document
 function restoreAppearance(
   theme: string | null,
   accent: string | null,
@@ -73,9 +73,9 @@ describe("saved appearance", () => {
         expect([...properties.keys()]).toEqual([...accentProperties]);
         expect(
           contrastRatio(accent.accent, theme === "light" ? "#e4e9ef" : "#343c47"),
-        ).toBeGreaterThanOrEqual(minimumContrast);
+        ).toBeGreaterThanOrEqual(minContrast);
         expect(contrastRatio(accent.accentStrong, accent.accentOnStrong)).toBeGreaterThanOrEqual(
-          minimumContrast,
+          minContrast,
         );
       }
     },
@@ -166,7 +166,6 @@ describe("display preferences", () => {
       "data-titles": "sans",
       "data-tone": "midnight",
     });
-    // Each mode has its own tone, so the light one is not used in dark mode and vice versa.
     expect(preferenceAttributes(everything, "light")["data-tone"]).toBe("bright");
   });
 
@@ -200,7 +199,6 @@ describe("display preferences", () => {
     expect(standard.dataset.theme).toBe("light");
     expect(standard.attributes.has("data-tone")).toBe(false);
     expect(standard.attributes.get("data-mode")).toBe("light");
-    // A tone that belongs to the other mode is ignored rather than half applied.
     expect(
       restoreAppearance("light", null, { "ceit-tone-light": "midnight" }).attributes.has(
         "data-tone",

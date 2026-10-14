@@ -4,7 +4,7 @@ export function dateValue(value?: Date | null) {
   return value ? value.toISOString().slice(0, 10) : "";
 }
 
-// The inspection date is shown in Philippine time, so the edit field must use that day as well.
+// use the manila date so it matches what's displayed
 export function manilaDateValue(value?: Date | null) {
   return value ? manilaCalendarDate(value) : "";
 }
@@ -28,7 +28,6 @@ export function displayPurchasePrice(value?: { toString: () => string } | null) 
   return philippinePeso.format(Number(value.toString()));
 }
 
-// Reuse the same label and input layout.
 export function TextField({
   name,
   label: fieldLabel,
@@ -74,7 +73,6 @@ export function TextField({
   );
 }
 
-// Display one label and value in the item summary.
 export function Detail({
   label: detailLabel,
   children,
@@ -82,7 +80,6 @@ export function Detail({
 }: {
   label: string;
   children: React.ReactNode;
-  /** Longer text, such as a description, takes the full row. */
   wide?: boolean;
 }) {
   return (

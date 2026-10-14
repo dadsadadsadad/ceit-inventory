@@ -9,9 +9,8 @@ import { FormError, formAction } from "@/lib/form-action";
 import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 
-const maximumEventsPerDay = 25;
+const maxEventsPerDay = 25;
 
-// Add an event to the dashboard calendar.
 export async function createCalendarEvent(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -22,17 +21,15 @@ export async function createCalendarEvent(formData: FormData) {
     }
     const title = requiredText(formData, "title", 120);
     const notes = optionalText(formData, "notes", 500);
-    // Counted, added, and recorded together, so the day's limit holds and nothing goes unrecorded.
-    await runTransaction(async (transaction) => {
-      if (
-        (await transaction.calendarEvent.count({ where: { eventDate } })) >= maximumEventsPerDay
-      ) {
-        throw new FormError(`A day can hold up to ${maximumEventsPerDay} events.`);
+    // count + insert + log in one transaction so the daily limit holds
+    await runTransaction(async (tx) => {
+      if ((await tx.calendarEvent.count({ where: { eventDate } })) >= maxEventsPerDay) {
+        throw new FormError(`A day can hold up to ${maxEventsPerDay} events.`);
       }
-      const event = await transaction.calendarEvent.create({
+      const event = await tx.calendarEvent.create({
         data: { title, notes, eventDate, createdByName: actor.username },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: auditEventData({
           action: "CREATED",
           actor,
@@ -46,18 +43,18 @@ export async function createCalendarEvent(formData: FormData) {
   });
 }
 
-// Remove an event staff added. Loans, licenses, and warranties are not events and cannot be removed here.
+// only staff events can be deleted, not loans/licenses/warranties
 export async function deleteCalendarEvent(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requiredUuid(formData, "id", "Invalid event.");
-    await runTransaction(async (transaction) => {
-      const event = await transaction.calendarEvent.findUnique({ where: { id } });
+    await runTransaction(async (tx) => {
+      const event = await tx.calendarEvent.findUnique({ where: { id } });
       if (!event) {
         throw new FormError("This event was already removed.");
       }
-      await transaction.calendarEvent.delete({ where: { id } });
-      await transaction.inventoryAudit.create({
+      await tx.calendarEvent.delete({ where: { id } });
+      await tx.inventoryAudit.create({
         data: auditEventData({
           action: "DELETED",
           actor,

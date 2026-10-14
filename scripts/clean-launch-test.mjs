@@ -31,7 +31,7 @@ try {
     [schema],
   );
   if (apply) {
-    // The validated name comes only from the test setup file.
+    // schema name only comes from the setup file
     await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     if (readFileSync(envPath, "utf8") === savedEnv) {
       unlinkSync(envPath);

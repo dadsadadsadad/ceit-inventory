@@ -21,19 +21,17 @@ import {
 } from "@/lib/borrow-availability";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 
-const maximumStaffNoteLength = 2_000;
+const maxStaffNoteLength = 2_000;
 
-// Validate the borrowing request ID from the form.
 function requestId(formData: FormData) {
   return requiredUuid(formData, "requestId", "Invalid borrowing request.");
 }
 
-// Read the staff note and check its length.
 function staffNotes(formData: FormData) {
   const value = String(formData.get("staffNotes") ?? "").trim();
-  if (value.length > maximumStaffNoteLength) {
+  if (value.length > maxStaffNoteLength) {
     throw new FormError(
-      `Staff notes must be ${maximumStaffNoteLength.toLocaleString()} characters or fewer.`,
+      `Staff notes must be ${maxStaffNoteLength.toLocaleString()} characters or fewer.`,
     );
   }
   return value || null;
@@ -43,23 +41,21 @@ function unitLabel(quantity: number) {
   return quantity === 1 ? "unit" : "units";
 }
 
-// Check equipment out to a borrower.
 export async function markBorrowed(formData: FormData) {
   return formAction(async () => {
     const policy = borrowPolicyFromEnvironment();
     const actor = await requireWriteAccess();
     const id = requestId(formData);
     const notes = staffNotes(formData);
-    // Anyone can type a student number into the public form, so staff confirm who is
-    // standing at the desk before equipment leaves.
+    // anyone can type any student number, so staff have to check the id
     if (formData.get("idChecked") !== "on") {
       throw new FormError(
         "Confirm that you checked the borrower's school ID before handing over the equipment.",
       );
     }
 
-    const itemId = await runTransaction(async (transaction) => {
-      const request = await transaction.borrowRequest.findUnique({
+    const itemId = await runTransaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({
         where: { id },
         include: {
           inventoryItem: {
@@ -93,7 +89,7 @@ export async function markBorrowed(formData: FormData) {
         );
       }
       await checkLoanAvailability(
-        transaction,
+        tx,
         request.inventoryItemId,
         now,
         request.expectedReturnDate,
@@ -113,19 +109,18 @@ export async function markBorrowed(formData: FormData) {
         );
       }
 
-      const outstandingQuantityLoans = await transaction.borrowRequest.count({
+      const outstandingQuantityLoans = await tx.borrowRequest.count({
         where: {
           inventoryItemId: request.inventoryItemId,
           status: { in: [borrowStatus.BORROWED, borrowStatus.RETURN_REQUESTED] },
           checkedOutItemStatus: null,
         },
       });
-      // A grouped legacy asset can reach one remaining unit without becoming
-      // an individually tracked asset. Keep using stock quantities until return.
+      // old grouped assets still use quantities until they're split
       const individualAssetCheckout =
         outstandingQuantityLoans === 0 &&
         usesIndividualAssetCheckout(request.inventoryItem, request.requestedQuantity);
-      const inventoryUpdate = await transaction.inventoryItem.updateMany({
+      const inventoryUpdate = await tx.inventoryItem.updateMany({
         where: {
           id: request.inventoryItemId,
           quantity: { gte: request.requestedQuantity },
@@ -140,7 +135,7 @@ export async function markBorrowed(formData: FormData) {
       }
 
       const processedAt = new Date();
-      await transaction.borrowRequest.update({
+      await tx.borrowRequest.update({
         where: { id: request.id },
         data: {
           status: borrowStatus.BORROWED,
@@ -150,7 +145,7 @@ export async function markBorrowed(formData: FormData) {
           checkedOutItemStatus: individualAssetCheckout ? request.inventoryItem.status : null,
         },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.BORROWED,
@@ -180,15 +175,15 @@ export async function markBorrowed(formData: FormData) {
   });
 }
 
-// Close a pending request without checking out equipment.
+// only pending requests can be declined
 export async function declineBorrowRequest(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requestId(formData);
     const notes = staffNotes(formData);
 
-    const itemId = await runTransaction(async (transaction) => {
-      const request = await transaction.borrowRequest.findUnique({
+    const itemId = await runTransaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({
         where: { id },
         select: { id: true, inventoryItemId: true, requestedQuantity: true, status: true },
       });
@@ -199,7 +194,7 @@ export async function declineBorrowRequest(formData: FormData) {
         throw new FormError("Only pending requests can be declined.");
       }
 
-      await transaction.borrowRequest.update({
+      await tx.borrowRequest.update({
         where: { id: request.id },
         data: {
           status: borrowStatus.DECLINED,
@@ -208,7 +203,7 @@ export async function declineBorrowRequest(formData: FormData) {
           processedByName: actor.username,
         },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.DECLINED,
@@ -233,15 +228,14 @@ export async function declineBorrowRequest(formData: FormData) {
   });
 }
 
-// Confirm the return and restore availability.
 export async function returnBorrowRequest(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requestId(formData);
     const notes = staffNotes(formData);
 
-    const itemId = await runTransaction(async (transaction) => {
-      const request = await transaction.borrowRequest.findUnique({
+    const itemId = await runTransaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({
         where: { id },
         select: {
           checkedOutItemStatus: true,
@@ -263,23 +257,20 @@ export async function returnBorrowRequest(formData: FormData) {
 
       let restoredIndividualStatus = false;
       if (request.checkedOutItemStatus) {
-        // Do not overwrite a staff member's later defect/retirement decision.
-        // In that case the return is still recorded, but the current status is
-        // intentionally retained for follow-up.
-        const statusRestore = await transaction.inventoryItem.updateMany({
+        // don't overwrite a status staff changed after checkout (e.g. marked defective)
+        const statusRestore = await tx.inventoryItem.updateMany({
           where: { id: request.inventoryItemId, status: ItemStatus.DEPLOYED },
           data: { status: request.checkedOutItemStatus },
         });
         restoredIndividualStatus = statusRestore.count === 1;
       } else {
-        // Requests created before one-record-per-asset tracking used stock
-        // quantities. Preserve that historical return behavior.
-        await transaction.inventoryItem.update({
+        // old requests from before per-unit tracking still return by quantity
+        await tx.inventoryItem.update({
           where: { id: request.inventoryItemId },
           data: { quantity: { increment: request.requestedQuantity } },
         });
       }
-      await transaction.borrowRequest.update({
+      await tx.borrowRequest.update({
         where: { id: request.id },
         data: {
           status: borrowStatus.RETURNED,
@@ -288,7 +279,7 @@ export async function returnBorrowRequest(formData: FormData) {
           returnedByName: actor.username,
         },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.RETURNED,
@@ -319,7 +310,7 @@ export async function returnBorrowRequest(formData: FormData) {
   });
 }
 
-// Reserve the time without checking out the item.
+// approve = reserve the time, checkout happens later
 export async function approveReservation(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -378,7 +369,7 @@ export async function approveReservation(formData: FormData) {
   });
 }
 
-// Release an approved reservation.
+// frees the reserved time, the item was never checked out
 export async function cancelReservation(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -417,7 +408,6 @@ export async function cancelReservation(formData: FormData) {
   });
 }
 
-// Move the agreed return time of equipment that is still checked out.
 export async function extendBorrowRequest(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -440,8 +430,8 @@ export async function extendBorrowRequest(formData: FormData) {
       throw new FormError("Choose a return time within the next year.");
     }
 
-    const itemId = await runTransaction(async (transaction) => {
-      const request = await transaction.borrowRequest.findUnique({ where: { id } });
+    const itemId = await runTransaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({ where: { id } });
       if (!request) {
         throw new FormError("This borrowing request no longer exists.");
       }
@@ -453,33 +443,32 @@ export async function extendBorrowRequest(formData: FormData) {
           "Only equipment that is currently checked out can have its return time changed.",
         );
       }
-      // A return was asked for but the equipment is still out (or the request was not the
-      // borrower's): a new return time puts it back on loan.
+      // return was requested but never happened, put it back on loan
       const keepsOnLoan = request.status === borrowStatus.RETURN_REQUESTED;
       if (newReturn.getTime() === request.expectedReturnDate.getTime()) {
         throw new FormError("Choose a different return time to save a change.");
       }
       const policy = borrowPolicyFromEnvironment();
-      if (newReturn.getTime() - request.startsAt.getTime() > policy.maximumTotalLoanDays * dayMs) {
+      if (newReturn.getTime() - request.startsAt.getTime() > policy.maxTotalLoanDays * dayMs) {
         throw new FormError(
-          `A loan can run for at most ${dayCount(policy.maximumTotalLoanDays)} in total. Choose an earlier return time, or have the borrower return the equipment and request it again.`,
+          `A loan can run for at most ${dayCount(policy.maxTotalLoanDays)} in total. Choose an earlier return time, or have the borrower return the equipment and request it again.`,
         );
       }
       if (newReturn > request.expectedReturnDate) {
-        await checkLoanExtension(transaction, request, newReturn, now);
+        await checkLoanExtension(tx, request, newReturn, now);
       }
 
       const retentionDeadline = borrowerDataExpiresAt(newReturn);
-      await transaction.borrowRequest.update({
+      await tx.borrowRequest.update({
         where: { id },
         data: {
           expectedReturnDate: newReturn,
           ...(keepsOnLoan ? { status: borrowStatus.BORROWED, returnRequestedAt: null } : {}),
-          // Borrower details are kept until the retention period after the agreed return.
+          // keep borrower details until retention days after the new return time
           ...(retentionDeadline > request.personalDataExpiresAt
             ? { personalDataExpiresAt: retentionDeadline }
             : {}),
-          // Keep the earlier note (such as the approval note) and add the reason beside it.
+          // keep the old note and append the reason
           ...(notes
             ? {
                 staffNotes: [request.staffNotes, `Return time changed: ${notes}`]
@@ -489,7 +478,7 @@ export async function extendBorrowRequest(formData: FormData) {
             : {}),
         },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,
@@ -514,14 +503,13 @@ export async function extendBorrowRequest(formData: FormData) {
   });
 }
 
-// Note that the borrower was reminded about the return time.
 export async function markReminded(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requestId(formData);
 
-    const itemId = await runTransaction(async (transaction) => {
-      const request = await transaction.borrowRequest.findUnique({
+    const itemId = await runTransaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({
         where: { id },
         select: { id: true, inventoryItemId: true, status: true },
       });
@@ -534,11 +522,11 @@ export async function markReminded(formData: FormData) {
       ) {
         throw new FormError("Only equipment that is still out can be reminded about.");
       }
-      await transaction.borrowRequest.update({
+      await tx.borrowRequest.update({
         where: { id: request.id },
         data: { remindedAt: new Date() },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,

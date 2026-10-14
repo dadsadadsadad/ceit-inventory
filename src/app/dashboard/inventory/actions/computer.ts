@@ -21,7 +21,6 @@ import {
   updatedFields,
 } from "./shared";
 
-// Attach a computer profile to eligible equipment.
 export async function addComputerDetails(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -58,7 +57,6 @@ export async function addComputerDetails(formData: FormData) {
   });
 }
 
-// Save hardware and operating system changes.
 export async function updateComputerDetails(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -91,7 +89,6 @@ export async function updateComputerDetails(formData: FormData) {
   });
 }
 
-// Add an installed application to the computer.
 export async function addComputerSoftware(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -129,7 +126,6 @@ export async function addComputerSoftware(formData: FormData) {
   });
 }
 
-// Save an installed application's details.
 export async function updateComputerSoftware(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -169,7 +165,6 @@ export async function updateComputerSoftware(formData: FormData) {
   });
 }
 
-// Remove an installed application from the record.
 export async function removeComputerSoftware(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();

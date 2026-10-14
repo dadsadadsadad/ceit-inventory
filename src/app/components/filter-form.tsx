@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const typingDelayMs = 350;
 
-/** Turn the form's fields into a clean query string: no blanks, and always back on page 1. */
+// drop blanks and reset to page 1
 function queryFromForm(form: HTMLFormElement) {
   const query = new URLSearchParams();
   for (const [key, value] of new FormData(form).entries()) {
@@ -16,7 +16,7 @@ function queryFromForm(form: HTMLFormElement) {
   return query.toString();
 }
 
-/** Put the URL's values back into the fields, for the browser's back and forward buttons. */
+// sync fields back from the url on back/forward
 function applyQueryToForm(form: HTMLFormElement, query: URLSearchParams) {
   for (const element of Array.from(form.elements)) {
     if (
@@ -36,10 +36,9 @@ function applyQueryToForm(form: HTMLFormElement, query: URLSearchParams) {
     if (element instanceof HTMLInputElement && element.type === "checkbox") {
       element.checked = values.includes(element.value);
     } else if (element instanceof HTMLInputElement && element.type === "radio") {
-      // A radio group with nothing in the URL goes back to its default choice.
       element.checked = values.length ? values.includes(element.value) : element.defaultChecked;
     } else if (element instanceof HTMLSelectElement) {
-      // A choice missing from the URL is the standard one: an empty option, else the first.
+      // default is the empty option, otherwise the first one
       const options = Array.from(element.options);
       const wanted = values[0] ?? "";
       element.value = options.some((option) => option.value === wanted)
@@ -51,11 +50,7 @@ function applyQueryToForm(form: HTMLFormElement, query: URLSearchParams) {
   }
 }
 
-/**
- * A filter bar that applies itself: choices and checkboxes apply immediately and typing
- * applies shortly after you stop. The state lives in the URL, so every filtered view can be
- * bookmarked, shared, and reached again with the back button.
- */
+// filters apply on change (text after a short pause) and live in the url
 export function FilterForm({
   children,
   className,
@@ -63,7 +58,6 @@ export function FilterForm({
 }: {
   children: ReactNode;
   className?: string;
-  /** Accessible name for the search form, such as "Inventory filters". */
   label: string;
 }) {
   const router = useRouter();
@@ -96,8 +90,7 @@ export function FilterForm({
       return;
     }
     lastQuery.current = current;
-    // The address changed some other way (a link, the back button): typing still waiting to be
-    // applied is dropped, so it cannot undo that change a moment later.
+    // url changed from somewhere else, drop the pending search so it doesn't undo it
     window.clearTimeout(timer.current);
     if (formRef.current) {
       applyQueryToForm(formRef.current, new URLSearchParams(current));
@@ -111,7 +104,7 @@ export function FilterForm({
     if (!(target instanceof HTMLInputElement)) {
       return;
     }
-    // Text boxes wait for a pause in typing; everything else applies at once.
+    // debounce text inputs only
     if (["text", "search", "number", "tel", "email"].includes(target.type)) {
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(apply, typingDelayMs);
@@ -149,7 +142,6 @@ export function FilterForm({
   );
 }
 
-/** Clears every field in its form and applies the empty filter. */
 export function ClearFiltersButton({
   children = "Clear",
   className,

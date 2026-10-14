@@ -108,7 +108,7 @@ describe("report PDF", () => {
   it("copes with empty tables, no filters, and text the built-in fonts lack", async () => {
     const report = sample(0, {
       filters: [],
-      title: "Équipement ₱ “quoted” 日本語",
+      title: "Équipement ₱ \u201Cquoted\u201D 日本語",
       metrics: [],
     });
     report.tables.push({
@@ -123,7 +123,7 @@ describe("report PDF", () => {
   });
 
   it("makes text safe for the built-in fonts", () => {
-    expect(pdfText("a—b “q” ₱ 5 · x")).toBe('a-b "q" PHP 5 | x');
+    expect(pdfText("a\u2014b \u201Cq\u201D ₱ 5 · x")).toBe('a-b "q" PHP 5 | x');
     expect(pdfText("日本")).toBe("??");
     expect(pdfText("x".repeat(20), 10)).toBe("xxxxxxx...");
   });

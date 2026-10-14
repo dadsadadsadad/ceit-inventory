@@ -52,7 +52,6 @@ describe("stock levels", () => {
 });
 
 describe("warranty states", () => {
-  // Midday in Manila on 2026-10-06.
   const now = new Date("2026-10-06T04:00:00Z");
   const day = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
@@ -68,7 +67,7 @@ describe("warranty states", () => {
   });
 
   it("uses the Manila calendar day after midnight there", () => {
-    // 00:30 on 2026-10-07 in Manila is still 2026-10-06 in UTC.
+    // still the 6th in utc
     const afterMidnight = new Date("2026-10-06T16:30:00Z");
     expect(warrantyState(day("2026-10-06"), afterMidnight)).toBe("expired");
   });

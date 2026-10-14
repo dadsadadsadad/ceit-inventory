@@ -4,18 +4,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { FormError } from "./form-action";
 
-/**
- * A signed note, put in each public form, that says "this page was opened at this time for this
- * item". A submission without one (a script posting straight to the server), with a forged one,
- * sent too quickly to have been typed, or from a page left open for hours is refused. It is a
- * cheap first defence; per-device rate limits and staff approval remain the real controls.
- */
+// signed token for public forms (item + time opened). blocks direct posts, instant submits and stale pages. rate limits are the real protection
 
-const maximumAgeMs = 6 * 60 * 60 * 1000;
+const maxAgeMs = 6 * 60 * 60 * 1000;
 
-// Nobody fills in a form in under a second; a script posting it straight away does. Automated
-// browser tests, which are as fast as a script, set FORM_TOKEN_MIN_AGE_MS=0 for their own server.
-function minimumAgeMs() {
+// scripts submit instantly, e2e tests set FORM_TOKEN_MIN_AGE_MS=0
+function minAgeMs() {
   const configured = Number(process.env.FORM_TOKEN_MIN_AGE_MS ?? 700);
   return Number.isFinite(configured) && configured >= 0 ? configured : 700;
 }
@@ -35,16 +29,15 @@ function sign(scope: string, issuedAt: string) {
   return createHmac("sha256", secret()).update(`form:${scope}:${issuedAt}`).digest("hex");
 }
 
-/** Create the token for a form, bound to what it is for (for example `borrow:<qr code>`). */
+// token format is <issuedAt>.<hmac>
 export function issueFormToken(scope: string, now = Date.now()) {
   const issuedAt = String(now);
   return `${issuedAt}.${sign(scope, issuedAt)}`;
 }
 
-/** Refuse a submission whose token is missing, forged, too fast, or too old. */
 export function assertFormToken(scope: string, token: string, now = Date.now()) {
   const [issuedAt = "", signature = ""] = token.split(".");
-  // Compared as bytes: a signature with a non-ASCII character has more bytes than characters.
+  // compare bytes, non-ascii chars take more bytes
   const given = Buffer.from(signature);
   const expected = Buffer.from(sign(scope, issuedAt));
   const matches = given.length === expected.length && timingSafeEqual(given, expected);
@@ -52,10 +45,10 @@ export function assertFormToken(scope: string, token: string, now = Date.now()) 
   if (!matches || !Number.isFinite(age)) {
     throw new FormError("This form could not be verified. Reload the page and try again.");
   }
-  if (age < minimumAgeMs()) {
+  if (age < minAgeMs()) {
     throw new FormError("That was very quick. Check your details and send the form again.");
   }
-  if (age > maximumAgeMs) {
+  if (age > maxAgeMs) {
     throw new FormError("This page has been open for a long time. Reload it and try again.");
   }
 }

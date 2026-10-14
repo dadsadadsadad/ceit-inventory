@@ -7,10 +7,7 @@ export type PickedItem = { assetTag: string | null; id: string; location: string
 
 const typingDelayMs = 200;
 
-/**
- * Find equipment by typing part of its name, asset tag, serial number, or room. Matches appear
- * under the box as you type; choosing one fills the form's hidden `name` field with its id.
- */
+// type to search equipment, the chosen id goes in a hidden input
 export function ItemPicker({
   initial = null,
   label,
@@ -173,9 +170,9 @@ export function ItemPicker({
               {status !== "idle" || !results.length ? (
                 <li className="item-picker-note" role="presentation">
                   {status === "loading"
-                    ? "Searching…"
+                    ? "Searching..."
                     : status === "error"
-                      ? "Couldn’t search right now. Try again."
+                      ? "Couldn't search right now. Try again."
                       : "No equipment matches. Try another word."}
                 </li>
               ) : null}

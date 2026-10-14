@@ -43,7 +43,7 @@ function optionalAssetTagCode(formData: FormData, key: string, length: number) {
   return code;
 }
 
-// Keep or choose an unused category code.
+// keep the current code or pick an unused one
 async function categoryAssetTagCode(formData: FormData, name: string, currentId?: string) {
   const supplied = optionalAssetTagCode(formData, "assetTagCode", 3);
   if (supplied) {
@@ -59,7 +59,7 @@ async function categoryAssetTagCode(formData: FormData, name: string, currentId?
   );
 }
 
-// Keep or choose an unused room code.
+// keep the current code or pick an unused one
 async function locationAssetTagCode(formData: FormData, currentId?: string) {
   const supplied = optionalAssetTagCode(formData, "assetTagCode", 2);
   if (supplied && !/^\d{2}$/.test(supplied)) {
@@ -87,7 +87,7 @@ function accountUsername(formData: FormData) {
   const username = requiredText(formData, "username", 32).toLowerCase();
   if (!usernamePattern.test(username)) {
     throw new FormError(
-      "Use 3–32 letters, numbers, periods, underscores, or hyphens for the username.",
+      "Use 3-32 letters, numbers, periods, underscores, or hyphens for the username.",
     );
   }
   return username;
@@ -123,7 +123,7 @@ function accountWriteError(error: unknown) {
   return error;
 }
 
-// Account settings.
+// account
 export async function updateOwnAccount(formData: FormData) {
   return formAction(async () => {
     const actor = await requireInventoryAccess();
@@ -155,8 +155,7 @@ export async function updateOwnAccount(formData: FormData) {
     if (!current) {
       throw new FormError("Enter your current password to update your account.");
     }
-    // Wrong guesses here count toward the same lock as sign-in, so a borrowed session cannot be
-    // used to try password after password.
+    // wrong passwords here count toward the sign-in lock too
     if (isAccountLocked(account)) {
       throw new FormError(
         "Too many wrong passwords were entered. Wait about 15 minutes before trying again.",
@@ -169,8 +168,8 @@ export async function updateOwnAccount(formData: FormData) {
 
     try {
       await prisma.$transaction(
-        async (transaction) => {
-          const updatedAccount = await transaction.user.update({
+        async (tx) => {
+          const updatedAccount = await tx.user.update({
             where: { id: actor.id },
             data: {
               email,
@@ -179,9 +178,9 @@ export async function updateOwnAccount(formData: FormData) {
             },
           });
           if (password) {
-            await transaction.userSession.deleteMany({ where: { userId: actor.id } });
+            await tx.userSession.deleteMany({ where: { userId: actor.id } });
           }
-          await transaction.inventoryAudit.create({
+          await tx.inventoryAudit.create({
             data: auditEventData({
               action: "UPDATED",
               actor,
@@ -219,7 +218,6 @@ export async function updateOwnAccount(formData: FormData) {
   });
 }
 
-// Refresh the forms that use categories and rooms.
 function refreshSetupPages() {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/settings");
@@ -236,7 +234,7 @@ function setupWriteError(error: unknown, label: string) {
   return error;
 }
 
-// Categories and rooms.
+// categories and rooms
 export async function createCategory(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -265,7 +263,6 @@ export async function createCategory(formData: FormData) {
   });
 }
 
-// Save the category name and tag code.
 export async function updateCategory(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -296,7 +293,6 @@ export async function updateCategory(formData: FormData) {
   });
 }
 
-// Add a room with its asset-tag code.
 export async function createLocation(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -329,7 +325,6 @@ export async function createLocation(formData: FormData) {
   });
 }
 
-// Save room details and its tag code.
 export async function updateLocation(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -364,7 +359,6 @@ export async function updateLocation(formData: FormData) {
   });
 }
 
-// Enable or disable a category for new assignments.
 export async function setCategoryActive(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -386,7 +380,6 @@ export async function setCategoryActive(formData: FormData) {
   });
 }
 
-// Enable or disable a room for new assignments.
 export async function setLocationActive(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -408,7 +401,6 @@ export async function setLocationActive(formData: FormData) {
   });
 }
 
-// Remove an unused category.
 export async function deleteCategory(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -421,8 +413,8 @@ export async function deleteCategory(formData: FormData) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await prisma.$transaction(
-          async (transaction) => {
-            const category = await transaction.category.findUnique({
+          async (tx) => {
+            const category = await tx.category.findUnique({
               where: { id },
               select: { _count: { select: { items: true } }, id: true, name: true },
             });
@@ -436,7 +428,7 @@ export async function deleteCategory(formData: FormData) {
               );
             }
 
-            await transaction.inventoryAudit.create({
+            await tx.inventoryAudit.create({
               data: auditEventData({
                 action: "DELETED",
                 actor,
@@ -445,13 +437,14 @@ export async function deleteCategory(formData: FormData) {
                 summary: "Category permanently deleted.",
               }),
             });
-            await transaction.category.delete({ where: { id } });
+            await tx.category.delete({ where: { id } });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
         refreshSetupPages();
         return;
       } catch (error) {
+        // P2003 = an item got assigned in the meantime (foreign key)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
           throw new FormError(
             "This category now has an inventory record assigned to it. Reassign or remove that record before deleting the category.",
@@ -472,7 +465,6 @@ export async function deleteCategory(formData: FormData) {
   });
 }
 
-// Remove an unused room.
 export async function deleteLocation(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -485,8 +477,8 @@ export async function deleteLocation(formData: FormData) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await prisma.$transaction(
-          async (transaction) => {
-            const location = await transaction.location.findUnique({
+          async (tx) => {
+            const location = await tx.location.findUnique({
               where: { id },
               select: { _count: { select: { items: true } }, id: true, name: true },
             });
@@ -500,7 +492,7 @@ export async function deleteLocation(formData: FormData) {
               );
             }
 
-            await transaction.inventoryAudit.create({
+            await tx.inventoryAudit.create({
               data: auditEventData({
                 action: "DELETED",
                 actor,
@@ -509,7 +501,7 @@ export async function deleteLocation(formData: FormData) {
                 summary: "Location permanently deleted.",
               }),
             });
-            await transaction.location.delete({ where: { id } });
+            await tx.location.delete({ where: { id } });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );

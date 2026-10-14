@@ -16,10 +16,8 @@ import { FormError, formAction } from "@/lib/form-action";
 import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 
-function text(formData: FormData, key: string, maximumLength: number, required = false) {
-  return required
-    ? requiredText(formData, key, maximumLength)
-    : optionalText(formData, key, maximumLength);
+function text(formData: FormData, key: string, maxLength: number, required = false) {
+  return required ? requiredText(formData, key, maxLength) : optionalText(formData, key, maxLength);
 }
 
 function id(formData: FormData, key: string) {
@@ -46,7 +44,6 @@ function enumValue<T extends string>(
   return value as T;
 }
 
-// Check the equipment status selected after inspection.
 function resolutionItemStatus(formData: FormData) {
   const value = text(formData, "itemStatus", 64);
   if (!value) {
@@ -62,7 +59,6 @@ function resolutionItemStatus(formData: FormData) {
   return value as ItemStatus;
 }
 
-// New maintenance requests.
 export async function createMaintenanceTicket(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -81,15 +77,15 @@ export async function createMaintenanceTicket(formData: FormData) {
     const markDefective = formData.get("markDefective") === "on";
 
     await prisma.$transaction(
-      async (transaction) => {
-        const item = await transaction.inventoryItem.findUnique({
+      async (tx) => {
+        const item = await tx.inventoryItem.findUnique({
           where: { id: itemId },
           select: { id: true, status: true },
         });
         if (!item || item.status === ItemStatus.RETIRED) {
           throw new FormError("Choose an active inventory item.");
         }
-        const ticket = await transaction.maintenanceTicket.create({
+        const ticket = await tx.maintenanceTicket.create({
           data: {
             inventoryItemId: itemId,
             title: title ?? "",
@@ -100,11 +96,11 @@ export async function createMaintenanceTicket(formData: FormData) {
         });
         const itemWasMarkedDefective = markDefective && item.status !== ItemStatus.DEFECTIVE;
         if (itemWasMarkedDefective) {
-          await transaction.inventoryItem.update({
+          await tx.inventoryItem.update({
             where: { id: itemId },
             data: { status: ItemStatus.DEFECTIVE },
           });
-          await transaction.inventoryAudit.create({
+          await tx.inventoryAudit.create({
             data: auditEventData({
               action: AuditAction.STATUS_CHANGED,
               actor,
@@ -119,7 +115,7 @@ export async function createMaintenanceTicket(formData: FormData) {
             }),
           });
         }
-        await transaction.inventoryAudit.create({
+        await tx.inventoryAudit.create({
           data: auditEventData({
             action: "CREATED",
             actor,
@@ -137,7 +133,6 @@ export async function createMaintenanceTicket(formData: FormData) {
   });
 }
 
-// Inspection results and repair notes.
 export async function updateMaintenanceTicket(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -160,8 +155,8 @@ export async function updateMaintenanceTicket(formData: FormData) {
     );
 
     const ticket = await prisma.$transaction(
-      async (transaction) => {
-        const existing = await transaction.maintenanceTicket.findUnique({
+      async (tx) => {
+        const existing = await tx.maintenanceTicket.findUnique({
           where: { id: ticketId },
           select: {
             id: true,
@@ -178,6 +173,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
         if (!existing) {
           throw new FormError("This maintenance request no longer exists.");
         }
+        // someone else saved since the form was opened
         const submittedVersion = String(formData.get("updatedAt") ?? "");
         if (submittedVersion && submittedVersion !== existing.updatedAt.toISOString()) {
           throw new FormError(
@@ -187,25 +183,27 @@ export async function updateMaintenanceTicket(formData: FormData) {
         if (itemStatus && existing.inventoryItem.status === ItemStatus.RETIRED) {
           throw new FormError("Restore this item from Inventory before changing its status.");
         }
+        //
         if (itemStatus === ItemStatus.OK || itemStatus === ItemStatus.WORKING) {
-          const outstanding = await transaction.borrowRequest.count({
+          const outstanding = await tx.borrowRequest.count({
             where: {
               inventoryItemId: existing.inventoryItemId,
               status: { in: ["BORROWED", "RETURN_REQUESTED"] },
             },
           });
           if (outstanding) {
-            throw new FormError("Confirm the equipment’s return before making it available again.");
+            throw new FormError("Confirm the equipment's return before making it available again.");
           }
         }
 
+        // keep the first resolved date if it was already resolved
         const resolvedAt =
           status === MaintenanceStatus.RESOLVED
             ? existing.status === MaintenanceStatus.RESOLVED
               ? (existing.resolvedAt ?? new Date())
               : new Date()
             : null;
-        await transaction.maintenanceTicket.update({
+        await tx.maintenanceTicket.update({
           where: { id: ticketId },
           data: { status, resolutionNotes, resolvedAt, priority },
         });
@@ -213,11 +211,11 @@ export async function updateMaintenanceTicket(formData: FormData) {
           itemStatus && itemStatus !== existing.inventoryItem.status,
         );
         if (itemStatusChanged && itemStatus) {
-          await transaction.inventoryItem.update({
+          await tx.inventoryItem.update({
             where: { id: existing.inventoryItem.id },
             data: { status: itemStatus },
           });
-          await transaction.inventoryAudit.create({
+          await tx.inventoryAudit.create({
             data: auditEventData({
               action: AuditAction.STATUS_CHANGED,
               actor,
@@ -237,7 +235,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
             }),
           });
         }
-        await transaction.inventoryAudit.create({
+        await tx.inventoryAudit.create({
           data: auditEventData({
             action: "UPDATED",
             actor,

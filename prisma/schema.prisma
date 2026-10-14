@@ -79,7 +79,7 @@ enum UserRole {
   STAFF
 }
 
-// The kinds of extra details staff can add to equipment and stock.
+// kinds of custom fields
 enum CustomFieldType {
   TEXT
   NUMBER
@@ -88,7 +88,7 @@ enum CustomFieldType {
   CHOICE
 }
 
-// Rooms and storage areas.
+// rooms and storage areas
 model Location {
   id           String          @id @default(uuid()) @db.Uuid
   name         String          @unique
@@ -101,7 +101,6 @@ model Location {
   updatedAt    DateTime        @updatedAt
 }
 
-// Inventory categories.
 model Category {
   id           String          @id @default(uuid()) @db.Uuid
   name         String          @unique
@@ -114,7 +113,6 @@ model Category {
   updatedAt    DateTime        @updatedAt
 }
 
-// Equipment and supplies.
 model InventoryItem {
   id                 String               @id @default(uuid()) @db.Uuid
   assetTag           String?              @unique
@@ -131,11 +129,10 @@ model InventoryItem {
   serialNumber       String?              @unique
   purchaseDate       DateTime?
   purchasePrice      Decimal?             @db.Decimal(12, 2)
-  // Stock only: warn when the quantity falls to this number. Empty means the default (5).
+  // stock only, empty uses the default of 5
   lowStockThreshold  Int?
-  // Optional: when the manufacturer's warranty ends.
   warrantyEndsAt     DateTime?
-  // Optional extra details, keyed by CustomField id.
+  // custom field answers keyed by CustomField id
   customFields       Json?
   notes              String?
   lastCheckedAt      DateTime?
@@ -159,12 +156,12 @@ model InventoryItem {
   @@index([warrantyEndsAt])
 }
 
-// An event staff add to the dashboard calendar, such as "Lab inventory check".
+// staff events on the dashboard calendar
 model CalendarEvent {
   id            String   @id @default(uuid()) @db.Uuid
   title         String
   notes         String?
-  // A calendar day, with no time of day.
+  // date only
   eventDate     DateTime @db.Date
   createdByName String?
   createdAt     DateTime @default(now())
@@ -173,16 +170,16 @@ model CalendarEvent {
   @@index([eventDate])
 }
 
-// An extra detail staff can record on items, such as "Lens mount" or "Funding source".
+// custom fields staff can add to items
 model CustomField {
   id         String          @id @default(uuid()) @db.Uuid
   label      String
   fieldType  CustomFieldType @default(TEXT)
-  // The allowed answers for a CHOICE field.
+  // options for CHOICE fields
   choices    String[]
-  // Empty means every item; otherwise only items of this type (ASSET or SUPPLY).
+  // null = all item types
   appliesTo  ItemType?
-  // Empty means every category; otherwise only items in this category.
+  // null = all categories
   categoryId String?         @db.Uuid
   category   Category?       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   sortOrder  Int             @default(0)
@@ -193,7 +190,6 @@ model CustomField {
   @@index([isActive, sortOrder])
 }
 
-// Hardware details for an inventory item.
 model Computer {
   id                  String             @id @default(uuid()) @db.Uuid
   itemId              String             @unique @db.Uuid
@@ -215,7 +211,6 @@ model Computer {
   updatedAt           DateTime           @updatedAt
 }
 
-// Software installed on a computer.
 model ComputerSoftware {
   id               String    @id @default(uuid()) @db.Uuid
   computerId       String    @db.Uuid
@@ -223,7 +218,7 @@ model ComputerSoftware {
   version          String?
   licenseKeyHint   String?
   licenseExpiresAt DateTime?
-  // Optional: whether this copy is licensed (empty when nobody has said).
+  // null = not set
   isLicensed       Boolean?
   installedAt      DateTime?
   computer         Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
@@ -233,7 +228,7 @@ model ComputerSoftware {
   @@unique([computerId, name])
 }
 
-// Who changed what, and when.
+// audit log
 model InventoryAudit {
   id          String         @id @default(uuid()) @db.Uuid
   itemId      String?        @db.Uuid
@@ -253,7 +248,6 @@ model InventoryAudit {
   @@index([createdAt])
 }
 
-// Borrowing, reservations, and returns.
 model BorrowRequest {
   id                    String        @id @default(uuid()) @db.Uuid
   inventoryItemId       String        @db.Uuid
@@ -277,7 +271,6 @@ model BorrowRequest {
   returnedByName        String?
   returnRequestedAt     DateTime?
   returnRequestNotes    String?
-  // When staff last reminded the borrower about the return time.
   remindedAt            DateTime?
   checkedOutItemStatus  ItemStatus?
   personalDataExpiresAt DateTime
@@ -293,7 +286,7 @@ model BorrowRequest {
   @@index([status, expectedReturnDate])
 }
 
-// Temporary request limits.
+// rate limit buckets
 model PublicRequestAttempt {
   id              String            @id @default(uuid()) @db.Uuid
   fingerprint     String
@@ -306,7 +299,6 @@ model PublicRequestAttempt {
   @@index([updatedAt])
 }
 
-// Photos attached to an item.
 model InventoryItemPhoto {
   id              String        @id @default(uuid()) @db.Uuid
   inventoryItemId String        @db.Uuid
@@ -320,7 +312,7 @@ model InventoryItemPhoto {
   @@index([inventoryItemId, createdAt])
 }
 
-// Reported issues and repair notes.
+// maintenance tickets
 model MaintenanceTicket {
   id              String              @id @default(uuid()) @db.Uuid
   inventoryItemId String              @db.Uuid
@@ -341,7 +333,6 @@ model MaintenanceTicket {
   @@index([status, priority, openedAt])
 }
 
-// Staff accounts.
 model User {
   id                  String        @id @default(uuid()) @db.Uuid
   email               String        @unique
@@ -357,7 +348,6 @@ model User {
   updatedAt           DateTime      @updatedAt
 }
 
-// Active sign-in sessions.
 model UserSession {
   id        String   @id @default(uuid()) @db.Uuid
   tokenHash String   @unique
@@ -370,7 +360,6 @@ model UserSession {
   @@index([expiresAt])
 }
 
-// Shared dashboard note.
 model DashboardNote {
   id            String   @id @default(uuid()) @db.Uuid
   scope         String   @unique @default("shared-dashboard")

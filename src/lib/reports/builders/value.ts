@@ -30,7 +30,6 @@ const ageBands = [
 const money = (value: Prisma.Decimal | number | null | undefined) =>
   value === null || value === undefined ? 0 : Number(value.toString());
 
-// What the department's equipment is worth: where the value sits, how old it is, and what is at risk.
 export async function buildValueReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
   const where: Prisma.InventoryItemWhereInput = {
@@ -118,7 +117,7 @@ export async function buildValueReport(context: BuilderContext): Promise<ReportM
   const roomName = new Map(rooms.map((entry) => [entry.id, entry.name]));
   const totalValue = money(totals._sum.purchasePrice);
 
-  // Purchases in each of the last six calendar years, by purchase date.
+  // last 6 years by purchase date
   const thisYear = Number(now.toISOString().slice(0, 4));
   const years = Array.from({ length: 6 }, (_, index) => thisYear - 5 + index);
   const yearValue = new Map(years.map((year) => [year, 0]));
@@ -148,7 +147,7 @@ export async function buildValueReport(context: BuilderContext): Promise<ReportM
     description:
       "What the equipment is worth, where that value sits, how old it is, and what is at risk.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
       names.category && `Category: ${names.category}`,
       names.location && `Room: ${names.location}`,

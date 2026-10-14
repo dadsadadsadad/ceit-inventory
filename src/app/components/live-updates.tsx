@@ -28,8 +28,7 @@ export function LiveUpdates() {
     let queued = false;
     let disposed = false;
     let lastRefresh = Date.now();
-    // The page this tab just changed was already re-rendered by the save itself, so the next
-    // revision change is our own and must not render the same page a second time.
+    // this tab's own save already re-rendered the page, skip the next revision change
     let ownChangeUntil = 0;
     const readyAt = Date.now() + 3_000;
     let generation = 0;
@@ -43,7 +42,7 @@ export function LiveUpdates() {
       if (!queued || disposed || document.visibilityState !== "visible" || !navigator.onLine) {
         return;
       }
-      // A server refresh must not advance concurrency tokens underneath unfinished edits.
+      // don't refresh under unsaved edits
       const editing = document.querySelector('form[data-dirty="true"], form[data-saving="true"]');
       if (editing) {
         setWaiting(true);
@@ -70,9 +69,8 @@ export function LiveUpdates() {
           ownChangeUntil = 0;
           return;
         }
-        // The navigation already rendered fresh data. Seed the subscription
-        // without fetching that entire page again immediately after it opens.
-        // A delayed polling fallback may have missed changes while connecting.
+        // navigation already has fresh data, just take the current revision
+        // unless polling started late and might have missed something
         if (!initial || reconcileInitial) {
           changed();
         }
@@ -141,7 +139,7 @@ export function LiveUpdates() {
             receive(data.revision);
           }
         } catch {
-          /* Ignore malformed intermediaries; the next heartbeat retries. */
+          // bad message, the next heartbeat will retry
         }
       };
       source.addEventListener("expired", () => {
@@ -150,8 +148,7 @@ export function LiveUpdates() {
       });
       source.onerror = () => {
         setConnection(navigator.onLine ? "reconnecting" : "offline");
-        // Keep EventSource's reconnect behavior; support proxies that buffer streams.
-        // Repeated reconnect failures must not keep postponing the fallback.
+        // fall back to polling if the stream keeps failing (some proxies buffer it)
         fallback ??= setTimeout(poll, 5_000);
       };
       fallback = setTimeout(poll, 10_000);
@@ -163,8 +160,7 @@ export function LiveUpdates() {
     function mutation(event: Event) {
       if ((event as CustomEvent).detail?.success) {
         ownChangeUntil = Date.now() + 8_000;
-        // Other tabs refresh; this one was refreshed by the save. Anything that arrived while
-        // editing is applied now.
+        // apply whatever came in while editing
         channel?.postMessage("changed");
       }
       flush();
@@ -173,7 +169,7 @@ export function LiveUpdates() {
       channel.onmessage = changed;
     }
     const timer = setInterval(() => {
-      // Reconcile time-based states and any change between render and subscribe.
+      // catch up on time based states and anything missed before subscribing
       if (Date.now() - lastRefresh > 60_000) {
         queued = true;
       }
@@ -205,11 +201,11 @@ export function LiveUpdates() {
       : waiting
         ? "Updates waiting · finish saving your edits"
         : connection === "reconnecting"
-          ? "Reconnecting to live updates…"
+          ? "Reconnecting to live updates..."
           : connection === "connecting"
-            ? "Connecting to live updates…"
+            ? "Connecting to live updates..."
             : refreshing
-              ? "Updating…"
+              ? "Updating..."
               : "Live updates on";
   return (
     <div

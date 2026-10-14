@@ -4,7 +4,6 @@ import {
   type CustomFieldValues,
 } from "@/lib/custom-fields";
 
-/** One input per custom field, using the control that suits its kind of answer. */
 export function CustomFieldInputs({
   fields,
   values = {},

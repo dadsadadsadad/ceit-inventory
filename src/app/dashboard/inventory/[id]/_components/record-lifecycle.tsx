@@ -7,11 +7,9 @@ import { SubmitButton } from "@/app/components/submit-button";
 import { deleteInventoryItem, retireInventoryItem } from "../../actions/item";
 import type { ItemRecord } from "./item-record";
 
-// Retire a record (reversible) or delete it permanently.
 export function RecordLifecycle({ item }: { item: ItemRecord }) {
   return (
     <>
-      {/* Retirement and permanent deletion controls. */}
       <section className="divider mt-6 border-t pt-5" aria-labelledby="record-lifecycle">
         <h3 id="record-lifecycle" className="text-sm font-semibold">
           Retire or delete
@@ -28,7 +26,7 @@ export function RecordLifecycle({ item }: { item: ItemRecord }) {
           <input type="hidden" name="id" value={item.id} />
           <SubmitButton
             disabled={item.status === ItemStatus.RETIRED}
-            pendingLabel="Retiring…"
+            pendingLabel="Retiring..."
             className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             {item.status === ItemStatus.RETIRED ? "Item is retired" : "Retire item"}
@@ -36,7 +34,6 @@ export function RecordLifecycle({ item }: { item: ItemRecord }) {
         </FeedbackForm>
 
         <details className="danger-zone mt-4 rounded-lg p-3">
-          {/* Permanent deletion. */}
           <summary className="cursor-pointer text-sm font-semibold">
             Permanently delete this item
           </summary>

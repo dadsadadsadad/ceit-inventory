@@ -15,15 +15,13 @@ import { filterNames, type BuilderContext } from "./shared";
 
 const listedPcs = 40;
 
-/** PC names with their rooms, cut short for a table cell. */
-export function pcNames(pcs: DirectoryPc[], maximum = listedPcs) {
-  const shown = pcs.slice(0, maximum).map((pc) => `${pc.name} (${pc.room})`);
-  return pcs.length > maximum
-    ? `${shown.join(", ")} and ${(pcs.length - maximum).toLocaleString()} more`
+export function pcNames(pcs: DirectoryPc[], max = listedPcs) {
+  const shown = pcs.slice(0, max).map((pc) => `${pc.name} (${pc.room})`);
+  return pcs.length > max
+    ? `${shown.join(", ")} and ${(pcs.length - max).toLocaleString()} more`
     : shown.join(", ");
 }
 
-// What hardware the PCs have, grouped by part, and which PCs share each one.
 export async function buildHardwareReport(context: BuilderContext): Promise<ReportModel> {
   const { filters } = context;
   const [loaded, names] = await Promise.all([
@@ -94,7 +92,7 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
       : "Hardware",
     description: "What your PCs are made of, and which machines share the same parts.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       names.location && `Room: ${names.location}`,
       filters.component &&
         `Part: ${hardwareComponents.find((part) => part.value === filters.component)?.label}`,
@@ -113,7 +111,7 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
         tone: incompleteCount ? "alert" : undefined,
       },
     ],
-    // The first two parts as charts: how many PCs share each value.
+    // charts for the first two parts
     charts: parts.slice(0, 2).map((component) =>
       countChart(
         `PCs by ${component.label.toLowerCase()}`,

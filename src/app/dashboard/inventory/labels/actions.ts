@@ -5,10 +5,9 @@ import { AuditAction } from "@prisma/client";
 import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { isUuid } from "@/lib/ids";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
-import { maximumLabelCount } from "@/lib/label-sheet";
+import { maxLabelCount } from "@/lib/label-sheet";
 import { prisma } from "@/prisma";
 
-// Add one printed QR label to the audit trail.
 export async function recordInventoryLabelPrinted(itemId: string) {
   const actor = await requireInventoryAccess();
   if (!isUuid(itemId)) {
@@ -35,13 +34,12 @@ export async function recordInventoryLabelPrinted(itemId: string) {
   });
 }
 
-// Record every item included in a label sheet.
 export async function recordLabelSheetPrinted(ids: string[]) {
   const actor = await requireInventoryAccess();
   if (
     !Array.isArray(ids) ||
     !ids.length ||
-    ids.length > maximumLabelCount ||
+    ids.length > maxLabelCount ||
     ids.some((id) => !isUuid(id))
   ) {
     throw new Error("Invalid label selection.");

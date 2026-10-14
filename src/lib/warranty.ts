@@ -2,15 +2,13 @@ import type { Prisma } from "@prisma/client";
 
 import { manilaCalendarDate } from "./manila-date";
 
-/** How soon before a warranty ends it counts as "ending soon". */
 export const warrantyWarningDays = 60;
 
 export type WarrantyState = "expired" | "ending" | "active" | "none";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
-// Warranty end dates are calendar days, saved as midnight UTC of that day. Compare them with
-// today's calendar day in Philippine time, so a warranty runs through the whole of its last day.
+// end dates are stored as utc midnight, compare with today in manila so the last day still counts
 function today(now: Date) {
   return Date.parse(`${manilaCalendarDate(now)}T00:00:00.000Z`);
 }
@@ -42,7 +40,6 @@ export function isWarrantyFilter(value: string | null | undefined): value is War
   return warrantyFilters.includes(value as WarrantyFilter);
 }
 
-/** The records in one warranty state, using the same day arithmetic as `warrantyState`. */
 export function warrantyWhere(
   filter: WarrantyFilter,
   now = new Date(),
@@ -61,7 +58,6 @@ export function warrantyWhere(
   }
 }
 
-/** Warranties still running that end within the next `days` days, from today. */
 export function warrantyEndingWithinWhere(
   days: number,
   now = new Date(),
@@ -70,7 +66,7 @@ export function warrantyEndingWithinWhere(
   return { warrantyEndsAt: { gte: start, lte: new Date(start.getTime() + days * dayMs) } };
 }
 
-/** Whole days from today until a warranty ends; negative once it has ended. */
+// negative once ended
 export function warrantyDaysLeft(endsAt: Date, now = new Date()) {
   return Math.round((endsAt.getTime() - today(now)) / dayMs);
 }

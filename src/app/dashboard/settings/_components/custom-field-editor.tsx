@@ -62,7 +62,6 @@ function ScopeFields({
   );
 }
 
-// Add a new extra field.
 export function NewCustomField({ categories }: { categories: Category[] }) {
   return (
     <details className="section-disclosure">
@@ -81,7 +80,7 @@ export function NewCustomField({ categories }: { categories: Category[] }) {
             name="label"
             maxLength={60}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Lens mount, Funding source, Color…"
+            placeholder="Lens mount, Funding source, Color..."
           />
         </label>
         <label>
@@ -105,12 +104,12 @@ export function NewCustomField({ categories }: { categories: Category[] }) {
             name="choices"
             rows={3}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder={"Only for “Choose from a list”. One answer per line."}
+            placeholder={'Only for "Choose from a list". One answer per line.'}
           />
         </label>
         <div className="sm:col-span-2">
           <SubmitButton
-            pendingLabel="Adding field…"
+            pendingLabel="Adding field..."
             className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
           >
             Add field
@@ -121,7 +120,6 @@ export function NewCustomField({ categories }: { categories: Category[] }) {
   );
 }
 
-// Edit, hide, or remove one extra field.
 export function CustomFieldEditor({ categories, field }: { categories: Category[]; field: Field }) {
   const category = categories.find((entry) => entry.id === field.categoryId);
   const scope = [
@@ -183,7 +181,7 @@ export function CustomFieldEditor({ categories, field }: { categories: Category[
         ) : null}
         <div className="sm:col-span-2">
           <SubmitButton
-            pendingLabel="Saving…"
+            pendingLabel="Saving..."
             className="secondary-button rounded-lg px-4 py-2 text-sm font-semibold"
           >
             Save
@@ -193,7 +191,7 @@ export function CustomFieldEditor({ categories, field }: { categories: Category[
       <FeedbackForm action={setCustomFieldActive} className="mt-3">
         <input type="hidden" name="id" value={field.id} />
         <input type="hidden" name="isActive" value={String(!field.isActive)} />
-        <SubmitButton pendingLabel="Updating…" className="accent-link text-xs font-semibold">
+        <SubmitButton pendingLabel="Updating..." className="accent-link text-xs font-semibold">
           {field.isActive ? "Hide this field" : "Show this field again"}
         </SubmitButton>
         <span className="muted ml-2 text-xs">
@@ -217,7 +215,7 @@ export function CustomFieldEditor({ categories, field }: { categories: Category[
             />
           </label>
           <SubmitButton
-            pendingLabel="Deleting…"
+            pendingLabel="Deleting..."
             className="danger-button rounded-lg px-4 py-2 text-sm font-semibold"
           >
             Delete field

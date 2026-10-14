@@ -5,7 +5,7 @@ import { getCurrentInventoryUser } from "@/lib/inventory-auth";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// One month of the dashboard calendar. Staff only: it lists who has borrowed what.
+// staff only, it shows who borrowed what
 export async function GET(request: Request) {
   if (!(await getCurrentInventoryUser())) {
     return new Response(null, { status: 401 });

@@ -1,128 +1,102 @@
-# Launch and workflow notes
+# Launch notes
 
-## Release preparation
+## Before a release
 
-1. Back up the target database and confirm that the backup can be restored separately.
-2. Run `npm ci`, `npm run test:unit`, `npm run test:e2e`, and `npm run verify`.
-3. On a development database, run `npm run test:launch:setup` and `npm run test:launch`. This covers authenticated borrowing, reservations, issue reporting, imports, inventory edits, report downloads, permissions, mobile layouts, and label pagination.
-4. Apply `npm run db:migrate:deploy` with the migration-owner connection, then run `npm run test:db`. Apply migrations **before** deploying the code that needs them. Afterwards, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` (read-only) should print nothing.
-5. Set the permanent HTTPS `NEXT_PUBLIC_APP_URL`, a random `REQUEST_RATE_LIMIT_SECRET`, and the borrower retention period. Run `npm run build` with the deployment environment, then start the app with the runtime database role. Do not deploy new application code against the old schema or reuse a test build.
-6. Replace temporary administrator accounts, schedule daily retention cleanup, and enable routine backups.
-7. From a student phone, scan one printed label on the actual school network. Confirm the public page, camera permission, request forms, and staff sign-in. Print one sheet at actual size before printing labels in bulk.
+1. Back up the database and check the backup restores.
+2. Run `npm ci`, `npm run test:unit`, `npm run test:e2e` and `npm run verify`.
+3. On a dev database run `npm run test:launch:setup` then `npm run test:launch`.
+4. Run `npm run db:migrate:deploy` with the migration connection, then `npm run test:db`. Migrations go in **before** the code that needs them. After that, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` should print nothing.
+5. Set `NEXT_PUBLIC_APP_URL` (https), `REQUEST_RATE_LIMIT_SECRET` and the retention period, then build with the production env. Don't reuse a test build.
+6. Replace any temporary admin accounts and set up backups.
+7. Scan a printed label with a phone on the school network and print one test sheet at 100% before printing a batch.
 
-Choose the hosting region next to the database: this project's `vercel.json` pins the functions to Singapore (`sin1`) because the Supabase database is in Singapore. A function in another region pays a full round trip across the world for every query, which is the largest single cause of slow pages. If the database ever moves, change `regions` to match.
+`vercel.json` pins functions to Singapore (`sin1`) because the database is there. If the database moves, change the region too, otherwise every query crosses regions and pages get slow.
 
-Production hosting, school account approval, physical printer alignment, and real-device camera permissions need checks in the deployment environment; automated tests do not replace these.
+## Borrowing rules
 
-## Borrowing and reservations
+Defaults are in `src/lib/borrow-policy.ts` and can be changed with env vars (see `.env.example`).
 
-### Limits that keep equipment moving
+| Rule                                            | Default  | Variable                     |
+| ----------------------------------------------- | -------- | ---------------------------- |
+| How far ahead a reservation can start           | 3 days   | `BORROW_MAX_ADVANCE_DAYS`    |
+| Max loan length                                 | 7 days   | `BORROW_MAX_LOAN_DAYS`       |
+| Max loan length with extensions                 | 14 days  | `BORROW_MAX_TOTAL_LOAN_DAYS` |
+| Open requests per student number                | 3        | `BORROW_MAX_ACTIVE_REQUESTS` |
+| Uncollected reservation expires after           | 2 hours  | `BORROW_PICKUP_GRACE_HOURS`  |
+| Unhandled "borrow now" request expires after    | 24 hours | `BORROW_PENDING_HOLD_HOURS`  |
 
-These defaults live in `src/lib/borrow-policy.ts` and can be changed with environment variables (see `.env.example`) without touching the code.
-
-| Rule                                                           | Default  | Variable                     |
-| -------------------------------------------------------------- | -------- | ---------------------------- |
-| A reservation can start at most this many days ahead           | 3        | `BORROW_MAX_ADVANCE_DAYS`    |
-| The longest a student can keep equipment                       | 7 days   | `BORROW_MAX_LOAN_DAYS`       |
-| The longest a loan can run once staff extend it                | 14 days  | `BORROW_MAX_TOTAL_LOAN_DAYS` |
-| Open requests or loans per student number                      | 3        | `BORROW_MAX_ACTIVE_REQUESTS` |
-| An uncollected reservation releases the item after             | 2 hours  | `BORROW_PICKUP_GRACE_HOURS`  |
-| An unhandled "borrow now" request stops holding the item after | 24 hours | `BORROW_PENDING_HOLD_HOURS`  |
-
-A student with equipment still out past its return time cannot make new requests until staff confirm the return. A reservation or pending request that has lapsed shows a **Pickup missed** or **Not handled in time** label for staff, stops blocking other bookings, and is checked the next time anyone books or looks at the item (no background job is needed). The borrow form states the rules and limits its date pickers to them, and the server enforces them as well.
+Students with something overdue can't make new requests until staff confirm the return. Expired requests show as **Pickup missed** or **Not handled in time** and stop blocking other bookings. The server checks all of this, not just the form.
 
 ### How it works
 
-- Students choose **Borrow now** or **Reserve for later** inside **Borrow equipment** on the QR page. Pickup and return use Philippine time. Same-day loans are supported.
-- Pending requests and approved reservations hold their requested time. Overlapping requests cannot overbook a unit, including simultaneous submissions. Non-overlapping reservations can share that unit on different schedules.
-- Approval reserves the time; it does not check out equipment or change its quantity. Staff check out an approved reservation when its pickup time arrives. Availability is checked again at handoff.
-- An overdue physical loan stays unavailable until staff confirm its return. Future availability still depends on the previous borrower returning on time.
-- Overdue loans show an **Overdue** badge, appear in the dashboard worklist, and can be listed with the Borrowing **Overdue** filter. Use **Set a new return time** (or **Change return time** before the deadline) on a checked-out loan to agree a new time with the borrower. Extending is refused when it would overlap another approved or pending booking; shortening is always allowed. Only the staff-recorded return time changes: the borrower's own details and the original pickup stay as submitted.
-- Cancel an approved reservation with a reason to release its time. Decline a pending request to close it. Expired requests cannot be checked out and remain visible for staff to close.
-- An individual asset stays at quantity 1 during checkout and uses the Deployed status. Staff cannot make it available again through ordinary inventory or maintenance edits while its loan is outstanding.
-- A student's return request does not restore availability. Staff inspect the unit and confirm the return. A defect recorded after checkout is preserved on return.
-- Reports include reservation type, pickup and return times, approval details, cancellation, and checkout/return history. Date filters use pickup for the reserved view, cancellation for cancelled reservations, checkout for borrowed items, and completion for returned items.
+- On the qr page students pick **Borrow now** or **Reserve for later**. Times are Philippine time.
+- Pending requests and reservations hold their time slot. Overlapping requests can't overbook a unit.
+- Approving only reserves the time. Staff check the item out at pickup, and availability is checked again then.
+- Overdue loans stay unavailable until staff confirm the return. They show an **Overdue** badge, appear on the dashboard and can be filtered.
+- Staff can change the return time on a loan. Extending is blocked if it would overlap another booking.
+- Tracked assets stay at quantity 1 and switch to Deployed while out.
+- A return request from a student doesn't free the item. Staff inspect it and confirm.
 
-## Stock, warranty, and extra fields
+## Stock, warranty and custom fields
 
-- **Low stock** applies to stock records only. A record is "running low" when its quantity is at or below its alert level and "out of stock" at zero. The alert level is set per record (empty means the default of 5; 0 turns the alert off). Retired and lost records never alert. Low stock shows on the Inventory list (and its **Low stock** filter), the item page, the dashboard, the overview report, and the **Stock** report. Change a count from the item page with **Add stock** or **Use stock** (with an optional note); every change is in the audit trail.
-- **Warranty** is optional on any item. "Ending soon" means within 60 days, counted in Philippine calendar days (a warranty runs through its last day). The **Warranty** report and the Inventory filter use the same rule.
-- **Extra fields** are defined in Settings and shown on every item (or only those of one type or category). **Hide this field** removes it from forms but keeps what was entered. Spreadsheet columns whose heading matches a field fill it during import.
-- A new equipment record can create several identical units at once (up to 50). Each gets its own asset tag and QR code, so each can be borrowed, reported, and located on its own. Stock is one record with one QR code, however many units it holds.
+- Low stock only applies to stock records. "Running low" means quantity at or below the alert level (default 5, 0 turns it off). Retired and lost records never alert.
+- Warranty "ending soon" means within 60 days.
+- Custom fields are set up in Settings and can be limited to one item type or category. Hiding a field keeps its answers.
+- Adding equipment with a quantity creates that many units (max 50), each with its own tag and qr code.
 
-## Return reminders and due today
+## Reminders
 
-- **Due today** lists loans whose return time falls later today (Philippine time) and that are not yet late. It appears on the dashboard, as a Borrowing filter, and as a report.
-- **Remind the borrower** on a loan offers a ready-written message (due soon, or late) to **Copy message** and send; it never includes private details beyond the item name. Noting the reminder records when, so two staff do not both chase the same borrower.
-- Checking out equipment asks staff to confirm the borrower's ID was checked.
+- **Due today** lists loans due later today that aren't late yet.
+- **Remind the borrower** gives a message to copy and send. It only mentions the item.
+- Checkout asks staff to confirm they checked the borrower's id.
 
-## Scanning a QR code
+## Scanning
 
-- A **signed-in staff phone** that scans any label goes straight to that item's record, ready to edit, with small **Borrow**, **Return**, and **Report a problem** shortcuts. The scan is recorded in the audit trail.
-- **Anyone else** sees the public page: first, in plain colours, whether the item is available now, in use until a time (reservations only), or not available; then the details and the borrow, return, and report forms.
-- Each public form carries a signed note for that item. It is checked on submission: forms posted without it, instantly after loading, or after being open for six hours are refused with a message to reload.
-
-## Dashboard calendar
-
-- It shows, for the month you are looking at: loans due back (late ones in red), reservations to hand over, software licenses ending, warranties ending, and the events staff add. Click a day to see its entries and add an event; events are for everyone and are recorded in the audit trail. Loans, licenses, and warranties come from their own records and cannot be removed from the calendar.
-- The current month arrives with the page; other months load when opened (`/api/calendar`, staff only).
-
-## Inventory checks
-
-- **Needs attention** means equipment still in service that is Defective, Not tested, or in Poor / For repair condition. Retired and lost records are excluded. The dashboard tile, the Inventory filter, and the PDF reports all use this one definition.
-- Use the Inventory filter **Last checked: Not checked in 90+ days** to build an inspection round, then select the items and choose **Record inspection (checked today)**. PC profiles are updated together with their records.
-
-## QR issue reports
-
-- The public **Report a problem** form asks for the reporter's name and creates a normal-priority maintenance request marked **QR issue report**, with that name shown beside it. It does not expose other reports or change the equipment's status automatically.
-- Staff review the report, adjust priority, inspect equipment, record notes, and resolve it in Maintenance. Identical open QR reports are deduplicated.
-- QR issues appear on the dashboard, the item record, maintenance filters, the audit trail, and CSV/PDF reports. The overview PDF includes open QR issue and reservation counts.
+- Signed in staff go straight to the item's edit page, with shortcuts to borrow, return or report.
+- Everyone else sees whether the item is available first, then the details and forms.
+- Public forms carry a signed token. Forms posted without one, submitted instantly, or left open for 6+ hours are refused.
 
 ## Label printing
 
-Select items in Inventory and choose **Print QR labels**, or choose a room on the QR labels page. Each batch supports up to 100 labels. Room batches omit retired items; an explicitly selected item can still be printed for archive identification.
+Pick items in Inventory and click **Print QR labels**, or choose a room on the labels page. Max 100 per batch.
 
-Use A4 paper, 100% scale, and no browser headers/footers. Compact labels are 62 × 32 mm, arranged 3 × 8 with 2 mm gaps; large labels are 92 × 64 mm, arranged 2 × 4 with 4 mm gaps. Both layouts use 10 mm page margins. Print on plain label paper or stock with matching dimensions. Long names are shortened to fit, so use the large layout when more detail is needed.
+Print on A4 at 100% scale with headers/footers off. Compact labels are 62 x 32 mm (3 x 8), large are 92 x 64 mm (2 x 4), with 10 mm margins. Long names get cut off, use the large size if needed.
 
-The permanent website address is embedded in each QR. A browser print request is recorded in the audit trail; the app cannot confirm whether a physical printer completed the job.
+## Limits
 
-## Other safety limits
-
-These are enforced by the server, not just the forms.
-
-| Where            | Limit                                                                                                                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Staff sign-in    | 5 failed attempts lock an account for about 15 minutes (an administrator can unlock it)                                                                                               |
-| Staff sessions   | 7 days, and at most 5 signed-in devices per account                                                                                                                                   |
-| Public requests  | Borrow, return, and issue forms: 8 per device and 60 per network address every 15 minutes, for each kind of form                                                                      |
-| Borrower details | Redacted after the retention period (365 days by default)                                                                                                                             |
-| Reports          | The page previews 500 rows per table; a PDF holds up to 2,000 rows and a CSV up to 10,000. Larger requests are refused with a message to narrow the filters, never silently cut short |
-| Imports          | 10 MB and 1,000 rows per file                                                                                                                                                         |
-| New units        | Up to 50 identical equipment units created at once                                                                                                                                    |
-| Extra fields     | Up to 40 fields, 500 characters per text answer                                                                                                                                       |
-| Photos           | 4 per item, 3 MB each                                                                                                                                                                 |
-| QR labels        | 100 per batch                                                                                                                                                                         |
-| Bulk changes     | Up to 10,000 selected records                                                                                                                                                         |
-| Borrowing        | The rules in the table above, plus a cap on the quantity of supplies in one request                                                                                                   |
+| Where            | Limit                                                          |
+| ---------------- | -------------------------------------------------------------- |
+| Sign in          | 5 wrong passwords locks the account for ~15 min                |
+| Sessions         | 7 days, max 5 devices per account                              |
+| Public forms     | 8 per device and 60 per ip every 15 min, per form type         |
+| Borrower details | removed after the retention period (365 days default)          |
+| Reports          | page shows 500 rows, pdf up to 2,000, csv up to 10,000         |
+| Imports          | 10 MB and 1,000 rows per file                                  |
+| New units        | 50 at once                                                     |
+| Custom fields    | 40 fields, 500 characters per answer                           |
+| Photos           | 4 per item, 3 MB each                                          |
+| QR labels        | 100 per batch                                                  |
+| Bulk changes     | 10,000 records                                                 |
 
 ## Database connections
 
-The app reuses one Prisma client per process. `DB_POOL_MAX` defaults to 5 and accepts 1–20; database connection and idle timeouts are bounded. Keep the sum of connection limits for all running instances, maintenance tools, and test servers below the database provider's limit. For serverless hosting, use the provider's transaction-pool endpoint for runtime connections and a separate migration connection.
+`DB_POOL_MAX` defaults to 5 (1-20). Keep the total across all running instances, scripts and test servers under the database's connection limit. On serverless, use the pooler url at runtime and a separate direct url for migrations.
 
-Session lookups are shared only within a React server render, so the layout and page do not duplicate the same lookup. Private page data is not cached across users. Live-update revision checks run every five seconds against the current page's relevant tables; overlapping reads are coalesced and results are reused for two seconds. Test `/api/live` through the deployed proxy, including automatic reconnection, polling fallback, and a deactivated staff session. Background tabs should disconnect, and remote changes should wait while a form has unsaved edits.
+Live updates poll the database every 5 seconds per open page and share results for 2 seconds. Test `/api/live` behind the real proxy, including reconnecting and the polling fallback.
 
-## Security
+## Security notes
 
-- **Access.** Every staff page, download, and action checks the signed-in account against the database. A central check (`src/proxy.ts`) turns away signed-out visitors first, and each handler repeats the check, so a new page cannot be left open by accident. Only administrators can manage accounts.
-- **Sign-in.** Passwords use scrypt. Five failed attempts lock an account for about 15 minutes, and a device that fails 30 times in 15 minutes is turned away before any password is checked (this limit is counted by network address and covers many different usernames, which the account lock cannot). A wrong password, a locked account, and an unknown account all get the same answer, so the page never confirms which usernames exist. A browser its owner has signed in on before (and not signed out of) can still sign in with the right password while the account is locked, so a stranger's wrong guesses cannot keep the owner out. Wrong current passwords on the Settings page count toward the same lock.
-- **Public forms.** Borrow, return, and issue forms are limited per device and, more loosely, per network address (a classroom on one Wi-Fi address shares the larger allowance, and changing the browser name does not reset it). Each carries a signed note tied to the item and the moment the page opened (so scripts and instant submissions are refused), and every request still needs staff approval. Borrowing rules (availability, overlaps, limits, overdue block) are enforced by the server inside a serializable transaction, whatever the form allowed. Live updates are only offered for QR codes that belong to an item.
-- **Data.** All database access goes through Prisma with bound values; the only raw SQL (live-update checks) uses fixed table names and bound parameters. Text from forms and spreadsheets is shown as text, never as markup, and CSV exports neutralise spreadsheet formulas. Photos are checked by size, type, and file signature and are served only to signed-in staff.
-- **Database.** Row level security is on for every table (the public database API cannot read or write any of them). Staff-side and public requests use the same server-only connection.
-- **Browser.** Content Security Policy (no plugins, no framing, same-origin connections only), `X-Frame-Options`, `nosniff`, a same-origin resource policy, HSTS, and a strict referrer policy are sent with every response. The session cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
-- **Known limits.** The Content Security Policy still allows inline scripts, which Next.js itself needs. On a browser that has not signed in before, an account can be locked for 15 minutes by someone who guesses its password wrongly five times; an administrator can unlock it from Users. Public requests need no account, so someone determined could still file fake requests up to the network limit; they hold equipment only until staff decline them or the hold lapses. Rate limits trust the address Vercel reports; behind another host, make sure the proxy sets `X-Forwarded-For` itself.
+- Every staff page, download and action checks the session against the database. `src/proxy.ts` is only a first check.
+- Passwords use scrypt. 5 failed attempts lock an account for 15 min, and 30 failures from one ip in 15 min block that ip. Wrong password, locked account and unknown user all get the same error.
+- A browser that signed in before can still sign in while the account is locked, so nobody can lock the owner out on purpose.
+- Public forms are rate limited and every request still needs staff approval. Borrowing rules run in a serializable transaction.
+- All queries go through prisma. CSV exports escape formulas. Photos are checked by type and file signature and only served to staff.
+- Row level security is on for every table.
+- Security headers (CSP, frame options, nosniff, HSTS, referrer policy) are set in `next.config.ts`. The session cookie is HttpOnly, SameSite=Lax and Secure in production.
+- The CSP still allows inline scripts because next needs them. Rate limits trust the ip from Vercel, so behind another proxy make sure it sets `X-Forwarded-For`.
 
-## Test data cleanup
+## Test cleanup
 
-The isolated suite writes `INVENTORY_DB_SCHEMA` and generated credentials to `.env.e2e.local`. Never copy this file into production. The normal application does not use it unless explicitly started with that file. The launch test builds with the test website address, so run `npm run build` again with the deployment environment before starting or shipping the normal app.
+The launch tests write the test schema and credentials to `.env.e2e.local`. Never copy it to production. The test build uses the test url, so run `npm run build` again afterwards.
 
-After stopping the test server, a database administrator may drop the exact `ceit_test_launch_*` schema reported by setup, then remove `.env.e2e.local`. Verify the schema name before removal. Keep the ordinary inventory schema and its migrations intact.
+To clean up, run `npm run test:launch:cleanup -- --apply`, or drop the `ceit_test_launch_*` schema by hand and delete `.env.e2e.local`.

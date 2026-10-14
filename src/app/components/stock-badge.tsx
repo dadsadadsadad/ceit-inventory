@@ -3,7 +3,6 @@ import type { ItemStatus, ItemType } from "@prisma/client";
 import { stockLevel, stockLevelLabel } from "@/lib/stock-level";
 import { warrantyState, warrantyStateLabel } from "@/lib/warranty";
 
-/** "Out of stock" or "Running low" for stock that needs restocking, and nothing otherwise. */
 export function StockBadge({
   item,
   showCount = false,
@@ -30,7 +29,6 @@ export function StockBadge({
   );
 }
 
-/** "Warranty ended" or "Ends within 60 days" when a warranty needs attention. */
 export function WarrantyBadge({ endsAt }: { endsAt: Date | null }) {
   const state = warrantyState(endsAt);
   if (state !== "expired" && state !== "ending") {

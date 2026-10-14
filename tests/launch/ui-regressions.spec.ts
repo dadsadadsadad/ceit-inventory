@@ -47,7 +47,6 @@ test("hover, press, and keyboard feedback remain distinct in both themes", async
     await expect
       .poll(() => browse.evaluate((node) => new DOMMatrix(getComputedStyle(node).transform).m42))
       .toBeGreaterThan(0);
-    // Release away from the link, then exercise a queue link with the keyboard.
     await page.mouse.move(300, 0);
     await page.mouse.up();
     const queue = page.locator(".queue-row").first();
@@ -117,7 +116,7 @@ test("saving a note gives visible pending feedback and prevents another submissi
   await page.getByLabel("Department note", { exact: true }).fill("Interaction review: note saved.");
   await page.getByRole("button", { name: "Save note", exact: true }).click();
   try {
-    const saving = page.getByRole("button", { name: "Saving note…", exact: true });
+    const saving = page.getByRole("button", { name: "Saving note...", exact: true });
     await expect(saving).toBeVisible();
     await expect(saving).toBeDisabled();
     await expect(saving).toHaveAttribute("aria-busy", "true");
@@ -213,7 +212,6 @@ test("dashboard supporting text is readable without browser zoom", async ({ page
   for (const width of [1440, 1280, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 700 });
     await expect(page.locator(".overview-metrics strong")).toHaveCount(4);
-    // The four metrics sit in one row or two; the figures in a row must line up.
     const rows = await page.locator(".overview-metrics > div").evaluateAll((metrics) => {
       const byRow = new Map<number, number[]>();
       for (const metric of metrics) {
@@ -308,8 +306,7 @@ test("both themes use neutral surfaces and accents visibly update controls, link
         };
       });
     const defaults = await colors();
-    // The surfaces are warm paper and ink: dark enough in Dark mode, light enough in Light mode,
-    // and never tinted by the accent color (checked again after the accent changes below).
+    // backgrounds shouldn't be tinted by the accent
     for (const surface of [defaults.background, defaults.sidebar, defaults.card]) {
       const channels = surface.match(/[\d.]+/g)!.map(Number);
       const spread = Math.max(...channels.slice(0, 3)) - Math.min(...channels.slice(0, 3));

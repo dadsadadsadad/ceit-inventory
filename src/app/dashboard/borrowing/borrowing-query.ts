@@ -34,31 +34,28 @@ export function isBorrowStatus(value?: string | string[]): value is BorrowStatus
   return Boolean(candidate && statuses.includes(candidate as BorrowStatus));
 }
 
-// "Overdue" is not a stored status: it is equipment still out past its return time.
+// overdue isn't a status, it's borrowed + past the return time
 export const overdueFilter = "OVERDUE";
 
 export function isOverdueFilter(value?: string | string[]) {
   return firstParam(value) === overdueFilter;
 }
 
-// Loans due back later today, so staff can remind borrowers before they are late.
+// due later today
 export const dueTodayFilter = "DUE_TODAY";
 
 export function isDueTodayFilter(value?: string | string[]) {
   return firstParam(value) === dueTodayFilter;
 }
 
-/**
- * The list shows what needs staff first: requests and returns waiting on someone, then loans and
- * reservations still in progress, then finished history. Newest first within each group.
- */
+// sort order: waiting on staff, then in progress, then history, newest first in each
 export const borrowingListTiers: BorrowStatus[][] = [
   [borrowStatus.REQUESTED, borrowStatus.RETURN_REQUESTED],
   [borrowStatus.BORROWED, borrowStatus.RESERVED],
   [borrowStatus.RETURNED, borrowStatus.DECLINED, borrowStatus.CANCELLED],
 ];
 
-// A short reason a pending or reserved request no longer holds the equipment.
+// why a pending/reserved request stopped holding the item
 export function lapsedLabel(request: BorrowingRecord, now = new Date()) {
   if (!isHoldLapsed(request, now, borrowPolicyFromEnvironment())) {
     return null;
@@ -74,7 +71,6 @@ export function isOverdue(request: BorrowingRecord, now = new Date()) {
   );
 }
 
-// Build the search and status filters for borrowing.
 export function borrowRequestWhere(search: SearchParams): Prisma.BorrowRequestWhereInput {
   const query = textParam(search.q);
   const where: Prisma.BorrowRequestWhereInput = {};
@@ -130,7 +126,6 @@ export function pageLink(search: SearchParams, page: number) {
   return queryString ? `/dashboard/borrowing?${queryString}` : "/dashboard/borrowing";
 }
 
-// The report that matches the filters on screen.
 export function reportHref(search: SearchParams) {
   const parameters = new URLSearchParams({ kind: "borrowing" });
   const status = firstParam(search.status);

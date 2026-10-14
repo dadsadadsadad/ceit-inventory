@@ -13,21 +13,18 @@ export type LabelGridItem = {
   name: string;
 };
 
-/**
- * The items on this page as tiles: click one to add its label, click again to take it out.
- * The choice lives in the address (`ids=`), so it survives paging, filtering, and reloading.
- */
+// selected ids are kept in the url (ids=) so they survive paging and reloads
 export function LabelItemGrid({
   items,
   matchingIds,
-  maximum,
+  max,
   selected,
   totalMatching,
 }: {
   items: LabelGridItem[];
-  /** Every item that matches the filters, when there are few enough to select at once. */
+  // only set when the matches fit in one batch
   matchingIds: string[] | null;
-  maximum: number;
+  max: number;
   selected: string[];
   totalMatching: number;
 }) {
@@ -37,7 +34,7 @@ export function LabelItemGrid({
   const [pending, startTransition] = useTransition();
   const [picked, setPicked] = useState(selected);
   const [message, setMessage] = useState("");
-  // A new selection from the server (back button, a link, "Clear") replaces the local one.
+  // new selection from the server replaces the local one
   const selectedKey = selected.join(",");
   const [savedKey, setSavedKey] = useState(selectedKey);
   if (selectedKey !== savedKey) {
@@ -52,8 +49,8 @@ export function LabelItemGrid({
     matchingIds !== null && matchingIds.length > 0 && matchingIds.every((id) => pickedSet.has(id));
 
   function commit(next: string[]) {
-    if (next.length > maximum) {
-      setMessage(`One batch holds up to ${maximum} labels. Print these first, then pick more.`);
+    if (next.length > max) {
+      setMessage(`One batch holds up to ${max} labels. Print these first, then pick more.`);
       return;
     }
     setMessage("");
@@ -130,10 +127,10 @@ export function LabelItemGrid({
           {message}
         </p>
       ) : null}
-      {matchingIds === null && totalMatching > maximum ? (
+      {matchingIds === null && totalMatching > max ? (
         <p className="muted text-sm">
-          More than {maximum} items match, so pick them page by page, or narrow the filters to
-          select them all at once.
+          More than {max} items match, so pick them page by page, or narrow the filters to select
+          them all at once.
         </p>
       ) : null}
 

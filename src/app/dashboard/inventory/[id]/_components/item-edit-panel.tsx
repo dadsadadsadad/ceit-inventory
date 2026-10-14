@@ -21,7 +21,6 @@ import type { ItemRecord } from "./item-record";
 import { PhotoManager } from "./photo-manager";
 import { RecordLifecycle } from "./record-lifecycle";
 
-// The collapsible staff panel: edit form, inspection, photos, and record lifecycle.
 export function ItemEditPanel({
   item,
   categories,
@@ -50,9 +49,7 @@ export function ItemEditPanel({
       open={open}
       className="section-disclosure card h-fit scroll-mt-6 rounded-lg p-5 sm:p-6"
     >
-      {/* Staff editing controls. */}
       <summary className="cursor-pointer text-lg font-semibold">Edit record</summary>
-      {/* Save the main inventory details. */}
       <FeedbackForm
         action={updateInventoryItem}
         resetOnSuccess={false}
@@ -311,14 +308,13 @@ export function ItemEditPanel({
           </FormSection>
         </div>
         <SubmitButton
-          pendingLabel="Saving update…"
+          pendingLabel="Saving update..."
           className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold"
         >
           Save update
         </SubmitButton>
       </FeedbackForm>
 
-      {/* Record the latest inspection. */}
       <section className="divider mt-6 border-t pt-5" aria-labelledby="inspection-heading">
         <h3 id="inspection-heading" className="text-sm font-semibold">
           Inspection
@@ -334,7 +330,7 @@ export function ItemEditPanel({
         >
           <input type="hidden" name="id" value={item.id} />
           <SubmitButton
-            pendingLabel="Recording…"
+            pendingLabel="Recording..."
             className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             Mark checked today
@@ -344,7 +340,7 @@ export function ItemEditPanel({
 
       {item.quantity > 1 && !item.isComputer ? (
         <section className="divider mt-6 border-t pt-5" aria-labelledby="individualize-heading">
-          {/* Give each unit its own record, tag, and QR code. */}
+          {/* split into units */}
           <h3 id="individualize-heading" className="text-sm font-semibold">
             Give each unit its own QR code
           </h3>
@@ -367,7 +363,7 @@ export function ItemEditPanel({
               aria-label="Type SPLIT to give each unit its own record"
             />
             <SubmitButton
-              pendingLabel="Creating unit records…"
+              pendingLabel="Creating unit records..."
               className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
             >
               Split into {item.quantity} units

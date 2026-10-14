@@ -3,7 +3,6 @@ import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 import { submitIssueReport } from "./issue-actions";
 
-// Send an equipment problem to maintenance.
 export function IssueReportForm({
   formToken,
   itemName,
@@ -22,7 +21,7 @@ export function IssueReportForm({
       <input type="hidden" name="qrCode" value={qrCode} />
       <input type="hidden" name="formToken" value={formToken} />
       <div className="honeypot" aria-hidden="true">
-        {/* Hidden field used to catch automated submissions. */}
+        {/* honeypot */}
         <label htmlFor="issue-website">Leave this field blank</label>
         <input id="issue-website" name="website" tabIndex={-1} autoComplete="off" />
       </div>
@@ -33,7 +32,6 @@ export function IssueReportForm({
           repairs.
         </p>
       </div>
-      {/* Who is reporting, the issue title, and what happened. */}
       <label className="block">
         <span className="text-sm font-semibold">Your name *</span>
         <input
@@ -54,7 +52,7 @@ export function IssueReportForm({
           minLength={3}
           maxLength={120}
           className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-          placeholder="e.g. Monitor won’t turn on"
+          placeholder="e.g. Monitor won't turn on"
         />
       </label>
       <label className="block">
@@ -73,7 +71,7 @@ export function IssueReportForm({
         Staff will see your name with the report. Please leave out passwords and student numbers.
       </p>
       <SubmitButton
-        pendingLabel="Sending…"
+        pendingLabel="Sending..."
         className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
       >
         Send issue report

@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 
-/**
- * A group of related form fields that opens and closes. Optional groups start closed so a form
- * shows only what is needed to get started; everything inside still submits when closed.
- */
+// collapsible group of fields, closed fields still submit
 export function FormSection({
   children,
   defaultOpen = false,

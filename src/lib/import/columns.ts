@@ -1,9 +1,4 @@
-/**
- * Working out which spreadsheet column holds what. Headings come from people, so they are matched
- * after dropping case, spaces and punctuation ("Serial No." and "serial_number" are the same), and
- * several common names are accepted for each field. Anything not understood is reported back, not
- * rejected.
- */
+// match headings ignoring case, spaces and punctuation, with a few aliases per field
 
 export const fieldAliases = {
   name: [
@@ -120,7 +115,6 @@ export const fieldAliases = {
 
 export type ImportField = keyof typeof fieldAliases;
 
-/** How each field is named when we tell staff what was understood. */
 export const fieldLabels: Record<ImportField, string> = {
   name: "Item name",
   category: "Category",
@@ -161,7 +155,6 @@ export const fieldLabels: Record<ImportField, string> = {
   legacyComments: "Comments (older sheets)",
 };
 
-/** Match headings despite punctuation, spacing and capitals. */
 export function normalizeHeader(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -169,16 +162,15 @@ export function normalizeHeader(value: string) {
 export type HeaderCell = { column: number; text: string };
 
 export type HeaderMatch = {
-  /** Field to the 1-based column that holds it. */
+  // field -> 1-based column
   columns: Partial<Record<ImportField, number>>;
-  /** Headings that are in the file but are not an inventory field. */
   extra: HeaderCell[];
   matched: { field: ImportField; header: string }[];
-  /** How many fields were recognised, used to pick the right row and sheet. */
+  // used to pick the header row and sheet
   score: number;
 };
 
-/** Match one row of cells to inventory fields. The first of two repeated headings wins. */
+// first one wins on duplicates
 export function matchHeaders(cells: HeaderCell[]): HeaderMatch {
   const byKey = new Map<string, HeaderCell>();
   for (const cell of cells) {
@@ -199,7 +191,7 @@ export function matchHeaders(cells: HeaderCell[]): HeaderMatch {
       continue;
     }
     columns[field] = cell.column;
-    // The room number may share its column with the location heading; list it once.
+    // room number can share the location column
     if (!claimed.has(cell.column)) {
       matched.push({ field, header: cell.text.trim() });
     }

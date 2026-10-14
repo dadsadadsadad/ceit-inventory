@@ -19,7 +19,6 @@ import { prisma } from "@/prisma";
 const maxIdentifierLength = 254;
 const maxPasswordLength = 256;
 
-// Check credentials, create a session, and record the sign-in.
 export async function signIn(formData: FormData) {
   const identifier = stripControlCharacters(String(formData.get("identifier") ?? ""))
     .trim()
@@ -33,7 +32,7 @@ export async function signIn(formData: FormData) {
   ) {
     redirect("/auth/login?error=invalid-credentials");
   }
-  // Refuse before the slow password check, so a flood of guesses costs almost nothing.
+  // check the throttle before hashing, hashing is slow on purpose
   if (await isSignInThrottled()) {
     redirect("/auth/login?error=too-many-attempts");
   }
@@ -42,14 +41,13 @@ export async function signIn(formData: FormData) {
     where: identifier.includes("@") ? { email: identifier } : { username: identifier },
   });
   const now = new Date();
-  // A locked account gets the same answer as a wrong password or an unknown account, so the
-  // page never confirms which usernames exist.
+  // same error for locked, wrong password and unknown user so usernames can't be guessed
   if (!user || !user.isActive) {
     await simulatePasswordCheck(password);
     await recordFailedSignInAttempt();
     redirect("/auth/login?error=invalid-credentials");
   }
-  // The owner's own browser may still try while the account is locked; see known-device.ts.
+  // known devices can still sign in while locked, see known-device.ts
   if (isAccountLocked(user, now) && !(await isKnownDevice(user.id))) {
     await simulatePasswordCheck(password);
     await recordFailedSignInAttempt();
@@ -82,7 +80,6 @@ export async function signIn(formData: FormData) {
   redirect("/dashboard");
 }
 
-// Record the sign-out and clear the session.
 export async function signOut() {
   try {
     const actor = await getCurrentInventoryUser();

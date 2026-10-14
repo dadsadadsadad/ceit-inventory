@@ -5,7 +5,6 @@ import { SubmitButton } from "@/app/components/submit-button";
 
 import { submitReturnRequest } from "./borrow-actions";
 
-// Match the borrower to an item being returned.
 export function ReturnRequestForm({
   formToken,
   itemName,
@@ -28,7 +27,6 @@ export function ReturnRequestForm({
         Enter the same student number and contact number used for borrowing. Staff will inspect the
         item and confirm the return.
       </p>
-      {/* Borrower details used to find the active loan. */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label>
           <span className="text-sm font-semibold">Student number *</span>
@@ -56,7 +54,6 @@ export function ReturnRequestForm({
           />
         </label>
       </div>
-      {/* Condition notes for the staff receiving the item. */}
       <label className="mt-4 block">
         <span className="text-sm font-semibold">Return notes (optional)</span>
         <textarea
@@ -72,7 +69,7 @@ export function ReturnRequestForm({
           A return is only completed after a CEIT staff member confirms it.
         </p>
         <SubmitButton
-          pendingLabel="Sending return request…"
+          pendingLabel="Sending return request..."
           className="secondary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold sm:w-auto"
         >
           Request return

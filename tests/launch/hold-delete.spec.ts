@@ -60,7 +60,7 @@ test("holding never deletes before release, and moving away or Escape cancels", 
   expect(await exists(record.id)).toBe(1);
 
   const restingBounds = (await record.button.boundingBox())!;
-  // Start near the edge to catch labels that shrink the target while holding.
+  // start near the edge
   await page.mouse.move(restingBounds.x + restingBounds.width - 5, restingBounds.y + 20);
   await page.mouse.down();
   await expect(record.button).toHaveAttribute("data-phase", "ready");

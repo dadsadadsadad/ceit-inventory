@@ -42,7 +42,6 @@ function readable(value: string) {
     .join(" ");
 }
 
-// Shared label and input for the new-item form.
 function InputField({
   hint,
   label,
@@ -77,7 +76,6 @@ function InputField({
   );
 }
 
-// Equipment or stock, then only the fields that matter for it. Everything else is optional.
 export function NewInventoryForm({
   categories,
   customFields,
@@ -101,7 +99,6 @@ export function NewInventoryForm({
     : "";
   const extraFields = customFieldsFor(customFields, { categoryId: categoryId || null, itemType });
 
-  // Suggest a PC name when a computer profile is enabled.
   function updateComputerSelection(nextValue: boolean) {
     setIsComputer(nextValue);
     if (nextValue) {
@@ -112,7 +109,7 @@ export function NewInventoryForm({
     }
   }
 
-  // Update the selected room and suggest its next PC name.
+  // suggest the next pc name for the room
   function updateLocation(nextLocationId: string) {
     setLocationId(nextLocationId);
     if (!isComputer) {
@@ -130,7 +127,6 @@ export function NewInventoryForm({
       createPreview={{ titleField: "name", detailFields: ["locationId", "categoryId"] }}
       className="card space-y-6 rounded-lg p-5 sm:p-7"
     >
-      {/* The few things every record needs. */}
       <section aria-labelledby="new-item-essentials">
         <p className="eyebrow">The basics</p>
         <h2 id="new-item-essentials" className="mt-2 text-lg font-semibold">
@@ -476,7 +472,7 @@ export function NewInventoryForm({
       </div>
 
       <SubmitButton
-        pendingLabel={severalUnits ? `Creating ${units} items…` : "Creating item…"}
+        pendingLabel={severalUnits ? `Creating ${units} items...` : "Creating item..."}
         className="primary-button rounded-lg px-5 py-2.5 text-sm font-semibold"
       >
         {severalUnits ? `Create ${units} items` : isStock ? "Create stock record" : "Create item"}

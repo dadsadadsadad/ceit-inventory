@@ -3,11 +3,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useId, useState, type InputHTMLAttributes } from "react";
 
-/**
- * A labelled password box with a button that shows what was typed, so it can be checked before
- * saving. The label names only the box; the button and the hint sit outside it, so a screen
- * reader announces "New password", not every word around it.
- */
+// the label only wraps the input so screen readers just read the field name
 export function PasswordInput({
   hint,
   id,

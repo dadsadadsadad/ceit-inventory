@@ -83,7 +83,6 @@ function LicensePill({ group, now }: { group: SoftwareGroup; now: Date }) {
   );
 }
 
-// Every software title across the PCs, with where it is installed and when licenses end.
 export default async function SoftwarePage({
   searchParams,
 }: {
@@ -217,7 +216,7 @@ export default async function SoftwarePage({
               defaultValue={q}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Software, version, PC, room, license hint…"
+              placeholder="Software, version, PC, room, license hint..."
             />
           </label>
           <label>
@@ -381,7 +380,7 @@ export default async function SoftwarePage({
                                   )}
                                 </td>
                                 <td className="muted px-3 py-3 text-sm">
-                                  {install.licenseKeyHint ?? "—"}
+                                  {install.licenseKeyHint ?? "-"}
                                 </td>
                               </tr>
                             ))}

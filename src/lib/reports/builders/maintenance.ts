@@ -19,7 +19,6 @@ import { loadCapped, monthlyCounts, namedItemCounts, type BuilderContext } from 
 const dayMs = 24 * 60 * 60 * 1000;
 const urgent = [MaintenancePriority.HIGH, MaintenancePriority.URGENT];
 
-// Reported problems and repairs.
 export async function buildMaintenanceReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
   const range = reportDateFilter(filters.dateRange);
@@ -84,7 +83,6 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           })),
         ),
       ),
-    // Open requests, for how long they have waited and what the broken equipment is worth.
     prisma.maintenanceTicket.findMany({
       where: { AND: [where, open] },
       select: {
@@ -94,7 +92,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
       },
       take: 5_000,
     }),
-    // Equipment reported more than once: the same fault coming back, or a unit worth replacing.
+    // items reported more than once
     prisma.maintenanceTicket
       .groupBy({
         by: ["inventoryItemId"],
@@ -152,7 +150,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
     title: "Maintenance",
     description: "Reported problems and repairs, and how long they stayed open.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.maintenanceStatus &&
         `Status: ${filters.maintenanceStatus === "OPEN" ? "Needs attention" : "Resolved"}`,
       filters.maintenancePriority && `Priority: ${humanize(filters.maintenancePriority)}`,

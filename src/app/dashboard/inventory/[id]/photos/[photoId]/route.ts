@@ -7,7 +7,6 @@ import { prisma } from "@/prisma";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Check staff access before returning the item's photo.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string; photoId: string }> },
@@ -30,8 +29,7 @@ export async function GET(
   new Uint8Array(body).set(photo.data);
   return new Response(body, {
     headers: {
-      // A photo's bytes never change for its id, and it is removed by deleting the record. Let the
-      // browser reuse it instead of reading the image from the database on every page view.
+      // photos never change for an id, so let the browser cache them
       "Cache-Control": "private, max-age=3600",
       "Content-Disposition": `inline; filename="${photo.fileName.replaceAll('"', "")}"`,
       "Content-Type": photo.contentType,

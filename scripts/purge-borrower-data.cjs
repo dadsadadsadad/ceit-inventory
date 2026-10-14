@@ -1,7 +1,6 @@
 const { databaseClient, databaseError } = require("./database.cjs");
 const client = databaseClient();
 
-// Remove personal details from expired, closed requests.
 async function main() {
   await client.connect();
   const result = await client.query(

@@ -3,21 +3,18 @@ import { canManageUsers, canManageInventory, requireInventoryAccess } from "@/li
 
 export const dynamic = "force-dynamic";
 
-// Check sign-in and load the staff navigation.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireInventoryAccess();
 
   return (
     <>
       <div className="dashboard-shell">
-        {/* Staff sidebar and mobile menu. */}
         <DashboardNavigation
           email={user.email}
           username={user.username}
           canManageUsers={canManageUsers(user.role)}
           canManageInventory={canManageInventory(user.role)}
         />
-        {/* The current dashboard page. */}
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </>

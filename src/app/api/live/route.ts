@@ -21,14 +21,16 @@ export async function GET(request: Request) {
     return new Response(null, { status: 401 });
   }
   const headers = { "Cache-Control": "private, no-store, no-transform" };
-  // A public subscription is only for a label that exists; a made-up code gets nothing to watch.
+  // only subscribe to codes that exist
   if (qrCode && (await liveRevision(qrCode, scope)) === missingItemRevision) {
     return new Response(null, { status: 404, headers });
   }
+  // fallback for proxies that buffer streams
   if (url.searchParams.get("mode") === "poll") {
     return Response.json({ revision: await liveRevision(qrCode, scope) }, { headers });
   }
 
+  // server sent events, checks every 5s and closes after 25s so the client reconnects
   const encoder = new TextEncoder();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
           if (request.signal.aborted || Date.now() - started > 25_000) {
             return stop();
           }
-          // Recheck access throughout the stream, including account deactivation.
+          // keep checking the session while the stream is open
           if (!initialTick && !qrCode && !(await getCurrentInventoryUser())) {
             if (!stopped) {
               controller.enqueue(encoder.encode("event: expired\ndata: {}\n\n"));
@@ -71,7 +73,6 @@ export async function GET(request: Request) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ revision })}\n\n`));
           timer = setTimeout(tick, 5_000);
         } catch {
-          // EventSource reconnects; no database details are exposed to the browser.
           stop();
         }
       }

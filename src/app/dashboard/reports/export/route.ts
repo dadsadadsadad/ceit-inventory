@@ -6,7 +6,6 @@ import { csvRows, ReportRequestError } from "@/lib/reports/model";
 
 export const dynamic = "force-dynamic";
 
-// The spreadsheet version of a report: the same filters as the page, in a CSV file.
 export async function GET(request: Request) {
   const user = await requireInventoryAccess();
   try {

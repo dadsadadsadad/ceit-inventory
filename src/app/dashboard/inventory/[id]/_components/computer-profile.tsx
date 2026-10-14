@@ -21,7 +21,6 @@ type SoftwareValues = {
   version: string | null;
 };
 
-// A short phrase for the line above a software entry: licensed, and until when.
 function licenseSummary(software: Pick<SoftwareValues, "isLicensed" | "licenseExpiresAt">) {
   const parts = [
     software.isLicensed === true
@@ -34,7 +33,7 @@ function licenseSummary(software: Pick<SoftwareValues, "isLicensed" | "licenseEx
   return parts.length ? ` · ${parts.join(" · ")}` : "";
 }
 
-// The fields for one installed program, the same whether adding or editing it.
+// same fields for add and edit
 function SoftwareFields({ software }: { software?: SoftwareValues }) {
   const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
   return (
@@ -121,7 +120,6 @@ type ComputerInfo = {
   lastCheckedAt: Date | null;
 };
 
-// Shared hardware and software input fields.
 export function ComputerFields({ computer }: { computer?: ComputerInfo | null }) {
   return (
     <div className="space-y-4">
@@ -204,7 +202,6 @@ export function ComputerFields({ computer }: { computer?: ComputerInfo | null })
   );
 }
 
-// Read-only computer specifications.
 function ComputerSummary({ computer }: { computer: ComputerInfo }) {
   return (
     <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -237,7 +234,6 @@ function ComputerSummary({ computer }: { computer: ComputerInfo }) {
   );
 }
 
-// Hardware, installed software, and the forms to edit them.
 export function ComputerSection({ item, canManage }: { item: ItemRecord; canManage: boolean }) {
   const computer = item.computer;
 
@@ -245,7 +241,6 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
     <>
       {computer ? (
         <article className="card rounded-lg p-5 sm:p-6">
-          {/* Computer profile and installed software. */}
           <h2 className="text-lg font-semibold">PC hardware and software</h2>
           <ComputerSummary computer={computer} />
           {canManage ? (
@@ -263,7 +258,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                 <input type="hidden" name="computerId" value={computer.id} />
                 <ComputerFields computer={computer} />
                 <SubmitButton
-                  pendingLabel="Saving PC details…"
+                  pendingLabel="Saving PC details..."
                   className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
                 >
                   Save PC details
@@ -289,7 +284,6 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                         ) : null}
                         <span className="muted">{licenseSummary(software)}</span>
                       </summary>
-                      {/* Edit this installed application. */}
                       <FeedbackForm
                         resetOnSuccess={false}
                         action={updateComputerSoftware}
@@ -301,19 +295,18 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                         <input type="hidden" name="id" value={software.id} />
                         <SoftwareFields software={software} />
                         <SubmitButton
-                          pendingLabel="Saving…"
+                          pendingLabel="Saving..."
                           className="primary-button rounded-lg px-3 py-2 text-sm font-semibold"
                         >
                           Save software
                         </SubmitButton>
                       </FeedbackForm>
-                      {/* Remove this application from the record. */}
                       <FeedbackForm action={removeComputerSoftware} className="mt-2">
                         <input type="hidden" name="itemId" value={item.id} />
                         <input type="hidden" name="computerId" value={computer.id} />
                         <input type="hidden" name="id" value={software.id} />
                         <SubmitButton
-                          pendingLabel="Removing…"
+                          pendingLabel="Removing..."
                           className="accent-link text-xs font-semibold"
                         >
                           Remove software
@@ -344,12 +337,11 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                   action={addComputerSoftware}
                   className="mt-4 grid gap-3 sm:grid-cols-2"
                 >
-                  {/* Add another installed application. */}
                   <input type="hidden" name="itemId" value={item.id} />
                   <input type="hidden" name="computerId" value={computer.id} />
                   <SoftwareFields />
                   <SubmitButton
-                    pendingLabel="Adding…"
+                    pendingLabel="Adding..."
                     className="primary-button rounded-lg px-4 py-2 text-sm font-semibold"
                   >
                     Add software
@@ -361,14 +353,13 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
         </article>
       ) : canManage && canHaveComputerDetails(item) ? (
         <details className="section-disclosure card rounded-lg p-5 sm:p-6">
-          {/* Create the item's computer profile. */}
           <summary className="cursor-pointer text-lg font-semibold">Add PC details</summary>
           <p className="muted mt-2 text-sm">Create a PC record for this single tracked asset.</p>
           <FeedbackForm action={addComputerDetails} className="mt-5 space-y-5">
             <input type="hidden" name="itemId" value={item.id} />
             <ComputerFields />
             <SubmitButton
-              pendingLabel="Adding PC record…"
+              pendingLabel="Adding PC record..."
               className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
             >
               Add PC record

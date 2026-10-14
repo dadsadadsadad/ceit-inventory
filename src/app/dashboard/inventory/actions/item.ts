@@ -16,7 +16,7 @@ import { nextInventoryAssetTag } from "@/lib/asset-tag";
 import { FormError, formAction } from "@/lib/form-action";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { isSingleTrackedAsset } from "@/lib/inventory-pc";
-import { maximumLabelCount } from "@/lib/label-sheet";
+import { maxLabelCount } from "@/lib/label-sheet";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { prisma } from "@/prisma";
 
@@ -34,7 +34,7 @@ import {
   identifier,
   inventoryWriteError,
   itemTypes,
-  maximumNewUnits,
+  maxNewUnits,
   optionalDate,
   optionalInteger,
   optionalPurchasePrice,
@@ -49,8 +49,7 @@ import {
   withInlineAnswers,
 } from "./shared";
 
-// Create inventory: one stock record, one piece of equipment, or several identical units, each
-// of which gets its own asset tag and QR code.
+// creates one stock record, one asset, or several units each with their own tag and qr
 export async function createInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -58,10 +57,10 @@ export async function createInventoryItem(formData: FormData) {
     const locationId = requiredId(formData, "locationId");
     const itemType = enumValue(formData, "itemType", itemTypes, ItemType.ASSET);
     const isEquipment = itemType === ItemType.ASSET;
-    // Equipment is always one physical unit per record; stock carries a quantity.
+    // assets are always quantity 1
     const quantity = isEquipment ? 1 : (optionalInteger(formData, "quantity") ?? 0);
     const units = isEquipment
-      ? Math.max(1, optionalInteger(formData, "units", maximumNewUnits) ?? 1)
+      ? Math.max(1, optionalInteger(formData, "units", maxNewUnits) ?? 1)
       : 1;
     const isComputer = isEquipment && formData.get("isComputer") === "on";
     const status = enumValue(formData, "status", statuses, ItemStatus.OK);
@@ -94,17 +93,17 @@ export async function createInventoryItem(formData: FormData) {
     const created: string[] = [];
     try {
       await prisma.$transaction(
-        async (transaction) => {
+        async (tx) => {
           const customFields = withInlineAnswers(
             baseCustomFields,
-            inlineField ? await addInlineCustomField(transaction, inlineField, actor) : {},
+            inlineField ? await addInlineCustomField(tx, inlineField, actor) : {},
           );
           for (let unit = 1; unit <= units; unit += 1) {
             const assetTag = isEquipment
               ? (suppliedAssetTag ??
-                (await nextInventoryAssetTag(transaction, { categoryId, locationId, status })))
+                (await nextInventoryAssetTag(tx, { categoryId, locationId, status })))
               : suppliedAssetTag;
-            const item = await transaction.inventoryItem.create({
+            const item = await tx.inventoryItem.create({
               data: {
                 name: units > 1 ? `${baseName} #${unit}`.slice(0, 255) : baseName,
                 assetTag,
@@ -157,14 +156,13 @@ export async function createInventoryItem(formData: FormData) {
 
     refreshInventoryViews();
     if (created.length > 1) {
-      // Several new tags are usually printed straight away.
+      // go straight to labels when several were made
       redirect(`/dashboard/inventory/labels?ids=${created.join(",")}&created=${created.length}`);
     }
     redirect(`/dashboard/inventory/${created[0]}`);
   });
 }
 
-// Save edits and reject a record changed by another user.
 export async function updateInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -226,14 +224,14 @@ export async function updateInventoryItem(formData: FormData) {
     };
     try {
       await prisma.$transaction(
-        async (transaction) => {
-          const liveItem = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
+        async (tx) => {
+          const liveItem = await tx.inventoryItem.findUniqueOrThrow({ where: { id } });
           if (liveItem.updatedAt.getTime() !== existing.updatedAt.getTime()) {
             throw new FormError(
               "This item changed while you were editing it. Refresh the page before saving again.",
             );
           }
-          const outstanding = await transaction.borrowRequest.count({
+          const outstanding = await tx.borrowRequest.count({
             where: {
               inventoryItemId: id,
               status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
@@ -251,7 +249,7 @@ export async function updateInventoryItem(formData: FormData) {
             );
           }
           if (status === ItemStatus.RETIRED && existing.status !== ItemStatus.RETIRED) {
-            const activeBorrowingCount = await transaction.borrowRequest.count({
+            const activeBorrowingCount = await tx.borrowRequest.count({
               where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } },
             });
             if (activeBorrowingCount) {
@@ -264,11 +262,11 @@ export async function updateInventoryItem(formData: FormData) {
             ...data,
             customFields: withInlineAnswers(
               data.customFields,
-              inlineField ? await addInlineCustomField(transaction, inlineField, actor) : {},
+              inlineField ? await addInlineCustomField(tx, inlineField, actor) : {},
             ),
             assetTag:
               itemType === ItemType.ASSET && !data.assetTag
-                ? await nextInventoryAssetTag(transaction, { categoryId, locationId, status })
+                ? await nextInventoryAssetTag(tx, { categoryId, locationId, status })
                 : data.assetTag,
           };
           const changes = updatedFields(existing, resolvedData);
@@ -278,7 +276,7 @@ export async function updateInventoryItem(formData: FormData) {
               : Object.keys(changes).length === 1 && "status" in changes
                 ? AuditAction.STATUS_CHANGED
                 : AuditAction.UPDATED;
-          await transaction.inventoryItem.update({
+          await tx.inventoryItem.update({
             where: { id },
             data: {
               ...resolvedData,
@@ -298,8 +296,8 @@ export async function updateInventoryItem(formData: FormData) {
             },
           });
           if ("lastCheckedAt" in changes) {
-            // Keep the PC profile's own inspection date in step with the record.
-            await transaction.computer.updateMany({
+            // keep the pc profile's inspection date in sync
+            await tx.computer.updateMany({
               where: { itemId: id },
               data: { lastCheckedAt: resolvedData.lastCheckedAt },
             });
@@ -315,7 +313,6 @@ export async function updateInventoryItem(formData: FormData) {
   });
 }
 
-// Add to or use up stock, keeping a note of why.
 export async function adjustStockQuantity(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -328,8 +325,8 @@ export async function adjustStockQuantity(formData: FormData) {
     const note = optionalText(formData, "note", 200);
 
     await prisma.$transaction(
-      async (transaction) => {
-        const item = await transaction.inventoryItem.findUnique({
+      async (tx) => {
+        const item = await tx.inventoryItem.findUnique({
           where: { id },
           select: { itemType: true, quantity: true, status: true },
         });
@@ -341,6 +338,7 @@ export async function adjustStockQuantity(formData: FormData) {
             "This stock record is retired. Restore it before adjusting the count.",
           );
         }
+        // new count after the change
         const next = direction === "add" ? item.quantity + amount : item.quantity - amount;
         if (next < 0) {
           throw new FormError(`Only ${item.quantity} left, so ${amount} cannot be used.`);
@@ -348,7 +346,7 @@ export async function adjustStockQuantity(formData: FormData) {
         if (next > 1_000_000) {
           throw new FormError("That would be more than the largest quantity a record can hold.");
         }
-        await transaction.inventoryItem.update({
+        await tx.inventoryItem.update({
           where: { id },
           data: {
             quantity: next,
@@ -376,16 +374,16 @@ export async function adjustStockQuantity(formData: FormData) {
   });
 }
 
-// Retire the item while keeping its history.
 export async function retireInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const id = requiredId(formData, "id");
     await prisma.$transaction(
-      async (transaction) => {
+      async (tx) => {
+        // can't retire something that's borrowed or reserved
         const [item, activeBorrowingCount] = await Promise.all([
-          transaction.inventoryItem.findUnique({ where: { id }, select: { status: true } }),
-          transaction.borrowRequest.count({
+          tx.inventoryItem.findUnique({ where: { id }, select: { status: true } }),
+          tx.borrowRequest.count({
             where: { inventoryItemId: id, status: { in: activeBorrowRequestStatuses } },
           }),
         ]);
@@ -399,7 +397,7 @@ export async function retireInventoryItem(formData: FormData) {
         }
 
         if (item.status !== ItemStatus.RETIRED) {
-          await transaction.inventoryItem.update({
+          await tx.inventoryItem.update({
             where: { id },
             data: {
               status: ItemStatus.RETIRED,
@@ -424,8 +422,7 @@ export async function retireInventoryItem(formData: FormData) {
   });
 }
 
-// Give each unit its own record, tag, and QR code: a grouped asset, or a counted stock record
-// (such as five screwdriver sets) whose units should be told apart when borrowed.
+// split a grouped asset or stock record into separate units
 export async function splitGroupedAsset(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -459,32 +456,32 @@ export async function splitGroupedAsset(formData: FormData) {
     let unitIds: string[] = [];
     try {
       unitIds = await prisma.$transaction(
-        async (transaction) => {
-          const item = await transaction.inventoryItem.findUniqueOrThrow({ where: { id } });
+        async (tx) => {
+          const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id } });
           if (item.quantity <= 1 || item.isComputer) {
             throw new FormError(
               "This record changed and can no longer be split. Refresh the page and try again.",
             );
           }
-          // Checked again here: a request sent since the check above would point at one unit.
-          if (await transaction.borrowRequest.count({ where: { inventoryItemId: id } })) {
+          // check again inside the transaction in case a request came in
+          if (await tx.borrowRequest.count({ where: { inventoryItemId: id } })) {
             throw new FormError(
               "This grouped asset now has a borrowing request and cannot be split automatically.",
             );
           }
           const unitCount = item.quantity;
           const wasStock = item.itemType === ItemType.SUPPLY;
-          await transaction.inventoryItem.update({
+          await tx.inventoryItem.update({
             where: { id },
             data: {
               quantity: 1,
               name: `${item.name} (unit 1)`,
-              // A stock record becomes equipment: one unit, its own tag, no restock alert.
+              // stock turns into a single asset with its own tag
               itemType: ItemType.ASSET,
               lowStockThreshold: null,
               assetTag:
                 item.assetTag ??
-                (await nextInventoryAssetTag(transaction, {
+                (await nextInventoryAssetTag(tx, {
                   categoryId: item.categoryId,
                   locationId: item.locationId,
                   status: item.status,
@@ -506,12 +503,12 @@ export async function splitGroupedAsset(formData: FormData) {
           });
           const created = [id];
           for (let unitNumber = 2; unitNumber <= unitCount; unitNumber += 1) {
-            const assetTag = await nextInventoryAssetTag(transaction, {
+            const assetTag = await nextInventoryAssetTag(tx, {
               categoryId: item.categoryId,
               locationId: item.locationId,
               status: item.status,
             });
-            const unit = await transaction.inventoryItem.create({
+            const unit = await tx.inventoryItem.create({
               select: { id: true },
               data: {
                 name: `${item.name} (unit ${unitNumber})`,
@@ -527,7 +524,7 @@ export async function splitGroupedAsset(formData: FormData) {
                 model: item.model,
                 purchaseDate: item.purchaseDate,
                 purchasePrice: item.purchasePrice,
-                // Units bought together share their warranty and the department's extra details.
+                // copy warranty and custom fields to the new units
                 warrantyEndsAt: item.warrantyEndsAt,
                 customFields: (item.customFields ?? undefined) as Prisma.InputJsonValue | undefined,
                 notes: item.notes,
@@ -560,16 +557,15 @@ export async function splitGroupedAsset(formData: FormData) {
     }
 
     refreshInventoryViews(id);
-    // Straight to their labels, already chosen, so each unit can be tagged right away.
+    // open the labels for the new units
     redirect(
-      unitIds.length <= maximumLabelCount
+      unitIds.length <= maxLabelCount
         ? `/dashboard/inventory/labels?ids=${unitIds.join(",")}&created=${unitIds.length}`
         : `/dashboard/inventory/${id}`,
     );
   });
 }
 
-// Save the inspection date and responsible staff member.
 export async function markInventoryItemChecked(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -595,7 +591,7 @@ export async function markInventoryItemChecked(formData: FormData) {
   });
 }
 
-// Delete only items without protected borrowing or repair history.
+// only delete items with no borrowing or maintenance history
 export async function deleteInventoryItem(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -616,8 +612,8 @@ export async function deleteInventoryItem(formData: FormData) {
     }
 
     try {
-      await prisma.$transaction(async (transaction) => {
-        const item = await transaction.inventoryItem.findUnique({
+      await prisma.$transaction(async (tx) => {
+        const item = await tx.inventoryItem.findUnique({
           where: { id },
           select: { assetTag: true, id: true, name: true },
         });
@@ -625,11 +621,11 @@ export async function deleteInventoryItem(formData: FormData) {
           throw new FormError("This item no longer exists.");
         }
         const itemLabel = item.assetTag ?? item.name;
-        await transaction.inventoryAudit.updateMany({
+        await tx.inventoryAudit.updateMany({
           where: { itemId: item.id },
           data: { entityId: item.id, entityLabel: itemLabel, entityType: "inventory-item" },
         });
-        await transaction.inventoryAudit.create({
+        await tx.inventoryAudit.create({
           data: auditEventData({
             action: "DELETED",
             actor,
@@ -638,7 +634,7 @@ export async function deleteInventoryItem(formData: FormData) {
             summary: "Inventory record permanently deleted.",
           }),
         });
-        await transaction.inventoryItem.delete({ where: { id } });
+        await tx.inventoryItem.delete({ where: { id } });
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {

@@ -1,7 +1,4 @@
-/**
- * The dashboard calendar: which things appear on it, and the month arithmetic behind the grid.
- * Days are Philippine calendar days written "YYYY-MM-DD"; months are "YYYY-MM".
- */
+// days are "YYYY-MM-DD" and months "YYYY-MM", in manila time
 
 export type CalendarKind = "return" | "pickup" | "license" | "warranty" | "event";
 
@@ -14,16 +11,13 @@ export const calendarKinds: Record<CalendarKind, { label: string; plural: string
 };
 
 export type CalendarEntry = {
-  /** The Philippine calendar day it falls on. */
   day: string;
-  /** A short second line, such as who has it or when. */
   detail?: string;
-  /** Set for staff-made events, which can be removed. */
+  // only staff events can be removed
   eventId?: string;
   href?: string;
   id: string;
   kind: CalendarKind;
-  /** A return that is already past its time. */
   late?: boolean;
   title: string;
 };
@@ -38,7 +32,7 @@ export function isMonthKey(value: string | null | undefined): value is string {
   return Boolean(match && Number(match[1]) >= earliestYear && Number(match[1]) <= latestYear);
 }
 
-/** A real calendar day (so "2026-02-31" is refused), as a UTC midnight Date. */
+// rejects things like 2026-02-31
 export function parseCalendarDay(value: string | null | undefined) {
   const match = value ? dayPattern.exec(value) : null;
   if (!match) {
@@ -80,19 +74,18 @@ export function monthTitle(month: string) {
   });
 }
 
-/** From the start of the month to the start of the next, in Philippine time. */
 export function monthBounds(month: string) {
   const next = shiftMonth(month, 1);
   return {
     start: new Date(`${month}-01T00:00:00+08:00`),
     end: new Date(`${next}-01T00:00:00+08:00`),
-    // The same bounds as plain dates, for columns that hold a day with no time.
+    // for date-only columns
     startDay: new Date(`${month}-01T00:00:00.000Z`),
     endDay: new Date(`${next}-01T00:00:00.000Z`),
   };
 }
 
-/** Whole weeks (Sunday first) that cover the month, so the grid is always a rectangle. */
+// full weeks starting sunday
 export function monthGrid(month: string) {
   const { year, index } = parts(month);
   const first = new Date(Date.UTC(year, index, 1));
@@ -122,7 +115,6 @@ export function dayHeading(day: string) {
     : day;
 }
 
-/** Entries grouped by day, in the order they should be listed. */
 export function entriesByDay(entries: CalendarEntry[]) {
   const order: CalendarKind[] = ["return", "pickup", "event", "license", "warranty"];
   const byDay = new Map<string, CalendarEntry[]>();

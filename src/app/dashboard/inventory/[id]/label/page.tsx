@@ -16,7 +16,7 @@ import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** How big the code prints on one label. Medium is the size the label always had. */
+// medium is the original size
 const labelSizes = {
   small: "Small: 4 cm code",
   medium: "Medium: 7 cm code",
@@ -25,7 +25,6 @@ const labelSizes = {
 } as const;
 type LabelSize = keyof typeof labelSizes;
 
-// Build the printable QR label for one item.
 export default async function ItemLabelPage({
   params,
   searchParams,
@@ -102,7 +101,6 @@ export default async function ItemLabelPage({
         ) : null}
         {scanUrl && qrDataUrl ? (
           <article className={`print-label print-label-${size} mx-auto rounded-lg p-7 text-center`}>
-            {/* Printable item label. */}
             <p className="eyebrow">CEIT inventory</p>
             <h1 className="mt-3 text-2xl font-bold">{item.name}</h1>
             <p className="mt-2 text-sm text-slate-600">
@@ -124,7 +122,6 @@ export default async function ItemLabelPage({
           </article>
         ) : (
           <section className="notice rounded-lg px-5 py-4 text-sm leading-6" role="alert">
-            {/* Show why a public label URL is unavailable. */}
             The permanent website address needs to be configured before you can print QR labels. Ask
             your administrator to finish the website setup.
           </section>

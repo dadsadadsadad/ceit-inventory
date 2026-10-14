@@ -11,7 +11,6 @@ export function codeFromScan(value: string, trustedQrOrigin?: string) {
   return inventoryQrCodeFromScan(value, window.location.origin, trustedQrOrigin);
 }
 
-// Read QR codes with the camera or manual entry.
 export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -23,7 +22,6 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
   const [isStarting, setIsStarting] = useState(false);
   const [manualCode, setManualCode] = useState("");
 
-  // Stop scanning and release the camera stream.
   function stopCamera(updateState = true) {
     attemptRef.current += 1;
     try {
@@ -51,7 +49,6 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
     };
   }, []);
 
-  // Validate the scanned code before opening its item.
   function openRecord(value: string) {
     const code = codeFromScan(value, trustedQrOrigin);
     if (!code) {
@@ -61,11 +58,10 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
       return;
     }
     stopCamera();
-    setMessage("Item found. Opening…");
+    setMessage("Item found. Opening...");
     router.push(`/scan/${encodeURIComponent(code)}`);
   }
 
-  // Start the rear camera and listen for a readable QR code.
   async function startCamera() {
     if (isStarting || isScanning || !navigator.mediaDevices?.getUserMedia || !videoRef.current) {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -76,11 +72,10 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
 
     const attempt = ++attemptRef.current;
     setIsStarting(true);
-    setMessage("Starting camera…");
+    setMessage("Starting camera...");
     try {
       const { BrowserQRCodeReader } = await import("@zxing/browser");
-      // The reader is loaded only on demand. Navigation or a stopped attempt may
-      // finish before that download, so never request a camera for an old scan.
+      // the reader loads lazily, bail if the scan was stopped or we navigated away meanwhile
       if (attempt !== attemptRef.current || !mountedRef.current || !videoRef.current) {
         return;
       }
@@ -123,7 +118,6 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
     }
   }
 
-  // Open an item using the code typed into the form.
   function submitManualCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     openRecord(manualCode);
@@ -135,7 +129,6 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
         data-scanning={isScanning}
         className="scanner-preview relative overflow-hidden rounded-lg bg-black"
       >
-        {/* Live camera preview. */}
         <video
           ref={videoRef}
           muted
@@ -169,7 +162,6 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
         <p id="scanner-status" className="scanner-status muted text-sm leading-6" role="status">
           {message}
         </p>
-        {/* Start and stop the camera. */}
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="button"
@@ -184,7 +176,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
             disabled={isStarting}
             className={`${isScanning ? "secondary-button" : "primary-button"} rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-wait disabled:opacity-60`}
           >
-            {isStarting ? "Starting camera…" : isScanning ? "Stop camera" : "Use camera"}
+            {isStarting ? "Starting camera..." : isScanning ? "Stop camera" : "Use camera"}
           </button>
         </div>
         <div className="divider mt-6 border-t pt-5">
@@ -192,7 +184,6 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
           <p className="muted mt-1 text-sm leading-6">
             No camera? Type the code printed under the QR image.
           </p>
-          {/* Open an item using its printed code. */}
           <form onSubmit={submitManualCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
             <label className="sr-only" htmlFor="manual-qr-code">
               QR code

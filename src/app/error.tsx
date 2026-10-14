@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 
-// Show a retry button when a page fails.
 export default function ApplicationError({
   error,
   retry,
@@ -24,7 +23,6 @@ export default function ApplicationError({
           and check whether the requested change was saved.
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          {/* Retry loading the failed page. */}
           <button
             onClick={retry}
             className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"

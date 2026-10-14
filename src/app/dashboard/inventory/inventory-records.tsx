@@ -24,7 +24,6 @@ function lastCheckedLabel(value: Date | null) {
     : "Not checked";
 }
 
-// Link a table heading to its next sort order.
 function SortableHeader({
   field,
   label,
@@ -59,7 +58,6 @@ function SortableHeader({
   );
 }
 
-// The matching records as a table (cards on phones), a grid of cards, or a compact list.
 export function InventoryRecords({
   allMatchingItemIds,
   bulkMode,
@@ -87,7 +85,6 @@ export function InventoryRecords({
 
   return (
     <>
-      {/* Matching inventory records. */}
       <section className="card overflow-hidden rounded-lg" aria-label="Inventory records">
         <div className="divider flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
           <p className="muted text-sm">
@@ -131,7 +128,6 @@ export function InventoryRecords({
                 aria-label={`Open ${item.name}`}
                 className="record-tile"
               >
-                {/* One item as a card. */}
                 <div className="record-tile-head">
                   <span
                     className={`record-symbol ${item.computer ? "is-computer" : ""}`}
@@ -165,7 +161,7 @@ export function InventoryRecords({
                 <dl className="record-tile-facts">
                   <div>
                     <dt>Asset tag</dt>
-                    <dd className="asset-code">{item.assetTag ?? "–"}</dd>
+                    <dd className="asset-code">{item.assetTag ?? "-"}</dd>
                   </div>
                   <div>
                     <dt>Room</dt>
@@ -200,7 +196,6 @@ export function InventoryRecords({
                 aria-label={`Open ${item.name}`}
                 className="record-compact-row"
               >
-                {/* One item on one line. */}
                 {bulkMode ? (
                   <input
                     value={item.id}
@@ -218,7 +213,7 @@ export function InventoryRecords({
                     {item.name}
                   </OptimisticText>
                 </Link>
-                <span className="muted asset-code record-compact-tag">{item.assetTag ?? "–"}</span>
+                <span className="muted asset-code record-compact-tag">{item.assetTag ?? "-"}</span>
                 <span className="muted record-compact-room">
                   <OptimisticText entity={`item:${item.id}`} field="location">
                     {item.location.name}
@@ -246,7 +241,7 @@ export function InventoryRecords({
                     aria-label={`Open ${item.name}`}
                     className="cursor-pointer space-y-3 p-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
                   >
-                    {/* Compact item cards for mobile. */}
+                    {/* mobile cards */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <Link
@@ -296,7 +291,7 @@ export function InventoryRecords({
             </div>
 
             <div className="record-table hidden overflow-x-auto xl:block">
-              {/* Inventory table for wider screens. */}
+              {/* desktop table */}
               <table className="w-full">
                 <thead>
                   <tr className="table-heading divider border-b">
@@ -340,7 +335,7 @@ export function InventoryRecords({
                           </td>
                         ) : null}
                         <td className="record-tag muted asset-code px-5 py-4 text-sm">
-                          {item.assetTag ?? "–"}
+                          {item.assetTag ?? "-"}
                         </td>
                         <td className="record-item px-5 py-4 text-sm">
                           <div className="record-identity">

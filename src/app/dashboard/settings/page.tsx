@@ -13,7 +13,6 @@ import { LocationEditor } from "./_components/location-editor";
 
 export const dynamic = "force-dynamic";
 
-// Load account settings, categories, and rooms.
 export default async function SettingsPage() {
   const user = await requireInventoryAccess();
   const setup = await Promise.all([
@@ -31,7 +30,6 @@ export default async function SettingsPage() {
   return (
     <div className="page settings-page">
       <div className="page-inner space-y-6">
-        {/* Settings page title. */}
         <header>
           <p className="eyebrow">Workspace preferences</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Settings</h1>
@@ -52,7 +50,7 @@ export default async function SettingsPage() {
             </p>
           </section>
           <div className="grid gap-6 xl:grid-cols-2">
-            {/* Create and edit rooms. */}
+            {/* rooms */}
             <section className="card rounded-lg p-5 sm:p-6">
               <h3 className="card-title text-lg font-semibold">Rooms and locations</h3>
               <details className="section-disclosure mt-5">
@@ -111,7 +109,7 @@ export default async function SettingsPage() {
                     />
                   </label>
                   <SubmitButton
-                    pendingLabel="Adding location…"
+                    pendingLabel="Adding location..."
                     className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
                   >
                     Add location
@@ -130,7 +128,7 @@ export default async function SettingsPage() {
               </div>
             </section>
 
-            {/* Create and edit inventory categories. */}
+            {/* categories */}
             <section className="card rounded-lg p-5 sm:p-6">
               <h3 className="card-title text-lg font-semibold">Item categories</h3>
               <details className="section-disclosure mt-5">
@@ -178,7 +176,7 @@ export default async function SettingsPage() {
                     />
                   </label>
                   <SubmitButton
-                    pendingLabel="Adding category…"
+                    pendingLabel="Adding category..."
                     className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
                   >
                     Add category
@@ -198,7 +196,7 @@ export default async function SettingsPage() {
             </section>
           </div>
 
-          {/* Extra details staff can record on items. */}
+          {/* custom fields */}
           <section>
             <p className="eyebrow">Item details</p>
             <h2 className="mt-2 text-xl font-semibold">Extra fields</h2>

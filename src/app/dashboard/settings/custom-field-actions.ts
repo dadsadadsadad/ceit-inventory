@@ -4,7 +4,7 @@ import { CustomFieldType, ItemType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { auditEventData } from "@/lib/audit-event";
-import { maximumCustomFields, validatedChoices } from "@/lib/custom-fields";
+import { maxCustomFields, validatedChoices } from "@/lib/custom-fields";
 import { FormError, formAction } from "@/lib/form-action";
 import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 import { requireWriteAccess } from "@/lib/inventory-auth";
@@ -42,7 +42,6 @@ function readChoices(formData: FormData, type: CustomFieldType) {
   }
 }
 
-// Add an extra detail staff can record on items.
 export async function createCustomField(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -54,19 +53,19 @@ export async function createCustomField(formData: FormData) {
     const scope = readScope(formData);
     const choices = readChoices(formData, fieldType);
 
-    // Checked, added, and recorded together, so the limit holds even for two saves at once.
-    await runTransaction(async (transaction) => {
-      const existing = await transaction.customField.findMany({ select: { label: true } });
-      if (existing.length >= maximumCustomFields) {
-        throw new FormError(`You can add up to ${maximumCustomFields} extra fields.`);
+    // count + insert in one transaction so the limit holds
+    await runTransaction(async (tx) => {
+      const existing = await tx.customField.findMany({ select: { label: true } });
+      if (existing.length >= maxCustomFields) {
+        throw new FormError(`You can add up to ${maxCustomFields} extra fields.`);
       }
       if (existing.some((field) => field.label.toLowerCase() === label.toLowerCase())) {
         throw new FormError("There is already an extra field with that name.");
       }
-      const field = await transaction.customField.create({
+      const field = await tx.customField.create({
         data: { label, fieldType, choices, ...scope, sortOrder: existing.length },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: auditEventData({
           action: "CREATED",
           actor,
@@ -80,7 +79,7 @@ export async function createCustomField(formData: FormData) {
   });
 }
 
-// Rename a field or change who it applies to. The kind of answer cannot change once records use it.
+// kind can't change once items have answers
 export async function updateCustomField(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -114,7 +113,7 @@ export async function updateCustomField(formData: FormData) {
   });
 }
 
-// Hide a field from forms without losing what was recorded.
+// hidden fields keep their answers
 export async function setCustomFieldActive(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -134,7 +133,7 @@ export async function setCustomFieldActive(formData: FormData) {
   });
 }
 
-// Remove a field. Answers already recorded on items are no longer shown.
+// answers stay on the items but aren't shown anymore
 export async function deleteCustomField(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();

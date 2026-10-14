@@ -16,7 +16,6 @@ const statusTones: Record<ItemStatus, ReportChartTone> = {
   LOST: "lost",
 };
 
-/** Records by equipment status, in the usual status order, in the status colours. */
 export function statusChart(
   counts: Map<ItemStatus, number>,
   title = "Records by status",
@@ -36,10 +35,7 @@ export function statusChart(
   };
 }
 
-/**
- * Amounts per category, largest first. Past `limit` the rest are folded into "Other", so a chart
- * never needs more bars than can be read at a glance.
- */
+// largest first, the rest past limit go into "Other"
 export function countChart(
   title: string,
   entries: [string, number][],
@@ -63,7 +59,7 @@ export function countChart(
   };
 }
 
-/** The last `months` calendar months in the Philippines, oldest first, with their boundaries. */
+// oldest first
 export function recentMonths(now: Date, months = 6) {
   const [year, month] = manilaDateText(now).slice(0, 7).split("-").map(Number);
   const label = new Intl.DateTimeFormat("en-PH", { month: "short", timeZone: "UTC" });
@@ -79,7 +75,7 @@ export function recentMonths(now: Date, months = 6) {
   });
 }
 
-/** The coming `months` calendar months in the Philippines, starting with this one. */
+// starting this month
 export function upcomingMonths(now: Date, months = 12) {
   const [year, month] = manilaDateText(now).slice(0, 7).split("-").map(Number);
   const label = new Intl.DateTimeFormat("en-PH", { month: "short", timeZone: "UTC" });
@@ -96,7 +92,6 @@ export function upcomingMonths(now: Date, months = 12) {
   });
 }
 
-/** "Oct 2026 to Sep 2027", for the note under a chart of coming months. */
 export function monthSpan(months: { label: string; year: number }[]) {
   const first = months[0];
   const last = months.at(-1);
@@ -110,7 +105,6 @@ const compactPeso = new Intl.NumberFormat("en-PH", {
   style: "currency",
 });
 
-/** Counts per month as a column chart. */
 export function monthChart(
   title: string,
   entries: [string, number][],
@@ -126,16 +120,14 @@ export function monthChart(
   };
 }
 
-/** A chart value in words: a count, or pesos without centavos. */
 export function chartValue(chart: Pick<ReportChart, "format" | "kind">, value: number) {
   if (chart.format !== "peso") {
     return value.toLocaleString();
   }
-  // Columns are narrow, so their amounts are shortened: ₱124K.
+  // columns are narrow so shorten, e.g. ₱124K
   return chart.kind === "columns" ? compactPeso.format(value) : formatPesoShort(value);
 }
 
-/** Whether a chart has anything worth drawing. */
 export function hasChartData(chart: ReportChart) {
   return chart.data.some((entry) => entry.value > 0);
 }

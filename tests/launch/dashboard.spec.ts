@@ -56,19 +56,16 @@ test.afterAll(async () => {
   await unlockAll();
 });
 
-test.describe("account locks cannot be used to keep people out", () => {
-  test("the owner's own browser can still sign in while the account is locked", async ({
-    page,
-    browser,
-  }) => {
+test.describe("account lock", () => {
+  test("known browser can sign in while the account is locked", async ({ page, browser }) => {
     await signIn(page, "launch.staff");
-    // The session ends, as it does after a week, without the owner signing out.
+    // expire the session without signing out
     await page.context().clearCookies({ name: "ceit_inventory_session" });
     await query(
       `UPDATE "User" SET "lockedUntil"=NOW() + INTERVAL '10 minutes', "failedSignInCount"=5, "firstFailedSignInAt"=NOW() WHERE username='launch.staff'`,
     );
 
-    // A browser that has never signed in is refused, even with the right password.
+    // new browser is refused even with the right password
     const strangerContext = await browser.newContext({ baseURL: "http://127.0.0.1:3101" });
     const stranger = await strangerContext.newPage();
     expect(await attemptSignIn(stranger, "launch.staff", process.env.CEIT_TEST_PASSWORD!)).toBe(
@@ -76,14 +73,14 @@ test.describe("account locks cannot be used to keep people out", () => {
     );
     await strangerContext.close();
 
-    // The owner's browser gets in, and that clears the lock.
+    // known browser gets in and clears the lock
     await signIn(page, "launch.staff");
     const account = (
       await query(`SELECT "lockedUntil" IS NULL AS open FROM "User" WHERE username='launch.staff'`)
     ).rows[0];
     expect(account.open).toBe(true);
 
-    // Signing out forgets the browser, so a shared computer does not keep the pass.
+    // signing out forgets the browser
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/auth\/login/);
     const cookies = await page.context().cookies();
@@ -120,9 +117,7 @@ test.describe("account locks cannot be used to keep people out", () => {
 });
 
 test.describe("borrowing", () => {
-  test("the list shows what needs staff first, then loans in progress, then history", async ({
-    page,
-  }) => {
+  test("list is sorted by what needs staff first", async ({ page }) => {
     await query('DELETE FROM "BorrowRequest"');
     const insert = (qr: string, borrower: string, status: string, requestedHoursAgo: number) =>
       itemId(qr).then((id) =>
@@ -132,7 +127,6 @@ test.describe("borrowing", () => {
           [randomUUID(), id, borrower, `ORD-${status}`, status, requestedHoursAgo],
         ),
       );
-    // The newest is finished history and the oldest is still waiting on staff.
     await insert("ceit-launch-item-14", "Cy Returned", "RETURNED", 1);
     await insert("ceit-launch-item-15", "Ben Borrowed", "BORROWED", 2);
     await insert("ceit-launch-item-16", "Ana Requested", "REQUESTED", 3);
@@ -150,7 +144,7 @@ test.describe("borrowing", () => {
     expect(borrowers).toEqual(["Ana Requested", "Ben Borrowed", "Cy Returned"]);
   });
 
-  test("a return that was asked for but never happened can be kept on loan", async ({ page }) => {
+  test("unfinished return can be put back on loan", async ({ page }) => {
     await query('DELETE FROM "BorrowRequest"');
     const id = await itemId("ceit-launch-item-17");
     const requestId = randomUUID();
@@ -169,7 +163,6 @@ test.describe("borrowing", () => {
       .getByLabel("New return date and time")
       .fill(manilaDateTimeInput(new Date(Date.now() + 30 * 3_600_000)));
     await card.getByRole("button", { name: "Save return time" }).click();
-    // Back on loan, it leaves the list of returns to confirm.
     await expect(page.getByText("No borrowing requests match these filters.")).toBeVisible();
     const saved = (
       await query(
@@ -204,9 +197,7 @@ test.describe("public pages and missing records", () => {
 });
 
 test.describe("QR labels", () => {
-  test("labels are chosen from a grid of every item, with filters, paging, and four sizes", async ({
-    page,
-  }) => {
+  test("label picker grid with filters, paging and sizes", async ({ page }) => {
     await signIn(page);
     await page.goto("/dashboard/inventory/labels");
     const tiles = page.locator(".label-tile");
@@ -215,16 +206,16 @@ test.describe("QR labels", () => {
     const tile = (name: string) =>
       page.locator(".label-tile", { has: page.getByText(name, { exact: true }) });
 
-    // Every item is listed at first, 24 to a page, with nothing chosen.
+    // 24 per page, nothing selected
     await expect(tiles).toHaveCount(24);
     await expect(page.getByText("No labels selected yet.")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Items pages" })).toBeVisible();
 
-    // Click to choose, click again to take it out.
+    // toggle
     await tile("Classroom projector").click();
     await expect(tile("Classroom projector")).toHaveAttribute("aria-pressed", "true");
     await expect(labels).toHaveCount(1);
-    // Choosing keeps the place: focus stays on the tile and the label size stays shown.
+    // focus stays on the tile
     await expect(tile("Classroom projector")).toBeFocused();
     await expect(page.getByRole("combobox", { name: "Label size" })).toHaveValue("");
     await expect(
@@ -233,7 +224,7 @@ test.describe("QR labels", () => {
     await tile("Classroom projector").click();
     await expect(labels).toHaveCount(0);
 
-    // A filter narrows the grid and keeps what is already chosen.
+    // filter keeps the selection
     await tile("Lab equipment 10").click();
     await expect(labels).toHaveCount(1);
     await page.getByLabel("Search", { exact: true }).fill("INV-TST-OK-01-0004");
@@ -245,7 +236,7 @@ test.describe("QR labels", () => {
     await expect(labels).toHaveCount(2);
     await expect(tile("Lab equipment 10")).toHaveAttribute("aria-pressed", "true");
 
-    // Choose many at once, across pages.
+    // select all across pages
     await page.getByRole("button", { name: "Clear selection" }).click();
     await expect(labels).toHaveCount(0);
     await page.getByRole("button", { name: "Select this page" }).click();
@@ -259,7 +250,7 @@ test.describe("QR labels", () => {
     await expect(labels).toHaveCount(27);
     await expect(page.getByRole("button", { name: "Print labels" })).toBeVisible();
 
-    // The sizes: 40, 24, 8, and 2 labels per sheet, keeping the choice.
+    // sizes: 40, 24, 8, 2 per sheet
     const size = page.getByRole("combobox", { name: "Label size" });
     for (const [layout, count] of [
       ["small", 1],
@@ -300,9 +291,7 @@ test.describe("QR labels", () => {
 });
 
 test.describe("inventory views", () => {
-  test("the list can be shown as a table, cards, or a compact list, and is remembered", async ({
-    page,
-  }) => {
+  test("table, cards and compact views are remembered", async ({ page }) => {
     await signIn(page);
     await page.goto("/dashboard/inventory");
     const views = page.getByRole("navigation", { name: "Inventory view" });
@@ -311,18 +300,16 @@ test.describe("inventory views", () => {
     await views.getByRole("link", { name: "Cards" }).click();
     await expect(page).toHaveURL(/view=cards/);
     await expect(page.locator(".record-tile")).toHaveCount(25);
-    // A card opens its record.
     await page.locator(".record-tile").first().locator(".record-tile-facts").click();
     await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
 
     await page.goto("/dashboard/inventory");
-    // The last choice is remembered on this device.
+    // remembered
     await expect(page.locator(".record-tile")).toHaveCount(25);
     await views.getByRole("link", { name: "Compact" }).click();
     await expect(page).toHaveURL(/view=compact/);
     await expect(page.locator(".record-compact-row")).toHaveCount(25);
 
-    // Filters and paging keep the view, and selecting items works in it.
     await page.getByLabel("Search", { exact: true }).fill("Lab equipment 2");
     await expect(page).toHaveURL(/q=Lab/);
     await expect(page).toHaveURL(/view=compact/);
@@ -334,7 +321,7 @@ test.describe("inventory views", () => {
   });
 });
 
-test.describe("units that are borrowed one at a time", () => {
+test.describe("splitting units", () => {
   test("a counted stock record can be split so each unit has its own QR code", async ({ page }) => {
     const source = (
       await query(
@@ -355,7 +342,6 @@ test.describe("units that are borrowed one at a time", () => {
     await page.getByLabel("Type SPLIT to give each unit its own record").fill("SPLIT");
     await page.getByRole("button", { name: "Split into 3 units" }).click();
 
-    // Their labels open, already chosen.
     await expect(page).toHaveURL(/\/dashboard\/inventory\/labels\?ids=.*created=3/);
     await expect(page.locator(".sheet-label")).toHaveCount(3);
     const units = (
@@ -394,10 +380,8 @@ test.describe("report charts", () => {
   });
 });
 
-test.describe("money, warranty, and record reports", () => {
-  test("asset value, record health, and the price and license filters build on the page and as files", async ({
-    page,
-  }) => {
+test.describe("value and health reports", () => {
+  test("asset value and record health reports with price and license filters", async ({ page }) => {
     await signIn(page);
     await query(
       `UPDATE "InventoryItem" SET "purchasePrice"=45000, "purchaseDate"='2024-06-01', "warrantyEndsAt"=CURRENT_DATE + 30 WHERE "qrCode"='ceit-launch-item-2'`,
@@ -406,14 +390,14 @@ test.describe("money, warranty, and record reports", () => {
       `UPDATE "InventoryItem" SET "purchasePrice"=8000 WHERE "qrCode"='ceit-launch-item-3'`,
     );
 
-    // Other tests may have priced records too, so compare with the database.
-    const priced = async (minimum = 0) =>
+    // other tests add prices too, compare with the db
+    const priced = async (min = 0) =>
       Math.round(
         Number(
           (
             await query(
               `SELECT COALESCE(SUM("purchasePrice"),0) AS total FROM "InventoryItem" WHERE "purchasePrice" >= $1`,
-              [minimum],
+              [min],
             )
           ).rows[0].total,
         ),
@@ -425,18 +409,18 @@ test.describe("money, warranty, and record reports", () => {
     );
     await expect(page.getByText("Value by category", { exact: true }).first()).toBeVisible();
 
-    // A price range narrows the list and says so.
+    // price range
     await page.goto("/dashboard/reports?kind=value&priceMin=10000&generate=1");
     await expect(page.locator(".report-chip", { hasText: /Price:.*or more/ })).toBeVisible();
     await expect(page.locator(".report-metric", { hasText: "Total value" })).toContainText(
       await priced(10000),
     );
 
-    // Record health lists what is missing.
+    // record health
     await page.goto("/dashboard/reports?kind=health&missing=price&generate=1");
     await expect(page.getByRole("heading", { name: "No purchase price", level: 3 })).toBeVisible();
 
-    // Warranties ending within a window.
+    // warranties ending soon
     await page.goto("/dashboard/reports?kind=warranty&within=90&generate=1");
     await expect(page.locator(".report-chip", { hasText: "Ending within 90 days" })).toBeVisible();
     await expect(page.getByText("Warranties ending, next 12 months")).toBeVisible();

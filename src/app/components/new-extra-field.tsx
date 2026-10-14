@@ -7,11 +7,7 @@ import { customFieldLabels } from "@/lib/custom-fields";
 const kinds = ["TEXT", "NUMBER", "DATE", "YES_NO", "CHOICE"] as const;
 type Kind = (typeof kinds)[number];
 
-/**
- * "Add a new extra field" inside an item form: name it, say what kind of answer it takes, and
- * fill it in for this item, all in one save. The field then exists for every item (Settings can
- * narrow it to one type or category).
- */
+// create a custom field from the item form and fill it in, saved together with the item
 export function NewExtraField() {
   const [kind, setKind] = useState<Kind>("TEXT");
   const control = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
@@ -31,7 +27,7 @@ export function NewExtraField() {
             name="newFieldLabel"
             maxLength={60}
             className={control}
-            placeholder="Lens mount, Funding source, Color…"
+            placeholder="Lens mount, Funding source, Color..."
           />
         </label>
         <label>

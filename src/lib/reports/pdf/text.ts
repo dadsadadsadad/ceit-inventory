@@ -1,25 +1,24 @@
 import type { PDFFont } from "pdf-lib";
 
-/** Make text safe for the built-in PDF fonts, which only cover Latin-1. */
-export function pdfText(value: unknown, maximum = 900) {
+// standard pdf fonts only support latin-1
+export function pdfText(value: unknown, max = 900) {
   const normalized = String(value ?? "")
     .normalize("NFKC")
-    .replaceAll(/[‐-―]/g, "-")
-    .replaceAll(/[‘’]/g, "'")
-    .replaceAll(/[“”]/g, '"')
-    .replaceAll("…", "...")
+    .replaceAll(/[\u2010-\u2015]/g, "-")
+    .replaceAll(/[\u2018\u2019]/g, "'")
+    .replaceAll(/[\u201C\u201D]/g, '"')
+    .replaceAll("\u2026", "...")
     .replaceAll("₱", "PHP ")
     .replaceAll("·", "|")
     .replaceAll(/[^\x20-\x7E\xA0-\xFF\n]/g, "?")
     .replaceAll(/[\t\r]+/g, " ")
     .replaceAll(/ +/g, " ")
     .trim();
-  return normalized.length > maximum
-    ? `${normalized.slice(0, Math.max(0, maximum - 3)).trimEnd()}...`
+  return normalized.length > max
+    ? `${normalized.slice(0, Math.max(0, max - 3)).trimEnd()}...`
     : normalized;
 }
 
-// Break a word that is wider than its column.
 function splitLongWord(word: string, font: PDFFont, size: number, width: number) {
   const pieces: string[] = [];
   let remaining = word;
@@ -37,7 +36,6 @@ function splitLongWord(word: string, font: PDFFont, size: number, width: number)
   return pieces;
 }
 
-/** Wrap one line of text to a width. */
 export function wrapLine(text: string, font: PDFFont, size: number, width: number) {
   const words = text.split(/\s+/).filter(Boolean);
   if (!words.length) {
@@ -70,7 +68,6 @@ export function wrapLine(text: string, font: PDFFont, size: number, width: numbe
   return lines;
 }
 
-/** Keep the first lines of a long cell and end it with an ellipsis. */
-export function capLines<T>(lines: T[], maximum: number, ellipsis: T) {
-  return lines.length <= maximum ? lines : [...lines.slice(0, maximum - 1), ellipsis];
+export function capLines<T>(lines: T[], max: number, ellipsis: T) {
+  return lines.length <= max ? lines : [...lines.slice(0, max - 1), ellipsis];
 }

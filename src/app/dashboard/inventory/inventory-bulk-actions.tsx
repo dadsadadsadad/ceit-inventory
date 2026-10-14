@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { maximumLabelCount } from "@/lib/label-sheet";
+import { maxLabelCount } from "@/lib/label-sheet";
 
 import { SubmitButton } from "@/app/components/submit-button";
 import {
@@ -17,7 +17,6 @@ import {
 type BulkAction = "condition" | "delete" | "inspect" | "location" | "remove" | "status";
 type SelectOption = { label: string; value: string };
 
-// Choose an action for the selected inventory.
 export function InventoryBulkActions({
   allItemIds,
   clearSelectionOnLoad = false,
@@ -61,7 +60,6 @@ export function InventoryBulkActions({
     return addSelectionChangeListener(handleSelectionChange);
   }, [allItemIds, clearSelectionOnLoad, selectionKey]);
 
-  // Clear the saved selection and visible checkboxes.
   function clearSelection() {
     saveSelectedItemIds(selectionKey, []);
     syncVisibleItemSelection([]);
@@ -95,7 +93,6 @@ export function InventoryBulkActions({
       {selectedIds.map((itemId) => (
         <input key={itemId} type="hidden" name="itemIds" value={itemId} />
       ))}
-      {/* Selection count and quick controls. */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-xl">
           <p className="eyebrow">Selected inventory</p>
@@ -106,7 +103,7 @@ export function InventoryBulkActions({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {selectedIds.length <= maximumLabelCount ? (
+          {selectedIds.length <= maxLabelCount ? (
             <Link
               href={`/dashboard/inventory/labels?ids=${selectedIds.join(",")}`}
               className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
@@ -114,7 +111,7 @@ export function InventoryBulkActions({
               Print QR labels
             </Link>
           ) : (
-            <p className="muted text-xs">Select up to {maximumLabelCount} items to print labels.</p>
+            <p className="muted text-xs">Select up to {maxLabelCount} items to print labels.</p>
           )}
           <button
             type="button"
@@ -126,7 +123,6 @@ export function InventoryBulkActions({
         </div>
       </div>
 
-      {/* Bulk action and target values. */}
       <div className="bulk-action-toolbar-controls mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(13rem,0.9fr)_minmax(15rem,1fr)_auto] xl:items-end">
         <label>
           <span className="muted text-xs font-bold uppercase tracking-wide">Action</span>
@@ -230,7 +226,7 @@ export function InventoryBulkActions({
               (action === "remove" || action === "delete") &&
               removalConfirmation !== confirmationWord
             }
-            pendingLabel={action === "delete" ? "Deleting…" : "Updating…"}
+            pendingLabel={action === "delete" ? "Deleting..." : "Updating..."}
             className={`${action === "remove" || action === "delete" ? "danger-button" : "primary-button"} w-full rounded-lg px-4 py-2.5 text-sm font-semibold`}
           >
             {action === "delete"

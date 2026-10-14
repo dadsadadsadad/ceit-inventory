@@ -1,11 +1,7 @@
-/*
-  Display preferences chosen in the Appearance panel. Each one is an attribute on <html>, set before
-  the page paints (src/lib/appearance-bootstrap.ts) and by the panel (src/app/components/theme-toggle.tsx).
-  The standard choice for each has no attribute, so none of this applies until someone changes it.
-*/
+/* appearance options, set as attributes on <html> by appearance-bootstrap.ts and theme-toggle.tsx */
 
-/* ------------------------------------------------------------------ background tone */
-/* Light: Bright, a near-white neutral for well-lit rooms. */
+/* background tone */
+/* light: bright */
 html[data-theme="light"][data-tone="bright"] {
   --background: #f7f6f3;
   --workspace-canvas: #f7f6f3;
@@ -16,7 +12,7 @@ html[data-theme="light"][data-tone="bright"] {
   --grain-opacity: 0.03;
 }
 
-/* Light: Cool, a soft blue-grey. */
+/* light: cool */
 html[data-theme="light"][data-tone="cool"] {
   --background: #eceff2;
   --workspace-canvas: #eceff2;
@@ -34,7 +30,7 @@ html[data-theme="light"][data-tone="cool"] {
   --grain-opacity: 0.03;
 }
 
-/* Dark: Midnight, a deep blue-black. */
+/* dark: midnight */
 html[data-theme="dark"][data-tone="midnight"] {
   --background: #0d1117;
   --workspace-canvas: #0d1117;
@@ -50,7 +46,7 @@ html[data-theme="dark"][data-tone="midnight"] {
   --border-input: rgb(232 237 244 / 30%);
 }
 
-/* Dark: Black, true black for OLED screens. */
+/* dark: black */
 html[data-theme="dark"][data-tone="black"] {
   --background: #000000;
   --workspace-canvas: #000000;
@@ -66,8 +62,7 @@ html[data-theme="dark"][data-tone="black"] {
   --border-input: rgb(255 255 255 / 32%);
 }
 
-/* ------------------------------------------------------------------ text size */
-/* Everything is sized in rem, so this scales the whole interface. */
+/* text size */
 html[data-text="large"] {
   font-size: 112.5%;
 }
@@ -76,7 +71,7 @@ html[data-text="larger"] {
   font-size: 125%;
 }
 
-/* ------------------------------------------------------------------ corners */
+/* corners */
 html[data-corners="sharp"] {
   --radius-card: 0.2rem;
   --radius-control: 0.15rem;
@@ -89,8 +84,7 @@ html[data-corners="round"] {
   --radius-chip: 0.65rem;
 }
 
-/* ------------------------------------------------------------------ titles */
-/* Page titles, section headings, and big numbers in the interface font instead of the serif. */
+/* titles */
 html[data-titles="sans"] {
   --font-display: var(--font-ui);
 }

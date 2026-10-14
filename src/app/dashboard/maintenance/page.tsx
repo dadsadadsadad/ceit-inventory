@@ -57,7 +57,6 @@ function formatDate(value: Date) {
   return formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" });
 }
 
-// Load reported issues and repair forms.
 export default async function MaintenancePage({
   searchParams,
 }: {
@@ -134,7 +133,7 @@ export default async function MaintenancePage({
       take: 25,
     });
   const [preselected, requestedTickets, count] = await Promise.all([
-    // An item link (from an item's page or QR scan) arrives with the equipment already chosen.
+    // preselect the item when coming from an item page or scan
     reporting && selectedItem
       ? prisma.inventoryItem.findFirst({
           where: { id: selectedItem, status: { not: ItemStatus.RETIRED } },
@@ -151,7 +150,6 @@ export default async function MaintenancePage({
   return (
     <div className="page maintenance-page">
       <div className="page-inner space-y-6">
-        {/* Maintenance title and summary. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Maintenance</p>
@@ -193,7 +191,6 @@ export default async function MaintenancePage({
           </div>
         ) : null}
 
-        {/* Create a maintenance request. */}
         {reporting ? (
           <section id="report-issue" className="card scroll-mt-6 rounded-lg p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -268,7 +265,7 @@ export default async function MaintenancePage({
                 <span>Mark the item as defective while this request needs attention.</span>
               </label>
               <SubmitButton
-                pendingLabel="Reporting…"
+                pendingLabel="Reporting..."
                 className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
               >
                 Submit maintenance request
@@ -277,7 +274,6 @@ export default async function MaintenancePage({
           </section>
         ) : null}
 
-        {/* Filter issues by status, priority, source, and date. Choices apply at once. */}
         <FilterForm className="filter-spread card rounded-lg p-4" label="Maintenance filters">
           {selectedItem ? <input type="hidden" name="item" value={selectedItem} /> : null}
           <label className="min-w-0 flex-1">
@@ -355,7 +351,6 @@ export default async function MaintenancePage({
           </ClearFiltersButton>
         </FilterForm>
 
-        {/* Matching maintenance requests. */}
         <section className="space-y-4" aria-label="Maintenance requests">
           <p className="muted text-sm">
             {count} request{count === 1 ? "" : "s"} · Page {page} of {totalPages}
@@ -367,7 +362,6 @@ export default async function MaintenancePage({
                 id={`ticket-${ticket.id}`}
                 className="card scroll-mt-6 rounded-lg p-5 sm:p-6"
               >
-                {/* Issue details and repair status. */}
                 <div className="maintenance-ticket-grid">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -414,7 +408,6 @@ export default async function MaintenancePage({
                       </p>
                     ) : null}
                   </div>
-                  {/* Save inspection results and staff notes. */}
                   <details className="section-disclosure min-w-0">
                     <summary className="secondary-button inline-flex cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold">
                       Update request
@@ -501,7 +494,7 @@ export default async function MaintenancePage({
                         </span>
                       </label>
                       <SubmitButton
-                        pendingLabel="Saving…"
+                        pendingLabel="Saving..."
                         className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
                       >
                         Save changes

@@ -1,4 +1,3 @@
-/** Match common phone formatting without exposing borrower details publicly. */
 export function normalizeContactNumber(value: string): string | null {
   const trimmed = value.trim();
   if (!/^\+?[0-9()\-\s]+$/.test(trimmed)) {

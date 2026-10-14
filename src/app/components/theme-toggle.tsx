@@ -43,20 +43,18 @@ import {
   toneLabels,
 } from "@/lib/appearance";
 
-// Color picker controls.
 type AccentColorPickerProps = {
   color: string;
   onChange: (color: string) => void;
 };
 
-// Choose a color with sliders, presets, or a hex value.
 function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
   const hsv = hexToHsv(color);
   const hexInputId = useId();
   const [hexDraft, setHexDraft] = useState("");
   const [isEditingHex, setIsEditingHex] = useState(false);
 
-  // Turn a pointer position into saturation and brightness.
+  // pointer position to saturation/brightness
   function setColorFromPlane(target: HTMLDivElement, clientX: number, clientY: number) {
     const bounds = target.getBoundingClientRect();
     if (!bounds.width || !bounds.height) {
@@ -84,7 +82,7 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
     }
   }
 
-  // Apply a hex color once all six digits are entered.
+  // only apply once all 6 hex digits are typed
   function handleHexChange(event: ChangeEvent<HTMLInputElement>) {
     const nextValue = event.currentTarget.value.replace(/[^\da-f]/gi, "").slice(0, 6);
     setHexDraft(nextValue);
@@ -117,7 +115,6 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
         </span>
       </div>
 
-      {/* Drag to choose saturation and brightness. */}
       <div
         className="accent-color-plane"
         aria-hidden="true"
@@ -135,7 +132,6 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
       </div>
 
       <p className="sr-only">Use the following sliders to adjust the color with a keyboard.</p>
-      {/* Keyboard-accessible color sliders. */}
       <div className="accent-color-adjustments">
         <label className="accent-color-range-label" htmlFor={`${hexInputId}-hue`}>
           <span>
@@ -226,7 +222,7 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
   );
 }
 
-// Accept saved hex colors and older preset names.
+// also accept old preset names
 function resolveAccent(value: string | null): Accent {
   const customColor = normalizeHex(value);
   if (customColor) {
@@ -236,8 +232,7 @@ function resolveAccent(value: string | null): Accent {
   return value ? (legacyAccentColors[value.toLowerCase()] ?? null) : null;
 }
 
-// Preferences are read straight from storage. If storage is blocked, choices made in this visit
-// are remembered here so they still work until the page is closed.
+// in-memory fallback for when localStorage is blocked
 const sessionValues: Record<string, string> = {};
 
 function readSaved(key: string) {
@@ -251,7 +246,7 @@ function readSaved(key: string) {
 let cachedPreferencesKey = "";
 let cachedPreferences: DisplayPreferences = defaultPreferences;
 
-// The same object is returned until a saved choice changes, as useSyncExternalStore requires.
+// useSyncExternalStore needs the same object back until something changes
 function getPreferencesSnapshot(): DisplayPreferences {
   if (typeof window === "undefined") {
     return defaultPreferences;
@@ -265,7 +260,6 @@ function getPreferencesSnapshot(): DisplayPreferences {
   return cachedPreferences;
 }
 
-// Read the saved accent with a browser-safe fallback.
 function getAccentSnapshot(): Accent {
   if (typeof window === "undefined") {
     return null;
@@ -278,7 +272,6 @@ function getAccentSnapshot(): Accent {
   }
 }
 
-// Listen for appearance changes in this tab and other tabs.
 function subscribeToAppearance(callback: () => void) {
   window.addEventListener("storage", callback);
   window.addEventListener(appearanceChangeEvent, callback);
@@ -305,12 +298,10 @@ function colorMix(color: string, percentage: number, mixWith: string) {
   return `color-mix(in srgb, ${color} ${percentage}%, ${mixWith})`;
 }
 
-// Return accent styles to the CSS defaults.
 function clearCustomAccentProperties(root: HTMLElement) {
   accentProperties.forEach((property) => root.style.removeProperty(property));
 }
 
-// Apply the chosen look: the display choices as attributes, then the readable accent colors.
 function applyAppearance(preferences: DisplayPreferences, theme: Theme, accent: Accent) {
   const root = document.documentElement;
   const customColor = normalizeHex(accent);
@@ -350,7 +341,7 @@ function applyAppearance(preferences: DisplayPreferences, theme: Theme, accent: 
   root.style.setProperty("--sidebar-deep", tokens.sidebarDeep);
 }
 
-// Update older saved accent preferences.
+// migrate old saved accents
 function migrateAccentStorage(accent: Accent) {
   try {
     const storedAccent = window.localStorage.getItem(accentStorageKey);
@@ -362,14 +353,11 @@ function migrateAccentStorage(accent: Accent) {
     } else if (storedAccent !== null) {
       window.localStorage.removeItem(accentStorageKey);
     }
-  } catch {
-    // Storage is optional; the current page still receives the selected color.
-  }
+  } catch {}
 }
 
 type SegmentOption<T extends string> = { icon?: ReactNode; label: string; value: T };
 
-// A row of choices where exactly one is on, such as Light, Dark, or Auto.
 function Segmented<T extends string>({
   className = "",
   label,
@@ -409,7 +397,6 @@ function Segmented<T extends string>({
   );
 }
 
-// Save the device's look: mode, background, accent color, and display choices.
 export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   const preferences = useSyncExternalStore<DisplayPreferences>(
     subscribeToAppearance,
@@ -428,8 +415,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   const headingId = useId();
 
   useEffect(() => {
-    // Read storage again so the first hydration effect never overrides the
-    // synchronous bootstrap choice with the server fallback values.
+    // read storage again so hydration doesn't overwrite what the bootstrap script set
     const currentPreferences = getPreferencesSnapshot();
     const currentAccent = getAccentSnapshot();
     applyAppearance(
@@ -468,7 +454,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
 
     document.addEventListener("pointerdown", closeOnOutsidePress);
     document.addEventListener("focusin", closeOnOutsidePress);
-    // Handle the panel before the mobile navigation's Escape listener.
+    // run before the mobile nav's escape handler
     document.addEventListener("keydown", closeOnEscape, true);
 
     return () => {
@@ -478,7 +464,6 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
     };
   }, [isOpen]);
 
-  // Apply the choice, save it, and notify the other controls.
   function saveAppearance(changes: Partial<DisplayPreferences>, nextAccent: Accent = accent) {
     const next = { ...preferences, ...changes };
     applyAppearance(next, resolveTheme(next.mode, getDeviceIsDark()), nextAccent);
@@ -487,7 +472,7 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
       for (const key of Object.keys(changes) as (keyof DisplayPreferences)[]) {
         const storageKey = preferenceKeys[key];
         sessionValues[storageKey] = next[key];
-        // The mode is always saved; the rest only when they differ from the standard look.
+        // always save mode, only save the rest if it's not the default
         if (key !== "mode" && next[key] === defaultPreferences[key]) {
           window.localStorage.removeItem(storageKey);
         } else {
@@ -501,15 +486,14 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
         window.localStorage.removeItem(accentStorageKey);
       }
     } catch {
-      // Appearance choices should still work for the current session when
-      // storage is unavailable (for example, in a restricted browser mode).
+      // storage can fail in private mode, still apply for this session
     }
 
     window.dispatchEvent(new Event(appearanceChangeEvent));
   }
 
   function resetEverything() {
-    // Each tone is reset in the key it is saved under, so both modes return to their standard.
+    // tones are saved per mode so reset both
     saveAppearance({ ...defaultPreferences }, null);
   }
 
@@ -568,7 +552,6 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
                 ]}
               />
 
-              {/* The standard background and two alternatives for the mode that is showing. */}
               <fieldset className="appearance-field">
                 <legend className="appearance-label">Background</legend>
                 <div className="appearance-tones" role="group" aria-label="Background">
@@ -593,7 +576,6 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
                 </div>
               </fieldset>
 
-              {/* Presets in one row; anything else is a custom color. */}
               <fieldset className="appearance-field">
                 <legend className="appearance-label">Accent color</legend>
                 <div
@@ -692,7 +674,6 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
           )
         : null}
 
-      {/* Open or close appearance settings. */}
       <button
         ref={triggerRef}
         type="button"
@@ -711,7 +692,6 @@ export function ThemeToggle({ embedded = false }: { embedded?: boolean }) {
   );
 }
 
-// Staff pages keep preferences with the account controls in the sidebar.
 export function GlobalAppearance() {
   const pathname = usePathname();
   return pathname.startsWith("/dashboard") ? null : <ThemeToggle />;

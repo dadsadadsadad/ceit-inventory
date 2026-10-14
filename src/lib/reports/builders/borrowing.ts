@@ -25,7 +25,7 @@ type Request = {
   status: BorrowStatus;
 };
 
-/** Whole days past the return time: for loans still out, until now; for returned ones, until return. */
+// days late, until now if still out
 function daysLate(request: Request, now: Date) {
   const end = request.returnedAt ?? (activeStatuses.includes(request.status) ? now : null);
   if (!end || end <= request.expectedReturnDate) {
@@ -42,7 +42,6 @@ const dateLabels = {
   cancelled: "Cancelled",
 } as const;
 
-// Requests, reservations, loans, and returns.
 export async function buildBorrowingReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
   const range = reportDateFilter(filters.dateRange);
@@ -115,13 +114,13 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
           })),
         ),
       ),
-    // Finished loans, for how long things stay out and how often they come back on time.
+    // returned loans, for average length and on time rate
     prisma.borrowRequest.findMany({
       where: { AND: [where, { status: BorrowStatus.RETURNED, returnedAt: { not: null } }] },
       select: { expectedReturnDate: true, processedAt: true, returnedAt: true, startsAt: true },
       take: 10_000,
     }),
-    // Equipment nobody asked for in this period: candidates to lend out more, move, or retire.
+    // items nobody borrowed in this period
     prisma.inventoryItem.findMany({
       where: idleWhere,
       include: { category: true, location: true },
@@ -162,7 +161,7 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
               : "Borrowing",
     description: "Requests, reservations, loans, and returns.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.borrowingState !== "all" &&
         `Showing: ${borrowingReportStateLabel(filters.borrowingState)}`,
       filters.borrowingStatus &&
@@ -184,13 +183,13 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         label: "Returned on time",
         value: finished.length
           ? `${Math.round(((finished.length - late) / finished.length) * 100)}%`
-          : "–",
+          : "-",
         note: finished.length ? `${plural(late, "late return")}` : "no returns yet",
         tone: late ? "alert" : undefined,
       },
       {
         label: "Average loan",
-        value: averageLoan === null ? "–" : `${averageLoan.toFixed(1)} days`,
+        value: averageLoan === null ? "-" : `${averageLoan.toFixed(1)} days`,
         note: "from check-out to return",
       },
       {

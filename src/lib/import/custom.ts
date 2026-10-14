@@ -6,11 +6,7 @@ import {
 } from "../custom-fields";
 import { isNo, isYes, parseLooseDate, type Warn } from "./values";
 
-/**
- * A spreadsheet column whose heading matches one of the extra fields set up in Settings goes into
- * that field. The cell is first put into the plain form the field expects ("Y" becomes "yes", a
- * typed date becomes YYYY-MM-DD); an answer that still does not fit is dropped with a warning.
- */
+// columns matching a custom field fill it, values that don't fit get dropped with a warning
 export function importedCustomValues(
   entries: { field: CustomFieldDefinition; raw: string }[],
   warn: Warn,
@@ -23,7 +19,7 @@ export function importedCustomValues(
     }
     const plain = plainAnswer(field, text);
     if (plain === null) {
-      warn(`“${text.slice(0, 40)}” does not fit the ${field.label} field, so it was left blank.`);
+      warn(`"${text.slice(0, 40)}" does not fit the ${field.label} field, so it was left blank.`);
       continue;
     }
     try {

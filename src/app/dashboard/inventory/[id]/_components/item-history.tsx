@@ -5,13 +5,11 @@ import { personName } from "@/lib/person";
 
 import type { ItemRecord } from "./item-record";
 
-// Open loans, open maintenance, and the latest changes to this record.
 export function ItemHistory({ item }: { item: ItemRecord }) {
   return (
     <>
       <article className="card rounded-lg p-5 sm:p-6">
         <div className="mb-6 space-y-5">
-          {/* Active loans and reservations for this item. */}
           <section>
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold">Borrowing and reservations</h2>
@@ -35,7 +33,7 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}{" "}
-                      –{" "}
+                      -{" "}
                       {formatManilaDate(request.expectedReturnDate, {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -48,7 +46,6 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
               <p className="muted mt-2 text-sm">No active requests.</p>
             )}
           </section>
-          {/* Unresolved maintenance requests. */}
           <section>
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold">Open maintenance</h2>
@@ -72,7 +69,6 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
             )}
           </section>
         </div>
-        {/* Recent changes to this item. */}
         <h2 className="text-lg font-semibold">Recent activity</h2>
         {item.auditEvents.length ? (
           <ol className="mt-4 space-y-3">

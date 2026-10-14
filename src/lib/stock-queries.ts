@@ -8,7 +8,6 @@ import { defaultLowStockThreshold } from "./stock-level";
 
 const inUse = { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] };
 
-/** Stock still in use that has fallen to its alert level (or none is left). */
 export function lowStockWhere(): Prisma.InventoryItemWhereInput {
   return {
     itemType: ItemType.SUPPLY,
@@ -23,7 +22,6 @@ export function lowStockWhere(): Prisma.InventoryItemWhereInput {
   };
 }
 
-/** Stock still in use with nothing left. */
 export function outOfStockWhere(): Prisma.InventoryItemWhereInput {
   return { itemType: ItemType.SUPPLY, status: inUse, quantity: { lte: 0 } };
 }

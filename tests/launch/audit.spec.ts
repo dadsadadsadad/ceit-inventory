@@ -141,10 +141,7 @@ test("scanner handles denied camera access and opens only trusted item links", a
   await expect(page.getByRole("heading", { name: "Lab equipment 24", exact: true })).toBeVisible();
 });
 
-test("photos upload, open above the page, preserve navigation focus, and can be removed", async ({
-  page,
-  request,
-}) => {
+test("photo upload, viewer and removal", async ({ page, request }) => {
   const item = (
     await query('SELECT id FROM "InventoryItem" WHERE "qrCode"=$1', ["ceit-launch-item-24"])
   ).rows[0];
@@ -304,8 +301,7 @@ test("every route has a readable mobile and desktop view in both themes", async 
           if (new Set(ids).size !== ids.length) {
             issues.push("duplicate element IDs");
           }
-          // Check rendered text, including small metadata; compact printed labels
-          // deliberately retain their physical print dimensions.
+          // compact labels keep their print size on purpose
           for (const element of document.querySelectorAll<HTMLElement>("body *")) {
             if (element.closest('.sr-only, [aria-hidden="true"], .sheet-label')) {
               continue;
@@ -335,10 +331,7 @@ test("every route has a readable mobile and desktop view in both themes", async 
   expect(errors).toEqual([]);
 });
 
-test("account creation, password changes, resets, and deactivation enforce session access", async ({
-  page,
-  browser,
-}) => {
+test("account changes and deactivation end sessions", async ({ page, browser }) => {
   test.setTimeout(90_000);
   const username = `audit.staff.${Date.now()}`;
   const email = `${username}@ceit.invalid`;

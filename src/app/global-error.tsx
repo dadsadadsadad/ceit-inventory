@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 
-// Fallback when the app shell cannot load. The stylesheet may not have loaded either, so every
-// style here is inline and uses the same paper-and-ink palette as the rest of the app.
+// inline styles since the stylesheet might not have loaded
 export default function GlobalError({
   error,
   retry,
@@ -81,7 +80,6 @@ export default function GlobalError({
             Try again in a moment. If this persists, ask the system administrator to check the
             application logs.
           </p>
-          {/* Retry loading the app. */}
           <button
             onClick={retry}
             style={{

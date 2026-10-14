@@ -22,7 +22,6 @@ const notices: Record<string, string> = {
   "password-updated": "Your password was updated. Sign in again with your new password.",
 };
 
-// Sign-in form and account notices.
 export default async function LoginPage({
   searchParams,
 }: {
@@ -32,7 +31,6 @@ export default async function LoginPage({
 
   return (
     <main className="login-page grid min-h-screen px-5 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-0">
-      {/* Desktop branding panel. */}
       <section className="login-panel hidden px-10 py-12 lg:flex lg:flex-col lg:justify-between">
         <div className="brand-lockup flex items-center gap-3">
           <BrandMark />
@@ -67,7 +65,6 @@ export default async function LoginPage({
         </div>
       </section>
 
-      {/* Mobile branding and sign-in form. */}
       <section className="login-form-side flex flex-col items-center justify-center gap-5">
         <div className="login-mobile-brand brand-lockup flex items-center gap-3 lg:hidden">
           <BrandMark />
@@ -99,7 +96,6 @@ export default async function LoginPage({
               {notices[notice]}
             </div>
           ) : null}
-          {/* Account credentials and sign-in button. */}
           <form action={signIn} className="space-y-4">
             <div>
               <label htmlFor="identifier" className="block text-sm font-semibold">
@@ -129,7 +125,7 @@ export default async function LoginPage({
               placeholder="Enter password"
             />
             <SubmitButton
-              pendingLabel="Signing in…"
+              pendingLabel="Signing in..."
               className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"
             >
               Sign in

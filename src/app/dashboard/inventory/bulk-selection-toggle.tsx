@@ -21,7 +21,6 @@ export function ClearInventorySelection() {
   return null;
 }
 
-// Select one row or all matching inventory.
 export function BulkSelectionToggle({
   allItemIds,
   selectionKey,
@@ -63,7 +62,6 @@ export function BulkSelectionToggle({
     };
   }, [allItemIds, selectionKey]);
 
-  // Select or clear the matching inventory IDs.
   function setAllSelection(checked: boolean) {
     const itemIds = checked ? allItemIds : [];
     saveSelectedItemIds(selectionKey, itemIds);

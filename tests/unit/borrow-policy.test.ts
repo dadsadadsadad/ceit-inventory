@@ -15,8 +15,8 @@ const days = (value: number) => hours(value * 24);
 
 describe("borrowing policy settings", () => {
   it("defaults to three days ahead and seven days per loan", () => {
-    expect(defaultBorrowPolicy.maximumAdvanceDays).toBe(3);
-    expect(defaultBorrowPolicy.maximumLoanDays).toBe(7);
+    expect(defaultBorrowPolicy.maxAdvanceDays).toBe(3);
+    expect(defaultBorrowPolicy.maxLoanDays).toBe(7);
     expect(borrowPolicyFromEnvironment({})).toEqual(defaultBorrowPolicy);
   });
 
@@ -27,10 +27,10 @@ describe("borrowing policy settings", () => {
       BORROW_MAX_ACTIVE_REQUESTS: "not a number",
       BORROW_PICKUP_GRACE_HOURS: "4",
     });
-    expect(policy.maximumAdvanceDays).toBe(5);
-    expect(policy.maximumLoanDays).toBe(defaultBorrowPolicy.maximumLoanDays);
-    expect(policy.maximumActiveRequestsPerStudent).toBe(
-      defaultBorrowPolicy.maximumActiveRequestsPerStudent,
+    expect(policy.maxAdvanceDays).toBe(5);
+    expect(policy.maxLoanDays).toBe(defaultBorrowPolicy.maxLoanDays);
+    expect(policy.maxActiveRequestsPerStudent).toBe(
+      defaultBorrowPolicy.maxActiveRequestsPerStudent,
     );
     expect(policy.pickupGraceHours).toBe(4);
   });
@@ -40,7 +40,7 @@ describe("borrowing policy settings", () => {
       BORROW_MAX_LOAN_DAYS: "30",
       BORROW_MAX_TOTAL_LOAN_DAYS: "10",
     });
-    expect(policy.maximumTotalLoanDays).toBe(30);
+    expect(policy.maxTotalLoanDays).toBe(30);
   });
 
   it("words day counts", () => {
@@ -70,7 +70,7 @@ describe("reservation and loan limits", () => {
   });
 
   it("respects a custom policy", () => {
-    const policy = { ...defaultBorrowPolicy, maximumAdvanceDays: 1, maximumLoanDays: 2 };
+    const policy = { ...defaultBorrowPolicy, maxAdvanceDays: 1, maxLoanDays: 2 };
     expect(() => validateBorrowSchedule(days(2), days(2.5), true, now, policy)).toThrow(
       "up to 1 day in advance",
     );

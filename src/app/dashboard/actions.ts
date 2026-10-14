@@ -8,9 +8,8 @@ import { prisma } from "@/prisma";
 import { FormError, formAction } from "@/lib/form-action";
 
 const sharedDashboardNoteScope = "shared-dashboard";
-const maximumDashboardNoteLength = 5_000;
+const maxDashboardNoteLength = 5_000;
 
-// Check the note's length before saving.
 function dashboardNoteContent(formData: FormData) {
   const value = formData.get("content");
   if (typeof value !== "string") {
@@ -18,32 +17,31 @@ function dashboardNoteContent(formData: FormData) {
   }
 
   const content = value.trim();
-  if (content.length > maximumDashboardNoteLength) {
+  if (content.length > maxDashboardNoteLength) {
     throw new FormError(
-      `Dashboard notes must be ${maximumDashboardNoteLength.toLocaleString()} characters or fewer.`,
+      `Dashboard notes must be ${maxDashboardNoteLength.toLocaleString()} characters or fewer.`,
     );
   }
 
   return content;
 }
 
-// Save the shared note and who changed it.
 export async function saveDashboardNote(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     const content = dashboardNoteContent(formData);
 
-    await prisma.$transaction(async (transaction) => {
-      const existing = await transaction.dashboardNote.findUnique({
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.dashboardNote.findUnique({
         where: { scope: sharedDashboardNoteScope },
         select: { id: true },
       });
-      await transaction.dashboardNote.upsert({
+      await tx.dashboardNote.upsert({
         where: { scope: sharedDashboardNoteScope },
         create: { scope: sharedDashboardNoteScope, content, updatedByName: actor.username },
         update: { content, updatedByName: actor.username },
       });
-      await transaction.inventoryAudit.create({
+      await tx.inventoryAudit.create({
         data: auditEventData({
           action: existing ? "UPDATED" : "CREATED",
           actor,

@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-// Help visitors recover from a missing page, record, or label.
 export default function NotFound() {
   return (
     <main className="page system-page grid min-h-screen place-items-center">

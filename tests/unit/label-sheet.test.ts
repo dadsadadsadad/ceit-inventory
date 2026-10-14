@@ -14,7 +14,6 @@ it("knows every label size and falls back to medium", () => {
   expect(labelLayoutOf("large")).toBe("large");
   expect(labelLayoutOf("toString")).toBe("compact");
   expect(labelLayoutOf(undefined)).toBe("compact");
-  // Each sheet still fits on A4 with the sizes the page uses.
   expect(Object.values(labelLayouts).map((layout) => layout.perPage)).toEqual([40, 24, 8, 2]);
 });
 

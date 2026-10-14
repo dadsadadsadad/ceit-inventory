@@ -14,7 +14,7 @@ import {
   CustomFieldError,
   customFieldInputName,
   customFieldsFor,
-  maximumCustomFields,
+  maxCustomFields,
   parseCustomFieldValues,
   readCustomValues,
   validatedChoices,
@@ -34,9 +34,9 @@ export { optionalText, requiredText };
 export const statuses = Object.values(ItemStatus);
 export const conditions = Object.values(ItemCondition);
 export const itemTypes = Object.values(ItemType);
-export const maximumBulkSelection = 10_000;
-/** The most equipment records one "Add" can create at once. */
-export const maximumNewUnits = 50;
+export const maxBulkSelection = 10_000;
+// max units per add
+export const maxNewUnits = 50;
 export const activeBorrowRequestStatuses = [
   BorrowStatus.REQUESTED,
   BorrowStatus.RESERVED,
@@ -44,12 +44,10 @@ export const activeBorrowRequestStatuses = [
   BorrowStatus.RETURN_REQUESTED,
 ];
 
-// A record ID from a form.
 export function requiredId(formData: FormData, key: string) {
   return requiredUuid(formData, key, `Invalid ${key}.`);
 }
 
-// Read and validate the selected inventory IDs.
 export function selectedIds(formData: FormData) {
   const ids = [
     ...new Set(
@@ -62,9 +60,9 @@ export function selectedIds(formData: FormData) {
   if (!ids.length) {
     throw new FormError("Select at least one inventory record.");
   }
-  if (ids.length > maximumBulkSelection) {
+  if (ids.length > maxBulkSelection) {
     throw new FormError(
-      `Update up to ${maximumBulkSelection.toLocaleString()} inventory records at a time.`,
+      `Update up to ${maxBulkSelection.toLocaleString()} inventory records at a time.`,
     );
   }
   if (ids.some((id) => !isUuid(id))) {
@@ -77,8 +75,7 @@ export function identifier(formData: FormData, key: string) {
   return optionalText(formData, key, 255)?.toUpperCase() ?? null;
 }
 
-// A date field only carries the calendar day. Keep the recorded time of day when the day is
-// unchanged, and use the real time when the chosen day is today (Philippine time).
+// date inputs have no time, keep the old time if the day didn't change, use now if it's today
 export function checkedAtFromDate(chosen: Date | null, current?: Date | null) {
   if (!chosen) {
     return null;
@@ -94,7 +91,6 @@ export function checkedDate(formData: FormData) {
   return checkedAtFromDate(optionalDate(formData, "lastCheckedAt")) ?? new Date();
 }
 
-// Keep one record per individually tagged asset.
 export function assertTrackedAssetQuantity(
   itemType: ItemType,
   quantity: number,
@@ -111,7 +107,6 @@ export function assertTrackedAssetQuantity(
   );
 }
 
-// Check the tag format before writing the item.
 export function assertAssetTag(assetTag: string | null, itemType: ItemType) {
   if (itemType === ItemType.ASSET && assetTag && !isInventoryAssetTag(assetTag)) {
     throw new FormError(
@@ -120,7 +115,7 @@ export function assertAssetTag(assetTag: string | null, itemType: ItemType) {
   }
 }
 
-// Translate duplicate identifiers into a form error.
+// unique constraint errors -> form errors
 export function inventoryWriteError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
     return new FormError(
@@ -146,7 +141,7 @@ export function enumValue<T extends string>(
   return value as T;
 }
 
-export function optionalInteger(formData: FormData, key: string, maximum = 1_000_000) {
+export function optionalInteger(formData: FormData, key: string, max = 1_000_000) {
   const value = optionalText(formData, key, 32);
   if (!value) {
     return null;
@@ -155,13 +150,13 @@ export function optionalInteger(formData: FormData, key: string, maximum = 1_000
     throw new FormError(`${key} must be a non-negative whole number.`);
   }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+  if (!Number.isSafeInteger(parsed) || parsed > max) {
     throw new FormError(`${key} is outside the allowed range.`);
   }
   return parsed;
 }
 
-// Accept a price with at most two decimal places.
+// max 2 decimal places
 export function optionalPurchasePrice(formData: FormData, key = "purchasePrice") {
   const value = optionalText(formData, key, 32);
   if (!value) {
@@ -191,7 +186,7 @@ export function optionalDate(formData: FormData, key: string) {
   return parsed;
 }
 
-// Stock records can set their own alert level. Empty means the default; equipment has none.
+// stock only, empty = default
 export function readLowStockThreshold(formData: FormData, itemType: ItemType) {
   if (itemType !== ItemType.SUPPLY) {
     return null;
@@ -199,8 +194,7 @@ export function readLowStockThreshold(formData: FormData, itemType: ItemType) {
   return optionalInteger(formData, "lowStockThreshold", 1_000_000);
 }
 
-// Read the custom field answers that apply to this item. Answers for fields that do not apply
-// (for example after a category change) are kept as they were; cleared answers are removed.
+// answers for fields that don't apply anymore are kept, cleared ones are removed
 export async function readItemCustomFields(
   formData: FormData,
   item: { categoryId: string; itemType: ItemType },
@@ -226,7 +220,6 @@ export async function readItemCustomFields(
 
 export { customFieldInputName };
 
-/** A new extra field typed into an item form, with this item's answer for it. */
 export type InlineCustomField = {
   answer: string;
   choices: string[];
@@ -234,8 +227,7 @@ export type InlineCustomField = {
   label: string;
 };
 
-// Read the "add a new extra field" part of an item form. Nothing is written yet, so a form that
-// fails for another reason does not leave a stray field behind.
+// only reads the new field here, it's created later in the item transaction
 export function readInlineCustomField(formData: FormData): InlineCustomField | null {
   const label = String(formData.get("newFieldLabel") ?? "").trim();
   if (!label) {
@@ -262,23 +254,22 @@ export function readInlineCustomField(formData: FormData): InlineCustomField | n
   };
 }
 
-// Create the field (for every item; Settings can narrow it) and return this item's answer for it.
-// It runs inside the item's own transaction, so the field and the item are saved together.
+// runs inside the item transaction so both save together
 export async function addInlineCustomField(
-  transaction: Prisma.TransactionClient,
+  tx: Prisma.TransactionClient,
   request: InlineCustomField,
   actor: InventoryUser,
 ): Promise<CustomFieldValues> {
-  const existing = await transaction.customField.findMany({ select: { label: true } });
-  if (existing.length >= maximumCustomFields) {
-    throw new FormError(`You can add up to ${maximumCustomFields} extra fields.`);
+  const existing = await tx.customField.findMany({ select: { label: true } });
+  if (existing.length >= maxCustomFields) {
+    throw new FormError(`You can add up to ${maxCustomFields} extra fields.`);
   }
   if (existing.some((field) => field.label.toLowerCase() === request.label.toLowerCase())) {
     throw new FormError(
-      `There is already an extra field called “${request.label}”. Fill that one in instead.`,
+      `There is already an extra field called "${request.label}". Fill that one in instead.`,
     );
   }
-  const field = await transaction.customField.create({
+  const field = await tx.customField.create({
     data: {
       choices: request.choices,
       fieldType: request.fieldType,
@@ -286,7 +277,7 @@ export async function addInlineCustomField(
       sortOrder: existing.length,
     },
   });
-  await transaction.inventoryAudit.create({
+  await tx.inventoryAudit.create({
     data: auditEventData({
       action: "CREATED",
       actor,
@@ -307,7 +298,6 @@ export async function addInlineCustomField(
   }
 }
 
-// Put an item's answers for a newly created field with the answers it already has.
 export function withInlineAnswers(
   base: Prisma.InputJsonObject | typeof Prisma.DbNull,
   inline: CustomFieldValues,
@@ -318,7 +308,7 @@ export function withInlineAnswers(
   return { ...(base === Prisma.DbNull ? {} : base), ...inline } as Prisma.InputJsonObject;
 }
 
-// "yes" or "no" from a select; empty means nobody said.
+// "yes" / "no" / empty
 export function optionalYesNo(formData: FormData, key: string) {
   const value = optionalText(formData, key, 8);
   if (!value) {
@@ -330,7 +320,6 @@ export function optionalYesNo(formData: FormData, key: string) {
   return value === "yes";
 }
 
-// Computer form values.
 export function computerData(formData: FormData, includeCheckTime = false) {
   return {
     operatingSystem: optionalText(formData, "operatingSystem", 255),
@@ -348,7 +337,7 @@ export function computerData(formData: FormData, includeCheckTime = false) {
   };
 }
 
-// Allow only active categories and rooms for new assignments.
+// only active categories and rooms can be assigned
 export async function assertActiveAssignments(
   categoryId: string,
   locationId: string,
@@ -376,7 +365,7 @@ export async function assertActiveAssignments(
   }
 }
 
-// Verify that these computer details belong to the item.
+// make sure the computer belongs to this item
 export async function requireComputerForItem(itemId: string, computerId: string) {
   const computer = await prisma.computer.findFirst({ where: { id: computerId, itemId } });
   if (!computer) {
@@ -385,7 +374,7 @@ export async function requireComputerForItem(itemId: string, computerId: string)
   return computer;
 }
 
-// Collect changed values for the audit trail.
+// changed fields for the audit log
 export function updatedFields(
   before: Record<string, unknown>,
   after: Record<string, unknown>,

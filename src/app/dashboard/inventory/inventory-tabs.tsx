@@ -8,7 +8,6 @@ const views = [
 
 export type InventoryView = (typeof views)[number]["key"];
 
-/** Switches between the equipment list and the hardware and software directories. */
 export function InventoryTabs({ current }: { current: InventoryView }) {
   return (
     <nav className="view-tabs" aria-label="Inventory views">

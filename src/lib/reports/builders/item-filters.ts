@@ -19,7 +19,7 @@ export const missingDetailLabels: Record<MissingDetail, string> = {
   pcDetails: "PC missing hardware details",
 };
 
-/** Records missing one detail. Serial numbers and warranties only count for equipment. */
+// serial and warranty only apply to assets
 export function missingWhere(detail: MissingDetail, now: Date): Prisma.InventoryItemWhereInput {
   switch (detail) {
     case "price":
@@ -44,7 +44,6 @@ export function missingWhere(detail: MissingDetail, now: Date): Prisma.Inventory
   }
 }
 
-/** Price range, purchase dates, and a missing detail, as conditions on inventory records. */
 export function itemDetailWhere(
   filters: Pick<ReportExportFilters, "missing" | "priceMax" | "priceMin" | "purchased">,
   now: Date,
@@ -66,7 +65,6 @@ export function itemDetailWhere(
   ];
 }
 
-/** The same filters, in words, for the filter summary. */
 export function itemDetailChips(
   filters: Pick<ReportExportFilters, "missing" | "priceMax" | "priceMin" | "purchased">,
 ) {

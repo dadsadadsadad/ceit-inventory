@@ -7,7 +7,7 @@ import { prisma } from "@/prisma";
 import { monthBounds, type CalendarEntry } from "./calendar";
 import { manilaCalendarDate } from "./manila-date";
 
-// A busy month is still a few dozen entries; the cap only stops a runaway query.
+// just a safety cap
 const perSource = 250;
 
 function timeText(date: Date) {
@@ -18,10 +18,7 @@ function timeText(date: Date) {
   });
 }
 
-/**
- * Everything the calendar shows for one month: loans coming back, reservations to hand over,
- * software licenses and warranties that end, and the events staff added themselves.
- */
+// loans, reservations, licenses, warranties and staff events for one month
 export async function loadCalendarMonth(month: string, now = new Date()): Promise<CalendarEntry[]> {
   const { start, end, startDay, endDay } = monthBounds(month);
   const [returns, pickups, licenses, warranties, events] = await Promise.all([

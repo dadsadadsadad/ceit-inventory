@@ -12,9 +12,8 @@ export const activeLoanStatuses = [
   BorrowStatus.RETURN_REQUESTED,
 ];
 
-// Check overlapping loans before reserving or checking out stock.
 export async function checkLoanAvailability(
-  transaction: Prisma.TransactionClient,
+  tx: Prisma.TransactionClient,
   itemId: string,
   startsAt: Date,
   endsAt: Date,
@@ -22,7 +21,7 @@ export async function checkLoanAvailability(
   excludeId?: string,
   checkout = false,
 ) {
-  const item = await transaction.inventoryItem.findUnique({
+  const item = await tx.inventoryItem.findUnique({
     where: { id: itemId },
     include: { category: { select: { isActive: true } }, location: { select: { isActive: true } } },
   });
@@ -34,7 +33,7 @@ export async function checkLoanAvailability(
   ) {
     throw new FormError("This item is not available for borrowing.");
   }
-  const loans = await transaction.borrowRequest.findMany({
+  const loans = await tx.borrowRequest.findMany({
     where: {
       inventoryItemId: itemId,
       status: { in: activeLoanStatuses },
@@ -54,17 +53,19 @@ export async function checkLoanAvailability(
     (loan) =>
       loan.status === BorrowStatus.BORROWED || loan.status === BorrowStatus.RETURN_REQUESTED,
   );
+  // a tracked asset that is out right now shows as DEPLOYED, it can still be reserved for later
   const deployedLoan =
     item.status === ItemStatus.DEPLOYED && checkedOut.some((loan) => loan.checkedOutItemStatus);
   if (!canBorrowInventoryStatus(item.status) && !(deployedLoan && !checkout)) {
     throw new FormError("This item is not available in its current condition or status.");
   }
-  // Old quantity-based loans reduced stock; individually tracked loans do not.
+  // only old quantity loans took from stock
   const capacity =
     item.quantity +
     checkedOut
       .filter((loan) => !loan.checkedOutItemStatus)
       .reduce((sum, loan) => sum + loan.requestedQuantity, 0);
+  // one tracked unit can't be checked out twice
   if (checkout && checkedOut.some((loan) => loan.checkedOutItemStatus)) {
     throw new FormError(
       "This item is still with another borrower. Confirm its return before checking it out again.",
@@ -88,9 +89,9 @@ export async function checkLoanAvailability(
   return item;
 }
 
-// Check that keeping an outstanding loan longer does not collide with someone else's booking.
+// make sure an extension doesn't overlap another booking
 export async function checkLoanExtension(
-  transaction: Prisma.TransactionClient,
+  tx: Prisma.TransactionClient,
   request: {
     checkedOutItemStatus: ItemStatus | null;
     id: string;
@@ -100,14 +101,14 @@ export async function checkLoanExtension(
   endsAt: Date,
   now = new Date(),
 ) {
-  const item = await transaction.inventoryItem.findUnique({
+  const item = await tx.inventoryItem.findUnique({
     where: { id: request.inventoryItemId },
     select: { quantity: true },
   });
   if (!item) {
     throw new FormError("This item no longer exists.");
   }
-  const others = await transaction.borrowRequest.findMany({
+  const others = await tx.borrowRequest.findMany({
     where: {
       inventoryItemId: request.inventoryItemId,
       status: { in: activeLoanStatuses },
@@ -123,8 +124,7 @@ export async function checkLoanExtension(
       isReservation: true,
     },
   });
-  // Older quantity-based loans removed their units from stock; add those units back to get the
-  // physical total. An individually tracked loan never changes the stock quantity.
+  // add back units old quantity loans took out to get the real total
   const otherQuantityLoans = others
     .filter(
       (loan) =>

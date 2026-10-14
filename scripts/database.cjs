@@ -9,7 +9,7 @@ if (existsSync(".env")) {
   loadEnvFile(".env");
 }
 
-// Use the same database choice as the application.
+// same db choice as the app
 function databaseClient() {
   const connectionString =
     process.env.SCHOOL_DATABASE_URL || process.env.DATABASE_URL || process.env.DIRECT_URL;
@@ -23,7 +23,7 @@ function databaseClient() {
   });
 }
 
-// Keep connection details out of command output.
+// hide connection details in output
 function databaseError(error) {
   console.error(`Database task failed (${error.code || error.name || "unknown error"}).`);
   process.exitCode = 1;

@@ -6,7 +6,6 @@ export type ScheduledLoan = {
   expectedReturnDate: Date;
   requestedQuantity: number;
   status: string;
-  /** Needed to tell when a pending "borrow now" request has gone stale. */
   requestedAt?: Date;
   isReservation?: boolean;
 };
@@ -26,7 +25,6 @@ export function parseManilaDateTime(value: string, label: string) {
   return date;
 }
 
-// Check that pickup and return times form a valid booking within the borrowing rules.
 export function validateBorrowSchedule(
   startsAt: Date,
   endsAt: Date,
@@ -43,24 +41,21 @@ export function validateBorrowSchedule(
   if (endsAt <= startsAt || endsAt <= now) {
     throw new Error("Return time must be after pickup time.");
   }
-  if (isReservation && startsAt.getTime() > now.getTime() + policy.maximumAdvanceDays * dayMs) {
+  if (isReservation && startsAt.getTime() > now.getTime() + policy.maxAdvanceDays * dayMs) {
     throw new Error(
-      `Reservations can only be made up to ${dayCount(policy.maximumAdvanceDays)} in advance. Choose a pickup time within the next ${dayCount(policy.maximumAdvanceDays)}.`,
+      `Reservations can only be made up to ${dayCount(policy.maxAdvanceDays)} in advance. Choose a pickup time within the next ${dayCount(policy.maxAdvanceDays)}.`,
     );
   }
-  if (endsAt.getTime() - startsAt.getTime() > policy.maximumLoanDays * dayMs) {
+  if (endsAt.getTime() - startsAt.getTime() > policy.maxLoanDays * dayMs) {
     throw new Error(
-      `Equipment can be borrowed for at most ${dayCount(policy.maximumLoanDays)} at a time. Choose an earlier return time.`,
+      `Equipment can be borrowed for at most ${dayCount(policy.maxLoanDays)} at a time. Choose an earlier return time.`,
     );
   }
 }
 
-/**
- * The earliest and latest values the borrow form should offer, in the browser's
- * `datetime-local` format (Philippine time). `pickup` is the chosen pickup, if any.
- */
+// min/max for the datetime-local inputs, in manila time
 export function borrowInputLimits(
-  policy: Pick<BorrowPolicy, "maximumAdvanceDays" | "maximumLoanDays">,
+  policy: Pick<BorrowPolicy, "maxAdvanceDays" | "maxLoanDays">,
   pickup?: string,
   now = new Date(),
 ) {
@@ -71,17 +66,13 @@ export function borrowInputLimits(
   const start = pickupDate && Number.isFinite(pickupDate.getTime()) ? pickupDate : now;
   return {
     pickupMin: manilaDateTimeInput(now),
-    pickupMax: manilaDateTimeInput(new Date(now.getTime() + policy.maximumAdvanceDays * dayMs)),
+    pickupMax: manilaDateTimeInput(new Date(now.getTime() + policy.maxAdvanceDays * dayMs)),
     returnMin: manilaDateTimeInput(start),
-    returnMax: manilaDateTimeInput(new Date(start.getTime() + policy.maximumLoanDays * dayMs)),
+    returnMax: manilaDateTimeInput(new Date(start.getTime() + policy.maxLoanDays * dayMs)),
   };
 }
 
-/**
- * A pending request or reservation that nobody acted on stops holding the equipment:
- * an uncollected reservation releases it after the pickup grace period, and a stale
- * "borrow now" request after the pending-hold period. Checked-out equipment never lapses.
- */
+// uncollected reservations lapse after the grace period, pending requests after the hold period
 export function isHoldLapsed(
   loan: ScheduledLoan,
   now = new Date(),
@@ -103,7 +94,7 @@ export function isHoldLapsed(
   return false;
 }
 
-/** Peak concurrent demand, rather than the sum of unrelated bookings. Intervals are [start, end). */
+// peak overlap, not the sum. intervals are [start, end)
 export function availableScheduledQuantity(
   capacity: number,
   loans: ScheduledLoan[],
@@ -114,6 +105,7 @@ export function availableScheduledQuantity(
 ) {
   const start = startsAt.getTime();
   const end = endsAt.getTime();
+  // sweep: +qty when a loan starts, -qty when it ends, keep the highest total
   const events: { at: number; delta: number }[] = [];
   for (const loan of loans) {
     const checkedOut = loan.status === "BORROWED" || loan.status === "RETURN_REQUESTED";
@@ -123,7 +115,7 @@ export function availableScheduledQuantity(
     if (isHoldLapsed(loan, now, policy)) {
       continue;
     }
-    // An overdue physical loan remains unavailable until staff confirm its return.
+    // overdue loans block the item until staff confirm the return
     const loanEnd =
       checkedOut && loan.expectedReturnDate <= now ? Infinity : loan.expectedReturnDate.getTime();
     const loanStart = loan.startsAt.getTime();
@@ -133,6 +125,7 @@ export function availableScheduledQuantity(
     events.push({ at: Math.max(start, loanStart), delta: loan.requestedQuantity });
     events.push({ at: Math.min(end, loanEnd), delta: -loan.requestedQuantity });
   }
+  //
   events.sort((a, b) => a.at - b.at || a.delta - b.delta);
   let demand = 0;
   let peak = 0;

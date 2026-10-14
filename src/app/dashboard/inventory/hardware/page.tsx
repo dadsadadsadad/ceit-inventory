@@ -37,7 +37,6 @@ type SearchParams = {
   view?: RawParam;
 };
 
-// Every PC's hardware, grouped by component or listed one PC at a time.
 export default async function HardwarePage({
   searchParams,
 }: {
@@ -158,7 +157,7 @@ export default async function HardwarePage({
               defaultValue={q}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Processor, memory, graphics, OS, PC name, room, MAC…"
+              placeholder="Processor, memory, graphics, OS, PC name, room, MAC..."
             />
           </label>
           <label>

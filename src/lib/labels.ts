@@ -1,4 +1,4 @@
-/** "FOR_REPAIR" becomes "For Repair": the readable form of any database enum value. */
+// "FOR_REPAIR" -> "For Repair"
 export function humanizeEnum(value: string) {
   return value
     .toLowerCase()

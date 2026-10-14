@@ -177,10 +177,7 @@ test("public availability catches external changes and reconnects after going of
   await expect(page.getByText("OK", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
 });
 
-test("new records have an immediate preview and synchronize additions, edits, and deletions", async ({
-  page,
-  browser,
-}) => {
+test("new records preview and sync adds, edits and deletes", async ({ page, browser }) => {
   await signIn(page);
   const name = `Live camera ${Date.now()}`;
   await page.goto(`/dashboard/inventory?q=${encodeURIComponent(name)}`);
@@ -298,9 +295,7 @@ test("shared notes update pristine fields without overwriting a draft", async ({
   await expect(page.getByLabel("Department note")).toHaveValue("Keep my unfinished note.");
 });
 
-test("workspace layouts keep readable controls within their containers at four widths", async ({
-  page,
-}) => {
+test("layouts fit their containers at four widths", async ({ page }) => {
   test.setTimeout(180_000);
   await signIn(page);
   const routes = [
@@ -370,7 +365,7 @@ test("workspace layouts keep readable controls within their containers at four w
             parseFloat(style.paddingBottom) +
             parseFloat(style.borderTopWidth) +
             parseFloat(style.borderBottomWidth) +
-            1; // Allow subpixel rounding while the page entrance animation settles.
+            1; // subpixel rounding
           if (element.getBoundingClientRect().height > oneLine) {
             issues.push(`wrapped short table label: ${element.textContent}`);
           }

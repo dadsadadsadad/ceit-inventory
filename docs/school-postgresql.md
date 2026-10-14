@@ -1,10 +1,10 @@
-# School PostgreSQL runbook
+# School PostgreSQL setup
 
-Use PostgreSQL 15 or newer. The application uses PostgreSQL directly; it does not require Supabase services after handover.
+Needs PostgreSQL 15+. Supabase isn't needed once it's on the school server.
 
-## First-time setup
+## First time
 
-Run the following as a school database administrator. Replace both passwords with long unique secrets and keep them in the school's secret manager.
+Run as a db admin (change both passwords):
 
 ```sql
 CREATE ROLE ceit_inventory_migrator LOGIN PASSWORD 'replace-with-migration-secret';
@@ -13,7 +13,7 @@ CREATE DATABASE ceit_inventory OWNER ceit_inventory_migrator;
 GRANT CONNECT ON DATABASE ceit_inventory TO ceit_inventory_app;
 ```
 
-Set `DIRECT_URL` to the migration role and `SCHOOL_DATABASE_URL` to the app role in `.env.local`. Run:
+In `.env.local` set `DIRECT_URL` to the migrator role and `SCHOOL_DATABASE_URL` to the app role, then:
 
 ```bash
 npm ci
@@ -22,16 +22,16 @@ npm run db:migrate:deploy
 npm run db:check
 ```
 
-The runtime-permissions migration grants the app role only schema, table, and sequence access, and adds an RLS policy exclusively for that role. Do not run the web application with the migration account.
+The migrations only give the app role table and sequence access. Don't run the app with the migrator account.
 
-## Routine operation
+## Day to day
 
-Run this daily through the school's task scheduler or cron service:
+Run this daily with cron or Task Scheduler:
 
 ```bash
 npm run db:purge-borrower-data
 ```
 
-Back up PostgreSQL daily with `pg_dump` from a protected school server. Store encrypted backups separately, test a restoration to a non-production database each term, and record the restore time and result.
+Back up daily with `pg_dump`, keep the backups encrypted somewhere else, and test a restore at least once a term.
 
-Before an application update, back up the database, run `npm run verify`, run `npm run db:migrate:deploy` with the migration role, then restart the application service using only `SCHOOL_DATABASE_URL`.
+To update: back up, run `npm run verify`, run `npm run db:migrate:deploy` with the migrator role, then restart the app with only `SCHOOL_DATABASE_URL` set.

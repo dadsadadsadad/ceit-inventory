@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 
-// The printable version of a report: the same filters as the page, drawn as a PDF.
 export async function GET(request: Request) {
   const user = await requireInventoryAccess();
   try {

@@ -40,7 +40,6 @@ import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
-// Load borrowing requests for the selected filters.
 export default async function BorrowingPage({
   searchParams,
 }: {
@@ -57,7 +56,7 @@ export default async function BorrowingPage({
   const tierWhere = borrowingListTiers.map((tier) => ({
     AND: [where, { status: { in: tier } }],
   }));
-  // One page across the groups in order: the rest of one group, then the start of the next.
+  // page across the groups in order
   const loadPage = async (page: number, tierCounts: number[]) => {
     let skip = (page - 1) * pageSize;
     const rows: BorrowingRecord[] = [];
@@ -105,7 +104,6 @@ export default async function BorrowingPage({
   return (
     <div className="page borrowing-page">
       <div className="page-inner space-y-6">
-        {/* Borrowing title and summary. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Equipment lending</p>
@@ -124,7 +122,6 @@ export default async function BorrowingPage({
           </div>
         </header>
 
-        {/* Search requests and narrow them down. Choices apply as soon as they are made. */}
         <FilterForm className="filter-spread card rounded-lg p-4" label="Borrowing request filters">
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>

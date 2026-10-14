@@ -1,13 +1,13 @@
 import type { ReportKind } from "./kinds";
 
-/** A report is plain data. The page, the PDF, and the CSV file are all drawn from the same model. */
+// the page, pdf and csv all render from this
 
 export type ReportColumn = {
   align?: "right";
   label: string;
-  /** Emphasise the first line of each cell, which usually names the record. */
+  // bold the first line
   primary?: boolean;
-  /** Relative width in the PDF; the page lets the browser decide. */
+  // pdf only
   width: number;
 };
 
@@ -16,57 +16,50 @@ export type ReportTable = {
   emptyText: string;
   heading: string;
   note?: string;
-  /** Cells are plain text; a new line starts a smaller second line. */
+  // \n starts a smaller second line
   rows: string[][];
-  /** How many rows exist in total. More than `rows.length` when the preview is trimmed. */
+  // can be more than rows.length when trimmed
   total: number;
 };
 
 export type ReportMetric = {
   label: string;
   note?: string;
-  /** `alert` marks numbers staff should act on, such as overdue loans. */
   tone?: "alert";
   value: string;
 };
 
-/** Status colours, the same ones the dashboard's status bar uses, so a status reads alike everywhere. */
+// same colors as the dashboard status bar
 export type ReportChartTone =
   "ok" | "working" | "deployed" | "defective" | "not_tested" | "retired" | "lost";
 
-/**
- * A simple chart drawn the same way on the page and in the PDF. Bars compare amounts across
- * categories; columns show amounts over time. The numbers also appear in the report's tables.
- */
+// bars for categories, columns for time
 export type ReportChart = {
   data: { label: string; tone?: ReportChartTone; value: number }[];
-  /** Counts by default; "peso" shows amounts like ₱45,000. */
   format?: "count" | "peso";
   kind: "bars" | "columns";
   note?: string;
   title: string;
-  /** What is counted, as a plural noun, for the hover text: "records", "requests". */
+  // plural, used in hover text
   unit: string;
 };
 
 export type ReportModel = {
-  /** Charts shown above the tables. */
   charts?: ReportChart[];
-  /** Spreadsheet rows including the header row. Reports without their own fall back to the tables. */
+  // includes header row, falls back to the tables
   csv?: unknown[][];
   description: string;
-  /** What the report is limited to, in words: "Status: Defective". Empty means no filters. */
+  // empty = no filters
   filters: string[];
   generatedAt: Date;
   kind: ReportKind;
   metrics: ReportMetric[];
-  /** Whether the report is narrower than its default, which adds "-filtered" to file names. */
+  // adds -filtered to the file name
   narrowed?: boolean;
   tables: ReportTable[];
   title: string;
 };
 
-/** Why a report could not be produced, with the HTTP status a download should answer with. */
 export class ReportRequestError extends Error {
   constructor(
     message: string,
@@ -79,14 +72,13 @@ export class ReportRequestError extends Error {
 
 export type ReportPurpose = "csv" | "pdf" | "preview";
 
-/** How many rows each way of viewing a report can hold. */
 export const reportRowLimits: Record<ReportPurpose, number> = {
   csv: 10_000,
   pdf: 2_000,
   preview: 500,
 };
 
-/** Cut a long list to what this purpose can hold. Downloads refuse instead of silently cutting. */
+// downloads throw instead of cutting
 export function capRows<T>(rows: T[], purpose: ReportPurpose, noun = "records") {
   const limit = reportRowLimits[purpose];
   if (rows.length <= limit) {
@@ -101,7 +93,6 @@ export function capRows<T>(rows: T[], purpose: ReportPurpose, noun = "records") 
   );
 }
 
-/** Spreadsheet rows for a report: its own, or every table stacked under a section column. */
 export function csvRows(report: ReportModel): unknown[][] {
   if (report.csv) {
     return report.csv;
@@ -119,7 +110,6 @@ function oneLine(cell: string) {
   return cell.replace(/\s*\n\s*/g, " · ");
 }
 
-/** Everything the file name needs to say whether it is a narrowed report. */
 export function reportFilename(stem: string, date: string, filtered: boolean, extension: string) {
   return `${stem}${filtered ? "-filtered" : ""}-${date}.${extension}`;
 }

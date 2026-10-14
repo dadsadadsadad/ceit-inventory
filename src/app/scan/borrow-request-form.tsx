@@ -12,27 +12,25 @@ type BorrowRequestFormProps = {
   availability: ItemAvailability;
   formToken: string;
   itemName: string;
-  maximumQuantity: number;
-  /** The borrowing rules, shown to the student and used to limit the date pickers. */
-  policy: { maximumAdvanceDays: number; maximumLoanDays: number };
+  maxQuantity: number;
+  policy: { maxAdvanceDays: number; maxLoanDays: number };
   qrCode: string;
 };
 const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
 
-// Collect an immediate loan or a future reservation.
 export function BorrowRequestForm({
   availability,
   formToken,
   itemName,
-  maximumQuantity,
+  maxQuantity,
   policy,
   qrCode,
 }: BorrowRequestFormProps) {
-  // An item that is in use right now can only be reserved, for after it is back.
+  // in use right now, so reserve only
   const inUse = availability.state === "later";
   const [when, setWhen] = useState(inUse ? "later" : "now");
   const [pickup, setPickup] = useState("");
-  const maximum = Math.min(Math.max(Math.trunc(maximumQuantity), 1), 1_000);
+  const max = Math.min(Math.max(Math.trunc(maxQuantity), 1), 1_000);
   const limits = borrowInputLimits(policy, when === "later" ? pickup : undefined);
   const pickupMin =
     inUse && availability.freeFrom && availability.freeFrom > limits.pickupMin
@@ -40,7 +38,6 @@ export function BorrowRequestForm({
       : limits.pickupMin;
   return (
     <FeedbackForm action={submitBorrowRequest} className="card request-form rounded-lg p-5 sm:p-7">
-      {/* Link this request to the scanned item. */}
       <input type="hidden" name="qrCode" value={qrCode} />
       <input type="hidden" name="formToken" value={formToken} />
       <div className="honeypot" aria-hidden="true">
@@ -53,11 +50,9 @@ export function BorrowRequestForm({
         equipment.
       </p>
       <p className="notice mt-3 rounded-lg px-4 py-3 text-sm leading-6">
-        Reservations can be made up to {dayCount(policy.maximumAdvanceDays)} ahead, and equipment
-        can be kept for up to {dayCount(policy.maximumLoanDays)}. Return it on time so others can
-        use it.
+        Reservations can be made up to {dayCount(policy.maxAdvanceDays)} ahead, and equipment can be
+        kept for up to {dayCount(policy.maxLoanDays)}. Return it on time so others can use it.
       </p>
-      {/* Choose borrowing now or reserving for later. */}
       <fieldset className="mt-6">
         <legend className="text-sm font-semibold">When do you need it?</legend>
         <div className="choice-group mt-2 grid grid-cols-2 gap-2">
@@ -122,7 +117,6 @@ export function BorrowRequestForm({
         All times are Philippine time. Availability is checked for the full borrowing period when
         you submit.
       </p>
-      {/* Borrower details and requested dates. */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label>
           <span className="text-sm font-semibold">Full name *</span>
@@ -161,7 +155,7 @@ export function BorrowRequestForm({
             placeholder="09XX XXX XXXX"
           />
         </label>
-        {maximum === 1 ? (
+        {max === 1 ? (
           <div>
             <input type="hidden" name="requestedQuantity" value="1" />
             <span className="text-sm font-semibold">Quantity</span>
@@ -176,7 +170,7 @@ export function BorrowRequestForm({
               type="number"
               inputMode="numeric"
               min="1"
-              max={maximum}
+              max={max}
               defaultValue="1"
               className={field}
             />
@@ -198,7 +192,7 @@ export function BorrowRequestForm({
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="muted text-xs leading-5">Staff will use your contact number to follow up.</p>
         <SubmitButton
-          pendingLabel="Sending…"
+          pendingLabel="Sending..."
           className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold sm:w-auto"
         >
           {when === "later" ? "Request reservation" : "Send borrowing request"}

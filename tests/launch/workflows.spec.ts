@@ -28,7 +28,7 @@ async function signIn(page: Page, username = "launch.admin") {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 async function download(page: Page, path: string) {
-  // Chromium accepts secure cookies on loopback HTTP; the API request client does not.
+  // the request client won't send secure cookies over http
   return page.request.get(path, {
     headers: {
       Cookie: (await page.context().cookies())
@@ -37,7 +37,6 @@ async function download(page: Page, path: string) {
     },
   });
 }
-// Staff confirm they looked at the borrower's ID before equipment leaves.
 async function checkOutEquipment(page: Page) {
   await page.getByLabel("I checked the borrower's school ID").filter({ visible: true }).check();
   await page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }).click();
@@ -109,7 +108,6 @@ test("maintenance suggests equipment as you type and accepts an exact item link"
   await expect(page.getByRole("combobox", { name: "Equipment" })).toHaveCount(0);
   await page.getByRole("link", { name: "Report an issue", exact: true }).click();
   const search = page.getByRole("combobox", { name: "Equipment" });
-  // Part of a name is enough; matches appear under the box while typing.
   await search.fill("equipment 27");
   const option = page.getByRole("option", { name: /Lab equipment 27/ });
   await expect(option).toBeVisible();
@@ -120,7 +118,6 @@ test("maintenance suggests equipment as you type and accepts an exact item link"
   const chosen = page.locator('input[type="hidden"][name="itemId"]');
   await expect(chosen).toHaveValue(item.id);
   await expect(page.locator(".item-picker-chip")).toContainText("Lab equipment 27");
-  // "Change" goes back to searching.
   await page.getByRole("button", { name: "Change" }).click();
   await expect(search).toBeFocused();
   await expect(chosen).toHaveValue("");
@@ -364,7 +361,7 @@ test("a reservation checks out only at pickup and the public return accepts phon
   await expect(
     page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }),
   ).toHaveCount(0);
-  // Simulate a staff page left open while the scheduled pickup changes.
+  // stale page while the pickup time changes
   await query(
     'UPDATE "BorrowRequest" SET "startsAt"=NOW()-INTERVAL \'1 minute\' WHERE "studentNumber"=$1',
     ["TEST-PICKUP"],
@@ -532,7 +529,6 @@ test("every report downloads as CSV and PDF and can be generated on the page", a
     (await download(page, "/dashboard/reports/export?kind=inventory&category=not-an-id")).status(),
   ).toBe(400);
 
-  // Pick a report, narrow it, generate it in the page, and download the same filters.
   await page.goto("/dashboard/reports");
   const form = page.getByRole("form", { name: "Report builder" });
   await expect(page.getByRole("article")).toHaveCount(0);
@@ -553,7 +549,6 @@ test("every report downloads as CSV and PDF and can be generated on the page", a
     /export\?.*kind=inventory/,
   );
 
-  // A quick report opens already generated.
   await page.goto("/dashboard/reports");
   await page.getByRole("link", { name: /Licenses ending soon/ }).click();
   await expect(page.getByRole("article", { name: "Software report" })).toBeVisible();

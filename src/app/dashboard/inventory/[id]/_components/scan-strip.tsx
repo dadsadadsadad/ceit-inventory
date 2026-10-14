@@ -4,10 +4,7 @@ import Link from "next/link";
 
 import { ScanAuditLogger } from "@/app/scan/scan-audit-logger";
 
-/**
- * Shown after staff scan a label. Editing is the focus of the page, so borrowing, returning and
- * reporting a problem are small shortcuts to the same public forms a borrower would use.
- */
+// shortcuts shown after staff scan a label
 export function ScanStrip({ item }: { item: { id: string; itemType: ItemType; qrCode: string } }) {
   const base = `/scan/${encodeURIComponent(item.qrCode)}?view=public`;
   return (

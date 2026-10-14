@@ -2,12 +2,11 @@ const { databaseClient, databaseError } = require("./database.cjs");
 const apply = process.argv.includes("--apply");
 const client = databaseClient();
 
-// Check inventory integrity and clean up expired operational data.
 async function main() {
   await client.connect();
   await client.query("BEGIN");
   try {
-    // Only expired operational data is eligible for removal.
+    // only expired rows get removed
     const expiredSessions = await client.query(
       'SELECT COUNT(*)::int AS count FROM public."UserSession" WHERE "expiresAt" <= NOW()',
     );

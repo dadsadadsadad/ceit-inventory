@@ -1,4 +1,4 @@
-// A change elsewhere in the workspace should not refresh the page being read.
+// which tables each page cares about
 export const liveScopeTables = {
   dashboard: [
     "InventoryItem",

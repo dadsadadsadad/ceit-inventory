@@ -6,7 +6,7 @@ if (!/^ceit_test_[a-z0-9_]+$/.test(process.env.INVENTORY_DB_SCHEMA ?? "")) {
   throw new Error("Run test:launch:setup to create an isolated test database first.");
 }
 
-// Pass environment values without forwarding --env-file to Next.js build workers.
+// don't pass --env-file down to the next build workers
 const result = spawnSync(process.execPath, ["node_modules/next/dist/bin/next", "build"], {
   env: process.env,
   stdio: "inherit",

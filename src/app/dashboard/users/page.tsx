@@ -20,7 +20,6 @@ type SearchParams = { q?: RawParam; role?: RawParam; status?: RawParam };
 
 const statusFilters = ["active", "inactive", "locked"] as const;
 
-// Load staff accounts for the administrator.
 export default async function UsersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await requireUserManagementPageAccess();
   const search = await searchParams;
@@ -63,7 +62,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   return (
     <div className="page users-page">
       <div className="page-inner space-y-6">
-        {/* Account management title. */}
         <header>
           <p className="eyebrow">Administration</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Users</h1>
@@ -72,7 +70,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </p>
         </header>
 
-        {/* The two account types. */}
         <section className="grid gap-4 sm:grid-cols-2" aria-label="Account types">
           {accountRoles.map((role) => (
             <article key={role.value} className="card rounded-lg p-5">
@@ -82,7 +79,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           ))}
         </section>
 
-        {/* Create a staff account. */}
         <details className="section-disclosure card rounded-lg p-5 sm:p-6">
           <summary className="cursor-pointer text-lg font-semibold">Add account</summary>
           <FeedbackForm
@@ -111,7 +107,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 minLength={3}
                 maxLength={32}
                 pattern={"[A-Za-z0-9._\\-]{3,32}"}
-                title="Use 3–32 letters, numbers, periods, underscores, or hyphens."
+                title="Use 3-32 letters, numbers, periods, underscores, or hyphens."
                 className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                 placeholder="ceit.staff"
               />
@@ -141,7 +137,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               autoComplete="new-password"
             />
             <SubmitButton
-              pendingLabel="Creating…"
+              pendingLabel="Creating..."
               className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
             >
               Create account
@@ -149,7 +145,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </FeedbackForm>
         </details>
 
-        {/* Find accounts by name, account type, or status. Choices apply at once. */}
         <FilterForm
           className="card grid gap-3 rounded-lg p-4 min-[360px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_auto] xl:items-end"
           label="Account filters"
@@ -197,7 +192,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </ClearFiltersButton>
         </FilterForm>
 
-        {/* Existing staff accounts. */}
         <section className="card overflow-hidden rounded-lg">
           <div className="divider flex flex-wrap items-center justify-between gap-2 border-b px-5 py-4">
             <h2 className="text-lg font-semibold">Existing accounts</h2>
@@ -241,7 +235,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   savedValues={{ role: user.role }}
                   className="account-editor-grid divider mt-4 gap-4 border-t pt-5"
                 >
-                  {/* Update an account or reset its password. */}
                   <input type="hidden" name="id" value={user.id} />
                   <label>
                     <span className="muted text-xs font-bold uppercase tracking-wide">
@@ -269,7 +262,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       minLength={3}
                       maxLength={32}
                       pattern={"[A-Za-z0-9._\\-]{3,32}"}
-                      title="Use 3–32 letters, numbers, periods, underscores, or hyphens."
+                      title="Use 3-32 letters, numbers, periods, underscores, or hyphens."
                       className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                     />
                   </label>
@@ -307,7 +300,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     placeholder="Leave blank to keep"
                   />
                   <SubmitButton
-                    pendingLabel="Saving…"
+                    pendingLabel="Saving..."
                     className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
                   >
                     Save account
@@ -325,7 +318,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       {formatManilaDate(user.lockedUntil, { hour: "numeric", minute: "2-digit" })}.
                     </p>
                     <SubmitButton
-                      pendingLabel="Unlocking…"
+                      pendingLabel="Unlocking..."
                       className="secondary-button rounded-lg px-4 py-2 text-sm font-semibold"
                     >
                       Unlock account

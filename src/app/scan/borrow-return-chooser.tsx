@@ -9,42 +9,38 @@ import { ReturnRequestForm } from "./return-request-form";
 
 export type RequestMode = "borrow" | "return" | "issue";
 
-/** What a borrower is told about the item before they fill in anything. */
 export type ItemAvailability = {
-  /** When the item is next free, as a datetime-local value, if it is in use right now. */
+  // datetime-local value, only when in use
   freeFrom: string | null;
-  /** Borrowing is possible now, only for later, or not at all. */
   state: "now" | "later" | "closed";
 };
 
 type BorrowReturnChooserProps = {
   availability: ItemAvailability;
-  /** Signed notes proving each form came from this page. */
+  // form tokens for each form
   formTokens: { borrow: string; issue: string; return: string };
   initialMode?: RequestMode | null;
-  policy: { maximumAdvanceDays: number; maximumLoanDays: number };
+  policy: { maxAdvanceDays: number; maxLoanDays: number };
   itemName: string;
-  maximumQuantity: number;
+  maxQuantity: number;
   qrCode: string;
   canReport?: boolean;
   isAsset?: boolean;
 };
 
-// Switch between borrowing, returns, and issue reports.
 export function BorrowReturnChooser({
   availability,
   formTokens,
   initialMode = null,
   policy,
   itemName,
-  maximumQuantity,
+  maxQuantity,
   qrCode,
   canReport = true,
   isAsset = true,
 }: BorrowReturnChooserProps) {
   const [mode, setMode] = useState<RequestMode | null>(initialMode);
-  // Keep the notes this page was opened with. A live refresh issues fresh ones, and swapping
-  // them under someone who is about to press Send would make their form look "too quick".
+  // keep the original tokens, fresh ones from a live refresh would look "too quick"
   const [tokens] = useState(formTokens);
   const contentRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLElement>(null);
@@ -78,7 +74,7 @@ export function BorrowReturnChooser({
           <BorrowRequestForm
             qrCode={qrCode}
             itemName={itemName}
-            maximumQuantity={maximumQuantity}
+            maxQuantity={maxQuantity}
             policy={policy}
             availability={availability}
             formToken={tokens.borrow}
@@ -106,7 +102,6 @@ export function BorrowReturnChooser({
           ? "Requests go directly to CEIT staff for confirmation."
           : "This item is no longer accepting requests. Contact CEIT staff for help."}
       </p>
-      {/* Choose borrowing, returning, or reporting an issue. */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {isAsset ? (
           <>

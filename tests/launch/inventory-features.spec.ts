@@ -33,15 +33,14 @@ async function itemId(qrCode: string) {
     .id as string;
 }
 
-// A checked-out loan for a seeded item, so the public page has something to say about it.
+// checked out loan so the public page shows it
 async function checkOut(qrCode: string, returnsInHours: number) {
   const id = await itemId(qrCode);
   await query("UPDATE \"InventoryItem\" SET status='DEPLOYED' WHERE id=$1", [id]);
   await query(
     `INSERT INTO "BorrowRequest" (id,"inventoryItemId","borrowerName","studentNumber",contact,purpose,"requestedQuantity","expectedReturnDate","startsAt",status,"checkedOutItemStatus","personalDataExpiresAt","updatedAt")
      VALUES ($1,$2,'Round Two Student','2024-0001','09123456789','Class',1,$3,NOW() - INTERVAL '2 hours','BORROWED','OK',NOW() + INTERVAL '30 days',NOW())`,
-    // An ISO string, not a Date: the driver would send a Date in this computer's time zone, which
-    // the time-zone-less column would keep as if it were UTC.
+    // iso string, a Date would be sent in local time
     [randomUUID(), id, new Date(Date.now() + returnsInHours * 3_600_000).toISOString()],
   );
 }
@@ -55,7 +54,6 @@ test.beforeEach(async () => {
   await query('DELETE FROM "PublicRequestAttempt"');
 });
 
-// Open the section a heading belongs to, leaving it open if it already is.
 async function openDisclosure(heading: import("@playwright/test").Locator) {
   await heading.locator("xpath=ancestor::details[1]").evaluate((details) => {
     (details as HTMLDetailsElement).open = true;
@@ -72,9 +70,7 @@ async function fillBasics(page: Page, name: string) {
   await page.locator('select[name="locationId"]').selectOption({ index: 1 });
 }
 
-test("stock warns when it runs low, using each record's own level and 5 by default", async ({
-  page,
-}) => {
+test("low stock alert uses the record's level or 5 by default", async ({ page }) => {
   await signIn(page);
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Stock");
@@ -93,12 +89,11 @@ test("stock warns when it runs low, using each record's own level and 5 by defau
   await expect(page).toHaveURL(/\/dashboard\/inventory\/[0-9a-f-]{36}$/);
   await expect(page.getByText("Running low")).toHaveCount(0);
 
-  // Only the record using the default level of 5 is listed as low.
+  // only the one using the default level
   await page.goto("/dashboard/inventory?stock=low");
   await expect(page.getByText("Sample markers").filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText("Sample chalk")).toHaveCount(0);
 
-  // Using stock moves a record across its own line.
   await page.goto("/dashboard/inventory?q=Sample%20chalk");
   await page
     .getByRole("link", { name: /Sample chalk/ })
@@ -113,7 +108,6 @@ test("stock warns when it runs low, using each record's own level and 5 by defau
   await page.goto("/dashboard");
   await expect(page.getByText("Low stock").first()).toBeVisible();
 
-  // The stock report lists both, with their levels.
   await page.goto("/dashboard/reports?kind=stock&generate=1");
   await expect(page.getByRole("heading", { name: "Stock", exact: true }).first()).toBeVisible();
   await expect(page.getByText("Sample markers").first()).toBeVisible();
@@ -152,7 +146,7 @@ test("warranty and extra fields are optional, saved, filtered, and reported", as
   await page.getByRole("button", { name: "Add field" }).click();
   await expect(page.getByText("Lens mount").first()).toBeVisible();
 
-  // A new item needs no warranty and no extra details: they sit in closed sections.
+  // warranty and custom fields are optional
   await page.goto("/dashboard/inventory/new");
   await chooseKind(page, "Equipment");
   await fillBasics(page, "Sample plain camera");
@@ -197,7 +191,6 @@ test("an extra field can be created from the item forms, not only from Settings"
   await expect(page.getByText("Sample Color").first()).toBeVisible();
   await expect(page.getByText("Teal").first()).toBeVisible();
 
-  // On the edit form, with a list of answers this time.
   await page.goto(page.url() + "?edit=1");
   await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
   await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
@@ -210,7 +203,7 @@ test("an extra field can be created from the item forms, not only from Settings"
   await expect(page.getByText("Sample Funding").first()).toBeVisible();
   await expect(page.getByText("Gift", { exact: true }).first()).toBeVisible();
 
-  // The same name cannot be created twice, whatever its capitals.
+  // case insensitive duplicate
   await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
   await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
   await page.getByLabel("Field name").fill("sample color");
@@ -220,15 +213,12 @@ test("an extra field can be created from the item forms, not only from Settings"
     page.getByRole("alert").filter({ hasText: /already an extra field called/ }),
   ).toBeVisible();
 
-  // Both fields exist for every item now, and are managed in Settings.
   await page.goto("/dashboard/settings");
   await expect(page.getByText("Sample Color").first()).toBeVisible();
   await expect(page.getByText("Sample Funding").first()).toBeVisible();
 });
 
-test("a flexible import copes with missing and extra columns, empty rows, and odd values", async ({
-  page,
-}) => {
+test("import handles missing/extra columns, empty rows and messy values", async ({ page }) => {
   await signIn(page);
   await page.goto("/dashboard/inventory/import");
   const csv = [
@@ -263,7 +253,7 @@ test("a flexible import copes with missing and extra columns, empty rows, and od
       'SELECT name,"purchasePrice","warrantyEndsAt"::text AS "warrantyEndsAt",notes,"assetTag" FROM "InventoryItem" WHERE name LIKE \'Sample import%\' ORDER BY name',
     )
   ).rows;
-  // The tripod row of 3 became three tracked units; the cable row of 2 became two.
+  // qty 3 -> 3 units, qty 2 -> 2 units
   expect(items.map((row) => row.name)).toEqual([
     "Sample import cable #1",
     "Sample import cable #2",
@@ -276,9 +266,9 @@ test("a flexible import copes with missing and extra columns, empty rows, and od
   expect(Number(tripod.purchasePrice)).toBe(1200);
   expect(tripod.warrantyEndsAt).toMatch(/^2030-01-15/);
   expect(tripod.notes).toContain("Funding source: Alumni gift");
-  // An unreadable warranty date was left blank instead of rejecting the row.
+  // bad date left blank
   expect(items.find((row) => row.name === "Sample import cable #1").warrantyEndsAt).toBeNull();
-  // Missing category and location were filled with the plain fallbacks.
+  // default category and location
   expect(
     (
       await query(
@@ -288,7 +278,7 @@ test("a flexible import copes with missing and extra columns, empty rows, and od
   ).toEqual({ category: "Uncategorized", location: "Unassigned" });
 });
 
-test("the public page says plainly when an item is in use or unavailable", async ({ page }) => {
+test("public page shows when an item is in use or unavailable", async ({ page }) => {
   await checkOut("ceit-launch-item-5", 3);
   await query(
     "UPDATE \"InventoryItem\" SET status='DEFECTIVE' WHERE \"qrCode\"='ceit-launch-item-6'",
@@ -309,9 +299,7 @@ test("the public page says plainly when an item is in use or unavailable", async
   await expect(page.getByRole("button", { name: /Borrow equipment/ })).toBeDisabled();
 });
 
-test("a signed-in phone goes straight to editing, with borrow, return, and report close by", async ({
-  page,
-}) => {
+test("signed in scan opens the edit page with shortcuts", async ({ page }) => {
   await signIn(page);
   const id = await itemId("ceit-launch-item-8");
   await page.goto("/scan/ceit-launch-item-8");
@@ -324,7 +312,6 @@ test("a signed-in phone goes straight to editing, with borrow, return, and repor
   await expect(page.getByRole("heading", { name: "Report a problem" })).toBeVisible();
   await expect(page.getByLabel("Your name")).toBeVisible();
 
-  // The public view stays reachable for staff.
   await page.goto("/scan/ceit-launch-item-8?view=public");
   await expect(page.getByText("Available now")).toBeVisible();
   await expect(page.getByRole("button", { name: /Borrow equipment/ })).toBeVisible();
@@ -336,7 +323,6 @@ test("an issue report asks for a name and shows it to staff", async ({ page }) =
   await page.getByLabel("Issue title").fill("Sample cracked screen");
   await page.getByLabel("What happened").fill("The screen has a long crack across the middle.");
   await page.getByRole("button", { name: "Send issue report" }).click();
-  // Without a name the browser stops the form.
   await expect(page.getByLabel("Your name")).toBeFocused();
   expect(
     (
@@ -361,10 +347,8 @@ test("an issue report asks for a name and shows it to staff", async ({ page }) =
   await expect(page.getByText(/by Ana Reyes through a QR code/)).toBeVisible();
 });
 
-test("loans due today are listed, can be reminded, and need an ID check to check out", async ({
-  page,
-}) => {
-  // Due in a little while, but still today in Manila.
+test("due today list, reminders and id check on checkout", async ({ page }) => {
+  // still today in manila
   const endOfDay = new Date();
   endOfDay.setUTCHours(15, 59, 0, 0);
   const soon = Math.max(

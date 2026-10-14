@@ -7,7 +7,6 @@ import { lowStockLevelFor, stockLevelSummary } from "@/lib/stock-level";
 import { adjustStockQuantity } from "../../actions/item";
 import type { ItemRecord } from "./item-record";
 
-// Stock records: how many are left, whether that is running low, and a quick way to add or use some.
 export function StockCard({ item }: { item: ItemRecord }) {
   return (
     <section className="card rounded-lg p-5 sm:p-6" aria-labelledby="stock-heading">
@@ -66,12 +65,12 @@ export function StockCard({ item }: { item: ItemRecord }) {
             <input
               name="note"
               maxLength={200}
-              placeholder="Delivery, used in class, …"
+              placeholder="Delivery, used in class, ..."
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
           <SubmitButton
-            pendingLabel="Saving…"
+            pendingLabel="Saving..."
             className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
           >
             Update stock

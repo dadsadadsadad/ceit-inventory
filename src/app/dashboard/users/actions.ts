@@ -30,7 +30,7 @@ function usernameFrom(formData: FormData) {
   const username = requiredText(formData, "username", 32).toLowerCase();
   if (!usernamePattern.test(username)) {
     throw new FormError(
-      "Use 3–32 letters, numbers, periods, underscores, or hyphens for the username.",
+      "Use 3-32 letters, numbers, periods, underscores, or hyphens for the username.",
     );
   }
   return username;
@@ -44,7 +44,6 @@ function roleFrom(formData: FormData) {
   return role as UserRole;
 }
 
-// Validate a new password when one is supplied.
 function passwordFrom(formData: FormData, required: boolean) {
   const password = String(formData.get("password") ?? "");
   if (!password && !required) {
@@ -64,7 +63,6 @@ function knownWriteError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
-// Staff account management.
 export async function createUser(formData: FormData) {
   return formAction(async () => {
     const administrator = await requireUserManager();
@@ -77,11 +75,11 @@ export async function createUser(formData: FormData) {
     const role = roleFrom(formData);
 
     try {
-      await prisma.$transaction(async (transaction) => {
-        const account = await transaction.user.create({
+      await prisma.$transaction(async (tx) => {
+        const account = await tx.user.create({
           data: { email, username, passwordHash: await hashPassword(password), role },
         });
-        await transaction.inventoryAudit.create({
+        await tx.inventoryAudit.create({
           data: auditEventData({
             action: "CREATED",
             actor: administrator,
@@ -107,7 +105,7 @@ export async function createUser(formData: FormData) {
   });
 }
 
-// Save account changes and protect the last administrator.
+// can't remove the last admin
 export async function updateUser(formData: FormData) {
   return formAction(async () => {
     const administrator = await requireUserManager();
@@ -128,8 +126,8 @@ export async function updateUser(formData: FormData) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await prisma.$transaction(
-          async (transaction) => {
-            const target = await transaction.user.findUnique({ where: { id } });
+          async (tx) => {
+            const target = await tx.user.findUnique({ where: { id } });
             if (!target) {
               throw new FormError("This account no longer exists.");
             }
@@ -139,7 +137,7 @@ export async function updateUser(formData: FormData) {
               target.isActive &&
               (!isActive || role !== UserRole.ADMINISTRATOR);
             if (removesAdministrator) {
-              const activeAdministratorCount = await transaction.user.count({
+              const activeAdministratorCount = await tx.user.count({
                 where: { role: UserRole.ADMINISTRATOR, isActive: true },
               });
               if (activeAdministratorCount <= 1) {
@@ -147,14 +145,14 @@ export async function updateUser(formData: FormData) {
               }
             }
 
-            const account = await transaction.user.update({
+            const account = await tx.user.update({
               where: { id },
               data: {
                 email,
                 username,
                 role,
                 isActive,
-                // A reset is how an administrator helps someone who is locked out.
+                // resetting also unlocks the account
                 ...(passwordHash
                   ? {
                       passwordHash,
@@ -166,9 +164,9 @@ export async function updateUser(formData: FormData) {
               },
             });
             if (passwordHash || !isActive) {
-              await transaction.userSession.deleteMany({ where: { userId: id } });
+              await tx.userSession.deleteMany({ where: { userId: id } });
             }
-            await transaction.inventoryAudit.create({
+            await tx.inventoryAudit.create({
               data: auditEventData({
                 action: "UPDATED",
                 actor: administrator,
@@ -215,7 +213,6 @@ export async function updateUser(formData: FormData) {
   });
 }
 
-// Let an administrator end a temporary sign-in lock without changing the password.
 export async function unlockUser(formData: FormData) {
   return formAction(async () => {
     const administrator = await requireUserManager();

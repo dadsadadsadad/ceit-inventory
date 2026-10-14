@@ -22,7 +22,7 @@ import {
   inventoryViewCookie,
   inventoryViewOf,
   inventoryWhere,
-  maximumBulkSelection,
+  maxBulkSelection,
   normalizeSearch,
   pageSize,
   selectionKey,
@@ -37,7 +37,6 @@ import { EmptyState } from "@/app/components/empty-state";
 
 export const dynamic = "force-dynamic";
 
-// Wrap bulk changes in a form when editing is allowed.
 function InventoryFormContainer({
   canManage,
   children,
@@ -55,7 +54,6 @@ function InventoryFormContainer({
   );
 }
 
-// Load the filtered inventory list.
 export default async function InventoryPage({
   searchParams,
 }: {
@@ -67,7 +65,7 @@ export default async function InventoryPage({
     cookies(),
   ]);
   const normalized = normalizeSearch(rawSearch);
-  // The address wins; otherwise the view this device chose last time.
+  // url first, then the saved view
   const view = inventoryViewOf(normalized.view ?? cookieStore.get(inventoryViewCookie)?.value);
   const search = { ...normalized, view };
   const canManage = canManageInventory(user.role);
@@ -110,7 +108,7 @@ export default async function InventoryPage({
               where,
               orderBy: { id: "asc" },
               select: { id: true },
-              take: maximumBulkSelection,
+              take: maxBulkSelection,
             })
           : Promise.resolve([]),
         loadPage(requestedPage),
@@ -135,7 +133,6 @@ export default async function InventoryPage({
       <InventoryRowNavigation />
       {search.bulk === "updated" || search.bulk === "deleted" ? <ClearInventorySelection /> : null}
       <div className="page-inner space-y-6">
-        {/* Inventory title and add/import links. */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Equipment register</p>

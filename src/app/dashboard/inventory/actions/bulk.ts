@@ -19,7 +19,6 @@ import {
   statuses,
 } from "./shared";
 
-// Changes to selected items.
 export async function bulkUpdateInventory(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
@@ -34,14 +33,14 @@ export async function bulkUpdateInventory(formData: FormData) {
 
       try {
         await prisma.$transaction(
-          async (transaction) => {
+          async (tx) => {
             const [items, borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
-              transaction.inventoryItem.findMany({
+              tx.inventoryItem.findMany({
                 where: { id: { in: ids } },
                 select: { assetTag: true, id: true, name: true },
               }),
-              transaction.borrowRequest.count({ where: { inventoryItemId: { in: ids } } }),
-              transaction.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
+              tx.borrowRequest.count({ where: { inventoryItemId: { in: ids } } }),
+              tx.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
             ]);
             if (items.length !== ids.length) {
               throw new FormError(
@@ -56,7 +55,7 @@ export async function bulkUpdateInventory(formData: FormData) {
 
             await Promise.all(
               items.map((item) =>
-                transaction.inventoryAudit.updateMany({
+                tx.inventoryAudit.updateMany({
                   where: { itemId: item.id },
                   data: {
                     entityId: item.id,
@@ -66,7 +65,7 @@ export async function bulkUpdateInventory(formData: FormData) {
                 }),
               ),
             );
-            await transaction.inventoryAudit.createMany({
+            await tx.inventoryAudit.createMany({
               data: items.map((item) =>
                 auditEventData({
                   action: "DELETED",
@@ -82,7 +81,7 @@ export async function bulkUpdateInventory(formData: FormData) {
                 }),
               ),
             });
-            const deleted = await transaction.inventoryItem.deleteMany({
+            const deleted = await tx.inventoryItem.deleteMany({
               where: { id: { in: ids } },
             });
             if (deleted.count !== ids.length) {
@@ -144,8 +143,8 @@ export async function bulkUpdateInventory(formData: FormData) {
     }
 
     await prisma.$transaction(
-      async (transaction) => {
-        const selectedCount = await transaction.inventoryItem.count({ where: { id: { in: ids } } });
+      async (tx) => {
+        const selectedCount = await tx.inventoryItem.count({ where: { id: { in: ids } } });
         if (selectedCount !== ids.length) {
           throw new FormError(
             "One or more selected records no longer exist. Refresh the inventory list and try again.",
@@ -153,7 +152,7 @@ export async function bulkUpdateInventory(formData: FormData) {
         }
 
         if (targetLocationId) {
-          const location = await transaction.location.findFirst({
+          const location = await tx.location.findFirst({
             where: { id: targetLocationId, isActive: true },
             select: { name: true },
           });
@@ -164,7 +163,7 @@ export async function bulkUpdateInventory(formData: FormData) {
         }
 
         if (isRetirement) {
-          const activeBorrowingCount = await transaction.borrowRequest.count({
+          const activeBorrowingCount = await tx.borrowRequest.count({
             where: { inventoryItemId: { in: ids }, status: { in: activeBorrowRequestStatuses } },
           });
           if (activeBorrowingCount) {
@@ -175,7 +174,7 @@ export async function bulkUpdateInventory(formData: FormData) {
         }
 
         if (data.status === ItemStatus.OK || data.status === ItemStatus.WORKING) {
-          const outstanding = await transaction.borrowRequest.count({
+          const outstanding = await tx.borrowRequest.count({
             where: {
               inventoryItemId: { in: ids },
               status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
@@ -188,15 +187,15 @@ export async function bulkUpdateInventory(formData: FormData) {
           }
         }
 
-        await transaction.inventoryItem.updateMany({ where: { id: { in: ids } }, data });
+        await tx.inventoryItem.updateMany({ where: { id: { in: ids } }, data });
         if (inspectedAt) {
-          // Keep the PC profile's own inspection date in step with the record.
-          await transaction.computer.updateMany({
+          // keep the pc profile's inspection date in sync
+          await tx.computer.updateMany({
             where: { itemId: { in: ids } },
             data: { lastCheckedAt: inspectedAt },
           });
         }
-        await transaction.inventoryAudit.createMany({
+        await tx.inventoryAudit.createMany({
           data: ids.map((itemId) => ({
             itemId,
             action:

@@ -12,11 +12,9 @@ import { isUuid } from "./ids";
 import { everyTermMatches, searchTerms } from "./search-terms";
 import { prisma } from "@/prisma";
 
-/** The most rows the directory pages and reports will read in one request. */
 export const directoryRowLimit = 20_000;
 
 export type DirectoryFilters = {
-  /** Include retired and lost PCs. By default only PCs in service are listed. */
   includeRetired?: boolean;
   license?: LicenseFilter;
   location?: string;
@@ -114,7 +112,6 @@ const pcSelect = {
   location: { select: { name: true } },
 } satisfies Prisma.InventoryItemSelect;
 
-/** PCs with their hardware profile, for the Hardware view and report. */
 export async function loadComputers(filters: DirectoryFilters) {
   const rows = await prisma.computer.findMany({
     where: computerWhere(filters),
@@ -160,7 +157,7 @@ export async function loadComputers(filters: DirectoryFilters) {
   return { computers, truncated };
 }
 
-/** Software installed on PCs, one entry per installation, for the Software view and report. */
+// one row per install
 export async function loadSoftware(filters: DirectoryFilters, now = new Date()) {
   const rows = await prisma.computerSoftware.findMany({
     where: softwareWhere(filters, now),

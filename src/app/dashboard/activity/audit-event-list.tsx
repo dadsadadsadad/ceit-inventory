@@ -43,7 +43,6 @@ function timeOf(value: Date) {
   return formatManilaDate(value, { hour: "numeric", minute: "2-digit" });
 }
 
-// Events for one page, grouped by day, each a single line that opens for the details.
 export function AuditEventList({ events }: { events: ActivityEvent[] }) {
   const days = groupEventsByDay(events);
 
@@ -61,7 +60,7 @@ export function AuditEventList({ events }: { events: ActivityEvent[] }) {
               const changes = auditChangedFields(event as AuditTrailEvent);
               const subject = auditSubjectLabel(event);
               const actor = auditActorLabel(event as AuditTrailEvent);
-              // A sign-in is about the person who signed in, so their name is shown once.
+              // for sign-ins the actor and the subject are the same person
               const byline = subject === actor ? [actor] : [subject, actor];
               return (
                 <li key={event.id} className="audit-entry">

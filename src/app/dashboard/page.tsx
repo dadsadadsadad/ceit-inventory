@@ -83,7 +83,6 @@ async function getDashboardData(includeAuditTrail: boolean) {
         ],
       },
     }),
-    // Equipment that is still out after its agreed return time.
     prisma.borrowRequest.groupBy({
       by: ["status"],
       _count: { _all: true },
@@ -98,7 +97,7 @@ async function getDashboardData(includeAuditTrail: boolean) {
     prisma.inventoryItem.count({ where: warrantyWhere("ending", now) }),
     prisma.borrowRequest.count({ where: dueTodayWhere(now) }),
   ]);
-  // Older notes were saved with an email address; show the person's username instead.
+  // old notes saved the email, show the username
   const noteAuthor = dashboardNote?.updatedByName ?? null;
   const noteAuthorName = noteAuthor?.includes("@")
     ? ((await prisma.user.findFirst({ where: { email: noteAuthor }, select: { username: true } }))
@@ -126,7 +125,7 @@ async function getDashboardData(includeAuditTrail: boolean) {
     reservationCount: count(BorrowStatus.RESERVED),
     returnCount: count(BorrowStatus.RETURN_REQUESTED),
     overdueCount: overdueCount(BorrowStatus.BORROWED) + overdueCount(BorrowStatus.RETURN_REQUESTED),
-    // A late loan with a pending return request is already listed under returns to confirm.
+    // skip late loans that already have a return request
     overdueUnreturnedCount: overdueCount(BorrowStatus.BORROWED),
   };
 }
@@ -137,7 +136,7 @@ export default async function DashboardPage() {
   const canManage = canManageInventory(user.role);
   const today = manilaCalendarDate();
   const calendarMonth = today.slice(0, 7);
-  // The calendar loads alongside the rest of the page, and never stops the page from loading.
+  // calendar failing shouldn't break the dashboard
   const calendarEntries = loadCalendarMonth(calendarMonth).catch((error) => {
     console.error("Unable to load the calendar", error);
     return [];
@@ -218,7 +217,7 @@ export default async function DashboardPage() {
   const standing = !dashboard
     ? ""
     : !canManage
-      ? "Everything in its place. Ready for what’s next."
+      ? "Everything in its place. Ready for what's next."
       : waiting
         ? `${waiting.toLocaleString()} ${waiting === 1 ? "thing is" : "things are"} waiting on your worklist.`
         : "Everything is in its place. Nothing needs you right now.";

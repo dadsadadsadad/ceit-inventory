@@ -108,7 +108,7 @@ export function OptimisticStatus({
       aria-live="polite"
     >
       {label}
-      {pending && <span className="optimistic-saving"> · Saving…</span>}
+      {pending && <span className="optimistic-saving"> · Saving...</span>}
     </span>
   );
 }

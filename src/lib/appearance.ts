@@ -27,7 +27,7 @@ export const contrastDark = "#000000";
 
 export const contrastLight = "#ffffff";
 
-export const minimumContrast = 4.7;
+export const minContrast = 4.7;
 
 export const defaultAccents: Readonly<Record<Theme, string>> = {
   dark: "#ff9b50",
@@ -68,7 +68,6 @@ export function isTheme(value: string | null): value is Theme {
   return value === "dark" || value === "light";
 }
 
-// Accept a complete six-digit hex color.
 export function normalizeHex(value: string | null | undefined): string | null {
   const match = value?.trim().match(/^#([\da-f]{6})$/i);
   return match ? `#${match[1].toLowerCase()}` : null;
@@ -93,7 +92,6 @@ export function rgbToHex({ red, green, blue }: RgbColor) {
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 }
 
-// Blend two colors by the requested amount.
 export function mixColors(start: string, end: string, endAmount: number) {
   const from = hexToRgb(start);
   const to = hexToRgb(end);
@@ -115,7 +113,7 @@ export function relativeLuminance(color: string) {
   return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue);
 }
 
-// Measure how clearly two colors differ in brightness.
+// wcag contrast ratio
 export function contrastRatio(first: string, second: string) {
   const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)].sort(
     (left, right) => right - left,
@@ -123,22 +121,21 @@ export function contrastRatio(first: string, second: string) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// Choose black or white text for this background.
 export function readableTextColor(background: string) {
   return contrastRatio(background, contrastDark) >= contrastRatio(background, contrastLight)
     ? contrastDark
     : contrastLight;
 }
 
-// Adjust a color until text reaches the required contrast.
+// darken/lighten until the text contrast is high enough
 export function ensureContrast(
   color: string,
   background: string,
   direction: string,
-  minimum = minimumContrast,
+  min = minContrast,
 ) {
   const normalized = normalizeHex(color) ?? defaultAccents.dark;
-  if (contrastRatio(normalized, background) >= minimum) {
+  if (contrastRatio(normalized, background) >= min) {
     return normalized;
   }
 
@@ -149,7 +146,7 @@ export function ensureContrast(
   for (let iteration = 0; iteration < 16; iteration += 1) {
     const amount = (lowerBound + upperBound) / 2;
     const candidate = mixColors(normalized, direction, amount);
-    if (contrastRatio(candidate, background) >= minimum) {
+    if (contrastRatio(candidate, background) >= min) {
       accessibleColor = candidate;
       upperBound = amount;
     } else {
@@ -160,25 +157,25 @@ export function ensureContrast(
   return accessibleColor;
 }
 
-export function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(Math.max(value, minimum), maximum);
+export function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
-// Convert picker coordinates and hex colors.
+// standard rgb -> hsv conversion
 export function hexToHsv(color: string): HsvColor {
   const normalized = normalizeHex(color) ?? defaultAccents.dark;
   const red = Number.parseInt(normalized.slice(1, 3), 16) / 255;
   const green = Number.parseInt(normalized.slice(3, 5), 16) / 255;
   const blue = Number.parseInt(normalized.slice(5, 7), 16) / 255;
-  const maximum = Math.max(red, green, blue);
-  const minimum = Math.min(red, green, blue);
-  const delta = maximum - minimum;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
 
   let hue = 0;
   if (delta !== 0) {
-    if (maximum === red) {
+    if (max === red) {
       hue = 60 * (((green - blue) / delta) % 6);
-    } else if (maximum === green) {
+    } else if (max === green) {
       hue = 60 * ((blue - red) / delta + 2);
     } else {
       hue = 60 * ((red - green) / delta + 4);
@@ -187,12 +184,12 @@ export function hexToHsv(color: string): HsvColor {
 
   return {
     hue: (hue + 360) % 360,
-    saturation: maximum === 0 ? 0 : (delta / maximum) * 100,
-    value: maximum * 100,
+    saturation: max === 0 ? 0 : (delta / max) * 100,
+    value: max * 100,
   };
 }
 
-// Convert the picker sliders back into a hex color.
+// and back
 export function hsvToHex({ hue, saturation, value }: HsvColor) {
   const normalizedHue = ((hue % 360) + 360) % 360;
   const chroma = (value / 100) * (saturation / 100);
@@ -224,7 +221,6 @@ export function hsvToHex({ hue, saturation, value }: HsvColor) {
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 }
 
-// Keep custom colors readable in either theme.
 export function getAccentColors(theme: Theme, color: string): AppearanceTokens {
   const textSurface = theme === "light" ? "#e4e9ef" : "#343c47";
   const linkDirection = theme === "light" ? contrastDark : contrastLight;
@@ -245,17 +241,13 @@ export function getAccentColors(theme: Theme, color: string): AppearanceTokens {
   };
 }
 
-/* ------------------------------------------------------------------ display preferences */
-/*
-  Besides the accent color, each device can choose how the workspace looks and feels. Every choice
-  is saved on the device and applied as an attribute on <html> (see preferences.css), so it takes
-  effect before the page paints (see appearance-bootstrap.ts, which must stay in step with this).
-*/
+// display preferences
+// saved per device and applied as attributes on <html> (see preferences.css)
 
 export const modeChoices = ["light", "dark", "auto"] as const;
 export type ModeChoice = (typeof modeChoices)[number];
 
-/** The background tones on offer in each mode. The first is the standard look. */
+// first one is the default
 export const toneChoices = {
   light: ["paper", "bright", "cool"],
   dark: ["ink", "midnight", "black"],
@@ -298,7 +290,7 @@ export const defaultPreferences: DisplayPreferences = {
   toneLight: "paper",
 };
 
-/** Where each choice is saved on the device. The mode keeps the original key. */
+// localStorage keys, mode keeps the old key
 export const preferenceKeys = {
   corners: "ceit-corners",
   mode: themeStorageKey,
@@ -308,7 +300,6 @@ export const preferenceKeys = {
   toneLight: "ceit-tone-light",
 } as const satisfies Record<keyof DisplayPreferences, string>;
 
-/** A saved value if it is one of the allowed choices, otherwise the standard one. */
 export function choiceOf<T extends string>(
   value: string | null | undefined,
   allowed: readonly T[],
@@ -317,7 +308,6 @@ export function choiceOf<T extends string>(
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-/** Read the choices from saved strings, ignoring anything that is not recognised. */
 export function parsePreferences(
   read: (key: string) => string | null | undefined,
 ): DisplayPreferences {
@@ -339,12 +329,12 @@ export function parsePreferences(
   };
 }
 
-/** The theme actually shown: "auto" follows the device's own light or dark setting. */
+// resolve "auto" using the system setting
 export function resolveTheme(mode: ModeChoice, deviceIsDark: boolean): Theme {
   return mode === "auto" ? (deviceIsDark ? "dark" : "light") : mode;
 }
 
-/** The attributes put on <html>. A standard choice has none, so the stylesheet stays untouched. */
+// defaults get no attribute
 export function preferenceAttributes(preferences: DisplayPreferences, theme: Theme) {
   const tone = theme === "dark" ? preferences.toneDark : preferences.toneLight;
   return {

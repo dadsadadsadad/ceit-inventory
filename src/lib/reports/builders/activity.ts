@@ -18,13 +18,11 @@ import { countChart, monthChart } from "../charts";
 import { ReportRequestError, type ReportModel } from "../model";
 import { loadCapped, monthlyCounts, type BuilderContext } from "./shared";
 
-// Show changed fields or a short event detail.
 function eventDetail(event: AuditTrailEvent) {
   const changes = auditChangedFields(event).map((change) => `${change.label}: ${change.value}`);
   return changes.join(" · ") || auditEventDetail(event);
 }
 
-// Who changed what, and when, for the chosen view of the audit trail.
 export async function buildActivityReport(context: BuilderContext): Promise<ReportModel> {
   let filters: ReturnType<typeof parseAuditTrailFilters>;
   try {
@@ -71,7 +69,7 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
       `Showing: ${auditViewLabel(filters.view)}`,
       filters.action && `Event: ${auditActionLabel(filters.action)}`,
       filters.actor && `Person: ${filters.actor}`,
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       dateRangeChip(filters.dateRange, "Dates"),
     ),
     generatedAt: context.now,
@@ -87,7 +85,7 @@ export async function buildActivityReport(context: BuilderContext): Promise<Repo
       { label: "Events", value: total.toLocaleString() },
       {
         label: "People involved",
-        // Public scans and requests have no staff member behind them.
+        // public actions have no staff user
         value: people.filter((person) => person.actorName).length.toLocaleString(),
       },
       {

@@ -1,27 +1,27 @@
 # CEIT Inventory
 
-QR code-based inventory and asset tracking for the CEIT department's rooms, computer labs, equipment, and supplies. Built with Next.js, Prisma, and PostgreSQL. It runs on Supabase PostgreSQL during development and can move to the school's own PostgreSQL server without code changes.
+QR code based inventory and asset tracking for the CEIT department's labs and equipment. Next.js + Prisma + PostgreSQL. Uses Supabase during development and can be moved to the school's own PostgreSQL server.
 
-See [the code guide](docs/code-guide.md) for the folder layout and common commands.
+Folder layout and commands are in [docs/code-guide.md](docs/code-guide.md).
 
 ## Features
 
-- Rooms, categories, tracked equipment (one record, asset tag, and QR code per unit), and counted stock with low-stock alerts
-- Automatic asset tags in the `INV-CAT-ST-ROOM-0001` format and a QR code for every item
-- PC and Mac profiles with hardware, software, and license details, plus Hardware and Software views across all PCs
-- Warranty dates, last-checked dates, and custom fields that staff can add from Settings or any item form
-- QR label printing, one at a time or in batches on A4 sheets
-- Phone camera scanning. Staff go straight to the item record; students see the item and can borrow it, return it, or report a problem
-- Borrowing requests, reservations, checkout, returns, overdue tracking, and return reminders
-- Maintenance tickets from staff and from QR issue reports
-- CSV and XLSX import with a dry-run check
-- Reports on the page, as PDF, or as CSV, with charts and filters
-- An audit trail of who changed what
-- Administrator and Faculty staff accounts
-- Light and dark themes with a few appearance options
-- Live updates across open browser tabs
+- rooms, categories, equipment (one record and qr code per unit) and stock with low stock alerts
+- asset tags generated as `INV-CAT-ST-ROOM-0001`
+- pc profiles (hardware, software, licenses) and hardware/software views across all pcs
+- warranty dates, inspection dates and custom fields
+- qr label printing, single or in batches on A4
+- scanning with a phone camera. staff go to the edit page, students can borrow, return or report a problem
+- borrowing requests, reservations, checkout, returns, overdue tracking and reminders
+- maintenance tickets
+- csv/xlsx import with a check mode that doesn't save
+- reports on the page or as pdf/csv, with charts and filters
+- audit trail
+- admin and faculty staff accounts
+- light/dark theme and a few appearance options
+- live updates between open tabs
 
-## Local setup
+## Setup
 
 Create `.env.local` (see `.env.example`):
 
@@ -34,7 +34,7 @@ REQUEST_RATE_LIMIT_SECRET="at-least-32-random-characters"
 BORROWER_DATA_RETENTION_DAYS="365"
 ```
 
-Then run:
+Then:
 
 ```bash
 npm install
@@ -43,35 +43,35 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
-Open **Settings** to add rooms and categories before adding items.
+Add rooms and categories in **Settings** first.
 
-`DIRECT_URL` is only used by Prisma migrations. `SCHOOL_DATABASE_URL` is used instead of `DATABASE_URL` when it is set. Never commit any of these values.
+`DIRECT_URL` is only for migrations. If `SCHOOL_DATABASE_URL` is set it's used instead of `DATABASE_URL`. Don't commit any of these.
 
-## Importing items
+## Importing
 
-The importer accepts CSV and `.xlsx` files. Column headings can be in any order and use common names (`Item`, `Qty`, `Serial No.`, `Room`, `Price`, and so on). Only the item name is required. Missing categories and rooms fall back to defaults, unknown columns go into the item notes, and values that cannot be read are left blank and listed. **Check file** shows what would happen without saving anything.
+CSV and `.xlsx` both work. Columns can be in any order and common names are recognized (`Item`, `Qty`, `Serial No.`, `Room`, `Price`, etc). Only the item name is required. Missing category/room use defaults, unknown columns go into the notes, and unreadable values are left blank with a warning. **Check file** shows the result without saving.
 
-## QR codes in production
+## QR codes
 
-Set `NEXT_PUBLIC_APP_URL` to the permanent public address before printing labels, because a printed QR code keeps its URL. The `/scan/[qrCode]` pages must be reachable without Vercel Deployment Protection.
+Set `NEXT_PUBLIC_APP_URL` to the real public address before printing labels, since the url is baked into each code. `/scan/[qrCode]` has to be reachable without Vercel Deployment Protection.
 
 ## Moving to the school server
 
-1. Install PostgreSQL 15 or newer.
+1. Install PostgreSQL 15+.
 2. Create the `ceit_inventory_migrator` and `ceit_inventory_app` roles.
-3. Set `SCHOOL_DATABASE_URL` to the app role and `DIRECT_URL` to the migrator role.
-4. Run `npm run db:migrate:deploy`, then remove `DIRECT_URL` from the app environment.
-5. Serve the app over HTTPS (needed for sign-in cookies and phone cameras).
+3. Set `SCHOOL_DATABASE_URL` (app role) and `DIRECT_URL` (migrator role).
+4. Run `npm run db:migrate:deploy`, then remove `DIRECT_URL` from the app's env.
+5. Serve it over https (needed for cookies and the phone camera).
 
-The full steps, including backups, are in [the school PostgreSQL runbook](docs/school-postgresql.md). Release steps and borrowing rules are in [the launch checklist](docs/launch-checklist.md).
+Details in [docs/school-postgresql.md](docs/school-postgresql.md). Release steps and borrowing rules are in [docs/launch-checklist.md](docs/launch-checklist.md).
 
 ## Accounts
 
-Administrators can do everything. Faculty staff can do everything except manage accounts. Students do not need an account to borrow, return, or report a problem from a QR page. Sessions last 7 days.
+Admins can do everything. Faculty staff can do everything except manage accounts. Students don't need an account to use the qr pages. Sessions last 7 days.
 
 ## Borrower data
 
-Public forms are rate limited. Borrower names, student numbers, and contact details are removed from finished requests after `BORROWER_DATA_RETENTION_DAYS`. This runs automatically when staff open the dashboard, or on a schedule with `npm run db:purge-borrower-data`.
+Public forms are rate limited. Borrower names, student numbers and contact numbers are removed from finished requests after `BORROWER_DATA_RETENTION_DAYS`. This runs when staff open the dashboard, or with `npm run db:purge-borrower-data`.
 
 ## Tests
 
@@ -81,4 +81,4 @@ npm run test:e2e
 npm run verify
 ```
 
-`npm run test:launch:setup` followed by `npm run test:launch` runs the signed-in workflow tests against a separate `ceit_test_launch_*` schema. Remove it afterwards with `npm run test:launch:cleanup -- --apply`, then run `npm run build` again.
+For the signed in workflow tests run `npm run test:launch:setup` then `npm run test:launch`. They use a separate `ceit_test_launch_*` schema. Clean up with `npm run test:launch:cleanup -- --apply` and run `npm run build` again after.

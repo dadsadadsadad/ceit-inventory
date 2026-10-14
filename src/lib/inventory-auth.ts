@@ -9,13 +9,13 @@ import { sessionCookieName } from "@/lib/session-cookie";
 import { prisma } from "@/prisma";
 
 const writableRoles = ["administrator", "staff"] as const;
-// A week, so a shared lab computer does not stay signed in for a month.
+// 1 week
 const sessionLifetimeMs = 7 * 24 * 60 * 60 * 1000;
-const maximumSessionsPerUser = 5;
+const maxSessionsPerUser = 5;
 const sessionTokenPattern = /^[a-f0-9]{64}$/;
 const scryptOptions = { N: 16_384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 
-// Store a hash of the session token instead of the token itself.
+// only the hash is stored
 function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -26,7 +26,6 @@ export function canManageInventory(role: string) {
   return writableRoles.includes(role as (typeof writableRoles)[number]);
 }
 
-// Only administrators can add, change, or deactivate accounts. Faculty staff can do everything else.
 export function canManageUsers(role: string) {
   return role === "administrator";
 }
@@ -43,14 +42,12 @@ function derivePasswordHash(password: string, salt: string) {
   });
 }
 
-// Password hashing.
 export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const derivedHash = await derivePasswordHash(password, salt);
   return `scrypt-v1:${salt}:${derivedHash.toString("hex")}`;
 }
 
-// Check the password rules used by account forms.
 export function passwordValidationMessage(password: string) {
   if (password.length < 8) {
     return "Use at least 8 characters.";
@@ -61,9 +58,9 @@ export function passwordValidationMessage(password: string) {
   return null;
 }
 
-// Compare a password with the stored salted hash.
 export async function verifyPassword(password: string, passwordHash: string) {
   const values = passwordHash.split(":");
+  // old hashes are salt:hash, newer ones scrypt-v1:salt:hash
   const [salt, savedHash] =
     values.length === 2 ? values : values[0] === "scrypt-v1" ? [values[1], values[2]] : [];
   if (!salt || !savedHash) {
@@ -74,30 +71,29 @@ export async function verifyPassword(password: string, passwordHash: string) {
   return storedHash.length === derivedHash.length && timingSafeEqual(storedHash, derivedHash);
 }
 
-// Spend the same time as a real password check when no account matches, so response time does
-// not reveal which usernames and email addresses exist.
+// hash anyway so timing doesn't reveal which users exist
 export async function simulatePasswordCheck(password: string) {
   await derivePasswordHash(password, "0".repeat(32));
 }
 
-// Create a sign-in session.
 export async function createSession(userId: string) {
+  // the cookie gets the token, the db only gets its hash
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + sessionLifetimeMs);
 
-  await prisma.$transaction(async (transaction) => {
-    await transaction.userSession.deleteMany({ where: { expiresAt: { lte: new Date() } } });
-    await transaction.userSession.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.userSession.deleteMany({ where: { expiresAt: { lte: new Date() } } });
+    await tx.userSession.create({
       data: { tokenHash: tokenHash(token), userId, expiresAt },
     });
-    const olderSessions = await transaction.userSession.findMany({
+    const olderSessions = await tx.userSession.findMany({
       where: { userId },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: maximumSessionsPerUser,
+      skip: maxSessionsPerUser,
       select: { id: true },
     });
     if (olderSessions.length) {
-      await transaction.userSession.deleteMany({
+      await tx.userSession.deleteMany({
         where: { id: { in: olderSessions.map((session) => session.id) } },
       });
     }
@@ -114,7 +110,6 @@ export async function createSession(userId: string) {
   });
 }
 
-// Delete the session record and its browser cookie.
 export async function clearSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookieName)?.value;
@@ -129,8 +124,7 @@ export async function clearSession() {
   }
 }
 
-// Share the lookup between a layout and its page for this render only. React's
-// request cache never shares a session with another request or browser.
+// react cache is per request, so layout and page share one lookup
 export const getCurrentInventoryUser = cache(async (): Promise<InventoryUser | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookieName)?.value;
@@ -157,7 +151,6 @@ export const getCurrentInventoryUser = cache(async (): Promise<InventoryUser | n
   };
 });
 
-// Page and action permissions.
 export async function requireInventoryAccess() {
   const user = await getCurrentInventoryUser();
   if (!user) {
@@ -166,7 +159,6 @@ export async function requireInventoryAccess() {
   return user;
 }
 
-// Require a signed-in account that can change inventory.
 export async function requireWriteAccess() {
   const user = await requireInventoryAccess();
   if (!canManageInventory(user.role)) {
@@ -175,7 +167,6 @@ export async function requireWriteAccess() {
   return user;
 }
 
-// Restrict account management to administrators.
 export async function requireUserManager() {
   const user = await requireInventoryAccess();
   if (!canManageUsers(user.role)) {
@@ -184,7 +175,6 @@ export async function requireUserManager() {
   return user;
 }
 
-// Redirect accounts without inventory access.
 export async function requireInventoryManagementPageAccess() {
   const user = await requireInventoryAccess();
   if (!canManageInventory(user.role)) {
@@ -193,7 +183,6 @@ export async function requireInventoryManagementPageAccess() {
   return user;
 }
 
-// Redirect accounts that cannot manage other accounts.
 export async function requireUserManagementPageAccess() {
   const user = await requireInventoryAccess();
   if (!canManageUsers(user.role)) {

@@ -12,9 +12,7 @@ export function clearInventorySelections() {
         window.sessionStorage.removeItem(key);
       }
     }
-  } catch {
-    // The in-memory selection is already cleared when storage is unavailable.
-  }
+  } catch {}
 }
 
 function uniqueItemIds(itemIds: Iterable<string>) {
@@ -25,7 +23,6 @@ function inventoryItemInputs() {
   return [...document.querySelectorAll<HTMLInputElement>(itemSelector)];
 }
 
-// Restore this filter's selection from browser storage.
 export function selectedItemIds(selectionKey: string) {
   if (typeof window === "undefined") {
     return [];
@@ -42,7 +39,6 @@ export function selectedItemIds(selectionKey: string) {
   }
 }
 
-// Keep selected items when changing pages.
 export function saveSelectedItemIds(selectionKey: string, itemIds: Iterable<string>) {
   if (typeof window === "undefined") {
     return;
@@ -57,12 +53,10 @@ export function saveSelectedItemIds(selectionKey: string, itemIds: Iterable<stri
       window.sessionStorage.removeItem(storageKey);
     }
   } catch {
-    // Selection can still work for the visible page when browser storage is
-    // unavailable, such as in a restricted private-browsing session.
+    // storage can be blocked, still works for this page
   }
 }
 
-// Match visible checkboxes to the saved selection.
 export function syncVisibleItemSelection(itemIds: Iterable<string>) {
   const selected = new Set(itemIds);
   inventoryItemInputs().forEach((input) => {
@@ -70,7 +64,6 @@ export function syncVisibleItemSelection(itemIds: Iterable<string>) {
   });
 }
 
-// Add or remove one item from the selection.
 export function updateSelectedItem(selectionKey: string, itemId: string, checked: boolean) {
   const selected = new Set(selectedItemIds(selectionKey));
   if (checked) {
@@ -84,7 +77,6 @@ export function updateSelectedItem(selectionKey: string, itemId: string, checked
   notifySelectionChange(selectionKey);
 }
 
-// Tell the checkboxes and bulk toolbar to update.
 export function notifySelectionChange(selectionKey: string) {
   document.dispatchEvent(new CustomEvent(selectionChangeEvent, { detail: { selectionKey } }));
 }
@@ -93,7 +85,6 @@ export function isSelectionChangeForKey(event: Event, selectionKey: string) {
   return event instanceof CustomEvent && event.detail?.selectionKey === selectionKey;
 }
 
-// Listen for selection changes and return a cleanup function.
 export function addSelectionChangeListener(listener: (event: Event) => void) {
   document.addEventListener(selectionChangeEvent, listener);
   return () => document.removeEventListener(selectionChangeEvent, listener);

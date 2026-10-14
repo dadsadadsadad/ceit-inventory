@@ -1,4 +1,3 @@
-/** The two kinds of account: an administrator, and faculty staff who can do everything else. */
 export const accountRoles = [
   {
     value: "ADMINISTRATOR",

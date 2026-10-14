@@ -16,7 +16,7 @@ type OtherLoan = {
   status: string;
 };
 
-function transaction(quantity: number, others: OtherLoan[]) {
+function tx(quantity: number, others: OtherLoan[]) {
   return {
     inventoryItem: { findUnique: vi.fn().mockResolvedValue({ quantity }) },
     borrowRequest: { findMany: vi.fn().mockResolvedValue(others) },
@@ -33,7 +33,7 @@ const individualLoan = {
 describe("extending a checked-out loan", () => {
   it("allows a longer loan when nobody else has booked the equipment", async () => {
     await expect(
-      checkLoanExtension(transaction(1, []), individualLoan, at(48), now),
+      checkLoanExtension(tx(1, []), individualLoan, at(48), now),
     ).resolves.toBeUndefined();
   });
 
@@ -46,7 +46,7 @@ describe("extending a checked-out loan", () => {
       status: "RESERVED",
     };
     await expect(
-      checkLoanExtension(transaction(1, [reservation]), individualLoan, at(48), now),
+      checkLoanExtension(tx(1, [reservation]), individualLoan, at(48), now),
     ).rejects.toThrow("requested or reserved by someone else");
   });
 
@@ -59,12 +59,12 @@ describe("extending a checked-out loan", () => {
       status: "RESERVED",
     };
     await expect(
-      checkLoanExtension(transaction(1, [reservation]), individualLoan, at(24), now),
+      checkLoanExtension(tx(1, [reservation]), individualLoan, at(24), now),
     ).resolves.toBeUndefined();
   });
 
   it("counts older quantity-based loans as part of the physical stock", async () => {
-    // 5 units in total: 1 left on the shelf, this loan holds 2 and another loan holds 2.
+    // 5 total: 1 on the shelf, this loan has 2, another has 2
     const otherQuantityLoan: OtherLoan = {
       checkedOutItemStatus: null,
       expectedReturnDate: at(100),
@@ -74,7 +74,7 @@ describe("extending a checked-out loan", () => {
     };
     const quantityLoan = { ...individualLoan, requestedQuantity: 2, checkedOutItemStatus: null };
     await expect(
-      checkLoanExtension(transaction(1, [otherQuantityLoan]), quantityLoan, at(48), now),
+      checkLoanExtension(tx(1, [otherQuantityLoan]), quantityLoan, at(48), now),
     ).resolves.toBeUndefined();
   });
 });

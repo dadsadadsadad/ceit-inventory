@@ -2,6 +2,7 @@ import { ItemStatus, PrismaClient } from "@prisma/client";
 
 import { FormError } from "./form-error";
 
+// INV-<category>-<status>-<room>-<number>, e.g. INV-CMP-OK-01-0001
 export const inventoryAssetTagPattern = /^INV-([A-Z0-9]{3})-([A-Z]{2})-(\d{2})-(\d{4})$/;
 
 const statusCodes: Record<ItemStatus, string> = {
@@ -29,15 +30,14 @@ export function normalizeAssetTagCode(value: string, length: number) {
   return code.length === length ? code : null;
 }
 
-// Build a short category or room code from its name.
 export function deriveAssetTagCode(name: string, length: number) {
+  // initials first, then the rest of the name, padded with X
   const words = name.toUpperCase().match(/[A-Z0-9]+/g) ?? [];
   const initials = words.map((word) => word[0]).join("");
   const compact = words.join("");
   return `${initials}${compact}`.slice(0, length).padEnd(length, "X");
 }
 
-// Find an unused code for a new category.
 export function nextCategoryAssetTagCode(
   name: string,
   usedCodes: Iterable<string | null | undefined>,
@@ -52,6 +52,7 @@ export function nextCategoryAssetTagCode(
     return base;
   }
 
+  // taken, so swap the end of the code for a number
   for (let sequence = 1; sequence <= 99; sequence += 1) {
     const candidate =
       sequence < 10
@@ -66,7 +67,6 @@ export function nextCategoryAssetTagCode(
   );
 }
 
-// Find the next unused room code.
 export function nextLocationAssetTagCode(usedCodes: Iterable<string | null | undefined>) {
   const used = new Set(
     [...usedCodes]
@@ -82,7 +82,6 @@ export function nextLocationAssetTagCode(usedCodes: Iterable<string | null | und
   throw new Error("No room asset-tag code is available. Enter a different two-digit code.");
 }
 
-// Combine category, status, and room codes.
 export function assetTagPrefix(categoryCode: string, status: ItemStatus, locationCode: string) {
   const normalizedCategory = normalizeAssetTagCode(categoryCode, 3);
   const normalizedLocation = normalizeAssetTagCode(locationCode, 2);
@@ -92,7 +91,6 @@ export function assetTagPrefix(categoryCode: string, status: ItemStatus, locatio
   return `INV-${normalizedCategory}-${statusCodes[status]}-${normalizedLocation}-`;
 }
 
-// Read the number at the end of a matching tag.
 export function assetTagSequence(assetTag: string, prefix: string) {
   if (!assetTag.startsWith(prefix)) {
     return null;
@@ -101,7 +99,6 @@ export function assetTagSequence(assetTag: string, prefix: string) {
   return /^\d{4}$/.test(value) ? Number(value) : null;
 }
 
-// Build the next available asset tag.
 export async function nextInventoryAssetTag(
   client: AssetTagClient,
   values: { categoryId: string; locationId: string; status: ItemStatus },
@@ -127,12 +124,13 @@ export async function nextInventoryAssetTag(
     where: { assetTag: { startsWith: prefix } },
     select: { assetTag: true },
   });
-  const maximumSequence = Math.max(
+  // next number after the highest one with this prefix
+  const maxSequence = Math.max(
     0,
     ...matches.map((item) => (item.assetTag ? (assetTagSequence(item.assetTag, prefix) ?? 0) : 0)),
   );
-  if (maximumSequence >= 9_999) {
+  if (maxSequence >= 9_999) {
     throw new Error(`No more asset-tag numbers are available for ${prefix}.`);
   }
-  return `${prefix}${String(maximumSequence + 1).padStart(4, "0")}`;
+  return `${prefix}${String(maxSequence + 1).padStart(4, "0")}`;
 }

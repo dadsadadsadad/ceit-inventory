@@ -38,7 +38,6 @@ function licenseSummary(group: SoftwareGroup) {
     : `${group.state === "expired" ? "Expired" : "Ends"} ${formatReportDay(group.soonestExpiry)}`;
 }
 
-// Every installed program, where it runs, and when its licenses end.
 export async function buildSoftwareReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
   const [loaded, names] = await Promise.all([
@@ -53,7 +52,6 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
     ),
     filterNames(filters),
   ]);
-  // "Ending within" keeps only copies whose license runs out in that window.
   const windowEnd = filters.within ? now.getTime() + filters.within * dayMs : null;
   const entries = windowEnd
     ? loaded.entries.filter(
@@ -101,7 +99,7 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
     title: "Software",
     description: "Every installed program, which PCs have it, and when licenses end.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       names.location && `Room: ${names.location}`,
       filters.license && licenseChips[filters.license],
       filters.within && `License ending within ${filters.within} days`,

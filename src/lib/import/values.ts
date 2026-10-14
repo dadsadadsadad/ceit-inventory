@@ -2,14 +2,8 @@ import { ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 
 import { normalizeHeader } from "./columns";
 
-/**
- * Reading spreadsheet cells forgivingly. A cell that cannot be understood never sinks a whole row:
- * the optional detail is left out and a warning says so. Only the item name is truly required.
- * (The one thing that is refused is an unusable number that would change what is stored, such as
- * a quantity far outside any sensible range.)
- */
+// bad cells become warnings and get left blank instead of failing the row
 
-/** A problem with one row that is safe and useful to show to staff. */
 export class ImportRowError extends Error {}
 
 export type Warn = (message: string) => void;
@@ -39,7 +33,7 @@ function dateFrom(year: number, month: number, day: number) {
     : null;
 }
 
-/** Dates as people type them: 2026-01-15, 1/15/2026, 15 Jan 2026, January 15, 2026, or an Excel number. */
+// accepts iso, m/d/y, "15 Jan 2026", "January 15, 2026" and excel serials
 export function parseLooseDate(raw: string): Date | null {
   const value = raw.trim();
   if (!value) {
@@ -54,7 +48,7 @@ export function parseLooseDate(raw: string): Date | null {
     const first = Number(match[1]);
     const second = Number(match[2]);
     const year = match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]);
-    // Month first, as is usual in the Philippines, unless that cannot be a month.
+    // month first unless it can't be a month
     return first > 12 ? dateFrom(year, second, first) : dateFrom(year, first, second);
   }
   match = /^(\d{1,2})[\s-]+([A-Za-z]{3,9})\.?,?[\s-]+(\d{4})$/.exec(value);
@@ -71,7 +65,7 @@ export function parseLooseDate(raw: string): Date | null {
       monthNumbers[match[1].slice(0, 3).toLowerCase()];
     return month ? dateFrom(Number(match[3]), month, Number(match[2])) : null;
   }
-  // An unformatted Excel date is a day count from 1899-12-30.
+  // excel dates count days from 1899-12-30
   if (/^\d{5}(?:\.\d+)?$/.test(value)) {
     const serial = Math.floor(Number(value));
     if (serial >= 20_000 && serial <= 80_000) {
@@ -81,25 +75,24 @@ export function parseLooseDate(raw: string): Date | null {
   return null;
 }
 
-/** An optional date. An unreadable one is dropped with a warning. */
 export function optionalDate(raw: string, field: string, warn: Warn) {
   if (!raw.trim()) {
     return null;
   }
   const date = parseLooseDate(raw);
   if (!date) {
-    warn(`${field} “${clip(raw)}” is not a date I could read, so it was left blank.`);
+    warn(`${field} "${clip(raw)}" is not a valid date, so it was left blank.`);
   }
   return date;
 }
 
-/** A whole number such as "5", "1,200" or "5 pcs". Blank is the fallback; nonsense is a warning. */
+// "5", "1,200", "5 pcs"
 export function looseWholeNumber(
   raw: string,
   fallback: number | null,
   field: string,
   warn: Warn,
-  maximum = 1_000_000,
+  max = 1_000_000,
 ) {
   const value = raw.trim();
   if (!value) {
@@ -108,26 +101,26 @@ export function looseWholeNumber(
   const match = /^(\d[\d,]*)(?:\.0+)?(?:\s*[A-Za-z.]*)?$/.exec(value);
   if (!match) {
     warn(
-      `${field} “${clip(value)}” is not a number, so ${fallback === null ? "it was left blank" : `${fallback} was used`}.`,
+      `${field} "${clip(value)}" is not a number, so ${fallback === null ? "it was left blank" : `${fallback} was used`}.`,
     );
     return fallback;
   }
   const parsed = Number(match[1].replaceAll(",", ""));
-  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+  if (!Number.isSafeInteger(parsed) || parsed > max) {
     throw new ImportRowError(`${field} is outside the allowed range.`);
   }
   return parsed;
 }
 
-/** Memory or storage in GB from "8", "8 GB", "512GB" or "1 TB". */
-export function looseSizeGb(raw: string, field: string, warn: Warn, maximum = 1_000_000) {
+// "8", "8 GB", "512GB", "1 TB"
+export function looseSizeGb(raw: string, field: string, warn: Warn, max = 1_000_000) {
   const value = raw.trim();
   if (!value) {
     return null;
   }
   const match = /^(\d+(?:[.,]\d+)?)\s*(tb|t|gb|g|mb|m)?b?$/i.exec(value);
   if (!match) {
-    warn(`${field} “${clip(value)}” is not a size I could read, so it was left blank.`);
+    warn(`${field} "${clip(value)}" is not a valid size, so it was left blank.`);
     return null;
   }
   const unit = (match[2] ?? "gb").toLowerCase();
@@ -139,13 +132,13 @@ export function looseSizeGb(raw: string, field: string, warn: Warn, maximum = 1_
       : amount;
   const rounded = Math.round(gigabytes);
   if (rounded < 1 && gigabytes > 0) {
-    warn(`${field} “${clip(value)}” is under 1 GB, so it was left blank.`);
+    warn(`${field} "${clip(value)}" is under 1 GB, so it was left blank.`);
     return null;
   }
-  return Math.min(rounded, maximum);
+  return Math.min(rounded, max);
 }
 
-/** A peso amount such as "1200", "1,200.50", "₱1,200" or "PHP 1200". */
+// "1200", "1,200.50", "₱1,200", "PHP 1200"
 export function loosePrice(raw: string, warn: Warn) {
   const value = raw
     .trim()
@@ -156,7 +149,7 @@ export function loosePrice(raw: string, warn: Warn) {
     return null;
   }
   if (!/^\d{1,8}(?:\.\d+)?$/.test(value)) {
-    warn(`Purchase price “${clip(raw)}” is not an amount I could read, so it was left blank.`);
+    warn(`Purchase price "${clip(raw)}" is not a valid amount, so it was left blank.`);
     return null;
   }
   return Number(value).toFixed(2);
@@ -175,7 +168,7 @@ export function isNo(value: string) {
 
 function clip(value: string, length = 40) {
   const text = value.trim();
-  return text.length > length ? `${text.slice(0, length)}…` : text;
+  return text.length > length ? `${text.slice(0, length)}...` : text;
 }
 
 const typeWords: Record<string, ItemType> = {
@@ -194,7 +187,7 @@ const typeWords: Record<string, ItemType> = {
   materials: ItemType.SUPPLY,
 };
 
-/** "Equipment" or "Stock" in whatever words the sheet uses. Blank is a tracked asset. */
+// blank = asset
 export function looseItemType(raw: string, warn: Warn): ItemType {
   const key = normalizeHeader(raw);
   if (!key) {
@@ -202,7 +195,7 @@ export function looseItemType(raw: string, warn: Warn): ItemType {
   }
   const type = typeWords[key];
   if (!type) {
-    warn(`Type “${clip(raw)}” was not recognised, so it was treated as equipment.`);
+    warn(`Type "${clip(raw)}" was not recognised, so it was treated as equipment.`);
     return ItemType.ASSET;
   }
   return type;
@@ -267,7 +260,6 @@ const conditionWords: Record<string, ItemCondition> = {
   damaged: ItemCondition.FOR_REPAIR,
 };
 
-/** A status or condition by its name or a common synonym; anything else keeps the fallback. */
 export function looseEnum<T extends string>(
   raw: string,
   values: readonly T[],
@@ -284,7 +276,7 @@ export function looseEnum<T extends string>(
   const match = exact ?? synonyms[key];
   if (!match) {
     warn(
-      `${field} “${clip(raw)}” was not recognised, so “${fallback.replaceAll("_", " ").toLowerCase()}” was used.`,
+      `${field} "${clip(raw)}" was not recognised, so "${fallback.replaceAll("_", " ").toLowerCase()}" was used.`,
     );
     return fallback;
   }
@@ -299,7 +291,7 @@ export function looseCondition(raw: string, fallback: ItemCondition, warn: Warn)
   return looseEnum(raw, Object.values(ItemCondition), conditionWords, fallback, "Condition", warn);
 }
 
-/** Rows that are really a total or a repeated heading, not an item. */
+// total rows and repeated headers
 export function isSummaryName(name: string) {
   return /^(?:grand\s+)?totals?:?$/i.test(name.trim());
 }

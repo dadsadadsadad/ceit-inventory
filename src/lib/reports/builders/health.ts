@@ -24,7 +24,6 @@ type HealthRecord = {
   warrantyEndsAt: Date | null;
 };
 
-/** The details one record is missing, using the same rules as the filters. */
 export function recordGaps(item: HealthRecord, now: Date): MissingDetail[] {
   const stale = now.getTime() - inspectionIntervalDays * dayMs;
   const checks: Record<MissingDetail, boolean> = {
@@ -44,10 +43,9 @@ export function recordGaps(item: HealthRecord, now: Date): MissingDetail[] {
   return missingDetails.filter((detail) => checks[detail]);
 }
 
-// What is missing from the register, so records can be completed before an audit.
 export async function buildHealthReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
-  // Retired and lost records are kept for history; they are not expected to be completed.
+  // skip retired and lost
   const base: Prisma.InventoryItemWhereInput = {
     AND: [
       inventoryWhere({
@@ -100,7 +98,7 @@ export async function buildHealthReport(context: BuilderContext): Promise<Report
     title: "Record health",
     description: "What is missing from each record, so the register can be completed.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       names.category && `Category: ${names.category}`,
       names.location && `Room: ${names.location}`,
       filters.itemType && `Type: ${filters.itemType === "ASSET" ? "Equipment" : "Stock"}`,
@@ -110,7 +108,7 @@ export async function buildHealthReport(context: BuilderContext): Promise<Report
     metrics: [
       {
         label: "Complete records",
-        value: everything ? `${Math.round((complete / everything) * 100)}%` : "–",
+        value: everything ? `${Math.round((complete / everything) * 100)}%` : "-",
         note: `${complete.toLocaleString()} of ${everything.toLocaleString()} in use`,
       },
       ...missingDetails.map((detail, index) => ({

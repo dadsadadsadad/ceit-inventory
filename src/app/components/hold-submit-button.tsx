@@ -7,11 +7,10 @@ import { SubmitButton } from "./submit-button";
 
 const holdDuration = 1100;
 
-// Holding arms the action; releasing inside the button submits it. A normal
-// click opens an untimed confirmation for keyboard, touch, and assistive input.
+// hold and release to confirm, a plain click opens a confirm dialog instead
 export function HoldSubmitButton({
   label = "Delete item",
-  pendingLabel = "Deleting…",
+  pendingLabel = "Deleting...",
   confirmation,
 }: {
   label?: string;
@@ -75,7 +74,7 @@ export function HoldSubmitButton({
   }, [confirming]);
 
   useEffect(() => {
-    // A failed server action can be retried, but never duplicated while pending.
+    // don't allow a second submit while pending
     if (previousPending.current && !pending) {
       submitting.current = false;
     }
@@ -122,8 +121,7 @@ export function HoldSubmitButton({
       return;
     }
     const ready = performance.now() - gesture.current.started >= holdDuration && inside(event);
-    // Short taps open the ordinary confirmation. A long/cancelled gesture never
-    // falls through to a second click action after pointerup.
+    // short taps open the dialog, long or cancelled presses shouldn't also fire a click
     suppressClick.current = ready || !inside(event);
     stop();
     if (ready && !pending && !submitting.current) {
@@ -180,7 +178,7 @@ export function HoldSubmitButton({
       >
         <span className="hold-fill" aria-hidden="true" />
         <span className="hold-sizing" aria-hidden="true">
-          {[label, pendingLabel, "Keep holding…", "Release to confirm"].map((text, index) => (
+          {[label, pendingLabel, "Keep holding...", "Release to confirm"].map((text, index) => (
             <span key={index}>{text}</span>
           ))}
         </span>
@@ -197,7 +195,7 @@ export function HoldSubmitButton({
             : phase === "ready"
               ? "Release to confirm"
               : phase === "holding"
-                ? "Keep holding…"
+                ? "Keep holding..."
                 : label}
         </span>
       </button>

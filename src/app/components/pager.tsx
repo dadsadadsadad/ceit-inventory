@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { paginationEntries } from "@/lib/pagination";
 
-/** Previous / numbered / next navigation shared by every long list. */
 export function Pager({
   currentPage,
   hrefForPage,
@@ -11,7 +10,6 @@ export function Pager({
 }: {
   currentPage: number;
   hrefForPage: (page: number) => string;
-  /** Plain name of what is paged, for example "Inventory". */
   label: string;
   totalPages: number;
 }) {
@@ -42,7 +40,7 @@ export function Pager({
         {paginationEntries(totalPages, currentPage).map((entry, index) =>
           entry === null ? (
             <span key={`gap-${index}`} className="muted px-1 text-sm" aria-hidden="true">
-              …
+              ...
             </span>
           ) : entry === currentPage ? (
             <span

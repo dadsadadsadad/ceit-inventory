@@ -25,7 +25,7 @@ async function signIn(page: Page, username = "launch.admin") {
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
-// The form's error message (Next.js also keeps an empty route announcer with the same role).
+// next also renders an empty route announcer with role=alert
 const formError = (page: Page) => page.getByRole("alert").filter({ hasText: /\S/ });
 const hours = (value: number) => manilaDateTimeInput(new Date(Date.now() + value * 3_600_000));
 
@@ -43,7 +43,6 @@ type RequestRow = {
   reservation?: boolean;
   checkedOut?: boolean;
 };
-// SQL interval text such as "'2 hours'" keeps the fixtures readable.
 async function insertRequest(item: number, row: RequestRow) {
   await query(
     `INSERT INTO "BorrowRequest" (id,"inventoryItemId","borrowerName","studentNumber",contact,purpose,"requestedQuantity","expectedReturnDate","startsAt","isReservation",status,"checkedOutItemStatus","personalDataExpiresAt","updatedAt")
@@ -90,7 +89,7 @@ test("the borrow form states the rules and a reservation cannot be booked more t
   const pickup = page.getByLabel("Pickup date and time");
   await expect(pickup).toHaveAttribute("max", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 
-  // Browsers enforce `max`; remove it so the server's own check is exercised.
+  // remove max so the server check runs
   await page.evaluate(() =>
     document.querySelectorAll("input[type=datetime-local]").forEach((input) => {
       input.removeAttribute("max");
@@ -162,10 +161,9 @@ test("a missed pickup releases the equipment and is labelled for staff", async (
     startsAt: "-3 hours",
     returns: "5 hours",
   });
-  // The missed booking no longer holds the equipment, so it is not listed as unavailable...
+  // lapsed booking doesn't hold it anymore
   await page.goto("/scan/ceit-launch-item-19");
   await expect(page.getByText("When this item is not available")).toHaveCount(0);
-  // ...and another student can borrow it now.
   await openBorrowForm(page, 19);
   await page.getByLabel("Return date and time").fill(hours(2));
   await fillBorrowDetails(page, "POLICY-NEXT");
@@ -205,9 +203,7 @@ test("staff cannot extend a loan beyond the total limit", async ({ page }) => {
   await expect(row.getByText("Return time updated.")).toBeVisible();
 });
 
-test("faculty staff can add and delete categories, which only administrators could before", async ({
-  page,
-}) => {
+test("faculty staff can add and delete categories", async ({ page }) => {
   await signIn(page, "launch.staff");
   await page.goto("/dashboard/settings");
   await page.locator("summary", { hasText: "Add category" }).click();

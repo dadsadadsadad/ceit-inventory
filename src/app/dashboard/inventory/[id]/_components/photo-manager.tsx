@@ -7,11 +7,9 @@ import { deleteInventoryItemPhoto, uploadInventoryItemPhoto } from "../../action
 import { displayDate } from "./item-fields";
 import type { ItemRecord } from "./item-record";
 
-// Upload up to four photos and remove them again.
 export function PhotoManager({ item }: { item: ItemRecord }) {
   return (
     <>
-      {/* Upload and manage item photos. */}
       <section className="divider mt-6 border-t pt-5" aria-labelledby="item-photos-heading">
         <h3 id="item-photos-heading" className="text-sm font-semibold">
           Item photos
@@ -36,7 +34,7 @@ export function PhotoManager({ item }: { item: ItemRecord }) {
             />
           </label>
           <SubmitButton
-            pendingLabel="Uploading…"
+            pendingLabel="Uploading..."
             className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
             Add photo
@@ -70,7 +68,7 @@ export function PhotoManager({ item }: { item: ItemRecord }) {
                   <input type="hidden" name="photoId" value={photo.id} />
                   <HoldSubmitButton
                     label="Remove photo"
-                    pendingLabel="Removing…"
+                    pendingLabel="Removing..."
                     confirmation={`Remove ${photo.fileName}? This cannot be undone.`}
                   />
                 </FeedbackForm>

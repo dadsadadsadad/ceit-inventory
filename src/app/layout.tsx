@@ -14,7 +14,7 @@ import "./styles/components.css";
 import "./styles/pages.css";
 import "./styles/views.css";
 
-// Manrope for the interface, Fraunces for titles and numbers, IBM Plex Mono for asset tags.
+// manrope for ui, fraunces for titles, plex mono for tags
 const workspaceFont = localFont({
   src: "./fonts/manrope-latin-variable.woff2",
   variable: "--font-workspace",
@@ -44,7 +44,6 @@ export const metadata: Metadata = {
   description: "CEIT equipment, room inventory, borrowing, and maintenance.",
 };
 
-// Shared page shell and appearance controls.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -55,20 +54,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <body>
-        {/* Restore saved colors before showing the page. */}
+        {/* apply saved theme before paint */}
         <Script id="ceit-appearance-bootstrap" strategy="beforeInteractive">
           {appearanceBootstrap}
         </Script>
-        {/* Keyboard shortcut to the page content. */}
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
         <OptimisticProvider>
           <div id="main-content">{children}</div>
         </OptimisticProvider>
-        {/* Instant cue when a link to another page is pressed. */}
         <NavigationFeedback />
-        {/* Appearance controls shared by every page. */}
         <GlobalAppearance />
       </body>
     </html>

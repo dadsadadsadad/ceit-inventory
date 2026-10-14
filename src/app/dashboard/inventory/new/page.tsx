@@ -9,7 +9,6 @@ import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
 export const dynamic = "force-dynamic";
 
-// Load the categories and rooms for a new item.
 export default async function NewInventoryItemPage() {
   await requireInventoryManagementPageAccess();
   const [categories, locations, pcCounts, customFields] = await Promise.all([
@@ -55,7 +54,6 @@ export default async function NewInventoryItemPage() {
             records.
           </div>
         ) : (
-          /* New inventory entry form. */
           <NewInventoryForm
             categories={categories}
             customFields={customFields}

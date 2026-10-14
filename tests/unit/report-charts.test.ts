@@ -45,7 +45,7 @@ describe("report charts", () => {
   });
 
   it("splits time into Philippine calendar months", () => {
-    // 1 October 2026, 12:30 AM in Manila is still 30 September in UTC.
+    // still sept 30 in utc
     const months = recentMonths(new Date("2026-09-30T16:30:00.000Z"), 3);
     expect(months.map((month) => month.label)).toEqual(["Aug", "Sep", "Oct"]);
     expect(months[2].start.toISOString()).toBe("2026-09-30T16:00:00.000Z");

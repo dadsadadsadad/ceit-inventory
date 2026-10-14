@@ -26,7 +26,6 @@ const filterLabels = {
   none: "No warranty recorded",
 } as const;
 
-// Equipment warranties: what has ended, what is ending, what it is worth, and what comes next.
 export async function buildWarrantyReport(context: BuilderContext): Promise<ReportModel> {
   const { filters, now } = context;
   const base: Prisma.InventoryItemWhereInput = {
@@ -40,7 +39,7 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
       ...itemDetailWhere(filters, now),
     ],
   };
-  // "Ending within" a chosen window takes the place of the fixed 60-day "ending soon".
+  // a chosen window replaces the default 60 days
   const window = filters.within ?? warrantyWarningDays;
   const months = upcomingMonths(now, 12);
   const endingSoon = warrantyEndingWithinWhere(window, now);
@@ -127,7 +126,7 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
     description:
       "Which warranties have ended or are ending, the value they cover, and what ends in the coming year.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.within
         ? `Ending within ${filters.within} days`
         : filters.warranty && filterLabels[filters.warranty],

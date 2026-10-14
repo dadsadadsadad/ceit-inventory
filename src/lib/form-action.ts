@@ -3,10 +3,9 @@ import { Prisma } from "@prisma/client";
 
 import { FormError } from "./form-error";
 
-/** Expected form errors must be returned: production Server Actions redact thrown messages. */
+// return form errors instead of throwing, prod hides thrown messages
 export { FormError };
 
-// Return expected form errors and let redirects continue.
 export async function formAction(operation: () => Promise<unknown>) {
   try {
     await operation();

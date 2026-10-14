@@ -1,6 +1,4 @@
-/* Shared building blocks: cards, buttons, fields, pills, tables, chips, disclosures, and states. */
-
-/* ------------------------------------------------------------------ cards */
+/* cards */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -36,7 +34,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ buttons */
+/* buttons */
 .primary-button,
 .secondary-button,
 .danger-button {
@@ -171,7 +169,7 @@
   width: 1rem;
 }
 
-/* ------------------------------------------------------------------ fields */
+/* fields */
 .field {
   background: var(--surface);
   border: 1px solid var(--border-input);
@@ -270,12 +268,11 @@ input[type="datetime-local"] {
   line-height: 1.5;
 }
 
-/* A label wrapping a field is a block, so stacked fields keep the same gap between them. */
 label:has(> .field) {
   display: block;
 }
 
-/* A password box with its show/hide button tucked inside the right edge. */
+/* password show/hide button inside the input */
 .password-field {
   display: block;
   position: relative;
@@ -336,7 +333,7 @@ label:has(> .field) {
   padding: 1.2rem;
 }
 
-/* ------------------------------------------------------------------ feedback */
+/* feedback */
 .notice {
   background: var(--accent-soft);
   border: 1px solid var(--border-strong);
@@ -345,7 +342,7 @@ label:has(> .field) {
   overflow-wrap: anywhere;
 }
 
-/* Nothing to show: a quiet, dashed placeholder rather than a warning. */
+/* empty states */
 .empty-state {
   align-items: center;
   background: color-mix(in srgb, var(--surface) 70%, transparent);
@@ -443,7 +440,7 @@ label:has(> .field) {
   border-radius: 999px;
 }
 
-/* ------------------------------------------------------------------ pills and chips */
+/* pills and chips */
 .status-pill {
   align-items: center;
   background: var(--accent-soft);
@@ -615,7 +612,7 @@ a.pc-chip:hover {
   display: none;
 }
 
-/* ------------------------------------------------------------------ tabs and pagination */
+/* tabs and pagination */
 .view-tabs {
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -686,7 +683,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ disclosures */
+/* disclosures */
 .filter-disclosure,
 .section-disclosure {
   min-width: 0;
@@ -773,7 +770,7 @@ a.pc-chip:hover {
   color: var(--accent);
 }
 
-/* ------------------------------------------------------------------ tables and record lists */
+/* tables */
 .table-heading {
   background: transparent;
   color: var(--muted);
@@ -819,7 +816,6 @@ a.pc-chip:hover {
   min-width: 66rem;
 }
 
-/* The item name gets the room; tags, dates, and counts stay on one line. */
 .record-table .record-item {
   min-width: 17.5rem;
 }
@@ -907,7 +903,7 @@ a.pc-chip:hover {
   text-underline-offset: 0.25em;
 }
 
-/* ------------------------------------------------------------------ inventory views */
+/* inventory views */
 .view-switch {
   background: var(--surface-soft);
   border: 1px solid var(--border-input);
@@ -948,7 +944,7 @@ a.pc-chip:hover {
   }
 }
 
-/* Cards: one tile per item, as many across as fit. */
+/* cards view */
 .record-grid {
   display: grid;
   gap: 0.85rem;
@@ -1031,7 +1027,7 @@ a.pc-chip:hover {
   overflow-wrap: anywhere;
 }
 
-/* Compact: one tight line per item. */
+/* compact view */
 .record-compact {
   list-style: none;
   margin: 0;
@@ -1132,7 +1128,7 @@ a.pc-chip:hover {
   grid-column: 1 / -1;
 }
 
-/* ------------------------------------------------------------------ the status mix bar */
+/* status bar */
 .inventory-mix {
   padding: 1.3rem 1.4rem;
 }
@@ -1245,7 +1241,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ hold-to-confirm */
+/* hold to confirm */
 .hold-action {
   max-width: 100%;
 }
@@ -1334,7 +1330,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ choices on the public forms */
+/* public form choices */
 .choice-option {
   align-items: center;
   background: var(--surface);
@@ -1357,7 +1353,6 @@ a.pc-chip:hover {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-/* The choices on a scanned item read like cards: icon, title, and a line of help, left aligned. */
 .request-choice {
   align-items: flex-start;
   flex-direction: column;
@@ -1429,7 +1424,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ forms laid out in containers */
+/* container forms */
 .account-editor-grid,
 .account-create-grid,
 .category-editor-grid,
@@ -1477,7 +1472,6 @@ a.pc-chip:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* The update button waits in the corner; the form takes a column only once it is opened. */
   .maintenance-ticket-grid {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -1526,7 +1520,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ optional form sections */
+/* optional form sections */
 .form-section {
   background: var(--surface-soft);
   border: 1px solid var(--border);
@@ -1594,7 +1588,6 @@ a.pc-chip:hover {
   text-transform: uppercase;
 }
 
-/* The hint sits under the title at every width, so narrow panels never wrap it oddly. */
 .form-section-hint {
   color: var(--muted);
   font-size: 0.875rem;
@@ -1609,7 +1602,7 @@ a.pc-chip:hover {
   padding: 1rem 0 1.1rem;
 }
 
-/* ------------------------------------------------------------------ stock */
+/* stock */
 .stock-count {
   font-family: var(--font-display);
   font-size: 2.4rem;
@@ -1625,8 +1618,7 @@ a.pc-chip:hover {
   font-weight: 500;
 }
 
-/* ------------------------------------------------------------------ borrowing request cards */
-/* Each request is its own bordered card with space around it, so it is clear where one ends. */
+/* borrowing request cards */
 .request-list {
   background: var(--surface-soft);
   display: grid;
@@ -1645,7 +1637,7 @@ a.pc-chip:hover {
   padding: 1.25rem;
 }
 
-/* The left edge follows the status colours: waiting on staff, out on loan, or finished. */
+/* left border color by status */
 .request-card:is([data-status="BORROWED"], [data-status="RESERVED"]) {
   border-left-color: var(--status-deployed);
 }
@@ -1749,7 +1741,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ availability and scan shortcuts */
+/* availability and scan shortcuts */
 .notice-warning {
   background: var(--status-pending-bg);
   border-color: color-mix(in srgb, var(--status-pending) 45%, transparent);
@@ -1831,9 +1823,8 @@ a.pc-chip:hover {
   padding: 0.4rem 0.85rem;
 }
 
-/* ------------------------------------------------------------------ filter bars with many controls */
-/* The search takes its own row; the selects and dates share the rest, growing to fill it and
-   wrapping instead of being squeezed until their text is cut off. Phones fit two per row. */
+/* filter bars */
+/* search on its own row, the rest wrap, 2 per row on phones */
 .filter-spread {
   align-items: flex-end;
   display: flex;
@@ -1861,8 +1852,7 @@ a.pc-chip:hover {
   }
 }
 
-/* ------------------------------------------------------------------ item picker */
-/* A search box whose matches drop down underneath as you type. */
+/* item picker */
 .item-picker {
   min-width: 0;
   position: relative;

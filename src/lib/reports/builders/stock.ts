@@ -11,7 +11,6 @@ import { chips } from "../format";
 import type { ReportModel } from "../model";
 import { filterNames, loadCapped, type BuilderContext } from "./shared";
 
-// Stock records, how many are left, and which are running low or out.
 export async function buildStockReport(context: BuilderContext): Promise<ReportModel> {
   const { filters } = context;
   const where: Prisma.InventoryItemWhereInput = {
@@ -57,7 +56,7 @@ export async function buildStockReport(context: BuilderContext): Promise<ReportM
     title: "Stock",
     description: "How many of each stock item are left, and what needs restocking.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.stock === "low" && "Running low or out",
       filters.stock === "out" && "Out of stock",
       names.category && `Category: ${names.category}`,

@@ -14,7 +14,6 @@ import { ItemType } from "@prisma/client";
 import { Detail, displayDate, displayPurchasePrice } from "./item-fields";
 import type { ItemRecord } from "./item-record";
 
-// The record summary card: photos, key facts, description, and notes.
 export function ItemSummary({
   customFields,
   item,
@@ -30,7 +29,6 @@ export function ItemSummary({
   const isSupply = item.itemType === ItemType.SUPPLY;
   return (
     <>
-      {/* Item details and photo preview. */}
       <article className="card rounded-lg p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Record summary</h2>
@@ -71,7 +69,7 @@ export function ItemSummary({
             <Detail label="Manufacturer / model">
               {[item.manufacturer, item.model].filter(Boolean).join(" ") || "Not recorded"}
             </Detail>
-            {/* Supplies rarely have a serial number or warranty, so blanks are left out. */}
+            {/* hide empty fields for supplies */}
             {!isSupply || item.serialNumber ? (
               <Detail label="Serial number">{item.serialNumber ?? "Not recorded"}</Detail>
             ) : null}

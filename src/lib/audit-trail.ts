@@ -22,10 +22,7 @@ export type AuditTrailEvent = {
   metadata: Prisma.JsonValue | null;
 };
 
-/**
- * What the audit trail shows by default and the quick views staff can switch to.
- * "Routine" is activity that happens constantly and rarely matters afterwards.
- */
+// "routine" = things that happen all the time and rarely matter later
 export const auditViews = [
   "important",
   "inventory",
@@ -65,7 +62,7 @@ export function auditViewDescription(view: AuditView) {
   }[view];
 }
 
-/** Without a chosen view, searching for one kind of action looks through everything. */
+// when searching for an action without a view, search everything
 export function defaultAuditView(action?: AuditAction): AuditView {
   return action ? "all" : "important";
 }
@@ -81,23 +78,23 @@ export type AuditTrailFilters = {
   view: AuditView;
 };
 
-type QueryParameters = Pick<URLSearchParams, "get">;
+type QueryParams = Pick<URLSearchParams, "get">;
 
-const maximumFilterTextLength = 120;
+const maxFilterTextLength = 120;
 const recordChangeActions: AuditAction[] = [
   AuditAction.UPDATED,
   AuditAction.MOVED,
   AuditAction.STATUS_CHANGED,
 ];
 
-function textFilter(parameters: QueryParameters, key: string, label: string) {
+function textFilter(parameters: QueryParams, key: string, label: string) {
   const raw = parameters.get(key);
   const value = raw === null ? undefined : stripControlCharacters(raw).trim();
   if (!value) {
     return undefined;
   }
-  if (value.length > maximumFilterTextLength) {
-    throw new Error(`${label} must be ${maximumFilterTextLength} characters or fewer.`);
+  if (value.length > maxFilterTextLength) {
+    throw new Error(`${label} must be ${maxFilterTextLength} characters or fewer.`);
   }
   return value;
 }
@@ -112,9 +109,8 @@ function optionalAction(value: string | null) {
   return value as AuditAction;
 }
 
-// Validate activity search, dates, and user filters.
 export function parseAuditTrailFilters(
-  parameters: QueryParameters,
+  parameters: QueryParams,
   now = new Date(),
 ): AuditTrailFilters {
   const reportFilters = parseReportExportFilters(parameters, now);
@@ -141,7 +137,7 @@ const routineActions: AuditAction[] = [
   AuditAction.SIGNED_OUT,
   AuditAction.EXPORTED,
 ];
-// Older single-label prints were recorded as ordinary updates with this summary.
+// old single label prints were saved as updates with this summary
 const singleLabelPrintSummary = "QR label opened for printing.";
 const nonInventoryEntities = [
   "borrow-request",
@@ -156,14 +152,13 @@ const nonInventoryEntities = [
   "report-export",
 ];
 
-/** Only non-nullable columns are compared, so negating this never drops rows with blanks. */
+// non-nullable columns only so NOT doesn't drop rows with nulls
 export function routineAuditWhere(): Prisma.InventoryAuditWhereInput {
   return {
     OR: [{ action: { in: routineActions } }, { summary: singleLabelPrintSummary }],
   };
 }
 
-/** The part of the query that each quick view adds. */
 export function auditViewWhere(view: AuditView): Prisma.InventoryAuditWhereInput {
   switch (view) {
     case "all":
@@ -199,7 +194,6 @@ export function auditViewWhere(view: AuditView): Prisma.InventoryAuditWhereInput
   }
 }
 
-// Turn activity filters into a database query.
 export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAuditWhereInput {
   const conditions: Prisma.InventoryAuditWhereInput[] = [];
   if (filters.view !== "all") {
@@ -232,8 +226,7 @@ export function auditTrailWhere(filters: AuditTrailFilters): Prisma.InventoryAud
   return conditions.length ? { AND: conditions } : {};
 }
 
-// Preserve activity filters in links and downloads.
-export function auditTrailSearchParameters(filters: AuditTrailFilters, page?: number) {
+export function auditTrailSearchParams(filters: AuditTrailFilters, page?: number) {
   const parameters = new URLSearchParams();
   if (filters.view !== defaultAuditView(filters.action)) {
     parameters.set("view", filters.view);
@@ -281,7 +274,7 @@ export function auditActionLabel(action: AuditAction) {
   return labels[action];
 }
 
-/** Newest-first events split into one group per Philippine calendar day. */
+// group by manila day
 export function groupEventsByDay<T extends { createdAt: Date }>(events: T[], now = new Date()) {
   const groups: { events: T[]; key: string; label: string }[] = [];
   for (const event of events) {
@@ -296,7 +289,6 @@ export function groupEventsByDay<T extends { createdAt: Date }>(events: T[], now
   return groups;
 }
 
-// Show the staff account or public source of an event.
 export function auditActorLabel(event: Pick<AuditTrailEvent, "actorId" | "actorName">) {
   const savedName = personName(event.actorName);
   if (savedName) {
@@ -305,10 +297,7 @@ export function auditActorLabel(event: Pick<AuditTrailEvent, "actorId" | "actorN
   return event.actorId ? "Former user" : "System / public";
 }
 
-/**
- * What an event is about: the item, the person whose account or session it was, or its saved label.
- * Accounts are stored as "username | email", and people are shown by username everywhere.
- */
+// accounts are stored as "username | email", show the username
 export function auditSubjectLabel(
   event: Pick<AuditTrailEvent, "entityLabel" | "entityType"> & { item?: { name: string } | null },
 ) {
@@ -337,7 +326,6 @@ function hasMetadataValue(metadata: Prisma.JsonObject, key: string) {
   return metadata[key] !== undefined && metadata[key] !== null;
 }
 
-// Group events by the work they describe.
 export function auditCategory(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
   const activityKind = metadataText(metadata, "activityKind");
@@ -432,10 +420,9 @@ function displayValue(value: Prisma.JsonValue) {
   if (!text) {
     return "Empty";
   }
-  return text.length > 160 ? `${text.slice(0, 157)}…` : text;
+  return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
-// List the field values recorded by an update.
 export function auditChangedFields(event: AuditTrailEvent) {
   const changes = auditMetadata(event).changes;
   if (!changes || typeof changes !== "object" || Array.isArray(changes)) {
@@ -447,10 +434,9 @@ export function auditChangedFields(event: AuditTrailEvent) {
   }));
 }
 
-// Explain an event using its stored metadata.
 export function auditEventDetail(event: AuditTrailEvent) {
   const metadata = auditMetadata(event);
-  // What changed is listed on its own, so there is nothing more to say about it.
+  // changes are listed separately
   if (auditChangedFields(event).length) {
     return null;
   }

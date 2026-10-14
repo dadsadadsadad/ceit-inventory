@@ -21,7 +21,7 @@ vi.mock("next/headers", () => ({ headers: async () => requestHeaders.current }))
 
 import {
   isSignInThrottled,
-  maximumFailedSignIns,
+  maxFailedSignIns,
   recordFailedSignInAttempt,
 } from "@/lib/sign-in-throttle";
 
@@ -44,12 +44,12 @@ describe("limiting failed sign-ins from one device", () => {
 
   it("limits a device once it has used up its failures in the window", async () => {
     database.publicRequestAttempt.findUnique.mockResolvedValue({
-      attempts: maximumFailedSignIns,
+      attempts: maxFailedSignIns,
       windowStartedAt: minutesAgo(5),
     });
     expect(await isSignInThrottled()).toBe(true);
     database.publicRequestAttempt.findUnique.mockResolvedValue({
-      attempts: maximumFailedSignIns - 1,
+      attempts: maxFailedSignIns - 1,
       windowStartedAt: minutesAgo(5),
     });
     expect(await isSignInThrottled()).toBe(false);
@@ -111,7 +111,7 @@ describe("limiting failed sign-ins from one device", () => {
     await isSignInThrottled();
     expect(keys[0]).toBe(keys[1]);
     expect(keys[0]).not.toBe(keys[2]);
-    // The stored value is a hash, never the address itself.
+    // stored as a hash
     expect(keys[0]).toMatch(/^[0-9a-f]{64}$/);
   });
 

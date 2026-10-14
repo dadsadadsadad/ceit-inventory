@@ -54,7 +54,6 @@ function options<T extends string>(values: readonly T[], label: (value: T) => st
   return values.map((value) => ({ value, label: label(value) }));
 }
 
-// Choose a report, narrow it down, generate it here, then download it as PDF or CSV.
 export default async function ReportsPage({
   searchParams,
 }: {

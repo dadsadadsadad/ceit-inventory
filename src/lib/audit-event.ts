@@ -21,7 +21,6 @@ export function auditActorName(actor?: AuditActor | null) {
   return username && email ? `${username} | ${email}` : username || email || null;
 }
 
-// Build a consistent audit entry for an action.
 export function auditEventData({
   action,
   actor,

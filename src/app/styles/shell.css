@@ -1,5 +1,3 @@
-/* The workspace frame: sidebar, navigation, page frame, and the tools that float above pages. */
-
 .dashboard-shell {
   color: var(--foreground);
   min-height: 100vh;
@@ -10,7 +8,7 @@
   min-height: 100dvh;
 }
 
-/* ------------------------------------------------------------------ brand */
+/* brand */
 .brand-lockup {
   align-items: center;
   display: flex;
@@ -43,7 +41,6 @@
   margin-top: 0.4rem;
 }
 
-/* A little hang tag, like the ones on the equipment. */
 .brand-mark {
   background: var(--foreground);
   border-radius: 0.4rem;
@@ -80,7 +77,7 @@
   width: 10px;
 }
 
-/* ------------------------------------------------------------------ sidebar */
+/* sidebar */
 .dashboard-sidebar {
   background: var(--sidebar-base);
   border-color: var(--border);
@@ -180,7 +177,7 @@
   color: var(--foreground);
 }
 
-/* The destination lights up as soon as it is pressed, before its page has arrived. */
+/* highlight on press, before the page loads */
 .nav-link-active,
 .nav-link-active:hover,
 .nav-link:has(.nav-progress) {
@@ -407,7 +404,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ page frame */
+/* page frame */
 .page {
   min-height: 100vh;
   padding: 1rem 0.9rem 6.5rem;
@@ -459,7 +456,7 @@
   }
 }
 
-/* Every page begins the same way: a small label, the title in serif, and a double rule. */
+/* page header */
 .page-inner > header:not(.card),
 .page-narrow > header:not(.card) {
   border-bottom: 3px double color-mix(in srgb, var(--rule) 62%, transparent);
@@ -506,7 +503,6 @@
     width: 100%;
   }
 
-  /* Header buttons share the row at their natural width and wrap whole, never mid-label. */
   .page header > .flex:last-child > :is(a, details, button) {
     flex: 1 1 auto;
     text-align: center;
@@ -514,7 +510,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ floating tools */
+/* floating tools */
 .appearance-control {
   bottom: max(1rem, env(safe-area-inset-bottom));
   position: fixed;
@@ -648,7 +644,7 @@
 }
 
 .appearance-mode-button {
-  /* Just over 44px so sub-pixel rounding can never take a touch target below the minimum. */
+  /* a bit over 44px so rounding never goes under */
   min-height: 2.8rem;
 }
 
@@ -955,7 +951,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ appearance panel layout */
+/* appearance panel */
 .appearance-field {
   border: 0;
   margin: 0 0 0.9rem;
@@ -973,7 +969,6 @@
   text-transform: uppercase;
 }
 
-/* Segments share one outline, so a row reads as a single control with one choice on. */
 .appearance-segments {
   background: var(--surface-soft);
   border: 1px solid var(--border-input);

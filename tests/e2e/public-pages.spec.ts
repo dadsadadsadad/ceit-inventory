@@ -6,9 +6,7 @@ test("login page is available without a database query", async ({ page }) => {
   await expect(page.getByLabel("Email")).toBeVisible();
   const password = page.getByLabel("Password", { exact: true });
   await expect(password).toHaveAttribute("type", "password");
-  // The box is named by its label alone, not by the button beside it.
   await expect(password).toHaveAccessibleName("Password");
-  // The eye button shows what was typed and hides it again.
   const toggle = page.getByRole("button", { name: "Show password" });
   await toggle.click();
   await expect(password).toHaveAttribute("type", "text");
@@ -125,9 +123,7 @@ test("appearance popover stays within a compact viewport", async ({ page }) => {
   expect(layout.pickerScrollWidth).toBeLessThanOrEqual(Math.ceil(layout.pickerWidth));
 });
 
-test("deployed global styles match the appearance controls and paper and ink themes", async ({
-  page,
-}) => {
+test("global styles match the appearance options and themes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/auth/login");
   await page.getByRole("button", { name: "Open appearance settings" }).click();
@@ -177,7 +173,7 @@ test("public buttons distinguish hovering from pressing and respect reduced moti
     await expect.poll(offset).toBe(reducedMotion === "reduce" ? 0 : -1);
     await page.mouse.down();
     await expect.poll(offset).toBe(reducedMotion === "reduce" ? 0 : 1);
-    // End the press away from the control so this never submits credentials.
+    // release outside so it doesn't submit
     await page.mouse.move(0, 0);
     await page.mouse.up();
   }
@@ -195,7 +191,7 @@ test.describe("display options", () => {
     const html = page.locator("html");
     const panel = await openPanel(page);
 
-    // The standard look carries no extra attributes.
+    // defaults have no attributes
     await expect(html).not.toHaveAttribute("data-tone", /.+/);
     await expect(html).not.toHaveAttribute("data-text", /.+/);
 
@@ -218,13 +214,12 @@ test.describe("display options", () => {
     await expect(html).toHaveAttribute("data-text", "larger");
     await expect(html).toHaveAttribute("data-corners", "round");
     await expect(html).toHaveAttribute("data-titles", "sans");
-    // Contrast and motion are no longer options.
+    // removed options
     await expect(panel.getByText("Contrast", { exact: true })).toHaveCount(0);
     await expect(panel.getByText("Motion", { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
       "20px",
     );
-    // Titles now use the interface font, so the two font tokens resolve to the same thing.
     const [display, ui] = await page.evaluate(() => {
       const style = getComputedStyle(document.documentElement);
       return [
@@ -235,14 +230,14 @@ test.describe("display options", () => {
     expect(display.length).toBeGreaterThan(0);
     expect(display).toBe(ui);
 
-    // Everything survives a reload, applied before the page shows.
+    // survives a reload
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "dark");
     await expect(html).toHaveAttribute("data-tone", "black");
     await expect(html).toHaveAttribute("data-text", "larger");
     await expect(html).toHaveAttribute("data-corners", "round");
 
-    // One button returns to the standard look.
+    // reset
     const again = await openPanel(page);
     await again.getByRole("button", { name: "Reset appearance" }).click();
     await expect(html).toHaveAttribute("data-theme", "light");
@@ -261,7 +256,6 @@ test.describe("display options", () => {
     await expect(html).toHaveAttribute("data-mode", "auto");
     await panel.getByRole("button", { name: "Midnight" }).click();
 
-    // The device changes to light: the page follows, with the light mode's own background.
     await page.emulateMedia({ colorScheme: "light" });
     await expect(html).toHaveAttribute("data-theme", "light");
     await expect(html).not.toHaveAttribute("data-tone", /.+/);
@@ -291,7 +285,7 @@ test.describe("display options", () => {
     expect(box!.x + box!.width).toBeLessThanOrEqual(360);
     expect(box!.y).toBeGreaterThanOrEqual(0);
     expect(box!.y + box!.height).toBeLessThanOrEqual(640);
-    // Taller than the screen is fine because the panel scrolls, but nothing may spill sideways.
+    // can be taller than the screen but not wider
     expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );

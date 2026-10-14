@@ -20,8 +20,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactCompiler: true,
   experimental: {
-    // Rebuild releases after stale compiled CSS was observed on a deployed build.
-    // This bypasses persisted transforms, not browser or runtime caching.
+    // skip turbopack's build cache, a deploy once shipped stale css with it on
     turbopackFileSystemCacheForBuild: false,
     serverActions: {
       bodySizeLimit: "10mb",
@@ -39,7 +38,7 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(self), geolocation=(), microphone=()" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-          // Browsers only honour this over HTTPS, which the school launch requires anyway.
+          // only used over https
           { key: "Strict-Transport-Security", value: "max-age=31536000" },
         ],
       },

@@ -37,7 +37,6 @@ const warrantyChip = {
   none: "none recorded",
 } as const;
 
-// Equipment and supplies, narrowed by the same filters the Inventory page offers.
 export async function buildInventoryReport(context: BuilderContext): Promise<ReportModel> {
   const { filters } = context;
   const created = reportDateFilter(filters.dateRange);
@@ -100,7 +99,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
     title: "Inventory",
     description: "Equipment and supplies, where they are kept, and what condition they are in.",
     filters: chips(
-      filters.query && `Search: “${filters.query}”`,
+      filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
       filters.condition && `Condition: ${humanize(filters.condition)}`,
       names.category && `Category: ${names.category}`,

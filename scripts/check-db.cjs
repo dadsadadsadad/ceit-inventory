@@ -1,7 +1,6 @@
 const { databaseClient, databaseError } = require("./database.cjs");
 const client = databaseClient();
 
-// Check the connection, tables, and inventory count.
 async function main() {
   await client.connect();
   const { rows } = await client.query(

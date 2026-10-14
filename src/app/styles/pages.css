@@ -1,6 +1,4 @@
-/* Page-specific layouts: the overview, item records, public scan pages, sign-in, and labels. */
-
-/* ------------------------------------------------------------------ overview */
+/* overview */
 .dashboard-overview-page .dashboard-header {
   align-items: end;
   display: grid;
@@ -298,7 +296,7 @@
   font-weight: 700;
 }
 
-/* The department note is a memo with a folded corner and ruled lines. */
+/* dashboard note */
 .dashboard-note-card {
   min-height: 15rem;
 }
@@ -312,7 +310,7 @@
   padding: 1.4rem;
 }
 
-/* The ruled lines are drawn from the same 28px rhythm as the text, starting at the first line. */
+/* ruled lines match the 28px line height */
 .dashboard-note-card textarea {
   background: repeating-linear-gradient(
     transparent 0 27px,
@@ -397,8 +395,7 @@
 }
 
 @container workspace (min-width: 56rem) {
-  /* The side column spans both rows; the last row takes its extra height, so the worklist and
-     the recent activity below it stay together instead of drifting apart. */
+  /* side column spans both rows so the worklist and activity stay together */
   .overview-workspace.has-queue {
     align-items: start;
     column-gap: 1.25rem;
@@ -482,7 +479,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ item records */
+/* item page */
 .item-detail-page dl > div,
 .scan-item-page dl > div {
   background: var(--surface-soft);
@@ -495,7 +492,6 @@
   grid-column: 1 / -1;
 }
 
-/* Phones fit two facts per row instead of one tall stack. */
 @media (min-width: 360px) and (max-width: 639px) {
   .item-detail-page dl.grid,
   .scan-item-page dl.grid {
@@ -532,7 +528,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* ------------------------------------------------------------------ public scan pages */
+/* scan pages */
 .scanner-preview {
   background: #0d0b09;
   border: 1px solid var(--border-input);
@@ -573,7 +569,6 @@
   color: var(--accent);
 }
 
-/* The scanner: a viewfinder beside the steps and manual lookup, stacked on phones. */
 .scanner-card {
   display: grid;
   gap: 1.5rem;
@@ -597,7 +592,7 @@
   }
 }
 
-/* Four corner brackets frame where the label should go. */
+/* viewfinder corners */
 .scanner-corners {
   --corner: color-mix(in srgb, var(--accent) 70%, #fff);
   --corner-size: 2.25rem;
@@ -667,7 +662,7 @@
   top: 10%;
 }
 
-/* ------------------------------------------------------------------ sign-in */
+/* sign in */
 .login-page {
   background: var(--background);
 }
@@ -764,7 +759,7 @@
   color: var(--foreground);
 }
 
-/* ------------------------------------------------------------------ error and status pages */
+/* error pages */
 .system-page .card {
   text-align: center;
 }
@@ -784,7 +779,7 @@
   margin-top: 1.8rem;
 }
 
-/* ------------------------------------------------------------------ QR labels */
+/* qr labels */
 .print-label {
   background: white;
   border: 1px solid #d6d3d1;
@@ -794,7 +789,6 @@
   overflow: hidden;
 }
 
-/* One item's label: the code prints at the chosen size, measured in real units for paper. */
 .print-label {
   max-width: 100%;
   width: max-content;
@@ -920,7 +914,7 @@
   font-size: 8pt;
 }
 
-/* Small: 4 across and 10 down, a 2 cm code with the name and tag beside it. */
+/* small: 4x10 */
 .label-layout-small .label-sheet {
   gap: 2mm;
   grid-auto-rows: 25.5mm;
@@ -951,7 +945,7 @@
   display: none;
 }
 
-/* Extra large: two per sheet, a 9 cm code above large text, for doors and shared equipment. */
+/* extra large: 2 per sheet */
 .label-layout-poster .label-sheet {
   gap: 6mm;
   grid-auto-rows: 132mm;
@@ -989,7 +983,7 @@
   font-size: 10pt;
 }
 
-/* The label picker: search, room, category, and size in a row, then a grid of item tiles. */
+/* label picker */
 .label-picker {
   align-items: end;
   display: grid;
@@ -1155,7 +1149,7 @@
   margin: 10mm;
 }
 
-/* ------------------------------------------------------------------ printing */
+/* print */
 @media print {
   body::before,
   .skip-link,
@@ -1230,7 +1224,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ dashboard calendar */
+/* calendar */
 .dashboard-side {
   align-content: start;
   display: grid;

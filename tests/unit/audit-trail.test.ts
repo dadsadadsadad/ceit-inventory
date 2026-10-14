@@ -6,7 +6,7 @@ import {
   auditCategory,
   auditChangedFields,
   auditSubjectLabel,
-  auditTrailSearchParameters,
+  auditTrailSearchParams,
   auditTrailWhere,
   auditViewWhere,
   groupEventsByDay,
@@ -120,9 +120,9 @@ describe("audit trail views", () => {
 
   it("keeps the chosen view in links only when it differs from the default", () => {
     const standard = parseAuditTrailFilters(new URLSearchParams(), now);
-    expect(auditTrailSearchParameters(standard).has("view")).toBe(false);
+    expect(auditTrailSearchParams(standard).has("view")).toBe(false);
     const routine = parseAuditTrailFilters(new URLSearchParams({ view: "routine" }), now);
-    expect(auditTrailSearchParameters(routine).get("view")).toBe("routine");
+    expect(auditTrailSearchParams(routine).get("view")).toBe("routine");
   });
 
   it("rejects an unknown view", () => {

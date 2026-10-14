@@ -62,7 +62,6 @@ describe("report detail filters", () => {
         now,
       ),
     ).toEqual(["price", "serial", "photo", "pcDetails"]);
-    // Stock has no serial number or warranty to record.
     expect(
       recordGaps(
         { ...base, itemType: ItemType.SUPPLY, serialNumber: null, warrantyEndsAt: null },

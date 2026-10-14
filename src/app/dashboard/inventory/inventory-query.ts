@@ -17,7 +17,7 @@ export {
 export { inventoryWhere, isItemCondition, isItemStatus, isItemType } from "@/lib/record-search";
 
 export const pageSize = 25;
-export const maximumBulkSelection = 10_000;
+export const maxBulkSelection = 10_000;
 
 export type SearchParams = {
   attention?: string;
@@ -69,7 +69,7 @@ export function currentSort(
   return { field, direction: search.direction === "desc" ? "desc" : "asc" };
 }
 
-// Apply the selected sort with a stable fallback order.
+// tie-break by id so paging is stable
 export function inventoryOrderBy(
   sort: ReturnType<typeof currentSort>,
 ): Prisma.InventoryItemOrderByWithRelationInput[] {
@@ -91,8 +91,7 @@ export function inventoryOrderBy(
   }
 }
 
-// Keep active filters when building links.
-export function inventoryFilterParameters(search: SearchParams) {
+export function inventoryFilterParams(search: SearchParams) {
   const parameters = new URLSearchParams();
   if (search.q?.trim()) {
     parameters.set("q", search.q.trim().slice(0, 120));
@@ -127,13 +126,13 @@ export function inventoryFilterParameters(search: SearchParams) {
   return parameters;
 }
 
-// Keep a separate selection for each set of filters.
+// selection is stored per filter set
 export function selectionKey(search: SearchParams) {
-  return inventoryFilterParameters(search).toString() || "all";
+  return inventoryFilterParams(search).toString() || "all";
 }
 
 export function pageLink(search: SearchParams, page: number) {
-  const parameters = inventoryFilterParameters(search);
+  const parameters = inventoryFilterParams(search);
   if (search.bulk === "1") {
     parameters.set("bulk", "1");
   }
@@ -159,7 +158,7 @@ export function sortLink(search: SearchParams, field: SortField) {
   return pageLink({ ...search, direction, sort: field }, 1);
 }
 
-// Keep one value per parameter, so a repeated query-string key never breaks the page.
+// repeated keys -> first value
 export function normalizeSearch(raw: RawSearchParams): SearchParams {
   return Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [key, firstParam(value)]),

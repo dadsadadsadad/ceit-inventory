@@ -54,10 +54,7 @@ function isBorrowableItem(
   );
 }
 
-/**
- * Can this be borrowed right now, or only booked for later? When it is in use, find the first
- * moment it is free again so the form can start its pickup choices from there.
- */
+// can it be borrowed now or only reserved, and when is it free next
 function availabilityFor(
   borrowable: boolean,
   capacity: number,
@@ -88,7 +85,6 @@ function availabilityFor(
   return { freeFrom: free ? manilaDateTimeInput(free) : null, state: "later" };
 }
 
-// Show public item details and available requests. Signed-in staff go straight to the record.
 export default async function ScannedItemPage({
   params,
   searchParams,
@@ -135,8 +131,7 @@ export default async function ScannedItemPage({
   const returnSent = firstParam(search.return) === "sent";
   const issueSent = firstParam(search.issue) === "sent";
   const publicView = firstParam(search.view) === "public";
-  // A phone that is signed in goes straight to editing. The borrow, return and report forms stay
-  // one tap away from there, and still open here when the staff member wants the public view.
+  // signed in staff go to the edit page, ?view=public keeps them here
   if (canManage && !publicView && !requestSent && !returnSent && !issueSent) {
     redirect(`/dashboard/inventory/${item.id}?edit=1&scanned=1#edit-record`);
   }
@@ -161,7 +156,7 @@ export default async function ScannedItemPage({
         checkedOutItemStatus: { not: null },
       },
     }),
-    // Only the times are public, never who borrowed the equipment.
+    // only times, never who borrowed it
     item.itemType === ItemType.ASSET
       ? prisma.borrowRequest.findMany({
           where: {
@@ -187,7 +182,7 @@ export default async function ScannedItemPage({
         })
       : Promise.resolve([]),
   ]);
-  // Bookings nobody collected or handled in time no longer hold the item.
+  // lapsed bookings don't hold the item
   const liveBookings = bookedRows.filter((booking) => !isHoldLapsed(booking, now, policy));
   const bookedTimes = liveBookings.slice(0, 6);
   const availableQuantity = item.quantity + (activeLoans._sum.requestedQuantity ?? 0);
@@ -206,7 +201,6 @@ export default async function ScannedItemPage({
     <main className="page scan-item-page">
       <ScanAuditLogger itemId={item.id} />
       <div className="page-narrow space-y-6">
-        {/* Scanned item name and navigation. */}
         <header>
           <div className="flex items-center justify-between gap-4">
             {canManage ? (
@@ -249,7 +243,7 @@ export default async function ScannedItemPage({
           </div>
         ) : null}
 
-        {/* Whether the item can be borrowed is the first thing a borrower should see. */}
+        {/* availability first */}
         {isAsset ? (
           <div className={`availability-banner availability-${availability.state} rounded-lg`}>
             {availability.state === "now" ? (
@@ -282,7 +276,6 @@ export default async function ScannedItemPage({
           </div>
         ) : null}
 
-        {/* Public item details. */}
         <article className="card rounded-lg p-5 sm:p-7">
           <dl className="grid gap-5 sm:grid-cols-2">
             <div className="detail-wide-phone">
@@ -335,19 +328,18 @@ export default async function ScannedItemPage({
           </section>
         ) : null}
 
-        {/* Public borrowing, return, and issue-report forms. */}
         <BorrowReturnChooser
           availability={availability}
           formTokens={formTokens}
           initialMode={initialMode}
           policy={{
-            maximumAdvanceDays: policy.maximumAdvanceDays,
-            maximumLoanDays: policy.maximumLoanDays,
+            maxAdvanceDays: policy.maxAdvanceDays,
+            maxLoanDays: policy.maxLoanDays,
           }}
           key={`${qrCode}-${requestSent}-${returnSent}-${issueSent}`}
           qrCode={item.qrCode}
           itemName={item.name}
-          maximumQuantity={availableQuantity}
+          maxQuantity={availableQuantity}
           isAsset={isAsset}
           canReport={item.status !== ItemStatus.RETIRED}
         />

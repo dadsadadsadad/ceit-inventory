@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-/** A calm placeholder for a list with nothing in it yet, or nothing that matches the filters. */
 export function EmptyState({
   action,
   children,

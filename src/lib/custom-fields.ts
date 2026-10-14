@@ -1,6 +1,6 @@
 import { CustomFieldType, ItemType } from "@prisma/client";
 
-/** Extra details staff can add to items, such as "Lens mount". Values live on each item. */
+// answers are stored on each item
 
 export type CustomFieldDefinition = {
   appliesTo: ItemType | null;
@@ -23,15 +23,13 @@ export const customFieldLabels: Record<CustomFieldType, string> = {
   CHOICE: "Choose from a list",
 };
 
-export const maximumCustomFields = 40;
-export const maximumCustomTextLength = 500;
+export const maxCustomFields = 40;
+export const maxCustomTextLength = 500;
 
-/** The form field name for one custom field. */
 export function customFieldInputName(id: string) {
   return `custom:${id}`;
 }
 
-/** The fields that apply to an item of this type and category. */
 export function customFieldsFor(
   definitions: CustomFieldDefinition[],
   item: { categoryId?: string | null; itemType?: ItemType | null },
@@ -43,7 +41,6 @@ export function customFieldsFor(
   );
 }
 
-/** Read the values stored on an item, ignoring anything that is not a plain value. */
 export function readCustomValues(stored: unknown): CustomFieldValues {
   if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
     return {};
@@ -57,7 +54,6 @@ export function readCustomValues(stored: unknown): CustomFieldValues {
   return values;
 }
 
-/** A value as people read it: "Yes", a formatted date, or the text itself. */
 export function formatCustomValue(
   field: CustomFieldDefinition,
   value: CustomFieldValue | undefined,
@@ -84,10 +80,7 @@ export function formatCustomValue(
 
 export class CustomFieldError extends Error {}
 
-/**
- * Turn submitted form values into the values to store. Empty answers are left out, so a field
- * nobody filled in takes no space. `read` is `formData.get`.
- */
+// empty answers are left out. read is formData.get
 export function parseCustomFieldValues(
   fields: CustomFieldDefinition[],
   read: (name: string) => FormDataEntryValue | null,
@@ -101,9 +94,9 @@ export function parseCustomFieldValues(
     }
     switch (field.fieldType) {
       case "TEXT":
-        if (text.length > maximumCustomTextLength) {
+        if (text.length > maxCustomTextLength) {
           throw new CustomFieldError(
-            `${field.label} must be ${maximumCustomTextLength} characters or fewer.`,
+            `${field.label} must be ${maxCustomTextLength} characters or fewer.`,
           );
         }
         values[field.id] = text;
@@ -141,7 +134,7 @@ export function parseCustomFieldValues(
   return values;
 }
 
-/** The list of answers for a field. Only "choose from a list" fields have one, and it needs two. */
+// only CHOICE fields, needs at least 2
 export function validatedChoices(fieldType: CustomFieldType, text: string) {
   if (fieldType !== CustomFieldType.CHOICE) {
     return [];
@@ -156,7 +149,7 @@ export function validatedChoices(fieldType: CustomFieldType, text: string) {
   return choices;
 }
 
-/** The answers for a CHOICE field, typed one per line or separated by commas. */
+// one per line or comma separated
 export function parseChoices(text: string) {
   const choices = text
     .split(/[\n,]/)
