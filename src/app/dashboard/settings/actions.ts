@@ -63,7 +63,7 @@ async function categoryAssetTagCode(formData: FormData, name: string, currentId?
 async function locationAssetTagCode(formData: FormData, currentId?: string) {
   const supplied = optionalAssetTagCode(formData, "assetTagCode", 2);
   if (supplied && !/^\d{2}$/.test(supplied)) {
-    throw new FormError("Use two digits for the room tag code, such as 05.");
+    throw new FormError("Room codes are 2 digits, e.g. 05.");
   }
   if (supplied) {
     return supplied;
@@ -86,9 +86,7 @@ function accountEmail(formData: FormData) {
 function accountUsername(formData: FormData) {
   const username = requiredText(formData, "username", 32).toLowerCase();
   if (!usernamePattern.test(username)) {
-    throw new FormError(
-      "Use 3-32 letters, numbers, periods, underscores, or hyphens for the username.",
-    );
+    throw new FormError("Usernames are 3-32 letters, numbers, . _ or -");
   }
   return username;
 }
@@ -96,7 +94,7 @@ function accountUsername(formData: FormData) {
 function currentPassword(formData: FormData) {
   const password = String(formData.get("currentPassword") ?? "");
   if (password.length > 256) {
-    throw new FormError("Passwords must be 256 characters or fewer.");
+    throw new FormError("Password is too long.");
   }
   return password;
 }
@@ -107,7 +105,7 @@ function newPassword(formData: FormData) {
     return null;
   }
   if (password.length > 256) {
-    throw new FormError("Passwords must be 256 characters or fewer.");
+    throw new FormError("Password is too long.");
   }
   const message = passwordValidationMessage(password);
   if (message) {
@@ -118,7 +116,7 @@ function newPassword(formData: FormData) {
 
 function accountWriteError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return new FormError("That email address or username is already assigned to an account.");
+    return new FormError("That email or username is already taken.");
   }
   return error;
 }
@@ -134,10 +132,10 @@ export async function updateOwnAccount(formData: FormData) {
     const current = currentPassword(formData);
 
     if (!password && confirmation) {
-      throw new FormError("Enter a new password before confirming it.");
+      throw new FormError("Enter the new password first.");
     }
     if (password && password !== confirmation) {
-      throw new FormError("The new password and confirmation do not match.");
+      throw new FormError("Passwords don't match.");
     }
 
     const account = await prisma.user.findUnique({
@@ -145,25 +143,23 @@ export async function updateOwnAccount(formData: FormData) {
       select: { email: true, lockedUntil: true, passwordHash: true, username: true },
     });
     if (!account) {
-      throw new FormError("Your account is no longer available.");
+      throw new FormError("Your account no longer exists.");
     }
 
     const identityChanged = account.email !== email || account.username !== username;
     if (!identityChanged && !password) {
-      throw new FormError("Make a change before saving your account.");
+      throw new FormError("Nothing to save.");
     }
     if (!current) {
-      throw new FormError("Enter your current password to update your account.");
+      throw new FormError("Enter your current password.");
     }
     // wrong passwords here count toward the sign-in lock too
     if (isAccountLocked(account)) {
-      throw new FormError(
-        "Too many wrong passwords were entered. Wait about 15 minutes before trying again.",
-      );
+      throw new FormError("Too many wrong passwords. Try again in 15 minutes.");
     }
     if (!(await verifyPassword(current, account.passwordHash))) {
       await recordFailedPassword(actor.id);
-      throw new FormError("Your current password is incorrect.");
+      throw new FormError("Wrong current password.");
     }
 
     try {
@@ -198,7 +194,7 @@ export async function updateOwnAccount(formData: FormData) {
                 },
                 sessionsRevoked: Boolean(password),
               },
-              summary: "Own account settings updated.",
+              summary: "Account settings updated.",
             }),
           });
         },
@@ -227,9 +223,7 @@ function refreshSetupPages() {
 
 function setupWriteError(error: unknown, label: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return new FormError(
-      `A ${label.toLowerCase()} with that name or asset-tag code already exists.`,
-    );
+    return new FormError(`A ${label.toLowerCase()} with that name or code already exists.`);
   }
   return error;
 }
@@ -407,7 +401,7 @@ export async function deleteCategory(formData: FormData) {
     const id = requiredId(formData);
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "DELETE") {
-      throw new FormError("Type DELETE to permanently remove this category.");
+      throw new FormError("Type DELETE to confirm.");
     }
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -424,7 +418,7 @@ export async function deleteCategory(formData: FormData) {
             }
             if (category._count.items > 0) {
               throw new FormError(
-                `Reassign or remove the ${category._count.items} inventory record${category._count.items === 1 ? "" : "s"} in this category before deleting it. You can deactivate it instead.`,
+                `Reassign or remove the ${category._count.items} inventory record${category._count.items === 1 ? "" : "s"} in this category first, or deactivate it.`,
               );
             }
 
@@ -446,9 +440,7 @@ export async function deleteCategory(formData: FormData) {
       } catch (error) {
         // P2003 = an item got assigned in the meantime (foreign key)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-          throw new FormError(
-            "This category now has an inventory record assigned to it. Reassign or remove that record before deleting the category.",
-          );
+          throw new FormError("An item was just added to this category, so it can't be deleted.");
         }
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -461,7 +453,7 @@ export async function deleteCategory(formData: FormData) {
       }
     }
 
-    throw new FormError("The category was updated by another request. Please try again.");
+    throw new FormError("Someone else changed this category. Try again.");
   });
 }
 
@@ -471,7 +463,7 @@ export async function deleteLocation(formData: FormData) {
     const id = requiredId(formData);
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "DELETE") {
-      throw new FormError("Type DELETE to permanently remove this location.");
+      throw new FormError("Type DELETE to confirm.");
     }
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -488,7 +480,7 @@ export async function deleteLocation(formData: FormData) {
             }
             if (location._count.items > 0) {
               throw new FormError(
-                `Move or remove the ${location._count.items} inventory record${location._count.items === 1 ? "" : "s"} assigned to this location before deleting it.`,
+                `Move or remove the ${location._count.items} inventory record${location._count.items === 1 ? "" : "s"} in this location first.`,
               );
             }
 
@@ -509,9 +501,7 @@ export async function deleteLocation(formData: FormData) {
         return;
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-          throw new FormError(
-            "This location now has an inventory record assigned to it. Move or remove that record before deleting the location.",
-          );
+          throw new FormError("An item was just added to this location, so it can't be deleted.");
         }
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -524,6 +514,6 @@ export async function deleteLocation(formData: FormData) {
       }
     }
 
-    throw new FormError("The location was updated by another request. Please try again.");
+    throw new FormError("Someone else changed this location. Try again.");
   });
 }

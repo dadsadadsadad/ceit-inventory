@@ -54,7 +54,7 @@ export async function buildStockReport(context: BuilderContext): Promise<ReportM
   return {
     kind: "stock",
     title: "Stock",
-    description: "How many of each stock item are left, and what needs restocking.",
+    description: "Stock levels and what needs restocking.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.stock === "low" && "Running low or out",

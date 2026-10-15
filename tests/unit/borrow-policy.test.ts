@@ -53,7 +53,7 @@ describe("reservation and loan limits", () => {
   it("allows a pickup up to three days ahead and rejects later ones", () => {
     expect(() => validateBorrowSchedule(days(3), days(4), true, now)).not.toThrow();
     expect(() => validateBorrowSchedule(hours(3 * 24 + 1), days(4), true, now)).toThrow(
-      "up to 3 days in advance",
+      "up to 3 days ahead",
     );
   });
 
@@ -72,7 +72,7 @@ describe("reservation and loan limits", () => {
   it("respects a custom policy", () => {
     const policy = { ...defaultBorrowPolicy, maxAdvanceDays: 1, maxLoanDays: 2 };
     expect(() => validateBorrowSchedule(days(2), days(2.5), true, now, policy)).toThrow(
-      "up to 1 day in advance",
+      "up to 1 day ahead",
     );
     expect(() => validateBorrowSchedule(now, days(3), false, now, policy)).toThrow(
       "at most 2 days",

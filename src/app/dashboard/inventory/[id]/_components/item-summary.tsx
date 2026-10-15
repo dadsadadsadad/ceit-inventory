@@ -103,9 +103,8 @@ export function ItemSummary({
         ) : null}
         {item.itemType === ItemType.ASSET && item.quantity > 1 ? (
           <p className="notice mt-5 rounded-lg px-4 py-3 text-sm leading-6">
-            Legacy grouped asset: this record represents {item.quantity} units but has one current
-            tag and QR code. New equipment is always created as one physical unit per record, so
-            give each existing unit its own record before moving it to a different room.
+            Grouped record: {item.quantity} units share one tag and QR code. Split it before moving
+            units to other rooms.
           </p>
         ) : null}
       </article>

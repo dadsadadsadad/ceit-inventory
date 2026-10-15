@@ -46,12 +46,11 @@ export function BorrowRequestForm({
       </div>
       <h2 className="text-xl font-semibold">Borrow {itemName}</h2>
       <p className="muted mt-2 text-sm leading-6">
-        Borrow today or reserve a time later. Wait for staff confirmation before collecting the
-        equipment.
+        Borrow now or reserve it. Wait for staff to confirm before picking it up.
       </p>
       <p className="notice mt-3 rounded-lg px-4 py-3 text-sm leading-6">
-        Reservations can be made up to {dayCount(policy.maxAdvanceDays)} ahead, and equipment can be
-        kept for up to {dayCount(policy.maxLoanDays)}. Return it on time so others can use it.
+        You can reserve up to {dayCount(policy.maxAdvanceDays)} ahead and keep it for up to{" "}
+        {dayCount(policy.maxLoanDays)}.
       </p>
       <fieldset className="mt-6">
         <legend className="text-sm font-semibold">When do you need it?</legend>
@@ -88,7 +87,7 @@ export function BorrowRequestForm({
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {when === "later" ? (
           <label>
-            <span className="text-sm font-semibold">Pickup date and time *</span>
+            <span className="text-sm font-semibold">Pickup time *</span>
             <input
               name="startsAt"
               type="datetime-local"
@@ -102,7 +101,7 @@ export function BorrowRequestForm({
           </label>
         ) : null}
         <label>
-          <span className="text-sm font-semibold">Return date and time *</span>
+          <span className="text-sm font-semibold">Return time *</span>
           <input
             name="expectedReturnDate"
             type="datetime-local"
@@ -113,10 +112,7 @@ export function BorrowRequestForm({
           />
         </label>
       </div>
-      <p className="muted mt-2 text-xs leading-5">
-        All times are Philippine time. Availability is checked for the full borrowing period when
-        you submit.
-      </p>
+      <p className="muted mt-2 text-xs leading-5">Times are in PH time.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label>
           <span className="text-sm font-semibold">Full name *</span>
@@ -186,11 +182,11 @@ export function BorrowRequestForm({
           minLength={5}
           maxLength={1_000}
           className={field}
-          placeholder="e.g. Projector for our class presentation"
+          placeholder="e.g. for a class presentation"
         />
       </label>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="muted text-xs leading-5">Staff will use your contact number to follow up.</p>
+        <p className="muted text-xs leading-5">Staff will contact you here if needed.</p>
         <SubmitButton
           pendingLabel="Sending..."
           className="primary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold sm:w-auto"

@@ -20,7 +20,7 @@ export function InventoryMix({ counts }: { counts: { status: ItemStatus; count: 
   return (
     <section className="inventory-mix" aria-labelledby="inventory-mix-title">
       <div className="mix-heading">
-        <h2 id="inventory-mix-title">Your inventory, at a glance</h2>
+        <h2 id="inventory-mix-title">Inventory status</h2>
         <span className="muted">{total.toLocaleString()} records</span>
       </div>
       {total ? (
@@ -46,7 +46,7 @@ export function InventoryMix({ counts }: { counts: { status: ItemStatus; count: 
           </ul>
         </>
       ) : (
-        <p className="muted">Add equipment to see its status breakdown here.</p>
+        <p className="muted">No equipment yet.</p>
       )}
     </section>
   );

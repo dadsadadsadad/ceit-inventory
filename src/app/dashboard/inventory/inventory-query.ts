@@ -57,6 +57,7 @@ export const inventoryListSelect = {
   category: { select: { name: true } },
   computer: { select: { id: true } },
   location: { select: { name: true } },
+  photos: { select: { id: true }, orderBy: { createdAt: "desc" }, take: 1 },
 } satisfies Prisma.InventoryItemSelect;
 
 export function currentSort(

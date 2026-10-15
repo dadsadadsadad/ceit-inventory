@@ -195,7 +195,7 @@ export function looseItemType(raw: string, warn: Warn): ItemType {
   }
   const type = typeWords[key];
   if (!type) {
-    warn(`Type "${clip(raw)}" was not recognised, so it was treated as equipment.`);
+    warn(`Type "${clip(raw)}" wasn't recognized, so it was added as equipment.`);
     return ItemType.ASSET;
   }
   return type;
@@ -276,7 +276,7 @@ export function looseEnum<T extends string>(
   const match = exact ?? synonyms[key];
   if (!match) {
     warn(
-      `${field} "${clip(raw)}" was not recognised, so "${fallback.replaceAll("_", " ").toLowerCase()}" was used.`,
+      `${field} "${clip(raw)}" wasn't recognized, so "${fallback.replaceAll("_", " ").toLowerCase()}" was used.`,
     );
     return fallback;
   }

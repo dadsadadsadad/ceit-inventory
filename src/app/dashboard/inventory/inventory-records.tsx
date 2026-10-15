@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Monitor, Package } from "lucide-react";
 
+import { ItemSymbol } from "@/app/components/item-symbol";
 import { OptimisticStatus, OptimisticText } from "@/app/components/optimistic-state";
 import { Pager } from "@/app/components/pager";
 import { StockBadge } from "@/app/components/stock-badge";
@@ -129,12 +129,11 @@ export function InventoryRecords({
                 className="record-tile"
               >
                 <div className="record-tile-head">
-                  <span
-                    className={`record-symbol ${item.computer ? "is-computer" : ""}`}
-                    aria-hidden="true"
-                  >
-                    {item.computer ? <Monitor size={21} /> : <Package size={21} />}
-                  </span>
+                  <ItemSymbol
+                    itemId={item.id}
+                    photoId={item.photos[0]?.id}
+                    isComputer={Boolean(item.computer)}
+                  />
                   <OptimisticStatus entity={`item:${item.id}`} value={item.status} />
                   {bulkMode ? (
                     <input
@@ -339,12 +338,11 @@ export function InventoryRecords({
                         </td>
                         <td className="record-item px-5 py-4 text-sm">
                           <div className="record-identity">
-                            <span
-                              className={`record-symbol ${item.computer ? "is-computer" : ""}`}
-                              aria-hidden="true"
-                            >
-                              {item.computer ? <Monitor size={21} /> : <Package size={21} />}
-                            </span>
+                            <ItemSymbol
+                              itemId={item.id}
+                              photoId={item.photos[0]?.id}
+                              isComputer={Boolean(item.computer)}
+                            />
                             <div>
                               <Link
                                 href={`/dashboard/inventory/${item.id}`}

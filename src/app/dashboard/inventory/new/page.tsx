@@ -43,15 +43,11 @@ export default async function NewInventoryItemPage() {
           </Link>
           <p className="eyebrow mt-5">New record</p>
           <h1 className="title mt-3 text-3xl">Add item</h1>
-          <p className="muted mt-2 text-sm leading-6">
-            Add equipment (each unit gets its own tag and QR code) or a stock record counted by
-            quantity. Only the basics are required.
-          </p>
+          <p className="muted mt-2 text-sm leading-6">Add equipment or stock.</p>
         </header>
         {!ready ? (
           <div className="notice rounded-lg px-5 py-4 text-sm">
-            Add at least one active category and location in Settings before creating inventory
-            records.
+            Add a category and location in Settings first.
           </div>
         ) : (
           <NewInventoryForm

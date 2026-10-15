@@ -13,7 +13,7 @@ export function PrintLabel({ itemId }: { itemId: string }) {
       await recordInventoryLabelPrinted(itemId);
       window.print();
     } catch {
-      setError("Couldn't prepare the print job. Please try again.");
+      setError("Couldn't print. Try again.");
     } finally {
       setPending(false);
     }

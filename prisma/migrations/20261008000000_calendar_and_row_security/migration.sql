@@ -1,14 +1,9 @@
--- Adds a table for the dashboard calendar's own events, row level security on the extra-fields
--- table from an earlier migration (it was created without it; every other table already has it, so
--- the public database API cannot read or write them), and a new kind of limited request so failed
--- sign-ins from one device can be counted. It also drops one redundant index. No data is changed or
--- removed, and the previous release keeps working against the result.
+-- calendar events, rls on CustomField, sign-in rate limit kind, drop a duplicate index
 
 -- AlterEnum
 ALTER TYPE "PublicRequestKind" ADD VALUE IF NOT EXISTS 'SIGN_IN';
 
--- A plain index on the room name that the unique indexes on the same column already cover. The
--- schema no longer declares it, so removing it leaves the database exactly as the schema describes.
+-- already covered by the unique index
 DROP INDEX IF EXISTS "Location_name_idx";
 
 -- CreateTable
@@ -27,7 +22,7 @@ CREATE TABLE "CalendarEvent" (
 -- CreateIndex
 CREATE INDEX "CalendarEvent_eventDate_idx" ON "CalendarEvent"("eventDate");
 
--- Row level security, like every other table.
+-- rls like the other tables
 ALTER TABLE "CalendarEvent" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "CustomField" ENABLE ROW LEVEL SECURITY;
 

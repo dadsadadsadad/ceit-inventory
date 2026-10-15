@@ -74,7 +74,7 @@ export function LocationEditor({
             defaultValue={location.assetTagCode ?? ""}
             maxLength={2}
             pattern="[0-9]{2}"
-            title="Use two digits, such as 05."
+            title="2 digits, e.g. 05."
             className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
           />
         </label>
@@ -101,7 +101,7 @@ export function LocationEditor({
           {location.isActive ? "Deactivate location" : "Reactivate location"}
         </SubmitButton>
         {location.isActive && location._count.items > 0 ? (
-          <span className="muted ml-2 text-xs">Existing records remain assigned here.</span>
+          <span className="muted ml-2 text-xs">Items stay assigned here.</span>
         ) : null}
       </FeedbackForm>
       <FeedbackForm action={deleteLocation} className="divider mt-4 border-t pt-4">
@@ -109,7 +109,7 @@ export function LocationEditor({
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-52 flex-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">
-              Type DELETE to remove this location
+              Type DELETE to confirm
             </span>
             <input
               required
@@ -131,8 +131,8 @@ export function LocationEditor({
         </div>
         <p className="muted mt-2 text-xs">
           {hasAssignedItems
-            ? `This location has ${location._count.items} linked inventory record${location._count.items === 1 ? "" : "s"} and cannot be deleted yet.`
-            : "Deletion is permanent and is only available while no inventory records are assigned here."}
+            ? `This location has ${location._count.items} linked inventory record${location._count.items === 1 ? "" : "s"} so it can't be deleted.`
+            : "Only locations with no items can be deleted."}
         </p>
       </FeedbackForm>
     </details>

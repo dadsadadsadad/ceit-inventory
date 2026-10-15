@@ -38,7 +38,7 @@ async function download(page: Page, path: string) {
   });
 }
 async function checkOutEquipment(page: Page) {
-  await page.getByLabel("I checked the borrower's school ID").filter({ visible: true }).check();
+  await page.getByLabel("School ID checked").filter({ visible: true }).check();
   await page.getByRole("button", { name: "Check out equipment" }).filter({ visible: true }).click();
 }
 test.beforeAll(async () => {
@@ -62,11 +62,11 @@ async function fillBorrow(
   if (later) {
     await page.getByLabel("Reserve for later").check();
     await page
-      .getByLabel("Pickup date and time")
+      .getByLabel("Pickup time")
       .fill(manilaDateTimeInput(new Date(Date.now() + fromHours * 3_600_000)));
   }
   await page
-    .getByLabel("Return date and time")
+    .getByLabel("Return time")
     .fill(manilaDateTimeInput(new Date(Date.now() + toHours * 3_600_000)));
   await page.getByLabel("Full name").fill("Launch Test Student");
   await page.getByLabel("Student number").fill(student);
@@ -136,7 +136,7 @@ test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ pa
     .getByLabel("What happened")
     .fill("The projector lamp flickers after five minutes of use.");
   await page.getByRole("button", { name: "Send issue report" }).click();
-  await expect(page.getByRole("status")).toContainText("Your issue report was sent");
+  await expect(page.getByRole("status")).toContainText("Report sent");
   await page.goto("/scan/ceit-launch-item-1");
   await page.getByRole("button", { name: /Report a problem/ }).click();
   await page.getByLabel("Your name").fill("Test Reporter");
@@ -145,7 +145,7 @@ test("QR reports reach maintenance, CSV, PDF, and the item history", async ({ pa
     .getByLabel("What happened")
     .fill("The projector lamp flickers after five minutes of use.");
   await page.getByRole("button", { name: "Send issue report" }).click();
-  await expect(page.getByRole("status")).toContainText("Your issue report was sent");
+  await expect(page.getByRole("status")).toContainText("Report sent");
   expect(
     (
       await query('SELECT COUNT(*)::int AS count FROM "MaintenanceTicket" WHERE title=$1', [
@@ -215,7 +215,7 @@ test("reservations hold a time without checking out equipment, reject overlap, a
 }) => {
   await fillBorrow(page, 2, "TEST-RESERVE-1", true);
   await page.getByRole("button", { name: "Request reservation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
+  await expect(page.getByRole("status")).toContainText("Request sent");
   await signIn(page);
   await page.goto("/dashboard/borrowing?q=TEST-RESERVE-1");
   await page
@@ -230,9 +230,7 @@ test("reservations hold a time without checking out equipment, reject overlap, a
   expect(result.rows[0]).toEqual({ status: "RESERVED", itemStatus: "OK" });
   await fillBorrow(page, 2, "TEST-RESERVE-2", true);
   await page.getByRole("button", { name: "Request reservation", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "already requested or reserved" }),
-  ).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "already booked then" })).toBeVisible();
   await expect(page.getByLabel("Student number")).toHaveValue("TEST-RESERVE-2");
   const csv = await download(
     page,
@@ -253,7 +251,7 @@ test("reservations hold a time without checking out equipment, reject overlap, a
 test("same-day checkout and return preserve the individual asset quantity", async ({ page }) => {
   await fillBorrow(page, 3, "TEST-NOW-1", false, 0, 1);
   await page.getByRole("button", { name: "Send borrowing request" }).click();
-  await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
+  await expect(page.getByRole("status")).toContainText("Request sent");
   await signIn(page);
   await page.goto("/dashboard/borrowing?q=TEST-NOW-1");
   await checkOutEquipment(page);
@@ -277,7 +275,7 @@ test("legacy grouped equipment returns every unit after its last available unit 
   for (const student of ["TEST-LEGACY-A", "TEST-LEGACY-B"]) {
     await fillBorrow(page, 7, student, false, 0, 2);
     await page.getByRole("button", { name: "Send borrowing request" }).click();
-    await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
+    await expect(page.getByRole("status")).toContainText("Request sent");
     await signIn(page);
     await page.goto(`/dashboard/borrowing?q=${student}`);
     await checkOutEquipment(page);
@@ -353,7 +351,7 @@ test("a reservation checks out only at pickup and the public return accepts phon
 }) => {
   await fillBorrow(page, 4, "TEST-PICKUP", true);
   await page.getByRole("button", { name: "Request reservation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
+  await expect(page.getByRole("status")).toContainText("Request sent");
   await signIn(page);
   await page.goto("/dashboard/borrowing?q=TEST-PICKUP");
   await page.getByRole("button", { name: "Approve reservation" }).filter({ visible: true }).click();
@@ -375,7 +373,7 @@ test("a reservation checks out only at pickup and the public return accepts phon
     ["TEST-PICKUP"],
   );
   await checkOutEquipment(page);
-  await expect(page.getByRole("alert").filter({ hasText: "has not started yet" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "hasn't started yet" })).toBeVisible();
   await query(
     'UPDATE "BorrowRequest" SET "startsAt"=NOW()-INTERVAL \'1 minute\' WHERE "studentNumber"=$1',
     ["TEST-PICKUP"],
@@ -399,7 +397,7 @@ test("a reservation checks out only at pickup and the public return accepts phon
   await page.getByLabel("Student number").fill("TEST-PICKUP");
   await page.getByLabel("Contact number").fill("+63 912 345 6789");
   await page.getByRole("button", { name: "Request return", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("return request was sent");
+  await expect(page.getByRole("status")).toContainText("Return request sent");
   await page.goto("/dashboard/borrowing?q=TEST-PICKUP");
   await expect(
     page.getByText("Return pending", { exact: true }).filter({ visible: true }),
@@ -424,7 +422,9 @@ test("simultaneous reservation requests cannot overbook an individual asset", as
       await expect(
         tab
           .locator('[role="status"]')
-          .or(tab.getByRole("alert").filter({ hasText: /already requested|could not be saved/ }))
+          .or(
+            tab.getByRole("alert").filter({ hasText: /already booked|Couldn't send the request/ }),
+          )
           .first(),
       ).toBeVisible();
     }),
@@ -464,7 +464,7 @@ test("item creation, stale edits, and import preview keep records and inputs con
   await page.locator("#edit-record").getByLabel("Name", { exact: true }).fill("Stale camera edit");
   await page.getByRole("button", { name: "Save update" }).click();
   await expect(
-    page.getByRole("alert").filter({ hasText: "changed since you opened it" }),
+    page.getByRole("alert").filter({ hasText: "Someone else changed this" }),
   ).toBeVisible();
   expect(
     (await query('SELECT name FROM "InventoryItem" WHERE id=$1', [created.id])).rows[0].name,

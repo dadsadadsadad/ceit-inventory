@@ -56,14 +56,14 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
   overview: {
     id: "overview",
     label: "Overview",
-    description: "Where everything stands today: totals, what needs attention, loans, repairs.",
+    description: "Totals, loans, repairs and what needs attention.",
     stem: "ceit-overview",
     controls: [],
   },
   inventory: {
     id: "inventory",
     label: "Inventory",
-    description: "Equipment and supplies with their status, condition, and where they are kept.",
+    description: "Equipment and stock with status, condition and location.",
     stem: "ceit-inventory",
     controls: [
       "search",
@@ -85,15 +85,14 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
   stock: {
     id: "stock",
     label: "Stock",
-    description: "Every stock record with how many are left and which are running low or out.",
+    description: "Stock levels.",
     stem: "ceit-stock",
     controls: ["search", "stockLevel", "category", "location"],
   },
   warranty: {
     id: "warranty",
     label: "Warranty",
-    description:
-      "Equipment with a recorded warranty, and which warranties have ended or are ending.",
+    description: "Warranty dates and what's ending.",
     stem: "ceit-warranty",
     controls: [
       "search",
@@ -109,8 +108,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
   value: {
     id: "value",
     label: "Asset value",
-    description:
-      "What the equipment is worth, by category and room, how old it is, and the value at risk.",
+    description: "Equipment value by category, room and age.",
     stem: "ceit-asset-value",
     controls: [
       "search",
@@ -126,44 +124,42 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
   health: {
     id: "health",
     label: "Record health",
-    description:
-      "Records missing a price, serial number, purchase date, warranty, photo, or recent check.",
+    description: "Items missing a price, serial, date, warranty, photo or recent check.",
     stem: "ceit-record-health",
     controls: ["search", "category", "location", "itemType", "missing"],
   },
   pcs: {
     id: "pcs",
     label: "PC register",
-    description: "One entry per PC with its hardware, system, and installed software.",
+    description: "All PCs with hardware, OS and software.",
     stem: "ceit-pc-register",
     controls: ["search", "inventoryStatus", "location", "incomplete", "dates"],
   },
   hardware: {
     id: "hardware",
     label: "Hardware",
-    description:
-      "Processors, memory, storage, and graphics across your PCs, and which PCs share them.",
+    description: "CPU, memory, storage and graphics across PCs.",
     stem: "ceit-hardware",
     controls: ["search", "location", "component", "incomplete", "retired"],
   },
   software: {
     id: "software",
     label: "Software",
-    description: "Every installed program, which PCs have it, and when licenses end.",
+    description: "Installed software and license dates.",
     stem: "ceit-software",
     controls: ["search", "location", "license", "within", "retired"],
   },
   borrowing: {
     id: "borrowing",
     label: "Borrowing",
-    description: "Requests, reservations, loans, and returns, including what is overdue.",
+    description: "Requests, reservations, loans and returns.",
     stem: "ceit-borrowing",
     controls: ["search", "borrowingState", "dates"],
   },
   maintenance: {
     id: "maintenance",
     label: "Maintenance",
-    description: "Reported problems and repairs, and how long they stayed open.",
+    description: "Repairs and how long they took.",
     stem: "ceit-maintenance",
     controls: ["search", "maintenanceStatus", "maintenancePriority", "maintenanceSource", "dates"],
   },
@@ -187,77 +183,77 @@ export const quickReports: {
 }[] = [
   {
     label: "Overdue loans",
-    description: "Everything that should already be back.",
+    description: "Not returned on time.",
     query: { kind: "borrowing", borrowingState: "overdue" },
   },
   {
     label: "Needs attention",
-    description: "Defective, untested, poor, or waiting for repair.",
+    description: "Defective, untested, poor or in repair.",
     query: { kind: "inventory", attention: "1" },
   },
   {
     label: "Low stock",
-    description: "Stock at or below its alert level, and anything out.",
+    description: "At or below the alert level.",
     query: { kind: "stock", stock: "low" },
   },
   {
     label: "Warranties ending soon",
-    description: "Equipment whose warranty ends within 60 days.",
+    description: "Warranty ends within 60 days.",
     query: { kind: "warranty", warranty: "ending" },
   },
   {
     label: "Due back today",
-    description: "Loans to remind borrowers about.",
+    description: "Due back today.",
     query: { kind: "borrowing", borrowingState: "due-today" },
   },
   {
     label: "Licenses ending soon",
-    description: "Software whose license ends within 30 days.",
+    description: "License ends within 30 days.",
     query: { kind: "software", license: "expiring" },
   },
   {
     label: "PCs missing details",
-    description: "PCs without a processor, memory, or storage recorded.",
+    description: "No CPU, memory or storage recorded.",
     query: { kind: "hardware", incomplete: "1", component: "processor" },
   },
   {
     label: "Open repairs",
-    description: "Problems nobody has resolved yet.",
+    description: "Not resolved yet.",
     query: { kind: "maintenance", maintenanceStatus: "OPEN" },
   },
   {
-    label: "What the equipment is worth",
-    description: "Total value by category and room, and the value at risk.",
+    label: "Equipment value",
+    description: "Value by category and room.",
     query: { kind: "value" },
   },
   {
     label: "Records missing a price",
-    description: "Equipment and stock with no purchase price recorded.",
+    description: "No purchase price recorded.",
     query: { kind: "health", missing: "price" },
   },
   {
     label: "Warranties ending in 90 days",
-    description: "Plan renewals or repairs before cover runs out.",
+    description: "Warranties ending soon.",
     query: { kind: "warranty", within: "90" },
   },
   {
     label: "Unlicensed software",
-    description: "Copies marked free or not licensed.",
+    description: "Free or unlicensed copies.",
     query: { kind: "software", license: "unlicensed" },
   },
   {
     label: "Licenses ending in 90 days",
-    description: "Software to renew this quarter.",
+    description: "Licenses to renew soon.",
     query: { kind: "software", within: "90" },
   },
   {
     label: "Not checked in 90 days",
-    description: "Equipment due for an inspection.",
+    description: "Due for a check.",
     query: { kind: "health", missing: "inspection" },
   },
   {
     label: "Last 30 days of borrowing",
-    description: "Every request in the past month.",
+    description: "Requests from the past month.",
     query: { kind: "borrowing", period: "last-30-days" },
   },
 ];

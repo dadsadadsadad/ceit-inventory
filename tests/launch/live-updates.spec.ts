@@ -64,7 +64,7 @@ test("a public QR issue appears in another session without navigation or reload"
       .getByLabel("What happened")
       .fill("A new equipment issue reported from a separate browser session.");
     await publicPage.getByRole("button", { name: "Send issue report" }).click();
-    await expect(publicPage.getByRole("status")).toContainText("Your issue report was sent");
+    await expect(publicPage.getByRole("status")).toContainText("Report sent");
     await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
   } finally {
     await publicContext.close();
@@ -126,7 +126,7 @@ test("maintenance changes appear optimistically, reconcile, and roll back failed
       [id],
     )
   ).rows[0].version;
-  await card.getByRole("button", { name: "Refresh details, keep my inputs" }).click();
+  await card.getByRole("button", { name: "Refresh and keep my changes" }).click();
   await expect(card.locator('input[name="updatedAt"]')).toHaveValue(latest);
   await expect(card.getByLabel("Staff notes")).toHaveValue(
     "Keep these unsaved notes after a conflict.",
@@ -146,7 +146,9 @@ test("remote changes wait for unfinished edits and resume after saving", async (
   await card.getByLabel("Staff notes").fill("My in-progress inspection notes.");
   const added = `${title} second issue`;
   await ticket(added);
-  await expect(page.locator(".live-updates")).toContainText("Updates waiting", { timeout: 15_000 });
+  await expect(page.locator(".live-updates")).toContainText("Save your changes to see updates", {
+    timeout: 15_000,
+  });
   await expect(card.getByLabel("Staff notes")).toHaveValue("My in-progress inspection notes.");
   await expect(page.getByRole("heading", { name: added, exact: true })).toHaveCount(0);
   await card.getByRole("button", { name: "Save changes" }).click();
@@ -291,7 +293,9 @@ test("shared notes update pristine fields without overwriting a draft", async ({
     'UPDATE "DashboardNote" SET content=$1, "updatedAt"=NOW() WHERE scope=\'shared-dashboard\'',
     [`${content} updated`],
   );
-  await expect(page.locator(".live-updates")).toContainText("Updates waiting", { timeout: 15_000 });
+  await expect(page.locator(".live-updates")).toContainText("Save your changes to see updates", {
+    timeout: 15_000,
+  });
   await expect(page.getByLabel("Department note")).toHaveValue("Keep my unfinished note.");
 });
 

@@ -17,35 +17,35 @@ describe("signed public form tokens", () => {
   });
 
   it("refuses a missing, malformed, or forged token", () => {
-    expect(() => assertFormToken("borrow:abc", "", issuedAt)).toThrow(/could not be verified/);
+    expect(() => assertFormToken("borrow:abc", "", issuedAt)).toThrow(/couldn't be verified/);
     expect(() => assertFormToken("borrow:abc", "nonsense", issuedAt)).toThrow(
-      /could not be verified/,
+      /couldn't be verified/,
     );
     const token = issueFormToken("borrow:abc", issuedAt);
     const [time] = token.split(".");
     expect(() =>
       assertFormToken("borrow:abc", `${time}.${"0".repeat(64)}`, issuedAt + 5_000),
-    ).toThrow(/could not be verified/);
+    ).toThrow(/couldn't be verified/);
     expect(() =>
       assertFormToken("borrow:abc", `${time}.${"é".repeat(64)}`, issuedAt + 5_000),
-    ).toThrow(/could not be verified/);
+    ).toThrow(/couldn't be verified/);
   });
 
   it("will not let a token be used for another item or another kind of form", () => {
     const token = issueFormToken("borrow:abc", issuedAt);
     expect(() => assertFormToken("borrow:other", token, issuedAt + 5_000)).toThrow(
-      /could not be verified/,
+      /couldn't be verified/,
     );
     expect(() => assertFormToken("issue:abc", token, issuedAt + 5_000)).toThrow(
-      /could not be verified/,
+      /couldn't be verified/,
     );
   });
 
   it("refuses a submission too fast to have been typed, and a page left open for hours", () => {
     const token = issueFormToken("issue:abc", issuedAt);
-    expect(() => assertFormToken("issue:abc", token, issuedAt + 100)).toThrow(/very quick/);
+    expect(() => assertFormToken("issue:abc", token, issuedAt + 100)).toThrow(/too fast/);
     expect(() => assertFormToken("issue:abc", token, issuedAt + 7 * 60 * 60 * 1000)).toThrow(
-      /open for a long time/,
+      /open too long/,
     );
   });
 });

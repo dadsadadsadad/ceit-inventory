@@ -160,35 +160,35 @@ export default async function DashboardPage() {
     ? [
         {
           label: "Borrowing requests",
-          detail: "Review and approve equipment requests",
+          detail: "Requests to review",
           count: dashboard.pendingBorrowCount,
           href: "/dashboard/borrowing?status=REQUESTED",
           Icon: ClipboardCheck,
         },
         {
           label: "Overdue loans",
-          detail: "Equipment still out past its return time",
+          detail: "Past their return time",
           count: dashboard.overdueCount,
           href: "/dashboard/borrowing?status=OVERDUE",
           Icon: Clock3,
         },
         {
           label: "Due back today",
-          detail: "Remind borrowers before the return time",
+          detail: "Due back today",
           count: dashboard.dueTodayCount,
           href: "/dashboard/borrowing?status=DUE_TODAY",
           Icon: CalendarClock,
         },
         {
           label: "Returns to confirm",
-          detail: "Check returned equipment back in",
+          detail: "Returns to confirm",
           count: dashboard.returnCount,
           href: "/dashboard/borrowing?status=RETURN_REQUESTED",
           Icon: Undo2,
         },
         {
           label: "Maintenance requests",
-          detail: "Review reported problems and repairs",
+          detail: "Open repairs",
           count: dashboard.openTicketCount,
           href: "/dashboard/maintenance?status=OPEN",
           Icon: Wrench,
@@ -196,15 +196,15 @@ export default async function DashboardPage() {
         {
           label: "Low stock",
           detail: dashboard.outOfStockCount
-            ? `${dashboard.outOfStockCount} out of stock. Time to restock`
-            : "Stock that is running low",
+            ? `${dashboard.outOfStockCount} out of stock`
+            : "Running low",
           count: dashboard.lowStockCount,
           href: "/dashboard/inventory?stock=low",
           Icon: PackageMinus,
         },
         {
           label: "Warranty ending soon",
-          detail: "Equipment whose warranty ends within 60 days",
+          detail: "Warranty ends within 60 days",
           count: dashboard.warrantyEndingCount,
           href: "/dashboard/inventory?warranty=ending",
           Icon: ShieldAlert,
@@ -217,10 +217,10 @@ export default async function DashboardPage() {
   const standing = !dashboard
     ? ""
     : !canManage
-      ? "Everything in its place. Ready for what's next."
+      ? "Nothing to do right now."
       : waiting
         ? `${waiting.toLocaleString()} ${waiting === 1 ? "thing is" : "things are"} waiting on your worklist.`
-        : "Everything is in its place. Nothing needs you right now.";
+        : "Nothing to do right now.";
 
   return (
     <div className="page dashboard-overview-page">
@@ -285,7 +285,7 @@ export default async function DashboardPage() {
                 </strong>
                 <span className="metric-detail">
                   <Link href="/dashboard/inventory?attention=1">
-                    Defective, untested, or poor condition
+                    Defective, untested or poor condition
                   </Link>
                 </span>
               </div>
@@ -317,7 +317,7 @@ export default async function DashboardPage() {
                   <div className="section-heading">
                     <div>
                       <p className="eyebrow">The worklist</p>
-                      <h2 className="mt-1">Needs a look</h2>
+                      <h2 className="mt-1">Needs attention</h2>
                     </div>
                     <span className={`queue-total ${waiting ? "has-work" : ""}`}>
                       {waiting ? `${waiting} to review` : "Up to date"}
@@ -325,8 +325,7 @@ export default async function DashboardPage() {
                   </div>
                   {waiting === 0 ? (
                     <p className="queue-clear">
-                      <CheckCheck size={18} aria-hidden="true" /> All caught up. New requests will
-                      appear here.
+                      <CheckCheck size={18} aria-hidden="true" /> No pending requests.
                     </p>
                   ) : null}
                   <div className="queue-list">
@@ -430,9 +429,7 @@ export default async function DashboardPage() {
                       ))}
                     </ol>
                   ) : (
-                    <p className="muted px-6 pb-6 text-sm">
-                      Changes to your inventory will appear here.
-                    </p>
+                    <p className="muted px-6 pb-6 text-sm">No activity yet.</p>
                   )}
                 </section>
               ) : null}
@@ -440,7 +437,7 @@ export default async function DashboardPage() {
           </>
         ) : (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            The dashboard could not load. Refresh the page to try again.
+            Couldn&apos;t load the dashboard. Refresh to try again.
           </div>
         )}
       </div>

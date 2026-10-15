@@ -29,9 +29,7 @@ function emailFrom(formData: FormData) {
 function usernameFrom(formData: FormData) {
   const username = requiredText(formData, "username", 32).toLowerCase();
   if (!usernamePattern.test(username)) {
-    throw new FormError(
-      "Use 3-32 letters, numbers, periods, underscores, or hyphens for the username.",
-    );
+    throw new FormError("Usernames are 3-32 letters, numbers, . _ or -");
   }
   return username;
 }
@@ -39,7 +37,7 @@ function usernameFrom(formData: FormData) {
 function roleFrom(formData: FormData) {
   const role = String(formData.get("role") ?? "");
   if (!roles.includes(role as UserRole)) {
-    throw new FormError("Choose a valid account role.");
+    throw new FormError("Pick a valid role.");
   }
   return role as UserRole;
 }
@@ -50,7 +48,7 @@ function passwordFrom(formData: FormData, required: boolean) {
     return null;
   }
   if (password.length > 256) {
-    throw new FormError("Passwords must be 256 characters or fewer.");
+    throw new FormError("Password is too long.");
   }
   const message = passwordValidationMessage(password);
   if (message) {
@@ -68,7 +66,7 @@ export async function createUser(formData: FormData) {
     const administrator = await requireUserManager();
     const password = passwordFrom(formData, true);
     if (!password) {
-      throw new FormError("A password is required for a new account.");
+      throw new FormError("Enter a password.");
     }
     const email = emailFrom(formData);
     const username = usernameFrom(formData);
@@ -95,7 +93,7 @@ export async function createUser(formData: FormData) {
       });
     } catch (error) {
       if (knownWriteError(error)) {
-        throw new FormError("That email address or username is already assigned to an account.");
+        throw new FormError("That email or username is already taken.");
       }
       throw error;
     }
@@ -118,9 +116,7 @@ export async function updateUser(formData: FormData) {
     const passwordHash = password ? await hashPassword(password) : null;
 
     if (id === administrator.id && (!isActive || role !== UserRole.ADMINISTRATOR)) {
-      throw new FormError(
-        "Keep your own account active and assigned as an administrator. Update another administrator first if needed.",
-      );
+      throw new FormError("You can't deactivate or demote your own account.");
     }
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -141,7 +137,7 @@ export async function updateUser(formData: FormData) {
                 where: { role: UserRole.ADMINISTRATOR, isActive: true },
               });
               if (activeAdministratorCount <= 1) {
-                throw new FormError("Keep at least one active administrator account.");
+                throw new FormError("There has to be at least one active admin.");
               }
             }
 
@@ -196,7 +192,7 @@ export async function updateUser(formData: FormData) {
         redirect("/dashboard/users");
       } catch (error) {
         if (knownWriteError(error)) {
-          throw new FormError("That email address or username is already assigned to an account.");
+          throw new FormError("That email or username is already taken.");
         }
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -209,7 +205,7 @@ export async function updateUser(formData: FormData) {
       }
     }
 
-    throw new FormError("The account was updated by another request. Please try again.");
+    throw new FormError("Someone else changed this account. Try again.");
   });
 }
 
@@ -232,7 +228,7 @@ export async function unlockUser(formData: FormData) {
             type: "account",
           },
           metadata: { activityKind: "account", changes: { signInLockCleared: true } },
-          summary: "Account sign-in lock cleared.",
+          summary: "Account unlocked.",
         }),
       });
     } catch (error) {

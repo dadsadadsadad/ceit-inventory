@@ -62,7 +62,7 @@ describe("report rows", () => {
       capRows(tooMany, "pdf", "PCs");
     } catch (error) {
       expect((error as ReportRequestError).status).toBe(413);
-      expect((error as Error).message).toContain("download the CSV instead");
+      expect((error as Error).message).toContain("use the CSV");
     }
     expect(capRows(tooMany, "csv").rows).toHaveLength(tooMany.length);
   });

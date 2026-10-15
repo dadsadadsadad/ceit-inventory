@@ -17,7 +17,7 @@ export async function createCalendarEvent(formData: FormData) {
     const day = String(formData.get("day") ?? "");
     const eventDate = parseCalendarDay(day);
     if (!eventDate) {
-      throw new FormError("Choose a valid day for the event.");
+      throw new FormError("Pick a valid day.");
     }
     const title = requiredText(formData, "title", 120);
     const notes = optionalText(formData, "notes", 500);
@@ -51,7 +51,7 @@ export async function deleteCalendarEvent(formData: FormData) {
     await runTransaction(async (tx) => {
       const event = await tx.calendarEvent.findUnique({ where: { id } });
       if (!event) {
-        throw new FormError("This event was already removed.");
+        throw new FormError("This event was already deleted.");
       }
       await tx.calendarEvent.delete({ where: { id } });
       await tx.inventoryAudit.create({

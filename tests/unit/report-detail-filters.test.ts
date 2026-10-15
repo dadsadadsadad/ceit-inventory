@@ -32,7 +32,7 @@ describe("report detail filters", () => {
 
   it("refuses prices and choices it cannot read", () => {
     expect(() => parse("priceMin=-5")).toThrow(/peso amount/);
-    expect(() => parse("priceMin=10&priceMax=5")).toThrow(/lowest price/);
+    expect(() => parse("priceMin=10&priceMax=5")).toThrow(/Min price/);
     expect(() => parse("within=45")).toThrow(/time window/);
     expect(() => parse("missing=everything")).toThrow(/missing detail/);
   });

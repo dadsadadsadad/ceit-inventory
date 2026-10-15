@@ -88,7 +88,7 @@ export function capRows<T>(rows: T[], purpose: ReportPurpose, noun = "records") 
     return { rows: rows.slice(0, limit), total: rows.length };
   }
   throw new ReportRequestError(
-    `This ${purpose === "csv" ? "CSV" : "PDF"} would hold more than ${limit.toLocaleString()} ${noun}. Narrow the filters or download the CSV instead.`,
+    `This ${purpose === "csv" ? "CSV" : "PDF"} would hold more than ${limit.toLocaleString()} ${noun}. Narrow the filters or use the CSV.`,
     413,
   );
 }

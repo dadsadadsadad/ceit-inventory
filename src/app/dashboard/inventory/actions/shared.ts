@@ -58,7 +58,7 @@ export function selectedIds(formData: FormData) {
     ),
   ];
   if (!ids.length) {
-    throw new FormError("Select at least one inventory record.");
+    throw new FormError("Select at least one item.");
   }
   if (ids.length > maxBulkSelection) {
     throw new FormError(
@@ -66,7 +66,7 @@ export function selectedIds(formData: FormData) {
     );
   }
   if (ids.some((id) => !isUuid(id))) {
-    throw new FormError("One or more selected inventory records are invalid.");
+    throw new FormError("Invalid selection.");
   }
   return ids;
 }
@@ -103,24 +103,20 @@ export function assertTrackedAssetQuantity(
     return;
   }
   throw new FormError(
-    "Track each physical equipment asset as one record so it can keep its own asset tag, QR code, room, and inspection history. Use a supply record for quantity-based stock.",
+    "Equipment is one record per unit. Use stock for things counted by quantity.",
   );
 }
 
 export function assertAssetTag(assetTag: string | null, itemType: ItemType) {
   if (itemType === ItemType.ASSET && assetTag && !isInventoryAssetTag(assetTag)) {
-    throw new FormError(
-      "Asset tags must follow the established INV-CAT-ST-ROOM-0001 format, or leave the field blank to generate the next compatible tag.",
-    );
+    throw new FormError("Use the INV-CAT-ST-ROOM-0001 format, or leave it blank to generate one.");
   }
 }
 
 // unique constraint errors -> form errors
 export function inventoryWriteError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return new FormError(
-      "That asset tag, serial number, or PC MAC address is already assigned to another record.",
-    );
+    return new FormError("That tag, serial number or MAC address is already used.");
   }
   return error;
 }
@@ -147,7 +143,7 @@ export function optionalInteger(formData: FormData, key: string, max = 1_000_000
     return null;
   }
   if (!/^\d+$/.test(value)) {
-    throw new FormError(`${key} must be a non-negative whole number.`);
+    throw new FormError(`${key} must be a whole number.`);
   }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed > max) {
@@ -163,9 +159,7 @@ export function optionalPurchasePrice(formData: FormData, key = "purchasePrice")
     return null;
   }
   if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(value)) {
-    throw new FormError(
-      "Purchase price must be a non-negative Philippine peso amount with up to two decimal places.",
-    );
+    throw new FormError("Enter a valid price, e.g. 1200 or 1200.50.");
   }
   const [whole, decimal = ""] = value.split(".");
   return new Prisma.Decimal(`${whole}.${decimal.padEnd(2, "0")}`).toString();
@@ -234,17 +228,17 @@ export function readInlineCustomField(formData: FormData): InlineCustomField | n
     return null;
   }
   if (label.length > 60) {
-    throw new FormError("A field name must be 60 characters or fewer.");
+    throw new FormError("Field names can be up to 60 characters.");
   }
   const fieldType = String(formData.get("newFieldType") ?? "TEXT") as CustomFieldType;
   if (!Object.values(CustomFieldType).includes(fieldType)) {
-    throw new FormError("Choose what kind of answer the new field takes.");
+    throw new FormError("Pick a field type.");
   }
   let choices: string[];
   try {
     choices = validatedChoices(fieldType, String(formData.get("newFieldChoices") ?? ""));
   } catch (error) {
-    throw new FormError(error instanceof Error ? error.message : "Check the new field's answers.");
+    throw new FormError(error instanceof Error ? error.message : "Check the field's options.");
   }
   return {
     answer: String(formData.get("newFieldValue") ?? "").trim(),
@@ -265,9 +259,7 @@ export async function addInlineCustomField(
     throw new FormError(`You can add up to ${maxCustomFields} extra fields.`);
   }
   if (existing.some((field) => field.label.toLowerCase() === request.label.toLowerCase())) {
-    throw new FormError(
-      `There is already an extra field called "${request.label}". Fill that one in instead.`,
-    );
+    throw new FormError(`There's already a field called "${request.label}".`);
   }
   const field = await tx.customField.create({
     data: {
@@ -358,7 +350,7 @@ export async function assertActiveAssignments(
         }),
   ]);
   if (!category) {
-    throw new FormError("Choose an active item category.");
+    throw new FormError("Pick an active category.");
   }
   if (!location) {
     throw new FormError("Choose an active location.");
@@ -369,7 +361,7 @@ export async function assertActiveAssignments(
 export async function requireComputerForItem(itemId: string, computerId: string) {
   const computer = await prisma.computer.findFirst({ where: { id: computerId, itemId } });
   if (!computer) {
-    throw new FormError("The PC record does not belong to this inventory item.");
+    throw new FormError("This PC record belongs to a different item.");
   }
   return computer;
 }

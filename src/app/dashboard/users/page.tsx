@@ -66,7 +66,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           <p className="eyebrow">Administration</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Users</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
-            Add accounts, change access, or reset passwords. Only administrators can do this.
+            Add accounts, change roles and reset passwords.
           </p>
         </header>
 
@@ -107,7 +107,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 minLength={3}
                 maxLength={32}
                 pattern={"[A-Za-z0-9._\\-]{3,32}"}
-                title="Use 3-32 letters, numbers, periods, underscores, or hyphens."
+                title="3-32 letters, numbers, . _ or -"
                 className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                 placeholder="ceit.staff"
               />
@@ -128,7 +128,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             </label>
             <PasswordInput
               label="Initial password *"
-              hint="At least 8 characters with a letter and number."
+              hint="At least 8 characters, with a letter and a number."
               required
               minLength={8}
               maxLength={256}
@@ -196,11 +196,11 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           <div className="divider flex flex-wrap items-center justify-between gap-2 border-b px-5 py-4">
             <h2 className="text-lg font-semibold">Existing accounts</h2>
             <p className="muted text-sm">
-              Password resets and deactivations sign the user out on all devices.
+              Resetting a password or deactivating signs the user out everywhere.
             </p>
           </div>
           {users.length === 0 ? (
-            <p className="muted px-5 py-6 text-sm">No accounts match these filters.</p>
+            <p className="muted px-5 py-6 text-sm">No accounts found.</p>
           ) : null}
           <div className="divide-y" style={{ borderColor: "var(--border)" }}>
             {users.map((user) => (
@@ -262,7 +262,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       minLength={3}
                       maxLength={32}
                       pattern={"[A-Za-z0-9._\\-]{3,32}"}
-                      title="Use 3-32 letters, numbers, periods, underscores, or hyphens."
+                      title="3-32 letters, numbers, . _ or -"
                       className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                     />
                   </label>
@@ -314,7 +314,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   >
                     <input type="hidden" name="id" value={user.id} />
                     <p className="muted text-sm">
-                      Too many failed sign-ins locked this account until{" "}
+                      Locked after failed sign-ins until{" "}
                       {formatManilaDate(user.lockedUntil, { hour: "numeric", minute: "2-digit" })}.
                     </p>
                     <SubmitButton

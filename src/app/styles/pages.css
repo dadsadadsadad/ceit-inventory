@@ -1123,6 +1123,14 @@
   color: var(--accent);
 }
 
+.label-tile-symbol img {
+  border-radius: var(--radius-control);
+  display: block;
+  height: 32px;
+  object-fit: cover;
+  width: 32px;
+}
+
 .label-tile-name {
   font-size: 0.9375rem;
   font-weight: 650;

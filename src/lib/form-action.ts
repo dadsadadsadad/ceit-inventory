@@ -17,21 +17,19 @@ export async function formAction(operation: () => Promise<unknown>) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         return {
-          error:
-            "A record with these details already exists. Check for a duplicate before trying again.",
+          error: "This already exists.",
         };
       }
       if (error.code === "P2003") {
         return {
-          error:
-            "Something this refers to, such as a room or category, no longer exists. Refresh the page and try again.",
+          error: "Something this uses was deleted. Refresh and try again.",
         };
       }
       if (error.code === "P2025") {
-        return { error: "This record changed or was removed. Refresh the page and try again." };
+        return { error: "This was changed or deleted. Refresh and try again." };
       }
       if (error.code === "P2034") {
-        return { error: "Another update happened at the same time. Please try again." };
+        return { error: "Someone else saved at the same time. Try again." };
       }
     }
     throw error;

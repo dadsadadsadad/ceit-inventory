@@ -200,12 +200,10 @@ export function HoldSubmitButton({
         </span>
       </button>
       <p id={helpId} className="muted hold-hint">
-        Hold and release, or click to confirm.
+        Hold to confirm, or click.
       </p>
       <span className="sr-only" role="status">
-        {phase === "ready"
-          ? "Ready. Release inside the button to confirm, or move away to cancel."
-          : ""}
+        {phase === "ready" ? "Release to confirm, or move away to cancel." : ""}
       </span>
       {confirming ? (
         <div id={panelId} className="hold-confirmation" role="group" aria-label="Confirm removal">

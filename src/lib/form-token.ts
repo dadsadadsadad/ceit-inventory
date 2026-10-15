@@ -43,12 +43,12 @@ export function assertFormToken(scope: string, token: string, now = Date.now()) 
   const matches = given.length === expected.length && timingSafeEqual(given, expected);
   const age = now - Number(issuedAt);
   if (!matches || !Number.isFinite(age)) {
-    throw new FormError("This form could not be verified. Reload the page and try again.");
+    throw new FormError("This form couldn't be verified. Reload and try again.");
   }
   if (age < minAgeMs()) {
-    throw new FormError("That was very quick. Check your details and send the form again.");
+    throw new FormError("That was too fast. Check your details and send again.");
   }
   if (age > maxAgeMs) {
-    throw new FormError("This page has been open for a long time. Reload it and try again.");
+    throw new FormError("This page has been open too long. Reload and try again.");
   }
 }

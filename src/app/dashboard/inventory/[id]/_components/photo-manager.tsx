@@ -15,7 +15,7 @@ export function PhotoManager({ item }: { item: ItemRecord }) {
           Item photos
         </h3>
         <p className="muted mt-2 text-xs leading-5">
-          Add up to four JPEG, PNG, or WebP images, up to 3 MB each.
+          Up to 4 photos (JPEG, PNG or WebP, max 3 MB each).
         </p>
         <FeedbackForm
           action={uploadInventoryItemPhoto}

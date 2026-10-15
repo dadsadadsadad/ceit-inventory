@@ -36,19 +36,19 @@ export function validateBorrowSchedule(
     throw new Error("Choose valid borrowing dates.");
   }
   if (isReservation && startsAt < now) {
-    throw new Error("Choose a pickup time in the future.");
+    throw new Error("Pickup has to be in the future.");
   }
   if (endsAt <= startsAt || endsAt <= now) {
-    throw new Error("Return time must be after pickup time.");
+    throw new Error("Return has to be after pickup.");
   }
   if (isReservation && startsAt.getTime() > now.getTime() + policy.maxAdvanceDays * dayMs) {
     throw new Error(
-      `Reservations can only be made up to ${dayCount(policy.maxAdvanceDays)} in advance. Choose a pickup time within the next ${dayCount(policy.maxAdvanceDays)}.`,
+      `Reservations can only be made up to ${dayCount(policy.maxAdvanceDays)} ahead.`,
     );
   }
   if (endsAt.getTime() - startsAt.getTime() > policy.maxLoanDays * dayMs) {
     throw new Error(
-      `Equipment can be borrowed for at most ${dayCount(policy.maxLoanDays)} at a time. Choose an earlier return time.`,
+      `You can borrow for at most ${dayCount(policy.maxLoanDays)} . Pick an earlier return time.`,
     );
   }
 }

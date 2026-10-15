@@ -73,7 +73,7 @@ describe("borrowing equipment that may already be out", () => {
   it("refuses to lend equipment that is still checked out to someone else", async () => {
     const out = database({ status: ItemStatus.DEPLOYED }, [checkedOut(5)]);
     await expect(checkLoanAvailability(out, "item", at(0), at(2), 1)).rejects.toThrow(
-      /already requested or reserved/,
+      /already booked then/,
     );
   });
 
@@ -85,31 +85,31 @@ describe("borrowing equipment that may already be out", () => {
   it("refuses to hand over equipment that has not come back, even to the next booking", async () => {
     const out = database({ status: ItemStatus.DEPLOYED }, [checkedOut(5), reservation(6, 8)]);
     await expect(checkLoanAvailability(out, "item", at(6), at(8), 1, "next", true)).rejects.toThrow(
-      /not available in its current condition or status/,
+      /can't be borrowed in its current status/,
     );
   });
 
   it("keeps an overdue loan blocking the item until staff confirm the return", async () => {
     const overdue = database({ status: ItemStatus.DEPLOYED }, [checkedOut(-1)]);
     await expect(checkLoanAvailability(overdue, "item", at(0), at(2), 1)).rejects.toThrow(
-      /already requested or reserved/,
+      /already booked then/,
     );
     await expect(checkLoanAvailability(overdue, "item", at(40), at(42), 1)).rejects.toThrow(
-      /already requested or reserved/,
+      /already booked then/,
     );
   });
 
   it("refuses to double book a time that another reservation holds", async () => {
     const booked = database({}, [reservation(10, 14)]);
     await expect(checkLoanAvailability(booked, "item", at(12), at(16), 1)).rejects.toThrow(
-      /already requested or reserved/,
+      /already booked then/,
     );
     await expect(checkLoanAvailability(booked, "item", at(14), at(16), 1)).resolves.toBeTruthy();
   });
 
   it("refuses more units than exist", async () => {
     await expect(checkLoanAvailability(database({}), "item", at(0), at(2), 2)).rejects.toThrow(
-      /already requested or reserved/,
+      /already booked then/,
     );
   });
 
@@ -128,7 +128,7 @@ describe("borrowing equipment that may already be out", () => {
     async (status) => {
       await expect(
         checkLoanAvailability(database({ status }), "item", at(0), at(2), 1),
-      ).rejects.toThrow(/not available in its current condition or status/);
+      ).rejects.toThrow(/can't be borrowed in its current status/);
     },
   );
 

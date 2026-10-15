@@ -123,8 +123,7 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
   return {
     kind: "warranty",
     title: "Warranty",
-    description:
-      "Which warranties have ended or are ending, the value they cover, and what ends in the coming year.",
+    description: "Warranties that ended or are ending soon.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.within
@@ -172,7 +171,7 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
         "Warranties ending, next 12 months",
         upcoming,
         "warranties",
-        `How many warranties end each month, ${monthSpan(months)}.`,
+        `Warranties ending per month, ${monthSpan(months)}.`,
       ),
     ],
     tables: [

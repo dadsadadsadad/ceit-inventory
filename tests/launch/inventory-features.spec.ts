@@ -183,7 +183,7 @@ test("an extra field can be created from the item forms, not only from Settings"
   await chooseKind(page, "Equipment");
   await fillBasics(page, "Sample inline field");
   await page.getByText("Extra details", { exact: true }).click();
-  await page.getByText("Add a new extra field", { exact: true }).click();
+  await page.getByText("Add an extra field", { exact: true }).click();
   await page.getByLabel("Field name").fill("Sample Color");
   await page.getByLabel("Answer for this item").fill("Teal");
   await page.getByRole("button", { name: "Create item" }).click();
@@ -193,7 +193,7 @@ test("an extra field can be created from the item forms, not only from Settings"
 
   await page.goto(page.url() + "?edit=1");
   await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
-  await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
+  await openDisclosure(page.getByText("Add an extra field", { exact: true }));
   await page.getByLabel("Field name").fill("Sample Funding");
   await page.getByLabel("Kind of answer").selectOption("CHOICE");
   await page.getByLabel("Answers to choose from").fill(["Grant", "Gift"].join("\n"));
@@ -205,13 +205,11 @@ test("an extra field can be created from the item forms, not only from Settings"
 
   // case insensitive duplicate
   await openDisclosure(page.locator("#edit-record").getByText("Extra details", { exact: true }));
-  await openDisclosure(page.getByText("Add a new extra field", { exact: true }));
+  await openDisclosure(page.getByText("Add an extra field", { exact: true }));
   await page.getByLabel("Field name").fill("sample color");
   await page.getByLabel("Kind of answer").selectOption("TEXT");
   await page.getByRole("button", { name: "Save update" }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: /already an extra field called/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: /already a field called/ })).toBeVisible();
 
   await page.goto("/dashboard/settings");
   await expect(page.getByText("Sample Color").first()).toBeVisible();
@@ -304,7 +302,7 @@ test("signed in scan opens the edit page with shortcuts", async ({ page }) => {
   const id = await itemId("ceit-launch-item-8");
   await page.goto("/scan/ceit-launch-item-8");
   await expect(page).toHaveURL(new RegExp(`/dashboard/inventory/${id}\\?edit=1&scanned=1`));
-  await expect(page.getByText("Scanned from its QR code")).toBeVisible();
+  await expect(page.getByText("Scanned")).toBeVisible();
   await expect(page.getByRole("link", { name: "Borrow", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Return", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Report a problem", exact: true }).click();
@@ -333,7 +331,7 @@ test("an issue report asks for a name and shows it to staff", async ({ page }) =
   ).toBe(0);
   await page.getByLabel("Your name").fill("Ana Reyes");
   await page.getByRole("button", { name: "Send issue report" }).click();
-  await expect(page.getByRole("status")).toContainText("Your issue report was sent");
+  await expect(page.getByRole("status")).toContainText("Report sent");
   expect(
     (
       await query(

@@ -15,7 +15,7 @@ export async function recordExport(user: InventoryUser, kind: string, format: "C
           type: "report-export",
         },
         metadata: { activityKind: "report-export", format, kind },
-        summary: `${kind} report exported as ${format}.`,
+        summary: `Exported ${kind} report as ${format}.`,
       }),
     });
   } catch (error) {

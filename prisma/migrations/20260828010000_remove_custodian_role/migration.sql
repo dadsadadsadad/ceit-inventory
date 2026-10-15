@@ -1,5 +1,4 @@
--- PostgreSQL enum values cannot be removed in place. Temporarily use text,
--- map existing Custodian accounts to Staff, and recreate the constrained enum.
+-- enum values can't be dropped in place, so go through text and move custodians to staff
 ALTER TABLE "User" ALTER COLUMN "role" DROP DEFAULT;
 ALTER TABLE "User" ALTER COLUMN "role" TYPE TEXT USING ("role"::text);
 

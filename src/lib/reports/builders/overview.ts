@@ -235,7 +235,7 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
           formatReportDateTime(item.lastCheckedAt),
         ]),
         total: attentionCount,
-        emptyText: "Nothing needs attention right now.",
+        emptyText: "Nothing needs attention.",
       },
       {
         heading: "Overdue loans",
@@ -268,7 +268,7 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
           formatReportDateTime(request.expectedReturnDate),
         ]),
         total: dueToday.length,
-        emptyText: "Nothing is due back later today.",
+        emptyText: "Nothing due today.",
       },
       {
         heading: "Low stock",

@@ -16,14 +16,14 @@
 
 Defaults are in `src/lib/borrow-policy.ts` and can be changed with env vars (see `.env.example`).
 
-| Rule                                            | Default  | Variable                     |
-| ----------------------------------------------- | -------- | ---------------------------- |
-| How far ahead a reservation can start           | 3 days   | `BORROW_MAX_ADVANCE_DAYS`    |
-| Max loan length                                 | 7 days   | `BORROW_MAX_LOAN_DAYS`       |
-| Max loan length with extensions                 | 14 days  | `BORROW_MAX_TOTAL_LOAN_DAYS` |
-| Open requests per student number                | 3        | `BORROW_MAX_ACTIVE_REQUESTS` |
-| Uncollected reservation expires after           | 2 hours  | `BORROW_PICKUP_GRACE_HOURS`  |
-| Unhandled "borrow now" request expires after    | 24 hours | `BORROW_PENDING_HOLD_HOURS`  |
+| Rule                                         | Default  | Variable                     |
+| -------------------------------------------- | -------- | ---------------------------- |
+| How far ahead a reservation can start        | 3 days   | `BORROW_MAX_ADVANCE_DAYS`    |
+| Max loan length                              | 7 days   | `BORROW_MAX_LOAN_DAYS`       |
+| Max loan length with extensions              | 14 days  | `BORROW_MAX_TOTAL_LOAN_DAYS` |
+| Open requests per student number             | 3        | `BORROW_MAX_ACTIVE_REQUESTS` |
+| Uncollected reservation expires after        | 2 hours  | `BORROW_PICKUP_GRACE_HOURS`  |
+| Unhandled "borrow now" request expires after | 24 hours | `BORROW_PENDING_HOLD_HOURS`  |
 
 Students with something overdue can't make new requests until staff confirm the return. Expired requests show as **Pickup missed** or **Not handled in time** and stop blocking other bookings. The server checks all of this, not just the form.
 
@@ -64,19 +64,19 @@ Print on A4 at 100% scale with headers/footers off. Compact labels are 62 x 32 m
 
 ## Limits
 
-| Where            | Limit                                                          |
-| ---------------- | -------------------------------------------------------------- |
-| Sign in          | 5 wrong passwords locks the account for ~15 min                |
-| Sessions         | 7 days, max 5 devices per account                              |
-| Public forms     | 8 per device and 60 per ip every 15 min, per form type         |
-| Borrower details | removed after the retention period (365 days default)          |
-| Reports          | page shows 500 rows, pdf up to 2,000, csv up to 10,000         |
-| Imports          | 10 MB and 1,000 rows per file                                  |
-| New units        | 50 at once                                                     |
-| Custom fields    | 40 fields, 500 characters per answer                           |
-| Photos           | 4 per item, 3 MB each                                          |
-| QR labels        | 100 per batch                                                  |
-| Bulk changes     | 10,000 records                                                 |
+| Where            | Limit                                                  |
+| ---------------- | ------------------------------------------------------ |
+| Sign in          | 5 wrong passwords locks the account for ~15 min        |
+| Sessions         | 7 days, max 5 devices per account                      |
+| Public forms     | 8 per device and 60 per ip every 15 min, per form type |
+| Borrower details | removed after the retention period (365 days default)  |
+| Reports          | page shows 500 rows, pdf up to 2,000, csv up to 10,000 |
+| Imports          | 10 MB and 1,000 rows per file                          |
+| New units        | 50 at once                                             |
+| Custom fields    | 40 fields, 500 characters per answer                   |
+| Photos           | 4 per item, 3 MB each                                  |
+| QR labels        | 100 per batch                                          |
+| Bulk changes     | 10,000 records                                         |
 
 ## Database connections
 

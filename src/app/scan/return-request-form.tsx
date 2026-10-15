@@ -24,8 +24,7 @@ export function ReturnRequestForm({
       </div>
       <h2 className="text-xl font-semibold">Return {itemName}</h2>
       <p className="muted mt-2 text-sm leading-6">
-        Enter the same student number and contact number used for borrowing. Staff will inspect the
-        item and confirm the return.
+        Use the same student and contact number you borrowed with.
       </p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label>
@@ -61,13 +60,11 @@ export function ReturnRequestForm({
           rows={3}
           maxLength={1_000}
           className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-          placeholder="Mention damage, missing accessories, or anything staff should know."
+          placeholder="Any damage or missing parts?"
         />
       </label>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="muted text-xs leading-5">
-          A return is only completed after a CEIT staff member confirms it.
-        </p>
+        <p className="muted text-xs leading-5">CEIT staff will check the item and confirm.</p>
         <SubmitButton
           pendingLabel="Sending return request..."
           className="secondary-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold sm:w-auto"

@@ -41,7 +41,7 @@ const tagFont = localFont({
 
 export const metadata: Metadata = {
   title: "CEIT Inventory",
-  description: "CEIT equipment, room inventory, borrowing, and maintenance.",
+  description: "CEIT equipment inventory",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

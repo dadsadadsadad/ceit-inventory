@@ -142,7 +142,7 @@ export function ItemPicker({
               onBlur={() => window.setTimeout(() => setOpen(false), 150)}
               onKeyDown={onKeyDown}
               className="field w-full rounded-lg py-2.5 pr-3 text-sm"
-              placeholder="Start typing a name, asset tag, serial number, or room"
+              placeholder="Search by name, tag, serial or room"
             />
           </span>
           {showList ? (
@@ -173,7 +173,7 @@ export function ItemPicker({
                     ? "Searching..."
                     : status === "error"
                       ? "Couldn't search right now. Try again."
-                      : "No equipment matches. Try another word."}
+                      : "No matches."}
                 </li>
               ) : null}
             </ul>

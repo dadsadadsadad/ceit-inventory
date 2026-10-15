@@ -62,9 +62,7 @@ export function nextCategoryAssetTagCode(
       return candidate;
     }
   }
-  throw new Error(
-    "No category asset-tag code is available. Enter a different three-character code.",
-  );
+  throw new Error("No category codes left. Enter one yourself.");
 }
 
 export function nextLocationAssetTagCode(usedCodes: Iterable<string | null | undefined>) {
@@ -79,14 +77,14 @@ export function nextLocationAssetTagCode(usedCodes: Iterable<string | null | und
       return candidate;
     }
   }
-  throw new Error("No room asset-tag code is available. Enter a different two-digit code.");
+  throw new Error("No room codes left. Enter one yourself.");
 }
 
 export function assetTagPrefix(categoryCode: string, status: ItemStatus, locationCode: string) {
   const normalizedCategory = normalizeAssetTagCode(categoryCode, 3);
   const normalizedLocation = normalizeAssetTagCode(locationCode, 2);
   if (!normalizedCategory || !normalizedLocation || !/^\d{2}$/.test(normalizedLocation)) {
-    throw new Error("The category or room asset-tag code is not configured correctly.");
+    throw new Error("The category or room code is invalid.");
   }
   return `INV-${normalizedCategory}-${statusCodes[status]}-${normalizedLocation}-`;
 }
@@ -114,9 +112,7 @@ export async function nextInventoryAssetTag(
     }),
   ]);
   if (!category?.assetTagCode || !location?.assetTagCode) {
-    throw new FormError(
-      "This category or room needs an asset-tag code in Settings before equipment can be added.",
-    );
+    throw new FormError("Set a code for this category or room in Settings first.");
   }
 
   const prefix = assetTagPrefix(category.assetTagCode, values.status, location.assetTagCode);
@@ -130,7 +126,7 @@ export async function nextInventoryAssetTag(
     ...matches.map((item) => (item.assetTag ? (assetTagSequence(item.assetTag, prefix) ?? 0) : 0)),
   );
   if (maxSequence >= 9_999) {
-    throw new Error(`No more asset-tag numbers are available for ${prefix}.`);
+    throw new Error(`No tag numbers left for ${prefix}.`);
   }
   return `${prefix}${String(maxSequence + 1).padStart(4, "0")}`;
 }

@@ -53,7 +53,7 @@ export function passwordValidationMessage(password: string) {
     return "Use at least 8 characters.";
   }
   if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
-    return "Include at least one letter and one number.";
+    return "Use at least one letter and one number.";
   }
   return null;
 }
@@ -162,7 +162,7 @@ export async function requireInventoryAccess() {
 export async function requireWriteAccess() {
   const user = await requireInventoryAccess();
   if (!canManageInventory(user.role)) {
-    throw new Error("You do not have permission to change inventory records.");
+    throw new Error("You don't have permission to do that.");
   }
   return user;
 }
@@ -170,7 +170,7 @@ export async function requireWriteAccess() {
 export async function requireUserManager() {
   const user = await requireInventoryAccess();
   if (!canManageUsers(user.role)) {
-    throw new Error("Only administrators can add or manage accounts.");
+    throw new Error("Only admins can manage accounts.");
   }
   return user;
 }

@@ -57,7 +57,7 @@ export async function checkLoanAvailability(
   const deployedLoan =
     item.status === ItemStatus.DEPLOYED && checkedOut.some((loan) => loan.checkedOutItemStatus);
   if (!canBorrowInventoryStatus(item.status) && !(deployedLoan && !checkout)) {
-    throw new FormError("This item is not available in its current condition or status.");
+    throw new FormError("This item can't be borrowed in its current status.");
   }
   // only old quantity loans took from stock
   const capacity =
@@ -67,9 +67,7 @@ export async function checkLoanAvailability(
       .reduce((sum, loan) => sum + loan.requestedQuantity, 0);
   // one tracked unit can't be checked out twice
   if (checkout && checkedOut.some((loan) => loan.checkedOutItemStatus)) {
-    throw new FormError(
-      "This item is still with another borrower. Confirm its return before checking it out again.",
-    );
+    throw new FormError("Someone else still has this item. Mark it returned first.");
   }
   if (
     quantity >
@@ -82,9 +80,7 @@ export async function checkLoanAvailability(
       borrowPolicyFromEnvironment(),
     )
   ) {
-    throw new FormError(
-      "This item is already requested or reserved during those times. Choose a different pickup or return time.",
-    );
+    throw new FormError("This item is already booked then. Pick different times.");
   }
   return item;
 }
@@ -140,8 +136,6 @@ export async function checkLoanExtension(
     request.requestedQuantity >
     availableScheduledQuantity(capacity, others, now, endsAt, now, borrowPolicyFromEnvironment())
   ) {
-    throw new FormError(
-      "This equipment is requested or reserved by someone else during that time. Choose an earlier return time.",
-    );
+    throw new FormError("Someone else has it booked then. Pick an earlier return time.");
   }
 }

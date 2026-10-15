@@ -12,14 +12,13 @@ export const metadata: Metadata = { title: "Sign in · CEIT Inventory" };
 
 const messages: Record<string, string> = {
   "invalid-credentials":
-    "The email address, username, or password is incorrect, or the account is temporarily locked after repeated failed attempts. Wait about 15 minutes or ask an administrator for help.",
-  "missing-credentials": "Enter your email address or username and password.",
-  "too-many-attempts":
-    "Too many failed sign-in attempts were made from this device. Wait about 15 minutes and try again.",
+    "Wrong username or password, or the account is locked. Try again in 15 minutes or ask an admin.",
+  "missing-credentials": "Enter your username and password.",
+  "too-many-attempts": "Too many failed attempts. Try again in 15 minutes.",
 };
 
 const notices: Record<string, string> = {
-  "password-updated": "Your password was updated. Sign in again with your new password.",
+  "password-updated": "Password changed. Sign in with your new password.",
 };
 
 export default async function LoginPage({
@@ -45,21 +44,18 @@ export default async function LoginPage({
           </div>
         </div>
         <div className="max-w-xl">
-          <p className="eyebrow">A place for everything.</p>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight">
-            Good work starts with the right equipment.
-          </h2>
-          <p className="login-caption">Keep it organized. Put it to work. Pass it on.</p>
+          <p className="eyebrow">CEIT Inventory</p>
+          <h2 className="mt-4 text-4xl font-bold tracking-tight">CEIT equipment inventory</h2>
+          <p className="login-caption">Track equipment, borrowing and repairs.</p>
           <ul className="login-points">
             <li>
-              <QrCode size={18} aria-hidden="true" /> Scan a label to open any record
+              <QrCode size={18} aria-hidden="true" /> Scan a label to open an item
             </li>
             <li>
-              <ClipboardList size={18} aria-hidden="true" /> Lend, reserve, and check equipment back
-              in
+              <ClipboardList size={18} aria-hidden="true" /> Lend and reserve equipment
             </li>
             <li>
-              <Wrench size={18} aria-hidden="true" /> Follow repairs from report to fix
+              <Wrench size={18} aria-hidden="true" /> Track repairs
             </li>
           </ul>
         </div>
@@ -82,9 +78,7 @@ export default async function LoginPage({
           <div className="mb-7">
             <p className="eyebrow">Staff access</p>
             <h1 className="title mt-3 text-3xl">Sign in</h1>
-            <p className="muted mt-2 text-sm leading-6">
-              Manage equipment, borrowing, and maintenance in one place.
-            </p>
+            <p className="muted mt-2 text-sm leading-6">Sign in to continue.</p>
           </div>
           {error && messages[error] ? (
             <div className="notice mb-5 rounded-lg px-4 py-3 text-sm" role="alert">

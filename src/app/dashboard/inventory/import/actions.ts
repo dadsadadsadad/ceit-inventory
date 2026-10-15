@@ -213,7 +213,7 @@ async function validateXlsxArchive(data: Buffer) {
   });
   try {
     if (archive.entryCount > maxXlsxArchiveEntries) {
-      throw new Error("The Excel workbook contains too many files.");
+      throw new Error("This Excel file is too complex.");
     }
     let uncompressedBytes = 0;
     for await (const entry of archive.eachEntry()) {
@@ -222,7 +222,7 @@ async function validateXlsxArchive(data: Buffer) {
       }
       uncompressedBytes += entry.uncompressedSize;
       if (uncompressedBytes > maxXlsxUncompressedBytes) {
-        throw new Error("The Excel workbook expands beyond the allowed size.");
+        throw new Error("This Excel file is too large.");
       }
     }
   } finally {
@@ -238,9 +238,9 @@ function messageForImportError(error: unknown) {
     return error.message;
   }
   if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
-    return "a unique asset tag, serial number, or PC MAC address already exists.";
+    return "the tag, serial number or MAC address is already used.";
   }
-  return "could not be imported. Check the data in this row.";
+  return "couldn't be imported. Check the row.";
 }
 
 type ParsedRow = {
@@ -330,13 +330,13 @@ function parseImportRow(
   let units = 1;
   if (itemType === ItemType.ASSET) {
     if (quantity === 0) {
-      warn("Quantity 0 was changed to 1 because equipment is tracked one unit at a time.");
+      warn("Quantity 0 was changed to 1.");
     }
     units = Math.max(quantity, 1);
     quantity = 1;
     if (units > maxNewUnits) {
       throw new ImportRowError(
-        `a quantity above ${maxNewUnits} is too many tracked units for one row. Split it into several rows, or mark the row as stock.`,
+        `a quantity above ${maxNewUnits} is too many units for one row. Split the row or mark it as stock.`,
       );
     }
   }
@@ -349,14 +349,14 @@ function parseImportRow(
     : null;
   if (units > 1 && (suppliedAssetTagText || serialNumber || macAddress)) {
     throw new ImportRowError(
-      `has quantity ${units} but only one asset tag, serial number, or MAC address. Each unit needs its own, so use one row per unit, or leave them blank to generate tags.`,
+      `has quantity ${units} but only one tag, serial or MAC address. Use one row per unit or leave them blank.`,
     );
   }
   if (units > 1 && hasComputerDetails) {
-    throw new ImportRowError("a PC must be one row per computer, not a quantity.");
+    throw new ImportRowError("use one row per PC.");
   }
   if (hasComputerDetails && itemType !== ItemType.ASSET) {
-    throw new ImportRowError("a PC must be a tracked equipment item, not stock.");
+    throw new ImportRowError("a PC can't be stock.");
   }
 
   const legacyChecked = valueAt("legacyChecked");
@@ -380,7 +380,7 @@ function parseImportRow(
   let originalTag = "";
   if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
     warn(
-      `Asset tag "${suppliedAssetTag.slice(0, 40)}" is not in the INV-... format, so a new tag was generated and the old one was kept in the notes.`,
+      `Asset tag "${suppliedAssetTag.slice(0, 40)}" isn't in the INV- format, so a new one was made. The old tag is in the notes.`,
     );
     originalTag = suppliedAssetTag;
     suppliedAssetTag = null;
@@ -391,11 +391,11 @@ function parseImportRow(
     warn,
   );
   const notes = combinedNotes(valueAt("notes"), [
-    ["Original asset tag", originalTag],
-    ["Original unit", valueAt("legacyUnit")],
-    ["Legacy counter", valueAt("legacyCounter")],
-    ["Original checked value", legacyChecked],
-    ["Known acquisition", legacyAcquisition && !purchaseDate ? legacyAcquisition : ""],
+    ["Old tag", originalTag],
+    ["Unit", valueAt("legacyUnit")],
+    ["Counter", valueAt("legacyCounter")],
+    ["Checked", legacyChecked],
+    ["Acquired", legacyAcquisition && !purchaseDate ? legacyAcquisition : ""],
     ["Year encoded", valueAt("legacyYearEncoded")],
     ["Comments", valueAt("legacyComments")],
     ...settings.keptColumns.map(({ column, header }): [string, string] => [header, cellAt(column)]),
@@ -457,11 +457,11 @@ function parseImportRow(
 }
 
 function missingSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} "${name}" does not exist. Tick "Create missing categories and locations", or add it in Settings first.`;
+  return `${kind} "${name}" doesn't exist. Turn on "Create missing categories and locations" or add it in Settings.`;
 }
 
 function inactiveSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} "${name}" is inactive. Reactivate it in Settings first.`;
+  return `${kind} "${name}" is inactive. Turn it back on in Settings.`;
 }
 
 // create only if allowed
@@ -496,7 +496,7 @@ async function resolveCategory(
         actor,
         entity: { id: category.id, label: name, type: "category" },
         metadata: { activityKind: "configuration", source: "import" },
-        summary: "Category created while importing inventory.",
+        summary: "Category created (import).",
       }),
     });
   }
@@ -537,7 +537,7 @@ async function resolveLocation(
         actor,
         entity: { id: location.id, label: name, type: "location" },
         metadata: { activityKind: "configuration", source: "import" },
-        summary: "Location created while importing inventory.",
+        summary: "Location created (import).",
       }),
     });
   }
@@ -586,7 +586,7 @@ async function saveImportedRow(
         auditEvents: {
           create: {
             action: AuditAction.CREATED,
-            summary: "Inventory item imported from file.",
+            summary: "Imported.",
             actorId: source.actor.id,
             actorName: auditActorName(source.actor),
             metadata: {
@@ -701,25 +701,25 @@ export async function importInventory(
     return fail(messageForImportError(error));
   }
   if (!(file instanceof File) || !file.size) {
-    return fail("Choose a non-empty CSV or Excel file.");
+    return fail("Choose a CSV or Excel file.");
   }
   if (file.size > maxFileBytes) {
-    return fail("The import file must be 10 MB or smaller.");
+    return fail("Files can be up to 10 MB.");
   }
 
   const extension = file.name.split(".").at(-1)?.toLowerCase();
   if (extension !== "csv" && extension !== "xlsx") {
-    return fail("Only .csv and .xlsx files are supported. In Excel, use Save As and pick one.");
+    return fail("Only .csv and .xlsx files work.");
   }
 
   let workbook: ExcelJS.Workbook;
   try {
     const data = Buffer.from(await file.arrayBuffer());
     if (extension === "xlsx" && !isXlsxFile(data)) {
-      return fail("The selected file is not a valid Excel workbook.");
+      return fail("That isn't a valid Excel file.");
     }
     if (extension === "csv" && data.includes(0)) {
-      return fail("The selected CSV file contains unsupported binary data.");
+      return fail("That CSV file couldn't be read.");
     }
     if (extension === "xlsx") {
       await validateXlsxArchive(data);
@@ -735,7 +735,7 @@ export async function importInventory(
     return fail(
       message.includes("allowed") || message.includes("too many")
         ? message
-        : "The spreadsheet could not be read. Save it again as a CSV or .xlsx file and retry.",
+        : "Couldn't read the file. Save it as .csv or .xlsx and try again.",
     );
   }
 
@@ -744,8 +744,8 @@ export async function importInventory(
     const headings = foundHeadings(workbook);
     return fail(
       headings.length
-        ? `No column for the item name was found. The headings in the file are ${listed(headings, 12)}. Add or rename one to "Name" ("Item", "Item name", or "Equipment" also work) and try again.`
-        : "The file looks empty. It needs a heading row with at least an item name column, then one row per item.",
+        ? `No item name column found. Columns in the file: ${listed(headings, 12)}. Add a "Name" column and try again.`
+        : "The file is empty. It needs a header row with a name column.",
     );
   }
   const { sheet, headerRowNumber, match } = source;
@@ -828,7 +828,7 @@ export async function importInventory(
     }
     if (!name) {
       skipped += 1;
-      problems.push({ rowNumber, message: "has no item name, so it was skipped." });
+      problems.push({ rowNumber, message: "has no name, skipped." });
       continue;
     }
     if (isSummaryName(name) || normalizeHeader(name) === nameHeading) {
@@ -869,7 +869,7 @@ export async function importInventory(
         ].filter(Boolean) as string[];
         if (identifiers.some((identifier) => previewIdentifiers.has(identifier))) {
           throw new ImportRowError(
-            "a repeated asset tag, serial number, or PC MAC address appears in this file.",
+            "the tag, serial number or MAC address is repeated in this file.",
           );
         }
         identifiers.forEach((identifier) => previewIdentifiers.add(identifier));
@@ -961,12 +961,12 @@ export async function importInventory(
   );
   if (fallbacks.category) {
     notices.push(
-      `${plural(fallbacks.category, "row")} had no category and ${fallbacks.category === 1 ? "was" : "were"} filed under "${fallbackCategoryName}". Add a Category column or a default category to avoid this.`,
+      `${plural(fallbacks.category, "row")} had no category and ${fallbacks.category === 1 ? "was" : "were"} filed under "${fallbackCategoryName}".`,
     );
   }
   if (fallbacks.location) {
     notices.push(
-      `${plural(fallbacks.location, "row")} had no location and ${fallbacks.location === 1 ? "was" : "were"} placed in "${fallbackLocationName}". Add a Location column or a default location to avoid this.`,
+      `${plural(fallbacks.location, "row")} had no location and ${fallbacks.location === 1 ? "was" : "were"} placed in "${fallbackLocationName}".`,
     );
   }
   if (customColumns.length) {
@@ -976,27 +976,27 @@ export async function importInventory(
   }
   if (keptColumns.length) {
     notices.push(
-      `Columns with no matching field (${listed(keptColumns.map((entry) => entry.header))}) were saved in each item's notes.`,
+      `Unmatched columns (${listed(keptColumns.map((entry) => entry.header))}) were added to the notes.`,
     );
   }
   if (ignoredColumns.length) {
-    notices.push(`Ignored columns with no matching field: ${listed(ignoredColumns)}.`);
+    notices.push(`Ignored columns: ${listed(ignoredColumns)}.`);
   }
   if (blankRows) {
     notices.push(`Skipped ${plural(blankRows, "empty row")}.`);
   }
   if (ignoredRows) {
-    notices.push(`Skipped ${plural(ignoredRows, "total or repeated heading row")}.`);
+    notices.push(`Skipped ${plural(ignoredRows, "total or header row")}.`);
   }
   if (cutOff) {
     notices.push(
-      `Only the first ${maxRows.toLocaleString()} rows (or ${maxRecords.toLocaleString()} items, when rows make several) are read at a time. Put the remaining rows in a second file and import that next.`,
+      `Only the first ${maxRows.toLocaleString()} rows (or ${maxRecords.toLocaleString()} items) are read per file. Put the rest in another file.`,
     );
   }
   if (!dataRows && !skipped) {
     return {
       ...emptyImportResult,
-      errors: ["There are no item rows under the headings. Add one row per item and try again."],
+      errors: ["There are no rows under the header."],
       matched: match.matched.map((entry) => ({
         header: entry.header,
         label: fieldLabels[entry.field],
@@ -1011,15 +1011,13 @@ export async function importInventory(
     .slice(0, maxReported)
     .map((problem) => `Row ${problem.rowNumber}: ${problem.message}`);
   if (problems.length > maxReported) {
-    errors.push(
-      `...and ${problems.length - maxReported} more rows need correction. Fix these first, then check again.`,
-    );
+    errors.push(`...and ${problems.length - maxReported} more rows have errors.`);
   }
   const warningLines = warnings
     .slice(0, maxReported)
     .map((warning) => `Row ${warning.rowNumber}: ${warning.message}`);
   if (warnings.length > maxReported) {
-    warningLines.push(`...and ${warnings.length - maxReported} more adjustments of the same kind.`);
+    warningLines.push(`...and ${warnings.length - maxReported} more like this.`);
   }
   return {
     errors,

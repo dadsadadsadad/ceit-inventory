@@ -69,7 +69,7 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.goto("/scan/ceit-launch-item-11");
     await page.getByRole("button", { name: /Reserve for later/ }).click();
     await expect(page.getByLabel("Borrow now (in use)")).toBeDisabled();
-    await page.getByLabel("Return date and time").fill(hours(2));
+    await page.getByLabel("Return time").fill(hours(2));
     await page.getByLabel("Full name").fill("Hand Made");
     await page.getByLabel("Student number").fill("SEC-CRAFT-1");
     await page.getByLabel("Contact number").fill("09123456789");
@@ -84,9 +84,7 @@ test.describe("borrowing rules cannot be bypassed", () => {
     // skip browser date limits, the server has to check
     await page.locator("form.request-form").evaluate((form) => form.setAttribute("novalidate", ""));
     await page.getByRole("button", { name: /Request reservation|Send borrowing request/ }).click();
-    await expect(
-      page.getByRole("alert").filter({ hasText: /already requested or reserved/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /already booked then/ })).toBeVisible();
     expect(
       (
         await query(
@@ -110,9 +108,7 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.getByLabel("Student number").fill("SEC-EARLY-1");
     await page.getByLabel("Contact number").fill("09170000002");
     await page.getByRole("button", { name: "Request return", exact: true }).click();
-    await expect(
-      page.getByRole("alert").filter({ hasText: /No active borrowing record matches/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /No loan found/ })).toBeVisible();
     expect(
       (await query('SELECT status FROM "BorrowRequest" WHERE "studentNumber"=\'SEC-EARLY-1\''))
         .rows[0].status,
@@ -123,8 +119,8 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.goto("/scan/ceit-launch-item-13");
     await page.getByRole("button", { name: /Borrow equipment/ }).click();
     await page.getByLabel("Reserve for later").check();
-    await page.getByLabel("Pickup date and time").fill(hours(24));
-    await page.getByLabel("Return date and time").fill(hours(23));
+    await page.getByLabel("Pickup time").fill(hours(24));
+    await page.getByLabel("Return time").fill(hours(23));
     await page.getByLabel("Full name").fill("Backwards Dates");
     await page.getByLabel("Student number").fill("SEC-BACK-1");
     await page.getByLabel("Contact number").fill("09123456789");
@@ -132,7 +128,7 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.locator("form.request-form").evaluate((form) => form.setAttribute("novalidate", ""));
     await page.getByRole("button", { name: "Request reservation", exact: true }).click();
     await expect(
-      page.getByRole("alert").filter({ hasText: /Return time must be after pickup time/ }),
+      page.getByRole("alert").filter({ hasText: /Return has to be after pickup/ }),
     ).toBeVisible();
   });
 
@@ -144,9 +140,7 @@ test.describe("borrowing rules cannot be bypassed", () => {
     await page.getByLabel("What happened").fill("This was sent by a script that skipped the form.");
     await page.evaluate(() => document.querySelector('input[name="formToken"]')!.remove());
     await page.getByRole("button", { name: "Send issue report" }).click();
-    await expect(
-      page.getByRole("alert").filter({ hasText: /could not be verified/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /couldn't be verified/ })).toBeVisible();
     expect(
       (
         await query(
@@ -383,7 +377,7 @@ test.describe("guessing passwords is slowed down", () => {
     expect(await attempt("launch.admin", process.env.CEIT_TEST_PASSWORD!)).toBe(
       "too-many-attempts",
     );
-    await expect(page.getByText(/Too many failed sign-in attempts/)).toBeVisible();
+    await expect(page.getByText(/Too many failed attempts/)).toBeVisible();
     // clear the counter instead of waiting
     await query('DELETE FROM "PublicRequestAttempt"');
     expect(await attempt("launch.admin", process.env.CEIT_TEST_PASSWORD!)).toBeNull();

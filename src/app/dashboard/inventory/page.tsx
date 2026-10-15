@@ -137,9 +137,7 @@ export default async function InventoryPage({
           <div>
             <p className="eyebrow">Equipment register</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Find equipment, check its condition, and keep each record up to date.
-            </p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">All equipment and stock.</p>
           </div>
           {canManage ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -176,24 +174,22 @@ export default async function InventoryPage({
 
         {search.bulk === "updated" ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
-            The selected inventory records were updated.
+            Updated.
           </div>
         ) : null}
         {search.bulk === "deleted" ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
-            The selected inventory records were permanently deleted.
+            Deleted.
           </div>
         ) : null}
 
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            Inventory could not be loaded. Confirm the database connection and try again.
+            Couldn&apos;t load the inventory.
           </div>
         ) : inventoryItems.length === 0 ? (
-          <EmptyState icon={PackageSearch} title="No records match these filters.">
-            {canManage
-              ? "Add an item or import an existing file to get started."
-              : "Try clearing a filter."}
+          <EmptyState icon={PackageSearch} title="No items found.">
+            {canManage ? "Add an item or import a file." : "Try clearing a filter."}
           </EmptyState>
         ) : (
           <InventoryFormContainer canManage={bulkMode}>

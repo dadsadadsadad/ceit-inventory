@@ -894,6 +894,18 @@ a.pc-chip:hover {
   color: var(--accent);
 }
 
+.record-symbol.has-photo {
+  overflow: hidden;
+  padding: 0;
+}
+
+.record-symbol.has-photo img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
 .record-name {
   font-weight: 650;
 }

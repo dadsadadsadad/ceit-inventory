@@ -148,7 +148,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
   return {
     kind: "maintenance",
     title: "Maintenance",
-    description: "Reported problems and repairs, and how long they stayed open.",
+    description: "Repairs and how long they took.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.maintenanceStatus &&
@@ -248,11 +248,11 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
             .join("\n"),
         ]),
         total,
-        emptyText: "No maintenance requests match these filters.",
+        emptyText: "No requests found.",
       },
       {
         heading: "Repeat problems",
-        note: "Equipment reported more than once. Worth a closer look, or replacing.",
+        note: "Items reported more than once.",
         columns: [
           { label: "Equipment", width: 2.2, primary: true },
           { label: "Requests", width: 0.8, align: "right" },
@@ -264,7 +264,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           formatReportDateTime(entry.last),
         ]),
         total: repeats.length,
-        emptyText: "No equipment has been reported more than once.",
+        emptyText: "No repeat reports.",
       },
     ],
     csv: [

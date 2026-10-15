@@ -138,12 +138,12 @@ export function NewInventoryForm({
             {
               value: "ASSET",
               title: "Equipment",
-              text: "Each unit gets its own asset tag and QR code, such as a PC, projector, or tool set. Choose this when you need to know which one was borrowed.",
+              text: "One record per unit, like a PC or projector.",
             },
             {
               value: "SUPPLY",
               title: "Stock",
-              text: "Supplies counted by quantity, such as cables or markers. One QR code covers the whole stock, so units can't be told apart.",
+              text: "Counted by quantity, like cables or markers.",
             },
           ].map((option) => (
             <label
@@ -185,11 +185,7 @@ export function NewInventoryForm({
               maxLength={255}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
               placeholder={
-                isComputer
-                  ? "Choose a room to suggest Room-PC-01"
-                  : isStock
-                    ? "HDMI cable"
-                    : "Dell OptiPlex 7010"
+                isComputer ? "Pick a room first" : isStock ? "HDMI cable" : "Dell OptiPlex 7010"
               }
             />
           </label>
@@ -219,7 +215,7 @@ export function NewInventoryForm({
               onChange={(event) => updateLocation(event.target.value)}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             >
-              <option value="">Choose a room or area</option>
+              <option value="">Choose a room</option>
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
@@ -230,7 +226,7 @@ export function NewInventoryForm({
           {isStock ? (
             <>
               <label>
-                <span className="text-sm font-semibold">How many do you have? *</span>
+                <span className="text-sm font-semibold">Quantity *</span>
                 <input
                   required
                   name="quantity"
@@ -243,7 +239,7 @@ export function NewInventoryForm({
                 />
               </label>
               <label>
-                <span className="text-sm font-semibold">Warn me when it falls to</span>
+                <span className="text-sm font-semibold">Low stock alert at</span>
                 <input
                   name="lowStockThreshold"
                   type="number"
@@ -275,8 +271,8 @@ export function NewInventoryForm({
                 />
                 <span className="muted mt-1 block text-xs leading-5">
                   {severalUnits
-                    ? `Creates ${units} separate records, numbered #1 to #${units}, each with its own tag and QR code.`
-                    : "Each unit gets its own asset tag and QR code."}
+                    ? `Creates ${units} records, #1 to #${units}.`
+                    : "Each one gets its own tag and QR code."}
                 </span>
               </label>
               <label className="flex items-start gap-3 self-end rounded-lg pb-3 text-sm font-semibold">
@@ -290,7 +286,7 @@ export function NewInventoryForm({
                 <span>
                   This is a PC or Mac
                   <span className="muted mt-1 block text-xs font-normal leading-5">
-                    Adds fields for its hardware and software.
+                    Adds hardware and software fields.
                   </span>
                 </span>
               </label>
@@ -300,10 +296,7 @@ export function NewInventoryForm({
       </section>
 
       <div className="space-y-3">
-        <FormSection
-          title="More details"
-          hint="Tag, status, condition, model, serial number, notes"
-        >
+        <FormSection title="More details" hint="Tag, status, condition, model, serial, notes">
           <div className="grid gap-4 sm:grid-cols-2">
             {!isStock && !severalUnits ? (
               <InputField
@@ -360,7 +353,7 @@ export function NewInventoryForm({
                 rows={2}
                 maxLength={5_000}
                 className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                placeholder="What it is used for or what comes with it."
+                placeholder="Optional"
               />
             </label>
             <label className="sm:col-span-2">
@@ -375,7 +368,7 @@ export function NewInventoryForm({
           </div>
         </FormSection>
 
-        <FormSection title="Purchase and warranty" hint="Date, price, and when the warranty ends">
+        <FormSection title="Purchase and warranty" hint="Date, price, warranty">
           <div className="grid gap-4 sm:grid-cols-3">
             <InputField name="purchaseDate" label="Purchase date" type="date" />
             <InputField
@@ -390,8 +383,7 @@ export function NewInventoryForm({
             <InputField name="warrantyEndsAt" label="Warranty ends" type="date" />
           </div>
           <p className="muted mt-3 text-xs leading-5">
-            The price is only visible in the record and the reports. A warranty date lets CEIT see
-            what is about to run out.
+            Price is only shown on the item page and in reports.
           </p>
         </FormSection>
 
@@ -452,19 +444,13 @@ export function NewInventoryForm({
                 />
               </label>
             </div>
-            <p className="muted mt-3 text-xs leading-5">
-              Installed programs are added on the record after it is created.
-            </p>
+            <p className="muted mt-3 text-xs leading-5">Software can be added after saving.</p>
           </FormSection>
         ) : null}
 
         <FormSection
           title="Extra details"
-          hint={
-            extraFields.length
-              ? "Fields your department added, or add a new one"
-              : "Record something that is not here yet"
-          }
+          hint={extraFields.length ? "Extra fields" : "Add a field"}
         >
           {extraFields.length ? <CustomFieldInputs fields={extraFields} /> : null}
           <NewExtraField />

@@ -136,7 +136,7 @@ function Table({ table }: { table: ReportTable }) {
       {trimmed ? (
         <p className="report-trimmed" role="note">
           Showing the first {table.rows.length.toLocaleString()} of {table.total.toLocaleString()}{" "}
-          rows. The PDF and CSV downloads include them all.
+          rows. Downloads include all of them.
         </p>
       ) : null}
     </section>
@@ -167,7 +167,7 @@ export function ReportSheet({ actions, report }: { actions: ReactNode; report: R
             </span>
           ))
         ) : (
-          <span className="muted text-sm">None. This report covers everything.</span>
+          <span className="muted text-sm">None</span>
         )}
       </div>
 

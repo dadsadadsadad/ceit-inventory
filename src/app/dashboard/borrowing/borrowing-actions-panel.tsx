@@ -23,7 +23,7 @@ function IdCheck({ id }: { id: string }) {
   return (
     <label className="id-check" htmlFor={id}>
       <input id={id} type="checkbox" name="idChecked" className="h-4 w-4" required />
-      <span>I checked the borrower&apos;s school ID</span>
+      <span>School ID checked</span>
     </label>
   );
 }
@@ -36,15 +36,14 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
     return (
       <div className="request-actions">
         {expired ? (
-          <p className="muted text-sm">Pickup period ended. Cancel this reservation to close it.</p>
+          <p className="muted text-sm">Pickup time passed. Cancel this reservation to close it.</p>
         ) : request.startsAt > now ? (
           <p className="muted text-sm">Pickup: {formatDateTime(request.startsAt)}</p>
         ) : (
           <>
             {lapsed ? (
               <p className="muted text-sm">
-                Pickup was missed, so this booking no longer holds the equipment. Check it out if
-                the borrower arrived late, or cancel it to close it.
+                Pickup was missed. Check it out if they showed up late, or cancel it.
               </p>
             ) : null}
             <FeedbackForm
@@ -210,7 +209,7 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
         <details className="section-disclosure">
           <summary className="accent-link cursor-pointer text-sm font-semibold">
             {request.status === borrowStatus.RETURN_REQUESTED
-              ? "Not back yet? Keep it on loan"
+              ? "Not returned? Keep on loan"
               : isOverdue(request, now)
                 ? "Set a new return time"
                 : "Change return time"}
@@ -254,5 +253,5 @@ export function BorrowingActions({ request }: { request: BorrowingRecord }) {
     );
   }
 
-  return <p className="muted text-sm">No further action is needed.</p>;
+  return <p className="muted text-sm">Nothing else to do.</p>;
 }

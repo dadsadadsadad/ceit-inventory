@@ -1,7 +1,4 @@
--- Expand the item-only history into a general operational audit trail. Existing
--- inventory events remain linked to their records, while non-inventory events
--- can carry their own stable subject. Audit history is retained if an item is
--- permanently removed.
+-- make the item history a general audit log, entries stay when an item is deleted
 ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'DELETED';
 ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'REQUESTED';
 ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'BORROWED';

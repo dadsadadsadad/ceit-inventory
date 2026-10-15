@@ -267,11 +267,11 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
           ];
         }),
         total,
-        emptyText: "No borrowing requests match these filters.",
+        emptyText: "No requests found.",
       },
       {
         heading: range ? "Equipment not requested in this period" : "Equipment never requested",
-        note: "Equipment in use that nobody has asked to borrow, most valuable first.",
+        note: "Never borrowed, most valuable first.",
         columns: [
           { label: "Item", width: 2, primary: true },
           { label: "Room", width: 1.2 },
@@ -283,7 +283,7 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
           item.purchasePrice === null ? "No price" : formatPeso(item.purchasePrice),
         ]),
         total: idleCount,
-        emptyText: "Every piece of equipment has been requested at least once.",
+        emptyText: "Everything has been borrowed at least once.",
       },
     ],
     csv: [

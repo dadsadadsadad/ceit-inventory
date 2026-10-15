@@ -5,10 +5,10 @@ export default function NotFound() {
     <main className="page system-page grid min-h-screen place-items-center">
       <section className="card w-full max-w-lg rounded-lg p-7 text-center">
         <p className="eyebrow">Not found</p>
-        <h1 className="title mt-3 text-3xl">That page or item is not here</h1>
+        <h1 className="title mt-3 text-3xl">Page not found</h1>
         <p className="muted mt-3 text-sm leading-6">
-          The link may be incomplete, or the record may have been removed. If you scanned a label,
-          try again with the whole code in view, or ask CEIT staff for help.
+          The link might be wrong or the item was deleted. If you scanned a label, try again or ask
+          CEIT staff.
         </p>
         <Link
           href="/dashboard"

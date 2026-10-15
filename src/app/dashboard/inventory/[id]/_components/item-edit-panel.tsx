@@ -152,15 +152,14 @@ export function ItemEditPanel({
             <div>
               <TextField
                 name="lowStockThreshold"
-                label="Warn me when it falls to"
+                label="Low stock alert at"
                 type="number"
                 value={item.lowStockThreshold}
                 min={0}
                 placeholder={String(defaultLowStockThreshold)}
               />
               <p className="muted mt-1 text-xs leading-5">
-                Leave blank to use {defaultLowStockThreshold}. Use the Stock card to add or use
-                some.
+                Leave blank to use {defaultLowStockThreshold}. Use the Stock card to change it.
               </p>
             </div>
           </div>
@@ -169,13 +168,13 @@ export function ItemEditPanel({
         )}
 
         <div className="space-y-3">
-          <FormSection title="More details" hint="Tag, model, serial number, notes, record type">
+          <FormSection title="More details" hint="Tag, model, serial, notes, type">
             <div className="space-y-4">
               <TextField name="assetTag" label="Asset tag" value={item.assetTag} maxLength={255} />
               {computer ? (
                 <div>
                   <span className="text-sm font-semibold">Record type</span>
-                  <p className="muted mt-2 text-sm">Equipment (locked while PC details exist)</p>
+                  <p className="muted mt-2 text-sm">Equipment (locked, has PC details)</p>
                   <input type="hidden" name="itemType" value={ItemType.ASSET} />
                   <input type="hidden" name="isComputer" value="on" />
                 </div>
@@ -208,7 +207,7 @@ export function ItemEditPanel({
                       <span>
                         This is a PC or Mac
                         <span className="muted mt-1 block text-xs font-normal leading-5">
-                          Only single pieces of equipment can have hardware and software details.
+                          Only single equipment items can have PC details.
                         </span>
                       </span>
                     </label>
@@ -284,19 +283,13 @@ export function ItemEditPanel({
                 value={dateValue(item.warrantyEndsAt)}
                 type="date"
               />
-              <p className="muted text-xs leading-5">
-                The price stays off the inventory list and is included in the reports.
-              </p>
+              <p className="muted text-xs leading-5">Only shown on the item page and in reports.</p>
             </div>
           </FormSection>
 
           <FormSection
             title="Extra details"
-            hint={
-              applicableFields.length
-                ? "Fields your department added, or add a new one"
-                : "Record something that is not here yet"
-            }
+            hint={applicableFields.length ? "Extra fields" : "Add a field"}
           >
             {applicableFields.length ? (
               <CustomFieldInputs
@@ -320,8 +313,7 @@ export function ItemEditPanel({
           Inspection
         </h3>
         <p className="muted mt-2 text-xs leading-5">
-          Last checked: {displayDate(item.lastCheckedAt)}. This records a dated inspection for every
-          item and updates the PC profile when one exists.
+          Last checked: {displayDate(item.lastCheckedAt)}.
         </p>
         <FeedbackForm
           action={markInventoryItemChecked}
@@ -342,15 +334,14 @@ export function ItemEditPanel({
         <section className="divider mt-6 border-t pt-5" aria-labelledby="individualize-heading">
           {/* split into units */}
           <h3 id="individualize-heading" className="text-sm font-semibold">
-            Give each unit its own QR code
+            Split into units
           </h3>
           <p className="muted mt-2 text-xs leading-5">
             {item.itemType === ItemType.SUPPLY
-              ? `Use this when the ${item.quantity} units are things borrowed one at a time, such as tool sets, so you can tell which one a student has. `
+              ? `Gives each of the ${item.quantity} units its own record, so you know which one was borrowed. `
               : ""}
-            This turns the record into unit 1 and adds {item.quantity - 1} more in the same room,
-            each with its own asset tag and QR code, then opens their labels to print. Move units to
-            their actual rooms afterward. This is unavailable once a borrowing history exists.
+            This makes this record unit 1 and adds {item.quantity - 1} more in the same room. Not
+            available once it has been borrowed.
           </p>
           <FeedbackForm action={splitGroupedAsset} className="mt-3 space-y-3">
             <input type="hidden" name="id" value={item.id} />
@@ -360,7 +351,7 @@ export function ItemEditPanel({
               maxLength={16}
               className="field w-full rounded-lg px-3 py-2 text-sm"
               placeholder="Type SPLIT"
-              aria-label="Type SPLIT to give each unit its own record"
+              aria-label="Type SPLIT to confirm"
             />
             <SubmitButton
               pendingLabel="Creating unit records..."

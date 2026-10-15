@@ -10,11 +10,11 @@ export default function DashboardNotFound() {
       <div className="page-inner space-y-6">
         <header>
           <p className="eyebrow">Not found</p>
-          <h1 className="title mt-3 text-3xl">That inventory record is not available</h1>
+          <h1 className="title mt-3 text-3xl">Item not found</h1>
         </header>
         <EmptyState
           icon={SearchX}
-          title="It may have been removed, or the link is incomplete."
+          title="It may have been deleted, or the link is wrong."
           action={
             <div className="flex flex-wrap justify-center gap-3">
               <Link
@@ -32,7 +32,7 @@ export default function DashboardNotFound() {
             </div>
           }
         >
-          Records that were retired are still listed in the inventory with the Retired status.
+          Retired items are still in the list with the Retired status.
         </EmptyState>
       </div>
     </div>

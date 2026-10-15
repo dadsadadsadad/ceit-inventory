@@ -57,7 +57,7 @@ test("import check reports row problems and duplicates", async ({ page }) => {
   await page.getByRole("button", { name: "Check file" }).click();
   await expect(page.getByText("3 rows look good", { exact: false })).toBeVisible();
   await expect(page.getByText("2 skipped", { exact: false })).toBeVisible();
-  await expect(page.getByText('category "Review missing category" does not exist')).toBeVisible();
+  await expect(page.getByText(`category "Review missing category" doesn't exist`)).toBeVisible();
   await expect(
     page.getByText("asset tag INV-TST-OK-01-0001 is already assigned to a record."),
   ).toBeVisible();
@@ -132,7 +132,7 @@ test("overdue loans are listed, can get a new return time, and cannot overlap a 
   const returnTime = table.first().getByLabel("New return date and time");
   await returnTime.fill(manilaDateTimeInput(new Date(Date.now() + 5 * 24 * 3_600_000)));
   await table.first().getByRole("button", { name: "Save return time" }).click();
-  await expect(table.first().getByRole("alert")).toContainText("requested or reserved by someone");
+  await expect(table.first().getByRole("alert")).toContainText("Someone else has it booked");
 
   await returnTime.fill(manilaDateTimeInput(new Date(Date.now() + 24 * 3_600_000)));
   await table.first().getByRole("button", { name: "Save return time" }).click();
@@ -161,9 +161,7 @@ test("a public item page lists booked times without borrower details", async ({ 
     [id],
   );
   await page.goto("/scan/ceit-launch-item-7");
-  await expect(
-    page.getByRole("heading", { name: "When this item is not available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Booked times" })).toBeVisible();
   await expect(page.getByText("Booked", { exact: true })).toBeVisible();
   await expect(page.getByText("Private Borrower Name")).toHaveCount(0);
   await expect(page.getByText("Private purpose")).toHaveCount(0);
@@ -238,7 +236,7 @@ test("bulk inspection records today's check for selected equipment", async ({ pa
     .filter({ has: page.locator('option[value="inspect"]') })
     .selectOption("inspect");
   await page.getByRole("button", { name: "Apply to 1" }).click();
-  await expect(page.getByText("The selected inventory records were updated.")).toBeVisible();
+  await expect(page.getByText("Updated.")).toBeVisible();
   const row = (
     await query(
       `SELECT "lastCheckedAt" > NOW() - INTERVAL '5 minutes' AS fresh FROM "InventoryItem" WHERE id=$1`,
@@ -249,7 +247,7 @@ test("bulk inspection records today's check for selected equipment", async ({ pa
   expect(
     (
       await query(
-        `SELECT COUNT(*)::int AS count FROM "InventoryAudit" WHERE "itemId"=$1 AND summary='Bulk update: inspection recorded.'`,
+        `SELECT COUNT(*)::int AS count FROM "InventoryAudit" WHERE "itemId"=$1 AND summary='Checked (bulk).'`,
         [id],
       )
     ).rows[0].count,

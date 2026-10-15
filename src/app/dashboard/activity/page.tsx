@@ -52,7 +52,7 @@ export default async function AuditTrailPage({
   try {
     filters = parseAuditTrailFilters(searchParameters(search));
   } catch (error) {
-    filterError = error instanceof Error ? error.message : "One or more audit filters are invalid.";
+    filterError = error instanceof Error ? error.message : "Invalid filters.";
     filters = parseAuditTrailFilters(new URLSearchParams());
   }
 
@@ -99,8 +99,7 @@ export default async function AuditTrailPage({
             <p className="eyebrow">Activity</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Audit trail</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              A record of who changed what, and when. Routine activity such as QR scans is tucked
-              away until you ask for it.
+              Who changed what and when. Scans, prints and sign-ins are under Routine.
             </p>
           </div>
           <details className="secondary-actions">
@@ -119,17 +118,17 @@ export default async function AuditTrailPage({
 
         {filterError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            {filterError} Showing the default view instead.
+            {filterError} Showing the default view.
           </div>
         ) : null}
 
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            The audit trail could not be loaded. Confirm the database connection and try again.
+            Couldn&apos;t load the audit trail.
           </div>
         ) : activity.length === 0 ? (
           <EmptyState icon={ScrollText} title="Nothing matches these filters.">
-            Try another view, a wider timeframe, or fewer words.
+            Try a different view or date range.
           </EmptyState>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Audit events">

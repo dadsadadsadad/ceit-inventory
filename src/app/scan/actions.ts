@@ -47,7 +47,7 @@ export async function recordInventoryScan(itemId: string) {
         data: {
           itemId: item.id,
           action: AuditAction.SCANNED,
-          summary: actor ? "Item QR code scanned by staff." : "Item QR code opened.",
+          summary: actor ? "Scanned by staff." : "Scanned.",
           actorId: actor?.id ?? null,
           actorName: auditActorName(actor),
           metadata: { source: "qr", scanType: actor ? "staff" : "public" },

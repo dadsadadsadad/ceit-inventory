@@ -21,7 +21,7 @@ function refreshPages() {
 function readScope(formData: FormData) {
   const appliesTo = optionalText(formData, "appliesTo", 16);
   if (appliesTo && !Object.values(ItemType).includes(appliesTo as ItemType)) {
-    throw new FormError("Choose equipment, stock, or everything.");
+    throw new FormError("Pick equipment, stock or all.");
   }
   const categoryId = optionalText(formData, "categoryId", 64);
   return {
@@ -36,9 +36,7 @@ function readChoices(formData: FormData, type: CustomFieldType) {
   try {
     return validatedChoices(type, String(formData.get("choices") ?? ""));
   } catch (error) {
-    throw new FormError(
-      error instanceof Error ? error.message : "Check the answers to choose from.",
-    );
+    throw new FormError(error instanceof Error ? error.message : "Check the options.");
   }
 }
 
@@ -48,7 +46,7 @@ export async function createCustomField(formData: FormData) {
     const label = requiredText(formData, "label", 60);
     const fieldType = String(formData.get("fieldType") ?? "TEXT") as CustomFieldType;
     if (!Object.values(CustomFieldType).includes(fieldType)) {
-      throw new FormError("Choose what kind of answer this field takes.");
+      throw new FormError("Pick a field type.");
     }
     const scope = readScope(formData);
     const choices = readChoices(formData, fieldType);
@@ -60,7 +58,7 @@ export async function createCustomField(formData: FormData) {
         throw new FormError(`You can add up to ${maxCustomFields} extra fields.`);
       }
       if (existing.some((field) => field.label.toLowerCase() === label.toLowerCase())) {
-        throw new FormError("There is already an extra field with that name.");
+        throw new FormError("There's already a field with that name.");
       }
       const field = await tx.customField.create({
         data: { label, fieldType, choices, ...scope, sortOrder: existing.length },
@@ -89,7 +87,7 @@ export async function updateCustomField(formData: FormData) {
 
     const current = await prisma.customField.findUnique({ where: { id } });
     if (!current) {
-      throw new FormError("This extra field no longer exists.");
+      throw new FormError("This field no longer exists.");
     }
     const choices = readChoices(formData, current.fieldType);
     const clash = await prisma.customField.findFirst({
@@ -97,7 +95,7 @@ export async function updateCustomField(formData: FormData) {
       select: { id: true },
     });
     if (clash) {
-      throw new FormError("There is already an extra field with that name.");
+      throw new FormError("There's already a field with that name.");
     }
     await prisma.customField.update({ where: { id }, data: { label, choices, ...scope } });
     await prisma.inventoryAudit.create({
@@ -139,7 +137,7 @@ export async function deleteCustomField(formData: FormData) {
     const actor = await requireWriteAccess();
     const id = requiredUuid(formData, "id", "Invalid extra field.");
     if (requiredText(formData, "confirmation", 16) !== "DELETE") {
-      throw new FormError("Type DELETE to remove this extra field.");
+      throw new FormError("Type DELETE to confirm.");
     }
     const field = await prisma.customField.delete({ where: { id } });
     await prisma.inventoryAudit.create({

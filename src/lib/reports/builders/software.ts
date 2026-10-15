@@ -97,7 +97,7 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
   return {
     kind: "software",
     title: "Software",
-    description: "Every installed program, which PCs have it, and when licenses end.",
+    description: "Installed software and license dates.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       names.location && `Room: ${names.location}`,
@@ -184,7 +184,7 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
         "Licenses ending, next 12 months",
         upcoming,
         "copies",
-        `How many installed copies have a license ending each month, ${monthSpan(months)}.`,
+        `Licenses ending per month, ${monthSpan(months)}.`,
       ),
     ],
     tables: [
@@ -205,11 +205,11 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
           pcNames(group.installs.map((install) => install.pc)),
         ]),
         total: titles.total,
-        emptyText: "No software matches these filters.",
+        emptyText: "No software found.",
       },
       {
         heading: "Installations",
-        note: "One line for every copy installed on a PC.",
+        note: "One row per install.",
         columns: [
           { label: "Software", width: 1.4, primary: true },
           { label: "PC", width: 1.4, primary: true },
@@ -227,7 +227,7 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
             : "No license date",
         ]),
         total: installs.total,
-        emptyText: "No software matches these filters.",
+        emptyText: "No software found.",
       },
     ],
     csv:

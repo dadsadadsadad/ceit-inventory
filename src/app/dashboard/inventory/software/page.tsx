@@ -158,10 +158,7 @@ export default async function SoftwarePage({
           <div>
             <p className="eyebrow">Equipment register</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Software</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Every program installed on your PCs, which machines have it, and when licenses end.
-              Add software on a PC&apos;s record.
-            </p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Software across all PCs.</p>
           </div>
           <Link
             href={`/dashboard/reports?${reportQuery.toString()}`}
@@ -216,7 +213,7 @@ export default async function SoftwarePage({
               defaultValue={q}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Software, version, PC, room, license hint..."
+              placeholder="Search software, PC or room"
             />
           </label>
           <label>
@@ -281,14 +278,14 @@ export default async function SoftwarePage({
 
         {loaded.truncated ? (
           <p className="notice rounded-lg px-4 py-3 text-sm" role="status">
-            Only the first {loaded.entries.length.toLocaleString()} installations are shown. Narrow
-            the search to see the rest.
+            Only the first {loaded.entries.length.toLocaleString()} installs shown. Narrow the
+            search to see more.
           </p>
         ) : null}
 
         {groups.length === 0 ? (
-          <EmptyState icon={AppWindow} title="No software matches these filters.">
-            Add installed software on a PC&apos;s record to see it here.
+          <EmptyState icon={AppWindow} title="No software found.">
+            Add software on a PC&apos;s page to see it here.
           </EmptyState>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Installed software">

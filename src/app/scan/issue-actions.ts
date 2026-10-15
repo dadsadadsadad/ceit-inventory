@@ -19,20 +19,20 @@ export async function submitIssueReport(formData: FormData) {
     const title = text("title");
     const description = text("description");
     if (formData.get("website")) {
-      throw new FormError("Unable to send this report. Please try again.");
+      throw new FormError("Couldn't send. Try again.");
     }
     if (!isInventoryQrCode(qrCode)) {
-      throw new FormError("This QR code is not valid.");
+      throw new FormError("Invalid QR code.");
     }
     assertFormToken(`issue:${qrCode}`, String(formData.get("formToken") ?? ""));
     if (reporterName.length < 2 || reporterName.length > 120) {
-      throw new FormError("Enter your name so staff know who reported the problem.");
+      throw new FormError("Enter your name.");
     }
     if (title.length < 3 || title.length > 120) {
-      throw new FormError("Use between 3 and 120 characters for the issue title.");
+      throw new FormError("Title has to be 3 to 120 characters.");
     }
     if (description.length < 10 || description.length > 2_000) {
-      throw new FormError("Describe the issue in 10 to 2,000 characters.");
+      throw new FormError("Description has to be 10 to 2,000 characters.");
     }
     await enforcePublicRequestRateLimit(PublicRequestKind.ISSUE);
     // reuse an identical open report
@@ -42,9 +42,7 @@ export async function submitIssueReport(formData: FormData) {
         select: { id: true, status: true },
       });
       if (!item || item.status === ItemStatus.RETIRED) {
-        throw new FormError(
-          "This item is no longer accepting issue reports. Please contact CEIT staff.",
-        );
+        throw new FormError("This item can't take reports. Ask CEIT staff.");
       }
       const duplicate = await tx.maintenanceTicket.findFirst({
         where: {
@@ -75,7 +73,7 @@ export async function submitIssueReport(formData: FormData) {
               type: "maintenance-ticket",
             },
             metadata: { source: "public-qr", priority: "NORMAL", reportedBy: reporterName },
-            summary: `Issue reported from a QR code by ${reporterName}: ${title}.`,
+            summary: `Reported (QR) by ${reporterName}: ${title}.`,
           }),
         });
       }

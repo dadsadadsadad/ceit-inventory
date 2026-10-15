@@ -95,7 +95,7 @@ export default async function ItemLabelPage({
               href={`/dashboard/inventory/labels?ids=${item.id}`}
               className="accent-link pb-2.5 text-sm font-semibold"
             >
-              Print several labels on one sheet
+              Print several on one sheet
             </Link>
           </FilterForm>
         ) : null}
@@ -116,14 +116,12 @@ export default async function ItemLabelPage({
               height={280}
             />
             <p className="mt-5 break-all font-mono text-xs text-slate-600">{item.qrCode}</p>
-            <p className="mt-2 text-xs text-slate-600">
-              Scan to view this item, request equipment, or report a problem.
-            </p>
+            <p className="mt-2 text-xs text-slate-600">Scan to borrow or report a problem.</p>
           </article>
         ) : (
           <section className="notice rounded-lg px-5 py-4 text-sm leading-6" role="alert">
-            The permanent website address needs to be configured before you can print QR labels. Ask
-            your administrator to finish the website setup.
+            The site URL isn&apos;t set yet, so labels can&apos;t be printed. Ask an admin to set
+            NEXT_PUBLIC_APP_URL.
           </section>
         )}
       </div>

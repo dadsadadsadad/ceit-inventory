@@ -99,8 +99,8 @@ export function BorrowReturnChooser({
       </h2>
       <p className="muted mt-2 text-sm leading-6">
         {isAsset || canReport
-          ? "Requests go directly to CEIT staff for confirmation."
-          : "This item is no longer accepting requests. Contact CEIT staff for help."}
+          ? "CEIT staff will confirm your request."
+          : "This item can't be requested. Ask CEIT staff."}
       </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {isAsset ? (
@@ -123,8 +123,8 @@ export function BorrowReturnChooser({
                 {availability.state === "closed"
                   ? "Not available to borrow."
                   : availability.state === "later"
-                    ? "In use now. Book it for after it is back."
-                    : "Borrow now or reserve for later."}
+                    ? "In use. Reserve it for later."
+                    : "Borrow now or reserve."}
               </span>
             </button>
             <button
@@ -138,9 +138,7 @@ export function BorrowReturnChooser({
             >
               <Undo2 className="mb-2" size={20} aria-hidden="true" />
               <span className="block text-base font-semibold">Return equipment</span>
-              <span className="mt-1 block text-sm font-normal opacity-90">
-                Arrange a return with staff.
-              </span>
+              <span className="mt-1 block text-sm font-normal opacity-90">Return it to staff.</span>
             </button>
           </>
         ) : null}
@@ -157,9 +155,7 @@ export function BorrowReturnChooser({
             <Wrench size={20} aria-hidden="true" />
             <span className="flex-1">
               <span className="block text-base font-semibold">Report a problem</span>
-              <span className="muted mt-1 block text-sm font-normal">
-                Something damaged or not working?
-              </span>
+              <span className="muted mt-1 block text-sm font-normal">Broken or not working?</span>
             </span>
           </button>
         ) : null}

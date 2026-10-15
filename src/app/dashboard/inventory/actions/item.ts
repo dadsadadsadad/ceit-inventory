@@ -71,17 +71,15 @@ export async function createInventoryItem(formData: FormData) {
     assertTrackedAssetQuantity(itemType, quantity);
     assertAssetTag(suppliedAssetTag, itemType);
     if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) {
-      throw new FormError("A PC must be a single tracked asset, not a supply record.");
+      throw new FormError("A PC has to be equipment, not stock.");
     }
     if (units > 1) {
       if (isComputer) {
-        throw new FormError(
-          "Add PCs one at a time so each keeps its own name, hardware profile, and network details.",
-        );
+        throw new FormError("Add PCs one at a time.");
       }
       if (suppliedAssetTag || serialNumber) {
         throw new FormError(
-          "A custom asset tag or serial number belongs to one unit. Add the units one at a time, or leave both blank to generate tags.",
+          "A tag or serial number only fits one unit. Add them one at a time or leave both blank.",
         );
       }
     }
@@ -131,7 +129,7 @@ export async function createInventoryItem(formData: FormData) {
                 auditEvents: {
                   create: {
                     action: AuditAction.CREATED,
-                    summary: "Inventory item created.",
+                    summary: "Item added.",
                     actorId: actor.id,
                     actorName: auditActorName(actor),
                     metadata: {
@@ -173,9 +171,7 @@ export async function updateInventoryItem(formData: FormData) {
     });
     const submittedVersion = String(formData.get("updatedAt") ?? "");
     if (submittedVersion && submittedVersion !== existing.updatedAt.toISOString()) {
-      throw new FormError(
-        "This item changed since you opened it. Refresh the page before saving your edits.",
-      );
+      throw new FormError("Someone else changed this item. Refresh and try again.");
     }
     const categoryId = requiredId(formData, "categoryId");
     const locationId = requiredId(formData, "locationId");
@@ -188,7 +184,7 @@ export async function updateInventoryItem(formData: FormData) {
     assertTrackedAssetQuantity(itemType, quantity, existing);
     assertAssetTag(suppliedAssetTag, itemType);
     if (isComputer && !isSingleTrackedAsset({ itemType, quantity })) {
-      throw new FormError("A PC must be a single tracked asset, not a supply record.");
+      throw new FormError("A PC has to be equipment, not stock.");
     }
     await assertActiveAssignments(categoryId, locationId, existing);
     const inlineField = readInlineCustomField(formData);
@@ -227,9 +223,7 @@ export async function updateInventoryItem(formData: FormData) {
         async (tx) => {
           const liveItem = await tx.inventoryItem.findUniqueOrThrow({ where: { id } });
           if (liveItem.updatedAt.getTime() !== existing.updatedAt.getTime()) {
-            throw new FormError(
-              "This item changed while you were editing it. Refresh the page before saving again.",
-            );
+            throw new FormError("Someone else changed this item. Refresh and try again.");
           }
           const outstanding = await tx.borrowRequest.count({
             where: {
@@ -244,9 +238,7 @@ export async function updateInventoryItem(formData: FormData) {
               ((status === ItemStatus.OK || status === ItemStatus.WORKING) &&
                 status !== existing.status))
           ) {
-            throw new FormError(
-              "This equipment is still borrowed. Confirm its return before changing its quantity, type, or availability.",
-            );
+            throw new FormError("This item is still borrowed. Mark it returned first.");
           }
           if (status === ItemStatus.RETIRED && existing.status !== ItemStatus.RETIRED) {
             const activeBorrowingCount = await tx.borrowRequest.count({
@@ -254,7 +246,7 @@ export async function updateInventoryItem(formData: FormData) {
             });
             if (activeBorrowingCount) {
               throw new FormError(
-                `Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still references this item. Resolve the request first.`,
+                `Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still uses this item. Close the request first.`,
               );
             }
           }
@@ -287,7 +279,7 @@ export async function updateInventoryItem(formData: FormData) {
                     ? `Updated ${Object.keys(changes)
                         .map((key) => auditFieldLabel(key).toLowerCase())
                         .join(", ")}.`
-                    : "Inventory record saved with no field changes.",
+                    : "Saved, nothing changed.",
                   actorId: actor.id,
                   actorName: auditActorName(actor),
                   metadata: { changes, activityKind: "record-edit" },
@@ -320,7 +312,7 @@ export async function adjustStockQuantity(formData: FormData) {
     const direction = enumValue(formData, "direction", ["add", "use"] as const, "add");
     const amount = optionalInteger(formData, "amount", 1_000_000);
     if (!amount || amount < 1) {
-      throw new FormError("Enter how many to add or use.");
+      throw new FormError("Enter an amount.");
     }
     const note = optionalText(formData, "note", 200);
 
@@ -331,12 +323,10 @@ export async function adjustStockQuantity(formData: FormData) {
           select: { itemType: true, quantity: true, status: true },
         });
         if (!item || item.itemType !== ItemType.SUPPLY) {
-          throw new FormError("Only stock records have a quantity to adjust.");
+          throw new FormError("Only stock has a quantity.");
         }
         if (item.status === ItemStatus.RETIRED) {
-          throw new FormError(
-            "This stock record is retired. Restore it before adjusting the count.",
-          );
+          throw new FormError("This item is retired. Restore it first.");
         }
         // new count after the change
         const next = direction === "add" ? item.quantity + amount : item.quantity - amount;
@@ -344,7 +334,7 @@ export async function adjustStockQuantity(formData: FormData) {
           throw new FormError(`Only ${item.quantity} left, so ${amount} cannot be used.`);
         }
         if (next > 1_000_000) {
-          throw new FormError("That would be more than the largest quantity a record can hold.");
+          throw new FormError("That quantity is too large.");
         }
         await tx.inventoryItem.update({
           where: { id },
@@ -391,9 +381,7 @@ export async function retireInventoryItem(formData: FormData) {
           throw new FormError("This item no longer exists.");
         }
         if (activeBorrowingCount) {
-          throw new FormError(
-            "This item has an active borrowing request. Resolve that request before retiring the record.",
-          );
+          throw new FormError("This item has an open borrowing request. Close it first.");
         }
 
         if (item.status !== ItemStatus.RETIRED) {
@@ -404,7 +392,7 @@ export async function retireInventoryItem(formData: FormData) {
               auditEvents: {
                 create: {
                   action: AuditAction.STATUS_CHANGED,
-                  summary: "Inventory item removed from active inventory.",
+                  summary: "Retired.",
                   actorId: actor.id,
                   actorName: auditActorName(actor),
                   metadata: { previousStatus: item.status, status: ItemStatus.RETIRED },
@@ -429,7 +417,7 @@ export async function splitGroupedAsset(formData: FormData) {
     const id = requiredId(formData, "id");
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "SPLIT") {
-      throw new FormError("Type SPLIT to create one record per physical unit.");
+      throw new FormError("Type SPLIT to confirm.");
     }
 
     const original = await prisma.inventoryItem.findUnique({
@@ -437,20 +425,16 @@ export async function splitGroupedAsset(formData: FormData) {
       select: { itemType: true, quantity: true, isComputer: true },
     });
     if (!original || original.quantity <= 1) {
-      throw new FormError("This record is already a single unit.");
+      throw new FormError("This is already a single unit.");
     }
     if (original.isComputer) {
-      throw new FormError(
-        "PC and Mac records must be corrected individually so their names, hardware profiles, and network identifiers remain accurate.",
-      );
+      throw new FormError("PCs can't be split. Fix them one by one.");
     }
     const borrowingHistoryCount = await prisma.borrowRequest.count({
       where: { inventoryItemId: id },
     });
     if (borrowingHistoryCount) {
-      throw new FormError(
-        "This grouped asset has borrowing history and cannot be split automatically. Preserve its history, then create individual replacement records for the physical units.",
-      );
+      throw new FormError("This item has borrowing history and can't be split.");
     }
 
     let unitIds: string[] = [];
@@ -459,18 +443,13 @@ export async function splitGroupedAsset(formData: FormData) {
         async (tx) => {
           const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id } });
           if (item.quantity <= 1 || item.isComputer) {
-            throw new FormError(
-              "This record changed and can no longer be split. Refresh the page and try again.",
-            );
+            throw new FormError("This item changed. Refresh and try again.");
           }
           // check again inside the transaction in case a request came in
           if (await tx.borrowRequest.count({ where: { inventoryItemId: id } })) {
-            throw new FormError(
-              "This grouped asset now has a borrowing request and cannot be split automatically.",
-            );
+            throw new FormError("This item has a borrowing request now and can't be split.");
           }
           const unitCount = item.quantity;
-          const wasStock = item.itemType === ItemType.SUPPLY;
           await tx.inventoryItem.update({
             where: { id },
             data: {
@@ -489,7 +468,7 @@ export async function splitGroupedAsset(formData: FormData) {
               auditEvents: {
                 create: {
                   action: AuditAction.UPDATED,
-                  summary: `${wasStock ? "Stock record" : "Grouped asset"} split into ${unitCount} individually tracked units.`,
+                  summary: `Split into ${unitCount} units.`,
                   actorId: actor.id,
                   actorName: auditActorName(actor),
                   metadata: {
@@ -532,7 +511,7 @@ export async function splitGroupedAsset(formData: FormData) {
                 auditEvents: {
                   create: {
                     action: AuditAction.CREATED,
-                    summary: `Individual asset created from grouped record: unit ${unitNumber} of ${unitCount}.`,
+                    summary: `Split from grouped record: unit ${unitNumber} of ${unitCount}.`,
                     actorId: actor.id,
                     actorName: auditActorName(actor),
                     metadata: {
@@ -579,7 +558,7 @@ export async function markInventoryItemChecked(formData: FormData) {
         data: {
           itemId: id,
           action: AuditAction.UPDATED,
-          summary: "Item inspection recorded.",
+          summary: "Checked.",
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { source: "inspection", checkedAt: checkedAt.toISOString() },
@@ -598,7 +577,7 @@ export async function deleteInventoryItem(formData: FormData) {
     const id = requiredId(formData, "id");
     const confirmation = requiredText(formData, "confirmation", 16);
     if (confirmation !== "DELETE") {
-      throw new FormError("Type DELETE to permanently remove this item.");
+      throw new FormError("Type DELETE to confirm.");
     }
 
     const [borrowingHistoryCount, maintenanceHistoryCount] = await Promise.all([
@@ -607,7 +586,7 @@ export async function deleteInventoryItem(formData: FormData) {
     ]);
     if (borrowingHistoryCount || maintenanceHistoryCount) {
       throw new FormError(
-        `This item has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Remove it from active inventory instead to preserve its history.`,
+        `This item has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire it instead.`,
       );
     }
 
@@ -631,16 +610,14 @@ export async function deleteInventoryItem(formData: FormData) {
             actor,
             entity: { id: item.id, itemId: item.id, label: itemLabel, type: "inventory-item" },
             metadata: { activityKind: "record-delete", assetTag: item.assetTag ?? "" },
-            summary: "Inventory record permanently deleted.",
+            summary: "Deleted.",
           }),
         });
         await tx.inventoryItem.delete({ where: { id } });
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-        throw new FormError(
-          "This item now has borrowing or maintenance history. Remove it from active inventory instead to preserve that history.",
-        );
+        throw new FormError("This item has history now. Retire it instead.");
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
         throw new FormError("This item no longer exists.");

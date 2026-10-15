@@ -144,8 +144,7 @@ export async function buildValueReport(context: BuilderContext): Promise<ReportM
   return {
     kind: "value",
     title: "Asset value",
-    description:
-      "What the equipment is worth, where that value sits, how old it is, and what is at risk.",
+    description: "Equipment value by category, room and age.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
@@ -217,14 +216,14 @@ export async function buildValueReport(context: BuilderContext): Promise<ReportM
         kind: "columns",
         format: "peso",
         unit: "pesos",
-        note: "Value bought each year, by purchase date.",
+        note: "Value bought per year.",
         data: years.map((year) => ({ label: String(year), value: yearValue.get(year) ?? 0 })),
       },
       {
         title: "Equipment age",
         kind: "bars",
         unit: "records",
-        note: "Records with a purchase date, by how long ago they were bought.",
+        note: "Items by age.",
         data: ageBands.map((band, index) => ({ label: band.label, value: ageCounts[index] })),
       },
     ],
@@ -244,11 +243,11 @@ export async function buildValueReport(context: BuilderContext): Promise<ReportM
           totalValue ? `${((row.value / totalValue) * 100).toFixed(1)}%` : "0%",
         ]),
         total: categoryRows.length,
-        emptyText: "No records match these filters.",
+        emptyText: "No items found.",
       },
       {
         heading: "Records by value",
-        note: "Most valuable first. Records without a price come last.",
+        note: "Most valuable first.",
         columns: [
           { label: "Item", width: 2, primary: true },
           { label: "Status", width: 1 },
@@ -270,7 +269,7 @@ export async function buildValueReport(context: BuilderContext): Promise<ReportM
             : "None recorded",
         ]),
         total,
-        emptyText: "No records match these filters.",
+        emptyText: "No items found.",
       },
     ],
     csv: [

@@ -90,7 +90,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
   return {
     kind: "pcs",
     title: "PC register",
-    description: "Every PC with its hardware, operating system, and installed software.",
+    description: "All PCs with hardware, OS and software.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
@@ -149,7 +149,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
           ];
         }),
         total,
-        emptyText: "No PCs match these filters.",
+        emptyText: "No PCs found.",
       },
     ],
     csv: [

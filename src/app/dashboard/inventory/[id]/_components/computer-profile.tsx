@@ -88,7 +88,7 @@ function SoftwareFields({ software }: { software?: SoftwareValues }) {
           defaultValue={software?.licenseKeyHint ?? ""}
           maxLength={255}
           className={field}
-          placeholder="Last four characters of the key"
+          placeholder="Last 4 characters of the key"
         />
       </label>
       <label>
@@ -183,7 +183,7 @@ export function ComputerFields({ computer }: { computer?: ComputerInfo | null })
             defaultValue={computer?.hardwareDescription ?? ""}
             maxLength={5_000}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Installed components, display, and attached hardware."
+            placeholder="Parts, display and peripherals."
           />
         </label>
         <label>
@@ -194,7 +194,7 @@ export function ComputerFields({ computer }: { computer?: ComputerInfo | null })
             defaultValue={computer?.softwareDescription ?? ""}
             maxLength={5_000}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Special applications, configuration, and license notes."
+            placeholder="Notes on software and licenses."
           />
         </label>
       </div>
@@ -325,7 +325,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
                 )}
               </div>
             ) : (
-              <p className="muted mt-2 text-sm">No software entries recorded yet.</p>
+              <p className="muted mt-2 text-sm">No software yet.</p>
             )}
 
             {canManage ? (
@@ -354,7 +354,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
       ) : canManage && canHaveComputerDetails(item) ? (
         <details className="section-disclosure card rounded-lg p-5 sm:p-6">
           <summary className="cursor-pointer text-lg font-semibold">Add PC details</summary>
-          <p className="muted mt-2 text-sm">Create a PC record for this single tracked asset.</p>
+          <p className="muted mt-2 text-sm">Add PC details for this item.</p>
           <FeedbackForm action={addComputerDetails} className="mt-5 space-y-5">
             <input type="hidden" name="itemId" value={item.id} />
             <ComputerFields />

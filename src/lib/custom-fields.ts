@@ -141,10 +141,10 @@ export function validatedChoices(fieldType: CustomFieldType, text: string) {
   }
   const choices = parseChoices(text);
   if (choices.length < 2) {
-    throw new CustomFieldError("Give at least two answers to choose from, one per line.");
+    throw new CustomFieldError("Add at least two options, one per line.");
   }
   if (choices.some((choice) => choice.length > 80)) {
-    throw new CustomFieldError("Each answer must be 80 characters or fewer.");
+    throw new CustomFieldError("Options can be up to 80 characters.");
   }
   return choices;
 }

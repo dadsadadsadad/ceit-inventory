@@ -1,11 +1,4 @@
--- Additive only: new optional columns, one new table, and indexes. Nothing existing is changed or removed,
--- so the previous release keeps working against this schema if this runs first.
---   InventoryItem.lowStockThreshold  stock alert level (empty = default of 5)
---   InventoryItem.warrantyEndsAt     optional warranty end date
---   InventoryItem.customFields       optional extra details, keyed by CustomField id
---   ComputerSoftware.isLicensed      optional "is this copy licensed?"
---   BorrowRequest.remindedAt         when staff last reminded the borrower
---   CustomField                      the extra details staff define in Settings
+-- stock alert level, warranty date, extra fields, software license flag and reminder time
 
 -- CreateEnum
 CREATE TYPE "CustomFieldType" AS ENUM ('TEXT', 'NUMBER', 'DATE', 'YES_NO', 'CHOICE');

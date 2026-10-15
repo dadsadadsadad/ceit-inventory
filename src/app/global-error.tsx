@@ -74,11 +74,10 @@ export default function GlobalError({
               margin: ".85rem 0 0",
             }}
           >
-            CEIT Inventory is temporarily unavailable
+            CEIT Inventory is down
           </h1>
           <p style={{ color: "#665e50", lineHeight: 1.65, margin: "1rem 0 0" }}>
-            Try again in a moment. If this persists, ask the system administrator to check the
-            application logs.
+            Try again in a bit. If it keeps happening, tell an admin.
           </p>
           <button
             onClick={retry}

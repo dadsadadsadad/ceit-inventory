@@ -31,7 +31,7 @@ export async function addComputerDetails(formData: FormData) {
     });
     if (item.computer || !canHaveComputerDetails(item)) {
       throw new FormError(
-        "Only a PC-designated single tracked asset without an existing PC record can receive PC details.",
+        "PC details can only be added to a single equipment item marked as a PC.",
       );
     }
 
@@ -44,7 +44,7 @@ export async function addComputerDetails(formData: FormData) {
         data: {
           itemId,
           action: AuditAction.UPDATED,
-          summary: "PC hardware record added.",
+          summary: "PC details added.",
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { source: "manual" },
@@ -76,7 +76,7 @@ export async function updateComputerDetails(formData: FormData) {
         data: {
           itemId,
           action: AuditAction.UPDATED,
-          summary: "PC hardware details updated.",
+          summary: "PC details updated.",
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { changes },
@@ -113,7 +113,7 @@ export async function addComputerSoftware(formData: FormData) {
         data: {
           itemId,
           action: AuditAction.UPDATED,
-          summary: `Software record added: ${name}.`,
+          summary: `Software added: ${name}.`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { software: name },
@@ -135,7 +135,7 @@ export async function updateComputerSoftware(formData: FormData) {
     await requireComputerForItem(itemId, computerId);
     const software = await prisma.computerSoftware.findFirst({ where: { id, computerId } });
     if (!software) {
-      throw new FormError("The software record no longer exists for this PC.");
+      throw new FormError("This software entry no longer exists.");
     }
     const data = {
       name: requiredText(formData, "name", 255),
@@ -152,7 +152,7 @@ export async function updateComputerSoftware(formData: FormData) {
         data: {
           itemId,
           action: AuditAction.UPDATED,
-          summary: `Software record updated: ${data.name}.`,
+          summary: `Software updated: ${data.name}.`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { changes: updatedFields(software, data) },
@@ -174,7 +174,7 @@ export async function removeComputerSoftware(formData: FormData) {
     await requireComputerForItem(itemId, computerId);
     const software = await prisma.computerSoftware.findFirst({ where: { id, computerId } });
     if (!software) {
-      throw new FormError("The software record no longer exists for this PC.");
+      throw new FormError("This software entry no longer exists.");
     }
 
     await prisma.$transaction([
@@ -183,7 +183,7 @@ export async function removeComputerSoftware(formData: FormData) {
         data: {
           itemId,
           action: AuditAction.UPDATED,
-          summary: `Software record removed: ${software.name}.`,
+          summary: `Software removed: ${software.name}.`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { software: software.name },

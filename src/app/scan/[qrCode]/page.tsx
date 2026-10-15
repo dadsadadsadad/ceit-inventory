@@ -227,19 +227,17 @@ export default async function ScannedItemPage({
 
         {requestSent ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
-            Your borrowing request was sent to CEIT staff. Please wait for confirmation before
-            collecting the item.
+            Request sent. Wait for CEIT staff to confirm before picking it up.
           </div>
         ) : null}
         {returnSent ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
-            Your return request was sent. Please bring the equipment to CEIT staff for inspection
-            and confirmation.
+            Return request sent. Bring the item to CEIT staff.
           </div>
         ) : null}
         {issueSent ? (
           <div className="notice notice-success rounded-lg px-5 py-4 text-sm" role="status">
-            Your issue report was sent. CEIT staff will review it.
+            Report sent. Thanks!
           </div>
         ) : null}
 
@@ -263,14 +261,14 @@ export default async function ScannedItemPage({
               </p>
               <p className="availability-detail">
                 {availability.state === "now"
-                  ? "You can borrow it now or reserve it for later."
+                  ? "You can borrow it now or reserve it."
                   : availability.state === "later"
                     ? freeFromDate
-                      ? `Expected back ${formatManilaDate(freeFromDate, { dateStyle: "medium", timeStyle: "short" })}. You can only reserve it for after then.`
-                      : "It is past its return time and waiting for staff to confirm. You can reserve it for a later time."
+                      ? `Expected back ${formatManilaDate(freeFromDate, { dateStyle: "medium", timeStyle: "short" })}. You can reserve it for after that.`
+                      : "It's overdue. You can still reserve it for later."
                     : item.status === ItemStatus.RETIRED
-                      ? "This item has been retired."
-                      : `Its status is ${inventoryStatusLabel(item.status).toLowerCase()}. Contact CEIT staff if you need it.`}
+                      ? "This item is retired."
+                      : `Its status is ${inventoryStatusLabel(item.status).toLowerCase()}. Ask CEIT staff if you need it.`}
               </p>
             </div>
           </div>
@@ -302,10 +300,10 @@ export default async function ScannedItemPage({
         {bookedTimes.length ? (
           <section className="card rounded-lg p-5 sm:p-7" aria-labelledby="booked-times-heading">
             <h2 id="booked-times-heading" className="text-base font-semibold">
-              When this item is not available
+              Booked times
             </h2>
             <p className="muted mt-1 text-sm leading-6">
-              Choose a pickup and return time outside these periods. All times are Philippine time.
+              Pick a time outside these. Times are in PH time.
             </p>
             <ul className="mt-4 space-y-3 text-sm">
               {bookedTimes.map((booking, index) => {
@@ -318,7 +316,7 @@ export default async function ScannedItemPage({
                     <p className="font-semibold">{inUse ? "In use" : "Booked"}</p>
                     <p className="muted mt-0.5">
                       {late
-                        ? "Past its return time, waiting for staff to confirm the return."
+                        ? "Overdue, waiting for return."
                         : `${inUse ? "Until " : `${formatManilaDate(booking.startsAt, { dateStyle: "medium", timeStyle: "short" })} to `}${formatManilaDate(booking.expectedReturnDate, { dateStyle: "medium", timeStyle: "short" })}`}
                     </p>
                   </li>

@@ -26,7 +26,7 @@ export async function recordInventoryLabelPrinted(itemId: string) {
     data: {
       itemId: item.id,
       action: AuditAction.EXPORTED,
-      summary: "QR label opened for printing.",
+      summary: "Label printed.",
       actorId: actor.id,
       actorName: auditActorName(actor),
       metadata: { activityKind: "qr-code-print", source: "qr-code" },
@@ -65,7 +65,7 @@ export async function recordLabelSheetPrinted(ids: string[]) {
           format: "batch-labels",
           count: items.length,
         },
-        summary: "QR label sheet opened for printing.",
+        summary: "Label sheet printed.",
       }),
     ),
   });

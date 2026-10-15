@@ -46,7 +46,7 @@ test("workspace font loads locally and sign-in remains usable when fonts fail", 
 test("login error state is rendered without leaking credentials", async ({ page }) => {
   await page.goto("/auth/login?error=invalid-credentials");
   await expect(
-    page.getByText(/^The email address, username, or password is incorrect, or the account is/),
+    page.getByText(/^Wrong username or password, or the account is locked/),
   ).toBeVisible();
 });
 
@@ -64,7 +64,7 @@ test("sign-in shows one brand at desktop and mobile widths", async ({ page }) =>
 
 test("unknown routes receive the application not-found page", async ({ page }) => {
   await page.goto("/this-route-does-not-exist");
-  await expect(page.getByRole("heading", { name: "That page or item is not here" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to dashboard" })).toBeVisible();
 });
 

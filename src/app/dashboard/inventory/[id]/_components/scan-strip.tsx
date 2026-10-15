@@ -12,7 +12,7 @@ export function ScanStrip({ item }: { item: { id: string; itemType: ItemType; qr
       <ScanAuditLogger itemId={item.id} />
       <p className="flex items-center gap-2 text-sm font-semibold">
         <ScanLine size={18} aria-hidden="true" />
-        Scanned from its QR code
+        Scanned
       </p>
       <div className="scan-strip-actions">
         {item.itemType === ItemType.ASSET ? (

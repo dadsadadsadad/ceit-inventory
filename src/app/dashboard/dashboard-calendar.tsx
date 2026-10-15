@@ -229,7 +229,7 @@ export function DashboardCalendar({
             ))}
           </ul>
         ) : (
-          <p className="muted cal-empty">Nothing planned for this day.</p>
+          <p className="muted cal-empty">Nothing on this day.</p>
         )}
 
         {canEdit ? (
@@ -248,7 +248,7 @@ export function DashboardCalendar({
               required
               maxLength={120}
               className="field w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Add an event, such as a lab check"
+              placeholder="Add event"
             />
             <label className="sr-only" htmlFor="calendar-event-notes">
               Note (optional)

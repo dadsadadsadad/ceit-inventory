@@ -11,8 +11,8 @@ export function AccountSettings({ email, username }: { email: string; username: 
         <p className="eyebrow">Your account</p>
         <h2 className="mt-2 text-lg font-semibold">Sign-in details</h2>
         <p className="muted mt-1 max-w-2xl text-sm leading-6">
-          Use either your email address or username to sign in. Confirm your current password before
-          changing account details.
+          You can sign in with your email or username. Your current password is needed to save
+          changes.
         </p>
       </div>
       <FeedbackForm
@@ -45,7 +45,7 @@ export function AccountSettings({ email, username }: { email: string; username: 
               minLength={3}
               maxLength={32}
               pattern={"[A-Za-z0-9._\\-]{3,32}"}
-              title="Use 3-32 letters, numbers, periods, underscores, or hyphens."
+              title="3-32 letters, numbers, . _ or -"
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
@@ -62,7 +62,7 @@ export function AccountSettings({ email, username }: { email: string; username: 
           />
           <PasswordInput
             label="New password"
-            hint="At least 8 characters with a letter and number."
+            hint="At least 8 characters, with a letter and a number."
             name="newPassword"
             autoComplete="new-password"
             minLength={8}
@@ -79,10 +79,7 @@ export function AccountSettings({ email, username }: { email: string; username: 
             className="field w-full rounded-lg px-3 py-2.5 text-sm"
           />
         </div>
-        <p className="muted text-xs leading-5">
-          Changing your password signs you out on every device so you can sign in again with the new
-          password.
-        </p>
+        <p className="muted text-xs leading-5">Changing your password signs you out everywhere.</p>
         <SubmitButton
           pendingLabel="Updating account..."
           className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"

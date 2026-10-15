@@ -52,12 +52,12 @@ export function auditViewLabel(view: AuditView) {
 
 export function auditViewDescription(view: AuditView) {
   return {
-    important: "Changes to records, borrowing, maintenance, accounts, and setup.",
-    inventory: "Records added, edited, moved, imported, inspected, or removed.",
-    borrowing: "Requests, reservations, check-outs, and returns.",
+    important: "Changes to items, borrowing, repairs, accounts and setup.",
+    inventory: "Items added, edited, moved, imported, checked or removed.",
+    borrowing: "Requests, reservations, checkouts and returns.",
     maintenance: "Reported problems and repairs.",
-    setup: "Accounts, rooms, categories, and the department note.",
-    routine: "QR scans, label prints, report downloads, and sign-ins.",
+    setup: "Accounts, rooms, categories and the note.",
+    routine: "Scans, label prints, downloads and sign-ins.",
     all: "Every recorded event.",
   }[view];
 }
@@ -138,7 +138,7 @@ const routineActions: AuditAction[] = [
   AuditAction.EXPORTED,
 ];
 // old single label prints were saved as updates with this summary
-const singleLabelPrintSummary = "QR label opened for printing.";
+const singleLabelPrintSummary = "Label printed.";
 const nonInventoryEntities = [
   "borrow-request",
   "maintenance-ticket",
@@ -400,7 +400,7 @@ export function auditFieldLabel(key: string) {
   const labels: Record<string, string> = {
     assetTag: "Asset tag",
     categoryId: "Category",
-    customFields: "Custom fields",
+    customFields: "Extra fields",
     itemType: "Item type",
     lastCheckedAt: "Last checked",
     locationId: "Location",
@@ -447,11 +447,11 @@ export function auditEventDetail(event: AuditTrailEvent) {
   }
   if (auditCategory(event) === "QR code scan") {
     return metadataText(metadata, "scanType") === "public"
-      ? "QR code opened from a public device."
-      : "QR code opened by signed-in staff.";
+      ? "Scanned (public)."
+      : "Scanned by staff.";
   }
   if (auditCategory(event) === "QR code") {
-    return "QR code printed for physical use.";
+    return "Label printed.";
   }
   return null;
 }

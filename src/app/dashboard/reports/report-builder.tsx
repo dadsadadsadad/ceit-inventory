@@ -42,12 +42,12 @@ const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
 const label = "muted text-xs font-bold uppercase tracking-wide";
 
 const dateNotes: Partial<Record<ReportKind, string>> = {
-  inventory: "Dates filter by when a record was added.",
-  pcs: "Dates filter by when a PC was added.",
+  inventory: "Dates are when the item was added.",
+  pcs: "Dates are when the PC was added.",
   borrowing:
-    "Dates filter by when the request was made, or by pickup, check-out, return, or cancellation for those views.",
-  maintenance: "Dates filter by when a problem was reported.",
-  activity: "Dates filter by when the event happened.",
+    "Dates are when the request was made (or picked up, returned, cancelled for those views).",
+  maintenance: "Dates are when the problem was reported.",
+  activity: "Dates are when it happened.",
 };
 
 export function ReportBuilder({ initial, options }: Props) {
@@ -150,7 +150,7 @@ export function ReportBuilder({ initial, options }: Props) {
                 name="q"
                 defaultValue={initial.q ?? ""}
                 maxLength={120}
-                placeholder="Name, asset tag, person, room..."
+                placeholder="Search"
                 className={field}
               />
             </label>
@@ -373,7 +373,7 @@ export function ReportBuilder({ initial, options }: Props) {
         </button>
         {changed ? (
           <span className="muted text-sm" role="status">
-            Filters changed. Generate the report again to update it.
+            Filters changed. Generate again to update.
           </span>
         ) : null}
       </div>

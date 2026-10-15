@@ -49,9 +49,7 @@ export async function markBorrowed(formData: FormData) {
     const notes = staffNotes(formData);
     // anyone can type any student number, so staff have to check the id
     if (formData.get("idChecked") !== "on") {
-      throw new FormError(
-        "Confirm that you checked the borrower's school ID before handing over the equipment.",
-      );
+      throw new FormError("Check the borrower's school ID first.");
     }
 
     const itemId = await runTransaction(async (tx) => {
@@ -64,29 +62,27 @@ export async function markBorrowed(formData: FormData) {
         },
       });
       if (!request) {
-        throw new FormError("This borrowing request no longer exists.");
+        throw new FormError("This request no longer exists.");
       }
       if (request.status !== borrowStatus.REQUESTED && request.status !== borrowStatus.RESERVED) {
-        throw new FormError("Only pending requests or approved reservations can be checked out.");
+        throw new FormError("Only pending or approved requests can be checked out.");
       }
       if (request.isReservation && request.status !== borrowStatus.RESERVED) {
-        throw new FormError("Approve the reservation before checking out the equipment.");
+        throw new FormError("Approve the reservation first.");
       }
       const now = new Date();
       if (request.status === borrowStatus.REQUESTED && isHoldLapsed(request, now, policy)) {
         throw new FormError(
-          "This request was not handled in time and no longer holds the equipment. Decline it and ask the borrower to submit a new request.",
+          "This request expired. Decline it and ask the borrower to send a new one.",
         );
       }
       if (request.startsAt > now) {
         throw new FormError(
-          "This reservation has not started yet. Check out the item at the agreed pickup time.",
+          "This reservation hasn't started yet. Check it out at the pickup time.",
         );
       }
       if (request.expectedReturnDate <= now) {
-        throw new FormError(
-          "The return time has passed. Decline or cancel this request and ask the borrower to submit new dates.",
-        );
+        throw new FormError("The return time has passed. Decline or cancel this request.");
       }
       await checkLoanAvailability(
         tx,
@@ -98,10 +94,10 @@ export async function markBorrowed(formData: FormData) {
         true,
       );
       if (request.inventoryItem.itemType !== ItemType.ASSET) {
-        throw new FormError("Only individually tracked equipment can be borrowed.");
+        throw new FormError("Only tracked equipment can be borrowed.");
       }
       if (!canBorrowInventoryStatus(request.inventoryItem.status)) {
-        throw new FormError("This item is not available for borrowing in its current status.");
+        throw new FormError("This item can't be borrowed right now.");
       }
       if (request.inventoryItem.quantity < request.requestedQuantity) {
         throw new FormError(
@@ -131,7 +127,7 @@ export async function markBorrowed(formData: FormData) {
           : { quantity: { decrement: request.requestedQuantity } },
       });
       if (inventoryUpdate.count !== 1) {
-        throw new FormError("This item is no longer available in the requested quantity.");
+        throw new FormError("Not enough of this item is available.");
       }
 
       const processedAt = new Date();
@@ -150,8 +146,8 @@ export async function markBorrowed(formData: FormData) {
           itemId: request.inventoryItemId,
           action: AuditAction.BORROWED,
           summary: individualAssetCheckout
-            ? "Borrow request approved: individual tagged asset checked out."
-            : `Borrow request approved: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} checked out.`,
+            ? "Checked out."
+            : `Checked out (${request.requestedQuantity} ${unitLabel(request.requestedQuantity)}).`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           entityId: request.id,
@@ -188,7 +184,7 @@ export async function declineBorrowRequest(formData: FormData) {
         select: { id: true, inventoryItemId: true, requestedQuantity: true, status: true },
       });
       if (!request) {
-        throw new FormError("This borrowing request no longer exists.");
+        throw new FormError("This request no longer exists.");
       }
       if (request.status !== borrowStatus.REQUESTED) {
         throw new FormError("Only pending requests can be declined.");
@@ -207,7 +203,7 @@ export async function declineBorrowRequest(formData: FormData) {
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.DECLINED,
-          summary: `Borrow request declined for ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)}.`,
+          summary: "Request declined.",
           actorId: actor.id,
           actorName: auditActorName(actor),
           entityId: request.id,
@@ -246,13 +242,13 @@ export async function returnBorrowRequest(formData: FormData) {
         },
       });
       if (!request) {
-        throw new FormError("This borrowing request no longer exists.");
+        throw new FormError("This request no longer exists.");
       }
       if (
         request.status !== borrowStatus.BORROWED &&
         request.status !== borrowStatus.RETURN_REQUESTED
       ) {
-        throw new FormError("Only checked-out requests can be marked as returned.");
+        throw new FormError("Only checked out items can be returned.");
       }
 
       let restoredIndividualStatus = false;
@@ -285,9 +281,9 @@ export async function returnBorrowRequest(formData: FormData) {
           action: AuditAction.RETURNED,
           summary: request.checkedOutItemStatus
             ? restoredIndividualStatus
-              ? "Borrowed individual tagged asset returned and made available."
-              : "Borrowed individual tagged asset returned; its staff-updated status was preserved."
-            : `Borrowed item returned: ${request.requestedQuantity} ${unitLabel(request.requestedQuantity)} restored.`,
+              ? "Returned."
+              : "Returned. Status was left as is."
+            : `Returned (${request.requestedQuantity} ${unitLabel(request.requestedQuantity)}).`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           entityId: request.id,
@@ -326,7 +322,7 @@ export async function approveReservation(formData: FormData) {
         isHoldLapsed(request, new Date(), borrowPolicyFromEnvironment())
       ) {
         throw new FormError(
-          "This reservation has expired or its pickup time has passed. Decline it and ask the borrower to choose new dates.",
+          "This reservation expired. Decline it and ask the borrower to pick new dates.",
         );
       }
       await checkLoanAvailability(
@@ -355,7 +351,7 @@ export async function approveReservation(formData: FormData) {
           entityId: id,
           entityType: "borrow-request",
           entityLabel: `Reservation ${id.slice(0, 8).toUpperCase()}`,
-          summary: "Reservation approved. Equipment is awaiting collection.",
+          summary: "Reservation approved.",
           metadata: {
             transition: borrowStatus.RESERVED,
             startsAt: request.startsAt.toISOString(),
@@ -376,14 +372,12 @@ export async function cancelReservation(formData: FormData) {
     const id = requestId(formData);
     const notes = staffNotes(formData);
     if (!notes) {
-      throw new FormError("Add a reason for cancelling this reservation.");
+      throw new FormError("Add a reason for cancelling.");
     }
     const itemId = await runTransaction(async (tx) => {
       const request = await tx.borrowRequest.findUnique({ where: { id } });
       if (!request || request.status !== borrowStatus.RESERVED) {
-        throw new FormError(
-          "Only approved reservations can be cancelled. Checked-out equipment must be returned.",
-        );
+        throw new FormError("Only approved reservations can be cancelled.");
       }
       await tx.borrowRequest.update({
         where: { id },
@@ -398,7 +392,7 @@ export async function cancelReservation(formData: FormData) {
           entityId: id,
           entityType: "borrow-request",
           entityLabel: `Reservation ${id.slice(0, 8).toUpperCase()}`,
-          summary: "Reservation cancelled; the booking time is available again.",
+          summary: "Reservation cancelled.",
           metadata: { transition: borrowStatus.CANCELLED },
         },
       });
@@ -433,25 +427,23 @@ export async function extendBorrowRequest(formData: FormData) {
     const itemId = await runTransaction(async (tx) => {
       const request = await tx.borrowRequest.findUnique({ where: { id } });
       if (!request) {
-        throw new FormError("This borrowing request no longer exists.");
+        throw new FormError("This request no longer exists.");
       }
       if (
         request.status !== borrowStatus.BORROWED &&
         request.status !== borrowStatus.RETURN_REQUESTED
       ) {
-        throw new FormError(
-          "Only equipment that is currently checked out can have its return time changed.",
-        );
+        throw new FormError("Only checked out items can get a new return time.");
       }
       // return was requested but never happened, put it back on loan
       const keepsOnLoan = request.status === borrowStatus.RETURN_REQUESTED;
       if (newReturn.getTime() === request.expectedReturnDate.getTime()) {
-        throw new FormError("Choose a different return time to save a change.");
+        throw new FormError("That's the same return time.");
       }
       const policy = borrowPolicyFromEnvironment();
       if (newReturn.getTime() - request.startsAt.getTime() > policy.maxTotalLoanDays * dayMs) {
         throw new FormError(
-          `A loan can run for at most ${dayCount(policy.maxTotalLoanDays)} in total. Choose an earlier return time, or have the borrower return the equipment and request it again.`,
+          `A loan can run for at most ${dayCount(policy.maxTotalLoanDays)} in total. Pick an earlier return time.`,
         );
       }
       if (newReturn > request.expectedReturnDate) {
@@ -482,7 +474,7 @@ export async function extendBorrowRequest(formData: FormData) {
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,
-          summary: `${keepsOnLoan ? "Kept on loan; return" : "Return"} time changed to ${formatManilaDate(newReturn, { dateStyle: "medium", timeStyle: "short" })}.`,
+          summary: `${keepsOnLoan ? "Kept on loan, return" : "Return"} time changed to ${formatManilaDate(newReturn, { dateStyle: "medium", timeStyle: "short" })}.`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           entityId: id,
@@ -514,13 +506,13 @@ export async function markReminded(formData: FormData) {
         select: { id: true, inventoryItemId: true, status: true },
       });
       if (!request) {
-        throw new FormError("This borrowing request no longer exists.");
+        throw new FormError("This request no longer exists.");
       }
       if (
         request.status !== borrowStatus.BORROWED &&
         request.status !== borrowStatus.RETURN_REQUESTED
       ) {
-        throw new FormError("Only equipment that is still out can be reminded about.");
+        throw new FormError("This item isn't out right now.");
       }
       await tx.borrowRequest.update({
         where: { id: request.id },
@@ -530,7 +522,7 @@ export async function markReminded(formData: FormData) {
         data: {
           itemId: request.inventoryItemId,
           action: AuditAction.UPDATED,
-          summary: "Borrower reminded about the return time.",
+          summary: "Borrower reminded.",
           actorId: actor.id,
           actorName: auditActorName(actor),
           entityId: request.id,

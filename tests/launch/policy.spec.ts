@@ -83,10 +83,10 @@ test("the borrow form states the rules and a reservation cannot be booked more t
   page,
 }) => {
   await openBorrowForm(page, 11);
-  await expect(page.getByText("Reservations can be made up to 3 days ahead")).toBeVisible();
-  await expect(page.getByText("kept for up to 7 days")).toBeVisible();
+  await expect(page.getByText("You can reserve up to 3 days ahead")).toBeVisible();
+  await expect(page.getByText("keep it for up to 7 days")).toBeVisible();
   await page.getByLabel("Reserve for later").check();
-  const pickup = page.getByLabel("Pickup date and time");
+  const pickup = page.getByLabel("Pickup time");
   await expect(pickup).toHaveAttribute("max", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 
   // remove max so the server check runs
@@ -96,10 +96,10 @@ test("the borrow form states the rules and a reservation cannot be booked more t
     }),
   );
   await pickup.fill(hours(4 * 24));
-  await page.getByLabel("Return date and time").fill(hours(4 * 24 + 2));
+  await page.getByLabel("Return time").fill(hours(4 * 24 + 2));
   await fillBorrowDetails(page, "POLICY-ADVANCE");
   await page.getByRole("button", { name: "Request reservation" }).click();
-  await expect(formError(page)).toContainText("up to 3 days in advance");
+  await expect(formError(page)).toContainText("up to 3 days ahead");
   expect((await query('SELECT COUNT(*)::int AS count FROM "BorrowRequest"')).rows[0].count).toBe(0);
 });
 
@@ -110,7 +110,7 @@ test("equipment cannot be requested for longer than seven days", async ({ page }
       input.removeAttribute("max");
     }),
   );
-  await page.getByLabel("Return date and time").fill(hours(8 * 24));
+  await page.getByLabel("Return time").fill(hours(8 * 24));
   await fillBorrowDetails(page, "POLICY-LONG");
   await page.getByRole("button", { name: "Send borrowing request" }).click();
   await expect(formError(page)).toContainText("at most 7 days");
@@ -129,10 +129,10 @@ test("a student with overdue equipment cannot request more", async ({ page }) =>
     checkedOut: true,
   });
   await openBorrowForm(page, 14);
-  await page.getByLabel("Return date and time").fill(hours(2));
+  await page.getByLabel("Return time").fill(hours(2));
   await fillBorrowDetails(page, "POLICY-OVERDUE");
   await page.getByRole("button", { name: "Send borrowing request" }).click();
-  await expect(formError(page)).toContainText("past its return time");
+  await expect(formError(page)).toContainText("overdue equipment");
   expect(
     (await query(`SELECT COUNT(*)::int AS count FROM "BorrowRequest" WHERE status='REQUESTED'`))
       .rows[0].count,
@@ -144,7 +144,7 @@ test("a student cannot hold more than three open requests at once", async ({ pag
     await insertRequest(item, { student: "POLICY-CAP", status: "REQUESTED", returns: "6 hours" });
   }
   await openBorrowForm(page, 18);
-  await page.getByLabel("Return date and time").fill(hours(2));
+  await page.getByLabel("Return time").fill(hours(2));
   await fillBorrowDetails(page, "POLICY-CAP");
   await page.getByRole("button", { name: "Send borrowing request" }).click();
   await expect(formError(page)).toContainText("already have 3 open requests");
@@ -163,12 +163,12 @@ test("a missed pickup releases the equipment and is labelled for staff", async (
   });
   // lapsed booking doesn't hold it anymore
   await page.goto("/scan/ceit-launch-item-19");
-  await expect(page.getByText("When this item is not available")).toHaveCount(0);
+  await expect(page.getByText("Booked times")).toHaveCount(0);
   await openBorrowForm(page, 19);
-  await page.getByLabel("Return date and time").fill(hours(2));
+  await page.getByLabel("Return time").fill(hours(2));
   await fillBorrowDetails(page, "POLICY-NEXT");
   await page.getByRole("button", { name: "Send borrowing request" }).click();
-  await expect(page.getByRole("status")).toContainText("Your borrowing request was sent");
+  await expect(page.getByRole("status")).toContainText("Request sent");
 
   const staff = await browser.newPage();
   await signIn(staff);

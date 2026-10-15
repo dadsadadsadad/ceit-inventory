@@ -36,6 +36,6 @@ export function reminderMessage(input: {
     day: "numeric",
   }).format(input.dueAt);
   return input.late
-    ? `Hi ${first}, this is CEIT. "${input.itemName}" was due back on ${when}. Please return it to the CEIT office as soon as you can. Thank you!`
-    : `Hi ${first}, this is a reminder from CEIT that "${input.itemName}" is due back on ${when}. Please return it to the CEIT office on time. Thank you!`;
+    ? `Hi ${first}, this is CEIT. "${input.itemName}" was due back on ${when}. Please return it to the CEIT office as soon as you can. Thanks!`
+    : `Hi ${first}, reminder from CEIT: "${input.itemName}" is due back on ${when}. Please return it to the CEIT office. Thanks!`;
 }

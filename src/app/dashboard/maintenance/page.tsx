@@ -154,9 +154,7 @@ export default async function MaintenancePage({
           <div>
             <p className="eyebrow">Maintenance</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Maintenance requests</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Review reported problems and record repairs.
-            </p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Reported problems and repairs.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
@@ -205,9 +203,7 @@ export default async function MaintenancePage({
               className="mt-5 space-y-4"
             >
               <div>
-                <p className="muted mt-1 text-sm">
-                  Use this when an item needs inspection, repair, or replacement.
-                </p>
+                <p className="muted mt-1 text-sm">For anything broken or needing a check.</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <ItemPicker
@@ -246,7 +242,7 @@ export default async function MaintenancePage({
                   name="title"
                   maxLength={255}
                   className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                  placeholder="e.g. Screen does not power on"
+                  placeholder="e.g. Screen won't turn on"
                 />
               </label>
               <label className="block">
@@ -257,12 +253,12 @@ export default async function MaintenancePage({
                   rows={4}
                   maxLength={5_000}
                   className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                  placeholder="Describe the fault, damage, or work needed."
+                  placeholder="What's wrong?"
                 />
               </label>
               <label className="flex items-center gap-3 text-sm">
                 <input name="markDefective" type="checkbox" className="h-4 w-4" />
-                <span>Mark the item as defective while this request needs attention.</span>
+                <span>Mark as defective</span>
               </label>
               <SubmitButton
                 pendingLabel="Reporting..."
@@ -282,7 +278,7 @@ export default async function MaintenancePage({
               name="q"
               defaultValue={query}
               maxLength={120}
-              placeholder="Issue, details, item, or asset tag"
+              placeholder="Search issue, item or tag"
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
@@ -489,8 +485,8 @@ export default async function MaintenancePage({
                         <span className="muted mt-1 block text-xs leading-5">
                           {ticket.inventoryItem.status === ItemStatus.DEFECTIVE &&
                           ticket.status === MaintenanceStatus.OPEN
-                            ? "This equipment is still marked Defective. Choose Working or OK once it has been repaired, otherwise it stays on the needs-attention list."
-                            : "Update after inspecting the equipment, or keep its current status."}
+                            ? "Still marked Defective. Set it to Working or OK once fixed."
+                            : "Set after checking the item."}
                         </span>
                       </label>
                       <SubmitButton
@@ -505,8 +501,8 @@ export default async function MaintenancePage({
               </article>
             ))
           ) : (
-            <EmptyState icon={Wrench} title="No maintenance requests match these filters.">
-              Report an issue when equipment needs inspection, repair, or replacement.
+            <EmptyState icon={Wrench} title="No requests found.">
+              Nothing reported.
             </EmptyState>
           )}
         </section>

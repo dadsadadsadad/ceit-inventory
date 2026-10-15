@@ -70,7 +70,7 @@ export function InventoryFilters({
             defaultValue={search.q?.slice(0, 120) ?? ""}
             maxLength={120}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Name, asset tag, serial, room, MAC..."
+            placeholder="Search name, tag, serial, room"
           />
         </label>
         <label>

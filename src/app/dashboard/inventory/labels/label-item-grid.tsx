@@ -9,6 +9,7 @@ export type LabelGridItem = {
   category: string;
   id: string;
   isComputer: boolean;
+  photoId: string | null;
   location: string;
   name: string;
 };
@@ -50,7 +51,7 @@ export function LabelItemGrid({
 
   function commit(next: string[]) {
     if (next.length > max) {
-      setMessage(`One batch holds up to ${max} labels. Print these first, then pick more.`);
+      setMessage(`One batch holds up to ${max} labels at a time.`);
       return;
     }
     setMessage("");
@@ -129,8 +130,7 @@ export function LabelItemGrid({
       ) : null}
       {matchingIds === null && totalMatching > max ? (
         <p className="muted text-sm">
-          More than {max} items match, so pick them page by page, or narrow the filters to select
-          them all at once.
+          More than {max} items match. Narrow the filters to select all.
         </p>
       ) : null}
 
@@ -150,7 +150,18 @@ export function LabelItemGrid({
                     {isPicked ? <Check size={14} strokeWidth={3} /> : null}
                   </span>
                   <span className="label-tile-symbol" aria-hidden="true">
-                    {item.isComputer ? <Monitor size={18} /> : <Package size={18} />}
+                    {item.photoId ? (
+                      <img
+                        src={`/dashboard/inventory/${item.id}/photos/${item.photoId}?size=thumb`}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : item.isComputer ? (
+                      <Monitor size={18} />
+                    ) : (
+                      <Package size={18} />
+                    )}
                   </span>
                   <span className="label-tile-name">{item.name}</span>
                   <span className="label-tile-tag">{item.assetTag ?? "No asset tag"}</span>

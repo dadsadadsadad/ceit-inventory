@@ -116,10 +116,7 @@ export default async function HardwarePage({
           <div>
             <p className="eyebrow">Equipment register</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Hardware</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              See what hardware your PCs have and which machines share it. Details come from each
-              PC&apos;s record.
-            </p>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">Hardware across all PCs.</p>
           </div>
           <Link
             href={`/dashboard/reports?${reportQuery.toString()}`}
@@ -157,7 +154,7 @@ export default async function HardwarePage({
               defaultValue={q}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Processor, memory, graphics, OS, PC name, room, MAC..."
+              placeholder="Search hardware, PC or room"
             />
           </label>
           <label>
@@ -235,14 +232,14 @@ export default async function HardwarePage({
 
         {loaded.truncated ? (
           <p className="notice rounded-lg px-4 py-3 text-sm" role="status">
-            Only the first {allComputers.length.toLocaleString()} PCs are shown. Narrow the search
-            to see the rest.
+            Only the first {allComputers.length.toLocaleString()} PCs shown. Narrow the search to
+            see more.
           </p>
         ) : null}
 
         {computers.length === 0 ? (
-          <EmptyState icon={Cpu} title="No PCs match these filters.">
-            Mark equipment as a PC and add its hardware details on its record to see it here.
+          <EmptyState icon={Cpu} title="No PCs found.">
+            Mark an item as a PC and add its hardware to see it here.
           </EmptyState>
         ) : mode === "components" ? (
           <section
@@ -266,7 +263,7 @@ export default async function HardwarePage({
                     <h2 className="directory-value">{group.value}</h2>
                     <p className="muted text-sm">
                       {group.count.toLocaleString()} PC{group.count === 1 ? "" : "s"}
-                      {group.recorded ? "" : " · add these details on each PC's record"}
+                      {group.recorded ? "" : " · add them on the PC's page"}
                     </p>
                     <span
                       className="directory-share"

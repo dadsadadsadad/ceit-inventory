@@ -14,10 +14,7 @@ export function RecordLifecycle({ item }: { item: ItemRecord }) {
         <h3 id="record-lifecycle" className="text-sm font-semibold">
           Retire or delete
         </h3>
-        <p className="muted mt-2 text-xs leading-5">
-          Removing from active inventory is reversible and keeps the PC, software, and activity
-          history available.
-        </p>
+        <p className="muted mt-2 text-xs leading-5">Retiring can be undone. History is kept.</p>
         <FeedbackForm
           action={retireInventoryItem}
           optimistic={{ entity: `item:${item.id}`, values: { status: "RETIRED" } }}
@@ -38,9 +35,8 @@ export function RecordLifecycle({ item }: { item: ItemRecord }) {
             Permanently delete this item
           </summary>
           <p className="mt-2 text-xs leading-5">
-            This permanently deletes the record, PC details, photos, and software. The audit trail
-            is retained. Items with borrowing or maintenance history cannot be deleted. Hold the
-            button and release to confirm, or use the click confirmation.
+            Deletes the item, its PC details, photos and software. Items with borrowing or
+            maintenance history can&apos;t be deleted.
           </p>
           <FeedbackForm action={deleteInventoryItem} className="mt-3 space-y-3">
             <input type="hidden" name="id" value={item.id} />

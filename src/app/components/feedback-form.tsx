@@ -19,11 +19,11 @@ function isRedirect(error: unknown) {
 
 function safeErrorMessage(error: unknown) {
   if (!(error instanceof Error)) {
-    return "Unable to save this change. Please try again.";
+    return "Couldn't save. Try again.";
   }
   const message = error.message.trim();
   if (!message || message.length > 240 || /prisma|database|invalid `|\n/i.test(message)) {
-    return "Unable to save this change. Please try again.";
+    return "Couldn't save. Try again.";
   }
   return message;
 }
@@ -112,7 +112,7 @@ export function FeedbackForm({
         for (const patch of patches) {
           if (!changes.begin(patch)) {
             failedRef.current = true;
-            return { error: "This record is already saving. Please wait.", success: false };
+            return { error: "Still saving, please wait.", success: false };
           }
           started.push(patch.entity);
         }
@@ -239,9 +239,7 @@ export function FeedbackForm({
             <span className="eyebrow">Adding record...</span>
             <h3 className="mt-1 font-semibold">{preview.title}</h3>
             {preview.details ? <p className="muted mt-1 text-sm">{preview.details}</p> : null}
-            <p className="muted mt-2 text-sm">
-              Waiting for confirmation. Your details are kept if this cannot be saved.
-            </p>
+            <p className="muted mt-2 text-sm">Saving...</p>
           </article>
         ) : null}
         {children}
@@ -269,7 +267,7 @@ export function FeedbackForm({
                   router.refresh();
                 }}
               >
-                Refresh details, keep my inputs
+                Refresh and keep my changes
               </button>
             ) : null}
           </div>

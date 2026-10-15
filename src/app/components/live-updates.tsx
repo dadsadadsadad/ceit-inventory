@@ -199,7 +199,7 @@ export function LiveUpdates() {
     connection === "offline"
       ? "Offline · reconnecting automatically"
       : waiting
-        ? "Updates waiting · finish saving your edits"
+        ? "Save your changes to see updates"
         : connection === "reconnecting"
           ? "Reconnecting to live updates..."
           : connection === "connecting"

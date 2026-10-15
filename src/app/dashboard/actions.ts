@@ -13,7 +13,7 @@ const maxDashboardNoteLength = 5_000;
 function dashboardNoteContent(formData: FormData) {
   const value = formData.get("content");
   if (typeof value !== "string") {
-    throw new FormError("Enter a valid dashboard note.");
+    throw new FormError("Enter a valid note.");
   }
 
   const content = value.trim();
@@ -51,7 +51,7 @@ export async function saveDashboardNote(formData: FormData) {
             type: "dashboard-note",
           },
           metadata: { activityKind: "dashboard-note", contentLength: content.length },
-          summary: existing ? "Shared dashboard note updated." : "Shared dashboard note created.",
+          summary: existing ? "Note updated." : "Note created.",
         }),
       });
     });

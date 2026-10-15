@@ -54,7 +54,7 @@ function resolutionItemStatus(formData: FormData) {
       value as "OK" | "WORKING" | "NOT_TESTED" | "DEFECTIVE",
     )
   ) {
-    throw new FormError("Choose a valid item status after resolving the request.");
+    throw new FormError("Pick a valid status.");
   }
   return value as ItemStatus;
 }
@@ -63,7 +63,7 @@ export async function createMaintenanceTicket(formData: FormData) {
   return formAction(async () => {
     const actor = await requireWriteAccess();
     if (!String(formData.get("itemId") ?? "").trim()) {
-      throw new FormError("Choose the equipment from the list under the search box.");
+      throw new FormError("Pick the item from the list.");
     }
     const itemId = id(formData, "itemId");
     const title = text(formData, "title", 255, true);
@@ -83,7 +83,7 @@ export async function createMaintenanceTicket(formData: FormData) {
           select: { id: true, status: true },
         });
         if (!item || item.status === ItemStatus.RETIRED) {
-          throw new FormError("Choose an active inventory item.");
+          throw new FormError("Pick an active item.");
         }
         const ticket = await tx.maintenanceTicket.create({
           data: {
@@ -111,7 +111,7 @@ export async function createMaintenanceTicket(formData: FormData) {
                 previousStatus: item.status,
                 status: ItemStatus.DEFECTIVE,
               },
-              summary: "Item status changed to defective while a maintenance request was reported.",
+              summary: "Marked defective (maintenance).",
             }),
           });
         }
@@ -121,7 +121,7 @@ export async function createMaintenanceTicket(formData: FormData) {
             actor,
             entity: { id: ticket.id, itemId, label: title, type: "maintenance-ticket" },
             metadata: { markDefective: itemWasMarkedDefective, priority, source: "maintenance" },
-            summary: `Maintenance request reported: ${title}.`,
+            summary: `Issue reported: ${title}.`,
           }),
         });
       },
@@ -171,17 +171,15 @@ export async function updateMaintenanceTicket(formData: FormData) {
           },
         });
         if (!existing) {
-          throw new FormError("This maintenance request no longer exists.");
+          throw new FormError("This request no longer exists.");
         }
         // someone else saved since the form was opened
         const submittedVersion = String(formData.get("updatedAt") ?? "");
         if (submittedVersion && submittedVersion !== existing.updatedAt.toISOString()) {
-          throw new FormError(
-            "This maintenance request changed since you opened it. Refresh the page before saving again.",
-          );
+          throw new FormError("Someone else changed this request. Refresh and try again.");
         }
         if (itemStatus && existing.inventoryItem.status === ItemStatus.RETIRED) {
-          throw new FormError("Restore this item from Inventory before changing its status.");
+          throw new FormError("Restore this item first.");
         }
         //
         if (itemStatus === ItemStatus.OK || itemStatus === ItemStatus.WORKING) {
@@ -192,7 +190,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
             },
           });
           if (outstanding) {
-            throw new FormError("Confirm the equipment's return before making it available again.");
+            throw new FormError("Mark it returned first.");
           }
         }
 
@@ -231,7 +229,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
                 previousStatus: existing.inventoryItem.status,
                 status: itemStatus,
               },
-              summary: `Item status updated while resolving maintenance request: ${existing.title}.`,
+              summary: `Status changed from maintenance: ${existing.title}.`,
             }),
           });
         }
@@ -261,7 +259,7 @@ export async function updateMaintenanceTicket(formData: FormData) {
               maintenanceTicketId: existing.id,
               source: "maintenance",
             },
-            summary: `Maintenance request updated: ${existing.title} (${status}).`,
+            summary: `Issue updated: ${existing.title} (${status}).`,
           }),
         });
         return existing;

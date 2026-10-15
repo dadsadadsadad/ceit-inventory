@@ -52,7 +52,7 @@ export function ImportForm() {
         return {
           ...initialImportResult,
           errors: [
-            "The import could not finish. Your file is still selected. Check it again before retrying to see which rows were already imported.",
+            "The import didn't finish. Check the file again to see what was already imported.",
           ],
         };
       }
@@ -79,8 +79,7 @@ export function ImportForm() {
         <div>
           <h2 className="text-lg font-semibold">Choose a spreadsheet</h2>
           <p className="muted mt-1 text-sm leading-6">
-            Upload your own file as it is, or start from the template. Only the item name is
-            required; anything else that is missing is filled in sensibly.
+            Use your own file or the template. Only the item name is required.
           </p>
         </div>
         <a
@@ -105,7 +104,7 @@ export function ImportForm() {
 
       <FormSection
         title="Defaults for missing details"
-        hint="Used when a row, or the whole file, has no category, location, or room"
+        hint="Used when a row has no category or location"
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block text-sm">
@@ -137,8 +136,7 @@ export function ImportForm() {
           </label>
         </div>
         <p className="muted mt-3 text-xs leading-5">
-          Leave these empty and rows without a category or location are filed under
-          &quot;Uncategorized&quot; and &quot;Unassigned&quot;, which you can fix later.
+          If left empty, rows go under &quot;Uncategorized&quot; and &quot;Unassigned&quot;.
         </p>
       </FormSection>
 
@@ -153,8 +151,7 @@ export function ImportForm() {
           <span>
             <strong>Create missing categories and locations</strong>
             <span className="muted block">
-              Leave this on for a first import. Turn it off to catch spelling mistakes against your
-              existing Settings.
+              Turn off to catch typos in category and location names.
             </span>
           </span>
         </label>
@@ -166,49 +163,40 @@ export function ImportForm() {
             className="mt-0.5 h-4 w-4"
           />
           <span>
-            <strong>Keep other columns in the notes</strong>
-            <span className="muted block">
-              Columns with no matching field are saved in each item&apos;s notes instead of being
-              thrown away. A column named like one of your extra fields fills that field.
-            </span>
+            <strong>Put other columns in notes</strong>
+            <span className="muted block">Columns that match an extra field fill that field.</span>
           </span>
         </label>
       </div>
 
       <details className="form-section">
         <summary className="form-section-summary">
-          <span className="form-section-title">How your file is read</span>
+          <span className="form-section-title">How the file is read</span>
         </summary>
         <div className="form-section-body space-y-2 text-sm leading-6">
           <ul className="list-disc space-y-1 pl-5">
             <li>
-              <strong>Headings</strong> can be in any order, on any row near the top, with any
-              spacing or capitals. Common alternatives work too: <code>Item</code>,{" "}
-              <code>Equipment</code>, <code>Qty</code>, <code>Serial No.</code>, <code>Brand</code>,{" "}
-              <code>Room</code>, <code>Price</code>, <code>Warranty</code>.
+              <strong>Headings</strong> can be in any order. These names also work:{" "}
+              <code>Item</code>, <code>Equipment</code>, <code>Qty</code>, <code>Serial No.</code>,{" "}
+              <code>Brand</code>, <code>Room</code>, <code>Price</code>, <code>Warranty</code>.
             </li>
             <li>
-              <strong>Missing columns</strong> are fine. <strong>Empty rows</strong>, totals, and
-              repeated headings are skipped without complaint.
+              <strong>Missing columns</strong> are fine. <strong>Empty rows</strong>, totals and
+              repeated headers are skipped.
             </li>
             <li>
-              <strong>Rows with a problem</strong> are skipped and listed with the reason. Every
-              other row is still imported.
+              <strong>Rows with a problem</strong> are skipped and listed. The rest still import.
             </li>
             <li>
-              <strong>Odd values</strong> such as &quot;₱1,200&quot;, &quot;8GB&quot;,
-              &quot;1/15/2026&quot;, or &quot;broken&quot; are understood. If one cannot be, that
-              detail is left blank and you are told.
+              <strong>Messy values</strong> like &quot;₱1,200&quot;, &quot;8GB&quot;,
+              &quot;1/15/2026&quot; or &quot;broken&quot; work. Anything unreadable is left blank.
             </li>
             <li>
-              <strong>Equipment</strong> with a quantity above 1 becomes that many separate items,
-              each with its own asset tag and QR code. Mark a row <code>stock</code> in a{" "}
-              <code>type</code> column to keep it as one counted stock record instead.
+              <strong>Equipment</strong> with a quantity over 1 becomes that many items, each with
+              its own tag. Put <code>stock</code> in a <code>type</code> column to keep it as one
+              stock record.
             </li>
-            <li>
-              Up to 1,000 rows and 10 MB per file. Check the file first to see exactly what would
-              happen, then import.
-            </li>
+            <li>Max 1,000 rows and 10 MB. Check the file first, then import.</li>
           </ul>
         </div>
       </details>
@@ -247,10 +235,10 @@ export function ImportForm() {
           {result.records !== result.imported
             ? ` · ${result.records.toLocaleString()} items ${result.previewed ? "would be created" : "created"}`
             : ""}
-          {result.previewed ? " · nothing has been saved yet" : ""}
+          {result.previewed ? " · nothing saved yet" : ""}
           {result.skipped ? ` · ${result.skipped.toLocaleString()} skipped` : ""}
           {result.previewed && result.imported && !result.errors.length ? (
-            <span className="block mt-1">Everything checks out. Press Import to save it.</span>
+            <span className="block mt-1">No problems found. Click Import to save.</span>
           ) : null}
         </div>
       ) : null}
@@ -265,7 +253,7 @@ export function ImportForm() {
 
       {result.warnings.length ? (
         <div className="notice notice-warning rounded-lg px-4 py-3 text-sm" aria-live="polite">
-          <p className="font-semibold">Adjusted so these rows could still be imported</p>
+          <p className="font-semibold">Changed so these rows could import</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             {result.warnings.map((warning) => (
               <li key={warning}>{warning}</li>
@@ -277,7 +265,7 @@ export function ImportForm() {
       {result.errors.length ? (
         <div className="notice notice-error rounded-lg px-4 py-3 text-sm" aria-live="polite">
           <p className="font-semibold">
-            {result.imported || result.skipped ? "Skipped rows" : "Could not read the file"}
+            {result.imported || result.skipped ? "Skipped rows" : "Couldn't read the file"}
           </p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             {result.errors.map((error) => (

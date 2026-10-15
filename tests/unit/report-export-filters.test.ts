@@ -66,7 +66,7 @@ describe("report export filters", () => {
   it("rejects invalid and reversed ranges", () => {
     expect(() =>
       parseReportExportFilters(new URLSearchParams({ from: "2026-09-12", to: "2026-09-01" }), now),
-    ).toThrow("Start date must be on or before end date.");
+    ).toThrow("Start date has to be before end date.");
     expect(() =>
       parseReportExportFilters(new URLSearchParams({ inventoryStatus: "BROKEN" }), now),
     ).toThrow("Invalid inventory status.");

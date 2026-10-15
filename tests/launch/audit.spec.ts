@@ -46,7 +46,7 @@ test("inventory overview shows real status counts and opens the matching filter"
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await signIn(page);
-    const mix = page.getByRole("region", { name: "Your inventory, at a glance" });
+    const mix = page.getByRole("region", { name: "Inventory status" });
     const total = (await query('SELECT COUNT(*)::int AS count FROM "InventoryItem"')).rows[0].count;
     await expect(mix).toContainText(`${total} records`);
     for (const name of ["Defective 1", "Deployed 1", "Retired 1"]) {
@@ -107,7 +107,7 @@ test("public request choices keep keyboard focus and failed return details", asy
   await page.getByLabel("Contact number").fill("09123456789");
   await page.getByLabel("Return notes").fill("Keep these notes after validation fails.");
   await page.getByRole("button", { name: "Request return", exact: true }).click();
-  const error = page.getByRole("alert").filter({ hasText: "No active borrowing record" });
+  const error = page.getByRole("alert").filter({ hasText: "No loan found" });
   await expect(error).toBeVisible();
   await expect(error).toBeFocused();
   await expect(page.getByLabel("Student number")).toHaveValue("AUDIT-NO-LOAN");
@@ -128,13 +128,13 @@ test("scanner handles denied camera access and opens only trusted item links", a
   await signIn(page);
   await page.goto("/scan");
   await page.getByRole("button", { name: "Use camera" }).click();
-  await expect(page.locator("#scanner-status")).toContainText("Camera permission was not granted");
+  await expect(page.locator("#scanner-status")).toContainText("Couldn't start the camera");
   await expect(page.getByRole("button", { name: "Use camera" })).toBeEnabled();
   await page
     .getByLabel("QR code", { exact: true })
     .fill("https://example.invalid/scan/ceit-launch-item-24");
   await page.getByRole("button", { name: "Open item", exact: true }).click();
-  await expect(page.locator("#scanner-status")).toContainText("not a CEIT inventory QR code");
+  await expect(page.locator("#scanner-status")).toContainText("Not a CEIT inventory QR code");
   await expect(page).toHaveURL(/\/scan$/);
   await page.getByLabel("QR code", { exact: true }).fill("ceit-launch-item-24");
   await page.getByRole("button", { name: "Open item", exact: true }).click();

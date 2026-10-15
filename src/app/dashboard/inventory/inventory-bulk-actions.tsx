@@ -74,16 +74,16 @@ export function InventoryBulkActions({
   const confirmationWord = action === "delete" ? "DELETE" : "RETIRE";
   const actionDetails =
     action === "location"
-      ? "Move every selected item to one active location."
+      ? "Move the selected items."
       : action === "status"
-        ? "Apply one status to every selected item."
+        ? "Set the status of the selected items."
         : action === "condition"
-          ? "Apply one condition to every selected item."
+          ? "Set the condition of the selected items."
           : action === "inspect"
-            ? "Record an inspection today for every selected item, including its PC profile when it has one."
+            ? "Mark the selected items as checked today."
             : action === "delete"
-              ? "Permanently delete selected records that have no borrowing or maintenance history, including their tags, QR codes, technical details, and photos. The audit trail is retained."
-              : "Retire selected items from active inventory while keeping their asset tags, QR codes, and complete history.";
+              ? "Delete the selected items. Items with borrowing or maintenance history are skipped."
+              : "Retire the selected items. Their history is kept.";
 
   return (
     <section
@@ -97,9 +97,7 @@ export function InventoryBulkActions({
         <div className="max-w-xl">
           <p className="eyebrow">Selected inventory</p>
           <h2 className="mt-2 text-lg font-bold tracking-tight">{countLabel}</h2>
-          <p className="muted mt-1 text-sm leading-6">
-            Choose a change to apply to the selected items.
-          </p>
+          <p className="muted mt-1 text-sm leading-6">Pick an action.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -138,7 +136,7 @@ export function InventoryBulkActions({
             <option value="condition">Edit condition</option>
             <option value="inspect">Record inspection (checked today)</option>
             <option value="location">Move to location</option>
-            <option value="remove">Retire (keep record and history)</option>
+            <option value="remove">Retire</option>
             <option value="delete">Permanently delete</option>
           </select>
         </label>

@@ -133,7 +133,7 @@ export default async function ReportsPage({
         problem = error.message;
       } else {
         console.error("Unable to build report", error);
-        problem = "The report could not be built. Check the database connection and try again.";
+        problem = "Couldn't build the report.";
       }
     }
   }
@@ -149,8 +149,7 @@ export default async function ReportsPage({
           <p className="eyebrow">Department records</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Reports</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
-            Pick a report, narrow it down, and generate it right here. When it looks right, print it
-            on the spot, download a PDF to share, or take a CSV for a spreadsheet.
+            Pick a report and filters, then print or download it as PDF or CSV.
           </p>
         </header>
 
@@ -189,7 +188,7 @@ export default async function ReportsPage({
               <h2 id="quick-reports-heading" className="text-lg font-semibold">
                 Quick reports
               </h2>
-              <p className="muted text-sm">Common questions, ready to generate in one click.</p>
+              <p className="muted text-sm">Common reports.</p>
             </div>
             <ul className="quick-reports">
               {quickReports.map((quick) => (

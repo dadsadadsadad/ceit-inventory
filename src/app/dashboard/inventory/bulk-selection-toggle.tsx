@@ -106,8 +106,8 @@ export function BulkSelectionToggle({
       </div>
       {hasSelectionLimit ? (
         <p className="muted w-full text-right font-medium">
-          Bulk updates are limited to {allItemIds.length.toLocaleString()} records at a time. Refine
-          your filters to select another group.
+          You can only select {allItemIds.length.toLocaleString()} items at a time. Narrow the
+          filters.
         </p>
       ) : null}
       <p

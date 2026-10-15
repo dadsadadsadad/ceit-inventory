@@ -109,7 +109,7 @@ export default async function BorrowingPage({
             <p className="eyebrow">Equipment lending</p>
             <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Review requests and reservations, check out equipment, and confirm returns.
+              Requests, reservations, checkouts and returns.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -130,7 +130,7 @@ export default async function BorrowingPage({
               defaultValue={textParam(search.q)}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Borrower, student number, contact, item, or asset tag"
+              placeholder="Name, student no., contact, item or tag"
             />
           </label>
           <label>
@@ -202,11 +202,11 @@ export default async function BorrowingPage({
 
         {databaseError ? (
           <div className="notice rounded-lg px-5 py-4 text-sm" role="alert">
-            Borrowing requests could not be loaded. Confirm the database connection and try again.
+            Couldn&apos;t load borrowing requests.
           </div>
         ) : requests.length === 0 ? (
-          <EmptyState icon={HandHelping} title="No borrowing requests match these filters.">
-            Students can submit a request from an item&apos;s QR code page.
+          <EmptyState icon={HandHelping} title="No requests found.">
+            Students can send requests by scanning an item&apos;s QR code.
           </EmptyState>
         ) : (
           <section className="card overflow-hidden rounded-lg" aria-label="Borrowing requests">

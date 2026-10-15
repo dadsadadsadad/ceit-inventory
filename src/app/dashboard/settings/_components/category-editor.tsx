@@ -62,7 +62,7 @@ export function CategoryEditor({
             defaultValue={category.assetTagCode ?? ""}
             maxLength={3}
             pattern="[A-Za-z0-9]{3}"
-            title="Use three letters or numbers."
+            title="3 letters or numbers."
             className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
           />
         </label>
@@ -89,7 +89,7 @@ export function CategoryEditor({
           {category.isActive ? "Deactivate category" : "Reactivate category"}
         </SubmitButton>
         {category.isActive && category._count.items > 0 ? (
-          <span className="muted ml-2 text-xs">Existing records keep this category.</span>
+          <span className="muted ml-2 text-xs">Items keep this category.</span>
         ) : null}
       </FeedbackForm>
       <FeedbackForm action={deleteCategory} className="divider mt-4 border-t pt-4">
@@ -97,7 +97,7 @@ export function CategoryEditor({
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-52 flex-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">
-              Type DELETE to remove this category
+              Type DELETE to confirm
             </span>
             <input
               required
@@ -119,8 +119,8 @@ export function CategoryEditor({
         </div>
         <p className="muted mt-2 text-xs">
           {category._count.items > 0
-            ? `This category has ${category._count.items} linked inventory record${category._count.items === 1 ? "" : "s"} and cannot be deleted yet.`
-            : "Deletion is permanent and is only available while no inventory records use this category."}
+            ? `This category has ${category._count.items} linked inventory record${category._count.items === 1 ? "" : "s"} so it can't be deleted.`
+            : "Only categories with no items can be deleted."}
         </p>
       </FeedbackForm>
     </details>

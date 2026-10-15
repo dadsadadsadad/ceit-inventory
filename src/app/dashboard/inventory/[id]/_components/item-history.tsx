@@ -86,7 +86,7 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
             ))}
           </ol>
         ) : (
-          <p className="muted mt-3 text-sm">No activity has been recorded yet.</p>
+          <p className="muted mt-3 text-sm">No activity yet.</p>
         )}
       </article>
     </>

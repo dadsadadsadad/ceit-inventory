@@ -1,6 +1,4 @@
--- The application now has exactly two account roles. Preserve any existing
--- Viewer accounts by giving them the operational Staff role before removing
--- the enum value; no user accounts or audit records are deleted.
+-- move viewers to staff before dropping the role
 UPDATE "User"
 SET "role" = 'STAFF'::"UserRole"
 WHERE "role" = 'VIEWER'::"UserRole";

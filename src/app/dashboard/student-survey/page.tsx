@@ -22,7 +22,7 @@ export default async function StudentSurveyPage() {
           <p className="eyebrow">Student feedback</p>
           <h1 className="title mt-2 text-3xl">Student survey</h1>
           <p className="muted mt-3 text-sm leading-6">
-            Students, scan the QR code below with your phone camera to answer the form.
+            Scan the QR code with your phone to answer the survey.
           </p>
         </header>
 
@@ -33,13 +33,11 @@ export default async function StudentSurveyPage() {
           <h2 id="survey-qr-heading" className="text-xl font-semibold">
             Scan to answer
           </h2>
-          <p className="muted mt-2 text-sm leading-6">
-            Point your camera at the code, then tap the link to open Google Forms.
-          </p>
+          <p className="muted mt-2 text-sm leading-6">It opens in Google Forms.</p>
           <Image
             unoptimized
             src={qrDataUrl}
-            alt="QR code linking to the CEIT student survey on Google Forms"
+            alt="QR code for the student survey"
             width={320}
             height={320}
             className="mx-auto my-6 h-auto w-full max-w-80 rounded-lg"
@@ -54,9 +52,7 @@ export default async function StudentSurveyPage() {
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
-          <p className="muted mt-3 text-xs leading-5">
-            Using this device? Select Open form to answer in a new tab.
-          </p>
+          <p className="muted mt-3 text-xs leading-5">Or click Open form to answer here.</p>
         </section>
       </div>
     </div>

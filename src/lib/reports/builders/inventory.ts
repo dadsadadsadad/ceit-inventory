@@ -97,7 +97,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
   return {
     kind: "inventory",
     title: "Inventory",
-    description: "Equipment and supplies, where they are kept, and what condition they are in.",
+    description: "Equipment and stock with location and condition.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
@@ -147,11 +147,11 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
             (statusMap.get(status) ?? 0).toLocaleString(),
           ]),
         total: statusMap.size,
-        emptyText: "No records match these filters.",
+        emptyText: "No items found.",
       },
       {
         heading: "Records",
-        note: pcs ? `${pcs.toLocaleString()} of the listed records are PCs or Macs.` : undefined,
+        note: pcs ? `${pcs.toLocaleString()} of these are PCs.` : undefined,
         columns: [
           { label: "Asset tag", width: 1.25, primary: true },
           { label: "Item", width: 1.9, primary: true },
@@ -183,7 +183,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
           `${formatReportDateTime(item.lastCheckedAt)}\nAdded ${formatReportDay(item.createdAt)}`,
         ]),
         total,
-        emptyText: "No records match these filters.",
+        emptyText: "No items found.",
       },
     ],
     csv: [

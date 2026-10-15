@@ -28,7 +28,7 @@ export async function bulkUpdateInventory(formData: FormData) {
     if (action === "delete") {
       const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
       if (confirmation !== "DELETE") {
-        throw new FormError("Type DELETE to permanently remove the selected records.");
+        throw new FormError("Type DELETE to confirm.");
       }
 
       try {
@@ -43,13 +43,11 @@ export async function bulkUpdateInventory(formData: FormData) {
               tx.maintenanceTicket.count({ where: { inventoryItemId: { in: ids } } }),
             ]);
             if (items.length !== ids.length) {
-              throw new FormError(
-                "One or more selected records no longer exist. Refresh the inventory list and try again.",
-              );
+              throw new FormError("Some selected items no longer exist. Refresh and try again.");
             }
             if (borrowingHistoryCount || maintenanceHistoryCount) {
               throw new FormError(
-                `Permanent deletion is blocked because the selection has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire those items instead to preserve their history.`,
+                `Can't delete because the selection has ${borrowingHistoryCount} borrowing and ${maintenanceHistoryCount} maintenance history record${borrowingHistoryCount + maintenanceHistoryCount === 1 ? "" : "s"}. Retire them instead.`,
               );
             }
 
@@ -77,7 +75,7 @@ export async function bulkUpdateInventory(formData: FormData) {
                     type: "inventory-item",
                   },
                   metadata: { activityKind: "record-delete", bulkAction: "delete" },
-                  summary: "Inventory record permanently deleted through a bulk action.",
+                  summary: "Deleted (bulk).",
                 }),
               ),
             });
@@ -85,18 +83,14 @@ export async function bulkUpdateInventory(formData: FormData) {
               where: { id: { in: ids } },
             });
             if (deleted.count !== ids.length) {
-              throw new FormError(
-                "One or more selected records changed before deletion. Refresh the inventory list and try again.",
-              );
+              throw new FormError("Some selected items changed. Refresh and try again.");
             }
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-          throw new FormError(
-            "One or more selected records gained borrowing or maintenance history. Retire those items instead to preserve that history.",
-          );
+          throw new FormError("Some selected items now have history. Retire them instead.");
         }
         throw error;
       }
@@ -115,40 +109,38 @@ export async function bulkUpdateInventory(formData: FormData) {
       const locationId = requiredId(formData, "bulkLocationId");
       targetLocationId = locationId;
       data = { locationId };
-      summary = "Bulk update: moved to a selected location.";
+      summary = "Moved (bulk).";
     } else if (action === "status") {
       const status = enumValue(formData, "bulkStatus", statuses, ItemStatus.OK);
       if (status === ItemStatus.RETIRED) {
-        throw new FormError("Use the Retire bulk action to remove records from active inventory.");
+        throw new FormError("Use Retire instead.");
       }
       data = { status };
-      summary = `Bulk update: status changed to ${status}.`;
+      summary = `Status changed to ${status}.`;
     } else if (action === "condition") {
       const condition = enumValue(formData, "bulkCondition", conditions, ItemCondition.GOOD);
       data = { condition };
-      summary = `Bulk update: condition changed to ${condition}.`;
+      summary = `Condition changed to ${condition}.`;
     } else if (action === "inspect") {
       inspectedAt = new Date();
       data = { lastCheckedAt: inspectedAt };
-      summary = "Bulk update: inspection recorded.";
+      summary = "Checked (bulk).";
     } else if (isRetirement) {
       const confirmation = requiredText(formData, "bulkRemovalConfirmation", 16);
       if (confirmation !== "RETIRE") {
-        throw new FormError("Type RETIRE to remove selected records from active inventory.");
+        throw new FormError("Type RETIRE to confirm.");
       }
       data = { status: ItemStatus.RETIRED };
-      summary = "Bulk update: inventory items removed from active inventory.";
+      summary = "Retired (bulk).";
     } else {
-      throw new FormError("Choose a valid bulk action.");
+      throw new FormError("Pick an action.");
     }
 
     await prisma.$transaction(
       async (tx) => {
         const selectedCount = await tx.inventoryItem.count({ where: { id: { in: ids } } });
         if (selectedCount !== ids.length) {
-          throw new FormError(
-            "One or more selected records no longer exist. Refresh the inventory list and try again.",
-          );
+          throw new FormError("Some selected items no longer exist. Refresh and try again.");
         }
 
         if (targetLocationId) {
@@ -159,7 +151,7 @@ export async function bulkUpdateInventory(formData: FormData) {
           if (!location) {
             throw new FormError("Choose an active location.");
           }
-          summary = `Bulk update: moved to ${location.name}.`;
+          summary = `Moved to ${location.name} (bulk).`;
         }
 
         if (isRetirement) {
@@ -168,7 +160,7 @@ export async function bulkUpdateInventory(formData: FormData) {
           });
           if (activeBorrowingCount) {
             throw new FormError(
-              `Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still reference the selection. Resolve those requests first.`,
+              `Retirement is blocked because ${activeBorrowingCount} active borrowing request${activeBorrowingCount === 1 ? "" : "s"} still use the selection. Close those requests first.`,
             );
           }
         }
@@ -182,7 +174,7 @@ export async function bulkUpdateInventory(formData: FormData) {
           });
           if (outstanding) {
             throw new FormError(
-              "Some selected equipment is still borrowed. Confirm its return before making it available again.",
+              "Some selected items are still borrowed. Mark them returned first.",
             );
           }
         }

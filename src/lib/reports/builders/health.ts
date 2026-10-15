@@ -96,7 +96,7 @@ export async function buildHealthReport(context: BuilderContext): Promise<Report
   return {
     kind: "health",
     title: "Record health",
-    description: "What is missing from each record, so the register can be completed.",
+    description: "Missing details on each item.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       names.category && `Category: ${names.category}`,
@@ -122,7 +122,7 @@ export async function buildHealthReport(context: BuilderContext): Promise<Report
         title: "What is missing",
         kind: "bars",
         unit: "records",
-        note: "Records in use that are missing each detail. One record can miss several.",
+        note: "Items missing each detail.",
         data: missingDetails.map((detail, index) => ({
           label: missingDetailLabels[detail],
           value: gapCounts[index],
@@ -147,7 +147,7 @@ export async function buildHealthReport(context: BuilderContext): Promise<Report
           formatReportDateTime(item.lastCheckedAt),
         ]),
         total,
-        emptyText: "Every record in use has these details. Nothing to complete.",
+        emptyText: "Nothing missing.",
       },
     ],
     csv: [

@@ -27,10 +27,7 @@ export function IssueReportForm({
       </div>
       <div>
         <h2 className="text-xl font-semibold">Report a problem</h2>
-        <p className="muted mt-2 text-sm leading-6">
-          Tell CEIT staff what happened to {itemName}. They will check the equipment and arrange any
-          repairs.
-        </p>
+        <p className="muted mt-2 text-sm leading-6">What&apos;s wrong with {itemName}?</p>
       </div>
       <label className="block">
         <span className="text-sm font-semibold">Your name *</span>
@@ -41,7 +38,7 @@ export function IssueReportForm({
           maxLength={120}
           autoComplete="name"
           className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-          placeholder="So staff know who to ask about it"
+          placeholder="In case staff need to ask"
         />
       </label>
       <label className="block">
@@ -64,12 +61,10 @@ export function IssueReportForm({
           maxLength={2_000}
           rows={4}
           className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-          placeholder="Describe the problem and when you noticed it."
+          placeholder="What happened and when?"
         />
       </label>
-      <p className="muted text-xs leading-5">
-        Staff will see your name with the report. Please leave out passwords and student numbers.
-      </p>
+      <p className="muted text-xs leading-5">Don&apos;t include passwords or student numbers.</p>
       <SubmitButton
         pendingLabel="Sending..."
         className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"

@@ -129,7 +129,7 @@ function startOfDate(value: string) {
 // end date is inclusive
 function dateRange(from?: string, to?: string): ExportDateRange {
   if (from && to && from > to) {
-    throw new Error("Start date must be on or before end date.");
+    throw new Error("Start date has to be before end date.");
   }
   return {
     ...(from ? { from: startOfDate(from) } : {}),
@@ -277,7 +277,7 @@ export function parseReportExportFilters(
   const priceMin = optionalPrice(parameters.get("priceMin"), "Lowest price");
   const priceMax = optionalPrice(parameters.get("priceMax"), "Highest price");
   if (priceMin !== undefined && priceMax !== undefined && priceMin > priceMax) {
-    throw new Error("The lowest price must not be more than the highest price.");
+    throw new Error("Min price can't be more than max price.");
   }
   const within = parameters.get("within");
   if (within && !reportWindows.includes(Number(within) as ReportWindow)) {

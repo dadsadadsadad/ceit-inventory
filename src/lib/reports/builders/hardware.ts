@@ -56,7 +56,7 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
         pcNames(group.pcs),
       ]),
       total: groups.length,
-      emptyText: "No PCs match these filters.",
+      emptyText: "No PCs found.",
     };
   });
 
@@ -81,7 +81,7 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
         componentValue(entry, "os") ?? "Not recorded",
       ]),
       total: listed.total,
-      emptyText: "No PCs match these filters.",
+      emptyText: "No PCs found.",
     });
   }
 
@@ -90,7 +90,7 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
     title: filters.component
       ? `Hardware: ${hardwareComponents.find((part) => part.value === filters.component)?.label}`
       : "Hardware",
-    description: "What your PCs are made of, and which machines share the same parts.",
+    description: "PC hardware and which PCs share parts.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       names.location && `Room: ${names.location}`,

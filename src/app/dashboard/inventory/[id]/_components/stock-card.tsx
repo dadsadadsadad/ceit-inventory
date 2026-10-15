@@ -26,7 +26,7 @@ export function StockCard({ item }: { item: ItemRecord }) {
         <p className="muted text-sm leading-6">
           {stockLevelSummary(item)}{" "}
           {item.lowStockThreshold === null
-            ? "Using the standard alert level."
+            ? "Using the default alert level."
             : `Set to ${lowStockLevelFor(item)} for this item.`}
         </p>
       </div>
@@ -37,7 +37,7 @@ export function StockCard({ item }: { item: ItemRecord }) {
       >
         <input type="hidden" name="id" value={item.id} />
         <fieldset className="filter-chips">
-          <legend className="sr-only">What happened to the stock</legend>
+          <legend className="sr-only">Reason</legend>
           <label className="filter-chip">
             <input type="radio" name="direction" value="add" defaultChecked />
             <span>Add stock</span>
@@ -65,7 +65,7 @@ export function StockCard({ item }: { item: ItemRecord }) {
             <input
               name="note"
               maxLength={200}
-              placeholder="Delivery, used in class, ..."
+              placeholder="e.g. delivery, used in class"
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>

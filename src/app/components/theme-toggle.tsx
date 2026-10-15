@@ -103,10 +103,10 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
           />
           <div className="min-w-0">
             <span className="block text-xs font-semibold text-[var(--foreground)]">
-              Create your accent
+              Custom color
             </span>
             <span className="block text-xs text-[var(--muted)]">
-              Adjusted for readable text in either mode.
+              Adjusted so text stays readable.
             </span>
           </div>
         </div>
@@ -131,7 +131,7 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
         />
       </div>
 
-      <p className="sr-only">Use the following sliders to adjust the color with a keyboard.</p>
+      <p className="sr-only">Color sliders</p>
       <div className="accent-color-adjustments">
         <label className="accent-color-range-label" htmlFor={`${hexInputId}-hue`}>
           <span>
@@ -215,7 +215,7 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
           />
         </label>
         <span id={`${hexInputId}-hint`} className="sr-only">
-          Enter a six digit hexadecimal color.
+          Enter a 6 digit hex color.
         </span>
       </div>
     </div>

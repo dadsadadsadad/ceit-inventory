@@ -25,7 +25,7 @@ const maxBorrowQuantity = 1_000;
 function readText(formData: FormData, key: string, maxLength: number) {
   const value = stripControlCharacters(String(formData.get(key) ?? "")).trim();
   if (value.length > maxLength) {
-    throw new FormError("One of the submitted fields is too long.");
+    throw new FormError("One of the fields is too long.");
   }
   return value;
 }
@@ -47,7 +47,7 @@ function requiredText(
 function readQrCode(formData: FormData) {
   const qrCode = readText(formData, "qrCode", 128);
   if (!qrCodePattern.test(qrCode)) {
-    throw new FormError("This QR code is not valid.");
+    throw new FormError("Invalid QR code.");
   }
   return qrCode;
 }
@@ -63,7 +63,7 @@ function readStudentNumber(formData: FormData) {
 function readContact(formData: FormData) {
   const contact = requiredText(formData, "contact", "Contact number", 32, 7);
   if (!normalizeContactNumber(contact)) {
-    throw new FormError("Enter a valid contact number with 7 to 15 digits.");
+    throw new FormError("Enter a valid contact number (7-15 digits).");
   }
   return contact;
 }
@@ -75,13 +75,13 @@ function readQuantity(formData: FormData) {
   }
   const quantity = Number(value);
   if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > maxBorrowQuantity) {
-    throw new FormError("Choose a quantity between 1 and 1,000.");
+    throw new FormError("Quantity has to be 1 to 1,000.");
   }
   return quantity;
 }
 
 function itemUnavailable(): never {
-  throw new FormError("This item is not currently available for a borrowing request.");
+  throw new FormError("This item can't be borrowed right now.");
 }
 
 function isSerializationFailure(error: unknown) {
@@ -94,18 +94,12 @@ function publicBorrowError(error: unknown) {
     return error;
   }
   if (error.code === "P2002") {
-    return new FormError(
-      "A matching borrowing request is already being processed. Please refresh the item page before trying again.",
-    );
+    return new FormError("You already sent this request. Refresh the page.");
   }
   if (error.code === "P2003" || error.code === "P2025") {
-    return new FormError(
-      "This item changed while the request was being submitted. Refresh the QR code page and try again.",
-    );
+    return new FormError("This item just changed. Refresh and try again.");
   }
-  return new FormError(
-    "The borrowing request could not be saved. Please try again or contact CEIT staff.",
-  );
+  return new FormError("Couldn't send the request. Try again or ask CEIT staff.");
 }
 
 type BorrowRequestInput = {
@@ -179,9 +173,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
               request.expectedReturnDate <= now,
           );
           if (hasOverdueLoan) {
-            throw new FormError(
-              "You still have equipment that is past its return time. Please return it to CEIT staff before requesting more.",
-            );
+            throw new FormError("You have overdue equipment. Return it first.");
           }
           const openRequests = studentRequests.filter(
             (request) =>
@@ -192,7 +184,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
           );
           if (openRequests.length >= input.policy.maxActiveRequestsPerStudent) {
             throw new FormError(
-              `You already have ${input.policy.maxActiveRequestsPerStudent} open requests or loans. Wait for CEIT staff to process them, or return equipment, before requesting more.`,
+              `You already have ${input.policy.maxActiveRequestsPerStudent} open requests or loans. Wait for those to finish first.`,
             );
           }
           const overlapsExisting = openRequests.some(
@@ -202,7 +194,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
               request.expectedReturnDate > input.startsAt,
           );
           if (overlapsExisting) {
-            throw new FormError("You already have an active request for this item.");
+            throw new FormError("You already have a request for this item.");
           }
 
           await checkLoanAvailability(
@@ -246,8 +238,8 @@ async function createBorrowRequest(input: BorrowRequestInput) {
                 transition: borrowStatus.REQUESTED,
               },
               summary: input.isReservation
-                ? "Reservation requested from a QR code."
-                : "Borrowing requested from a QR code.",
+                ? "Reservation requested (QR)."
+                : "Borrow requested (QR).",
             }),
           });
         },
@@ -266,7 +258,7 @@ async function createBorrowRequest(input: BorrowRequestInput) {
 export async function submitBorrowRequest(formData: FormData) {
   return formAction(async () => {
     if (readText(formData, "website", 255)) {
-      throw new FormError("Unable to submit this request. Please try again.");
+      throw new FormError("Couldn't send. Try again.");
     }
 
     const qrCode = readQrCode(formData);
@@ -312,7 +304,7 @@ export async function submitBorrowRequest(formData: FormData) {
 export async function submitReturnRequest(formData: FormData) {
   return formAction(async () => {
     if (readText(formData, "website", 255)) {
-      throw new FormError("Unable to submit this request. Please try again.");
+      throw new FormError("Couldn't send. Try again.");
     }
 
     const qrCode = readQrCode(formData);
@@ -341,13 +333,11 @@ export async function submitReturnRequest(formData: FormData) {
           );
           if (!request) {
             throw new FormError(
-              "No active borrowing record matches these details. Check the student and contact numbers, or ask CEIT staff for help.",
+              "No loan found for these details. Check your student and contact numbers.",
             );
           }
           if (request.status === borrowStatus.RETURN_REQUESTED) {
-            throw new FormError(
-              "A return request for this item is already waiting for staff confirmation.",
-            );
+            throw new FormError("You already sent a return request for this.");
           }
           await tx.borrowRequest.update({
             where: { id: request.id },
@@ -371,7 +361,7 @@ export async function submitReturnRequest(formData: FormData) {
                 source: "public-qr",
                 transition: borrowStatus.RETURN_REQUESTED,
               },
-              summary: "Borrower submitted a return request from a QR code.",
+              summary: "Return requested (QR).",
             }),
           });
         },

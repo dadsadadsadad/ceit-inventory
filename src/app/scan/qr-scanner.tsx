@@ -52,9 +52,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
   function openRecord(value: string) {
     const code = codeFromScan(value, trustedQrOrigin);
     if (!code) {
-      setMessage(
-        "This is not a CEIT inventory QR code. Enter the code printed under the QR image instead.",
-      );
+      setMessage("Not a CEIT inventory QR code. Type the code under the QR instead.");
       return;
     }
     stopCamera();
@@ -65,7 +63,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
   async function startCamera() {
     if (isStarting || isScanning || !navigator.mediaDevices?.getUserMedia || !videoRef.current) {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setMessage("Camera access is unavailable on this device. Use the printed code instead.");
+        setMessage("No camera available. Type the code instead.");
       }
       return;
     }
@@ -102,14 +100,12 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
         return;
       }
       controlsRef.current = controls;
-      setMessage("Point the camera at a CEIT inventory QR code.");
+      setMessage("Point the camera at a QR code.");
       setIsScanning(true);
     } catch {
       if (attempt === attemptRef.current && mountedRef.current) {
         stopCamera();
-        setMessage(
-          "Camera permission was not granted or the camera could not start. You can enter the QR code manually.",
-        );
+        setMessage("Couldn't start the camera. Type the code instead.");
       }
     } finally {
       if (attempt === attemptRef.current && mountedRef.current) {
@@ -142,7 +138,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
             <div className="scanner-empty-state">
               <ScanLine className="mx-auto h-7 w-7" aria-hidden="true" />
               <p className="mt-3 text-sm font-semibold">Camera preview</p>
-              <p className="mt-1 text-xs leading-5">Use your camera to scan an equipment label.</p>
+              <p className="mt-1 text-xs leading-5">Scan an equipment label.</p>
             </div>
           </div>
         ) : null}
@@ -156,7 +152,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
             <span aria-hidden="true">2</span> Hold the label inside the frame.
           </li>
           <li>
-            <span aria-hidden="true">3</span> The record opens on its own.
+            <span aria-hidden="true">3</span> It opens automatically.
           </li>
         </ol>
         <p id="scanner-status" className="scanner-status muted text-sm leading-6" role="status">
@@ -181,9 +177,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
         </div>
         <div className="divider mt-6 border-t pt-5">
           <h2 className="text-sm font-semibold">Manual lookup</h2>
-          <p className="muted mt-1 text-sm leading-6">
-            No camera? Type the code printed under the QR image.
-          </p>
+          <p className="muted mt-1 text-sm leading-6">No camera? Type the code under the QR.</p>
           <form onSubmit={submitManualCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
             <label className="sr-only" htmlFor="manual-qr-code">
               QR code
@@ -199,7 +193,7 @@ export function QrScanner({ trustedQrOrigin }: { trustedQrOrigin?: string }) {
               aria-describedby="scanner-status"
               maxLength={2048}
               className="field min-w-0 flex-1 rounded-lg px-3 py-2.5 font-mono text-sm"
-              placeholder="Paste or type QR code"
+              placeholder="QR code"
             />
             <button className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
               Open item

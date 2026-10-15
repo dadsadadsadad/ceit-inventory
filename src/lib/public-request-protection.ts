@@ -65,9 +65,7 @@ export async function enforcePublicRequestRateLimit(kind: PublicRequestKind) {
                 data: { attempts: 1, windowStartedAt: now },
               });
             } else if (existing.attempts >= limit) {
-              throw new FormError(
-                "Too many requests were sent from this device. Please wait 15 minutes and try again.",
-              );
+              throw new FormError("Too many requests. Try again in 15 minutes.");
             } else {
               await tx.publicRequestAttempt.update({
                 where: key,
@@ -87,5 +85,5 @@ export async function enforcePublicRequestRateLimit(kind: PublicRequestKind) {
     }
   }
 
-  throw new Error("The request could not be processed. Please try again.");
+  throw new Error("Something went wrong. Try again.");
 }

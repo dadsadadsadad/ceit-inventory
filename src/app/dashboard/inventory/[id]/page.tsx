@@ -115,7 +115,7 @@ export default async function InventoryItemPage({
             />
           ) : (
             <aside className="notice h-fit rounded-lg px-5 py-4 text-sm">
-              You have read-only access to this item.
+              You can only view this item.
             </aside>
           )}
         </div>

@@ -2,12 +2,12 @@ export const accountRoles = [
   {
     value: "ADMINISTRATOR",
     label: "Administrator",
-    description: "Everything faculty staff can do, plus adding and managing accounts.",
+    description: "Full access, including accounts.",
   },
   {
     value: "STAFF",
     label: "Faculty staff",
-    description: "Everything except adding or managing accounts.",
+    description: "Everything except accounts.",
   },
 ] as const;
 

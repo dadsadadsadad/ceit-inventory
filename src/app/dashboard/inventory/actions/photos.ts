@@ -60,18 +60,18 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
     const itemId = requiredId(formData, "itemId");
     const file = formData.get("photo");
     if (!(file instanceof File) || file.size === 0) {
-      throw new FormError("Choose an image to upload.");
+      throw new FormError("Choose a photo.");
     }
     if (file.size > maxPhotoBytes) {
-      throw new FormError("Each photo must be 3 MB or smaller.");
+      throw new FormError("Photos can be up to 3 MB.");
     }
     if (!supportedPhotoTypes.has(file.type)) {
-      throw new FormError("Use a JPEG, PNG, or WebP image.");
+      throw new FormError("Use a JPEG, PNG or WebP image.");
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (!imageTypeMatchesBytes(file.type, bytes)) {
-      throw new FormError("The image file does not match its declared type.");
+      throw new FormError("That file isn't a valid image.");
     }
 
     await prisma.$transaction(
@@ -81,7 +81,7 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
           tx.inventoryItemPhoto.count({ where: { inventoryItemId: itemId } }),
         ]);
         if (!item) {
-          throw new FormError("This inventory item no longer exists.");
+          throw new FormError("This item no longer exists.");
         }
         if (photoCount >= maxItemPhotos) {
           throw new FormError(`Each item can have up to ${maxItemPhotos} photos.`);
@@ -99,7 +99,7 @@ export async function uploadInventoryItemPhoto(formData: FormData) {
           data: {
             itemId,
             action: AuditAction.UPDATED,
-            summary: "Item photo added.",
+            summary: "Photo added.",
             actorId: actor.id,
             actorName: auditActorName(actor),
             metadata: {
@@ -128,7 +128,7 @@ export async function deleteInventoryItemPhoto(formData: FormData) {
       select: { id: true, fileName: true },
     });
     if (!photo) {
-      throw new FormError("This photo no longer belongs to the item.");
+      throw new FormError("This photo no longer exists.");
     }
 
     await prisma.$transaction([
@@ -137,7 +137,7 @@ export async function deleteInventoryItemPhoto(formData: FormData) {
         data: {
           itemId,
           action: AuditAction.UPDATED,
-          summary: `Item photo removed: ${photo.fileName}.`,
+          summary: `Photo removed: ${photo.fileName}.`,
           actorId: actor.id,
           actorName: auditActorName(actor),
           metadata: { source: "photo-delete" },

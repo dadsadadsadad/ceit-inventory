@@ -33,7 +33,7 @@ export function AuditFilters({ filters }: { filters: AuditTrailFilters }) {
           defaultValue={filters.query ?? ""}
           maxLength={120}
           className="field w-full rounded-lg px-3 py-2.5 text-sm"
-          placeholder="Search events, people, items, or asset tags..."
+          placeholder="Search"
         />
       </label>
 

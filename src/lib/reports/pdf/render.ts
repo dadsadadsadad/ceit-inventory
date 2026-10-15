@@ -131,7 +131,7 @@ class Sheet {
       color: pdfTheme.muted,
     });
     if (!report.filters.length) {
-      page.drawText("None. This report covers everything.", {
+      page.drawText("None", {
         x: margin + 48,
         y: this.cursor - 9,
         size: 9,

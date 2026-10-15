@@ -113,6 +113,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
         isComputer: true,
         location: { select: { name: true } },
         category: { select: { name: true } },
+        photos: { select: { id: true }, orderBy: { createdAt: "desc" }, take: 1 },
       },
       orderBy: order,
       skip: (currentPage - 1) * tilesPerPage,
@@ -173,8 +174,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             <p className="eyebrow mt-5">Printing</p>
             <h1 className="title mt-3 text-3xl">QR labels</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Click items to choose which labels to print, then pick a size and print. Filter the
-              list to find items faster.
+              Pick items, choose a size and print.
             </p>
           </div>
           {labels.length ? <PrintSheet ids={labels.map((item) => item.id)} /> : null}
@@ -185,8 +185,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             className="notice notice-success no-print rounded-lg px-5 py-4 text-sm"
             role="status"
           >
-            {created} item{created === 1 ? "" : "s"} created, each with its own asset tag and QR
-            code. Their labels are selected and ready below.
+            {created} item{created === 1 ? "" : "s"} created. Their labels are selected below.
           </div>
         ) : null}
 
@@ -205,7 +204,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
                   defaultValue={query}
                   maxLength={120}
                   className="field w-full rounded-lg py-2.5 pr-3 text-sm"
-                  placeholder="Name, asset tag, or serial number"
+                  placeholder="Name, tag or serial"
                 />
               </span>
             </label>
@@ -269,6 +268,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
                 name: item.name,
                 assetTag: item.assetTag,
                 isComputer: item.isComputer,
+                photoId: item.photos[0]?.id ?? null,
                 location: item.location.name,
                 category: item.category.name,
               }))}
@@ -278,7 +278,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               totalMatching={totalMatching}
             />
             {!tiles.length ? (
-              <EmptyState icon={Search} title="No items match these filters.">
+              <EmptyState icon={Search} title="No items found.">
                 <Link className="accent-link font-semibold" href={showAll}>
                   Show all items
                 </Link>
@@ -295,14 +295,13 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
 
         {invalidSelection || invalidFilter ? (
           <p className="notice no-print rounded-lg p-4" role="alert">
-            Some of the chosen items or filters could not be read. Choose them again from the list
-            above (up to {maxLabelCount} labels at a time).
+            Some selected items couldn&apos;t be loaded. Pick them again (up to {maxLabelCount}{" "}
+            labels at a time).
           </p>
         ) : null}
         {!appUrl ? (
           <p className="notice no-print rounded-lg p-4" role="alert">
-            The website address for QR labels hasn&apos;t been configured. Ask your administrator to
-            set it before printing.
+            The site URL isn&apos;t set yet. Ask an admin to set it before printing.
           </p>
         ) : null}
         {labels.length ? (
@@ -310,8 +309,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             <h2 className="no-print text-lg font-semibold">Preview</h2>
             <p className="muted no-print text-sm">
               {labels.length} label{labels.length === 1 ? "" : "s"} ·{" "}
-              {labelLayouts[layout].name.split(" ·")[0]} code · A4 paper · Print at 100% scale with
-              browser headers and footers turned off.
+              {labelLayouts[layout].name.split(" ·")[0]} code · A4 · print at 100% with headers and
+              footers off
             </p>
             <div className="label-sheet-preview">
               {labelPages(labels, labelLayouts[layout].perPage).map((sheet, index) => (
@@ -338,8 +337,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
                         <p>{item.location.name}</p>
                         <p className="sheet-label-hint">
                           {item.itemType === "ASSET"
-                            ? "Scan to borrow or report an issue"
-                            : "Scan to view or report an issue"}
+                            ? "Scan to borrow or report"
+                            : "Scan to view or report"}
                         </p>
                       </div>
                     </article>
@@ -351,8 +350,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
         ) : appUrl ? (
           <div className="no-print">
             <EmptyState icon={QrCode} title="No labels selected yet.">
-              Click items in the list above to choose their labels. Use &quot;Select this page&quot;
-              or &quot;Select all&quot; to choose many at once.
+              Click items above to add their labels.
             </EmptyState>
           </div>
         ) : null}

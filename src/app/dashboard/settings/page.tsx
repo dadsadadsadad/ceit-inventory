@@ -34,7 +34,7 @@ export default async function SettingsPage() {
           <p className="eyebrow">Workspace preferences</p>
           <h1 className="title mt-3 text-3xl sm:text-4xl">Settings</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
-            Update your account, and manage the rooms and categories used by inventory records.
+            Your account, rooms, categories and extra fields.
           </p>
         </header>
 
@@ -45,8 +45,8 @@ export default async function SettingsPage() {
             <p className="eyebrow">Inventory setup</p>
             <h2 className="mt-2 text-xl font-semibold">Locations and categories</h2>
             <p className="muted mt-1 max-w-2xl text-sm leading-6">
-              Inactive rooms and categories stay on existing records. Tag codes are used in{" "}
-              <code>INV-CAT-ST-ROOM-0001</code> asset tags generated for new equipment.
+              Inactive rooms and categories stay on old items. Codes are used in{" "}
+              <code>INV-CAT-ST-ROOM-0001</code> new asset tags.
             </p>
           </section>
           <div className="grid gap-6 xl:grid-cols-2">
@@ -91,12 +91,12 @@ export default async function SettingsPage() {
                         name="assetTagCode"
                         maxLength={2}
                         pattern="[0-9]{2}"
-                        title="Use two digits, such as 05."
+                        title="2 digits, e.g. 05."
                         className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                         placeholder="Auto"
                       />
                       <span className="muted mt-1 block text-xs">
-                        Leave empty to assign the next available two-digit code.
+                        Leave empty to use the next free code.
                       </span>
                     </label>
                   </div>
@@ -160,7 +160,7 @@ export default async function SettingsPage() {
                         name="assetTagCode"
                         maxLength={3}
                         pattern="[A-Za-z0-9]{3}"
-                        title="Use three letters or numbers."
+                        title="3 letters or numbers."
                         className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                         placeholder="Auto"
                       />
@@ -201,9 +201,7 @@ export default async function SettingsPage() {
             <p className="eyebrow">Item details</p>
             <h2 className="mt-2 text-xl font-semibold">Extra fields</h2>
             <p className="muted mt-1 max-w-2xl text-sm leading-6">
-              Add your own details to items, such as a lens mount for cameras or a funding source.
-              They appear in an optional section when adding and editing items, and in the inventory
-              export.
+              Extra details you want to track on items, like a funding source.
             </p>
           </section>
           <section className="card rounded-lg p-5 sm:p-6">
@@ -219,7 +217,7 @@ export default async function SettingsPage() {
                   />
                 ))
               ) : (
-                <p className="muted text-sm">No extra fields yet. Items work fine without them.</p>
+                <p className="muted text-sm">No extra fields yet.</p>
               )}
             </div>
           </section>

@@ -94,7 +94,7 @@ test.describe("account lock", () => {
     const newPassword = page.getByLabel("New password", { exact: true });
     await expect(newPassword).toHaveAccessibleName("New password");
     await expect(newPassword).toHaveAccessibleDescription(
-      "At least 8 characters with a letter and number.",
+      "At least 8 characters, with a letter and a number.",
     );
     const save = async () => {
       await page.getByLabel("Current password", { exact: true }).fill("Not-the-password9");
@@ -105,7 +105,7 @@ test.describe("account lock", () => {
     for (let guess = 1; guess <= 5; guess += 1) {
       await save();
       await expect(
-        page.getByRole("alert").filter({ hasText: "Your current password is incorrect." }),
+        page.getByRole("alert").filter({ hasText: "Wrong current password." }),
       ).toBeVisible();
     }
     await save();
@@ -158,12 +158,12 @@ test.describe("borrowing", () => {
     await signIn(page);
     await page.goto("/dashboard/borrowing?status=RETURN_REQUESTED");
     const card = page.locator(".request-card").filter({ hasText: "Still Has It" });
-    await card.locator("summary", { hasText: "Not back yet? Keep it on loan" }).click();
+    await card.locator("summary", { hasText: "Not returned? Keep on loan" }).click();
     await card
       .getByLabel("New return date and time")
       .fill(manilaDateTimeInput(new Date(Date.now() + 30 * 3_600_000)));
     await card.getByRole("button", { name: "Save return time" }).click();
-    await expect(page.getByText("No borrowing requests match these filters.")).toBeVisible();
+    await expect(page.getByText("No requests found.")).toBeVisible();
     const saved = (
       await query(
         `SELECT status, "returnRequestedAt" IS NULL AS cleared FROM "BorrowRequest" WHERE id=$1`,
@@ -186,9 +186,7 @@ test.describe("public pages and missing records", () => {
   test("a missing record keeps the workspace navigation", async ({ page }) => {
     await signIn(page);
     await page.goto("/dashboard/inventory/00000000-0000-4000-8000-000000000000");
-    await expect(
-      page.getByRole("heading", { name: "That inventory record is not available" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Item not found" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Search the inventory" })).toBeVisible();
     await expect(
       page.getByRole("navigation").getByRole("link", { name: "Inventory" }),
@@ -284,7 +282,7 @@ test.describe("QR labels", () => {
     await expect.poll(width).toBeLessThan(medium);
     await page.getByRole("combobox", { name: "Label size" }).selectOption("large");
     await expect.poll(width).toBeGreaterThan(medium);
-    await page.getByRole("link", { name: "Print several labels on one sheet" }).click();
+    await page.getByRole("link", { name: "Print several on one sheet" }).click();
     await expect(page).toHaveURL(/\/dashboard\/inventory\/labels\?ids=/);
     await expect(page.locator(".sheet-label")).toHaveCount(1);
   });
@@ -336,10 +334,8 @@ test.describe("splitting units", () => {
     );
     await signIn(page);
     await page.goto(`/dashboard/inventory/${id}?edit=1`);
-    await expect(
-      page.getByRole("heading", { name: "Give each unit its own QR code" }),
-    ).toBeVisible();
-    await page.getByLabel("Type SPLIT to give each unit its own record").fill("SPLIT");
+    await expect(page.getByRole("heading", { name: "Split into units" })).toBeVisible();
+    await page.getByLabel("Type SPLIT to confirm").fill("SPLIT");
     await page.getByRole("button", { name: "Split into 3 units" }).click();
 
     await expect(page).toHaveURL(/\/dashboard\/inventory\/labels\?ids=.*created=3/);

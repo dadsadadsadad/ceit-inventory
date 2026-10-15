@@ -47,7 +47,7 @@ describe("extending a checked-out loan", () => {
     };
     await expect(
       checkLoanExtension(tx(1, [reservation]), individualLoan, at(48), now),
-    ).rejects.toThrow("requested or reserved by someone else");
+    ).rejects.toThrow("Someone else has it booked");
   });
 
   it("allows an extension that finishes before the next reservation starts", async () => {

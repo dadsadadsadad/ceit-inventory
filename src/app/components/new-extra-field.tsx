@@ -15,11 +15,11 @@ export function NewExtraField() {
   return (
     <details className="section-disclosure mt-4">
       <summary className="accent-link cursor-pointer text-sm font-semibold">
-        Add a new extra field
+        Add an extra field
       </summary>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <p className="muted text-sm leading-6 sm:col-span-2">
-          Need to record something that is not here yet? Name it and it appears on every item.
+          The new field will show on every item.
         </p>
         <label>
           <span className="text-sm font-semibold">Field name</span>
@@ -27,7 +27,7 @@ export function NewExtraField() {
             name="newFieldLabel"
             maxLength={60}
             className={control}
-            placeholder="Lens mount, Funding source, Color..."
+            placeholder="e.g. Funding source"
           />
         </label>
         <label>
@@ -52,7 +52,7 @@ export function NewExtraField() {
               name="newFieldChoices"
               rows={3}
               className={control}
-              placeholder={"One answer per line, at least two."}
+              placeholder={"One per line, at least two."}
             />
           </label>
         ) : null}
@@ -71,7 +71,7 @@ export function NewExtraField() {
               step={kind === "NUMBER" ? "any" : undefined}
               maxLength={500}
               className={control}
-              placeholder={kind === "CHOICE" ? "Type one of the answers above" : undefined}
+              placeholder={kind === "CHOICE" ? "Pick one of the options above" : undefined}
             />
           )}
         </label>

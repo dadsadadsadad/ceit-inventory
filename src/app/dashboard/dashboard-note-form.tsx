@@ -31,7 +31,7 @@ export function DashboardNoteForm({ initialContent, updatedByName }: DashboardNo
           maxLength={maxDashboardNoteLength}
           rows={5}
           className="field h-full min-h-[10rem] w-full resize-y rounded-lg px-3 py-2.5 text-sm leading-6"
-          placeholder="A reminder, a handover, or something the team should know..."
+          placeholder="Write a note for the team"
         />
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
