@@ -185,6 +185,75 @@ test("hardware lists components and which PCs have them", async ({ page }) => {
   await expect(machines).not.toContainText(`${marker} PC A`);
 });
 
+test("pc labels show hardware and software and grow with long lists", async ({ page }) => {
+  const ids = Object.fromEntries(
+    (
+      await query(`SELECT id, name FROM "InventoryItem" WHERE name LIKE $1`, [`${marker} PC %`])
+    ).rows.map((row) => [String(row.name).slice(-1), row.id as string]),
+  );
+  const extra = Array.from({ length: 20 }, (_, index) => `Zz Lab app ${index + 1}`);
+  await query(
+    `INSERT INTO "ComputerSoftware" (id,"computerId",name,"updatedAt")
+     SELECT gen_random_uuid(), c.id, n, NOW() FROM "Computer" c, unnest($2::text[]) n WHERE c."itemId"=$1`,
+    [ids.C, extra],
+  );
+  await query(
+    `INSERT INTO "InventoryItem" (id,name,"qrCode","categoryId","locationId","updatedAt")
+     SELECT gen_random_uuid(), $1, 'ceit-directory-pc-projector', "categoryId", "locationId", NOW()
+     FROM "InventoryItem" WHERE id=$2`,
+    [`${marker} Projector`, ids.A],
+  );
+  try {
+    await signIn(page);
+    await page.goto(`/dashboard/inventory/${ids.A}`);
+    await page.getByRole("link", { name: "Print PC label" }).click();
+    await expect(page).toHaveURL(/type=pc/);
+    await expect(page.getByRole("heading", { name: "PC labels", level: 1 })).toBeVisible();
+
+    const first = page.getByRole("article", { name: `PC label for ${marker} PC A` });
+    await expect(first.getByRole("rowheader", { name: "CPU" })).toBeVisible();
+    await expect(first).toContainText("Intel Core i5-10400");
+    await expect(first).toContainText("16 GB");
+    await expect(first).toContainText("Zq Studio 2.0");
+    await expect(first).toContainText("Zq Render 5");
+    await expect(first.getByRole("img", { name: /QR code/ })).toBeVisible();
+    await expect(first.locator("thead th").nth(1)).toHaveAttribute("colspan", "1");
+
+    // 21 programs split into two columns
+    await page.goto(`/dashboard/inventory/labels?type=pc&ids=${ids.A},${ids.C}`);
+    const long = page.getByRole("article", { name: `PC label for ${marker} PC C` });
+    await expect(long.locator("thead th").nth(1)).toHaveAttribute("colspan", "2");
+    await expect(long).toContainText("Zz Lab app 20");
+    await expect(long).toContainText("zq studio 1.0");
+    await expect(page.getByRole("article", { name: /^PC label for/ })).toHaveCount(2);
+
+    await page.locator('select[name="size"]').selectOption("small");
+    await expect(page).toHaveURL(/size=small/);
+    await expect(page.locator(".pc-label-small")).toHaveCount(2);
+
+    // only pcs show up as tiles
+    await page.goto(`/dashboard/inventory/labels?type=pc&q=${encodeURIComponent(marker)}`);
+    await expect(page.getByText(`${marker} PC B`).first()).toBeVisible();
+    await expect(page.getByText(`${marker} Projector`)).toHaveCount(0);
+    await page.goto(`/dashboard/inventory/labels?q=${encodeURIComponent(marker)}`);
+    await expect(page.getByText(`${marker} Projector`).first()).toBeVisible();
+    await page.goto(
+      `/dashboard/inventory/labels?type=pc&q=${encodeURIComponent(`${marker} Projector`)}`,
+    );
+    await expect(page.getByText("No PCs found.")).toBeVisible();
+
+    await page
+      .getByRole("navigation", { name: "Label type" })
+      .getByRole("link", { name: "QR labels" })
+      .click();
+    await expect(page).not.toHaveURL(/type=pc/);
+    await expect(page.getByRole("heading", { name: "QR labels", level: 1 })).toBeVisible();
+  } finally {
+    await query(`DELETE FROM "ComputerSoftware" WHERE name LIKE 'Zz Lab app %'`);
+    await query(`DELETE FROM "InventoryItem" WHERE "qrCode"='ceit-directory-pc-projector'`);
+  }
+});
+
 test("audit trail shows important events first", async ({ page }) => {
   await query(
     `INSERT INTO "InventoryAudit" (id,action,summary,"entityType","entityLabel") VALUES

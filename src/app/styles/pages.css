@@ -983,6 +983,141 @@
   font-size: 10pt;
 }
 
+/* pc spec labels, width and type scale come from the size */
+.pc-label-sheet {
+  --pc-label-font: 7pt;
+  --pc-label-qr: 40mm;
+  --pc-label-width: 130mm;
+  align-items: start;
+  display: grid;
+  gap: 4mm;
+  grid-template-columns: repeat(auto-fill, var(--pc-label-width));
+  margin: 0 auto 1.5rem;
+  width: 190mm;
+}
+
+.pc-label-sheet-small {
+  --pc-label-font: 5.5pt;
+  --pc-label-qr: 26mm;
+  --pc-label-width: 93mm;
+}
+
+.pc-label-sheet-large {
+  --pc-label-font: 9pt;
+  --pc-label-qr: 58mm;
+  --pc-label-width: 190mm;
+}
+
+.pc-label {
+  background: white;
+  border: 0.3mm solid #1c1917;
+  break-inside: avoid;
+  color: #1c1917;
+  display: grid;
+  font-family: var(--font-ui);
+  font-size: var(--pc-label-font);
+  grid-template-columns: minmax(0, 1fr) calc(var(--pc-label-qr) + 4mm);
+  line-height: 1.2;
+  width: var(--pc-label-width);
+}
+
+/* hidden drops the outer cell borders so they don't double the label border */
+.pc-label-table {
+  border-collapse: collapse;
+  border-style: hidden;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.pc-label-col-name {
+  width: 19%;
+}
+
+.pc-label-col-value {
+  width: 41%;
+}
+
+.pc-label-split .pc-label-col-name {
+  width: 17%;
+}
+
+.pc-label-split .pc-label-col-value {
+  width: 33%;
+}
+
+.pc-label-table :is(th, td) {
+  border: 0.2mm solid #1c1917;
+  overflow-wrap: anywhere;
+  padding: 0.35em 0.55em;
+  text-align: left;
+  vertical-align: top;
+}
+
+.pc-label-table thead th {
+  -webkit-print-color-adjust: exact;
+  background: #e7e5e4;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  print-color-adjust: exact;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.pc-label-table tbody th {
+  font-weight: 700;
+  overflow-wrap: normal;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pc-label-small .pc-label-table :is(th, td) {
+  padding: 0.35em 0.4em;
+}
+
+.pc-label-small .pc-label-col-name {
+  width: 23%;
+}
+
+.pc-label-small.pc-label-split .pc-label-col-name {
+  width: 22%;
+}
+
+.pc-label-small.pc-label-split .pc-label-col-value {
+  width: 30%;
+}
+
+.pc-label-table tfoot td {
+  font-size: 0.9em;
+  text-transform: uppercase;
+}
+
+.pc-label-qr {
+  align-items: center;
+  border-left: 0.2mm solid #1c1917;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+  justify-content: center;
+  padding: 2mm;
+  text-align: center;
+}
+
+.pc-label-qr img {
+  height: var(--pc-label-qr);
+  width: var(--pc-label-qr);
+}
+
+.pc-label-qr strong {
+  font-family: Consolas, monospace;
+  font-size: 1.15em;
+  overflow-wrap: anywhere;
+}
+
+.pc-label-qr span {
+  color: #525252;
+  font-size: 0.85em;
+}
+
 /* label picker */
 .label-picker {
   align-items: end;
@@ -1229,6 +1364,10 @@
     -webkit-print-color-adjust: exact;
     border-color: transparent;
     print-color-adjust: exact;
+  }
+
+  .pc-label-sheet {
+    margin: 0 !important;
   }
 }
 

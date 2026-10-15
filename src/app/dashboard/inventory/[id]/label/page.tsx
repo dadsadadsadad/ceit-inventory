@@ -97,6 +97,14 @@ export default async function ItemLabelPage({
             >
               Print several on one sheet
             </Link>
+            {item.isComputer ? (
+              <Link
+                href={`/dashboard/inventory/labels?type=pc&ids=${item.id}`}
+                className="accent-link pb-2.5 text-sm font-semibold"
+              >
+                Print PC spec label
+              </Link>
+            ) : null}
           </FilterForm>
         ) : null}
         {scanUrl && qrDataUrl ? (

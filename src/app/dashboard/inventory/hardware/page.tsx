@@ -118,12 +118,20 @@ export default async function HardwarePage({
             <h1 className="title mt-3 text-3xl sm:text-4xl">Hardware</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Hardware across all PCs.</p>
           </div>
-          <Link
-            href={`/dashboard/reports?${reportQuery.toString()}`}
-            className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-          >
-            Open as report
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/dashboard/inventory/labels?type=pc${location ? `&location=${location}` : ""}`}
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Print PC labels
+            </Link>
+            <Link
+              href={`/dashboard/reports?${reportQuery.toString()}`}
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Open as report
+            </Link>
+          </div>
         </header>
 
         <InventoryTabs current="hardware" />

@@ -4,10 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import type { Prisma } from "@prisma/client";
-import { QrCode, Search } from "lucide-react";
+import { Monitor, QrCode, Search } from "lucide-react";
 import QRCode from "qrcode";
 
 import { EmptyState } from "@/app/components/empty-state";
+import { PcLabel } from "@/app/components/pc-label";
 import { FilterForm } from "@/app/components/filter-form";
 import { Pager } from "@/app/components/pager";
 import { isUuid } from "@/lib/ids";
@@ -21,6 +22,7 @@ import {
   maxLabelCount,
   selectedLabelIds,
 } from "@/lib/label-sheet";
+import { defaultPcLabelSize, pcLabelSizeOf, pcLabelSizes } from "@/lib/pc-label";
 import { firstParam, pageParam, textParam } from "@/lib/search-params";
 import { everyTermMatches, searchTerms } from "@/lib/search-terms";
 import { prisma } from "@/prisma";
@@ -38,6 +40,8 @@ type Search = {
   location?: string | string[];
   page?: string | string[];
   q?: string | string[];
+  size?: string | string[];
+  type?: string | string[];
 };
 
 const tilesPerPage = 24;
@@ -49,6 +53,9 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   const location = firstParam(search.location) ?? "";
   const category = firstParam(search.category) ?? "";
   const layout = labelLayoutOf(firstParam(search.layout));
+  // type=pc prints spec labels for computers only
+  const pcMode = firstParam(search.type) === "pc";
+  const pcSize = pcLabelSizeOf(firstParam(search.size));
   const query = textParam(search.q);
   const created = Number(firstParam(search.created));
   const requestedPage = pageParam(search.page);
@@ -63,6 +70,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
     : {
         AND: [
           { status: { not: "RETIRED" } },
+          pcMode ? { isComputer: true } : {},
           location ? { locationId: location } : {},
           category ? { categoryId: category } : {},
           ...everyTermMatches<Prisma.InventoryItemWhereInput>(searchTerms(query), (term) => [
@@ -95,8 +103,17 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
     headers(),
     selection.length
       ? prisma.inventoryItem.findMany({
-          where: { id: { in: selection } },
-          include: { location: { select: { name: true } } },
+          where: { id: { in: selection }, ...(pcMode ? { isComputer: true } : {}) },
+          include: {
+            location: { select: { name: true } },
+            computer: { include: { software: { orderBy: { name: "asc" } } } },
+            maintenanceTickets: {
+              where: { resolvedAt: { not: null } },
+              select: { resolvedAt: true },
+              orderBy: { resolvedAt: "desc" },
+              take: 1,
+            },
+          },
           orderBy: [{ assetTag: "asc" }, { id: "asc" }],
         })
       : Promise.resolve([]),
@@ -136,7 +153,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
           image: await QRCode.toDataURL(`${appUrl}/scan/${encodeURIComponent(item.qrCode)}`, {
             errorCorrectionLevel: "M",
             margin: 1,
-            width: layout === "poster" ? 720 : 320,
+            width: layout === "poster" || (pcMode && pcSize === "large") ? 720 : 320,
           }),
         })),
       )
@@ -148,7 +165,9 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
       q: query,
       location,
       category,
-      layout: layout === defaultLabelLayout ? undefined : layout,
+      type: pcMode ? "pc" : undefined,
+      layout: pcMode || layout === defaultLabelLayout ? undefined : layout,
+      size: pcMode && pcSize !== defaultPcLabelSize ? pcSize : undefined,
       ids: selection.join(","),
       ...changes,
     };
@@ -162,9 +181,17 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
     return text ? `/dashboard/inventory/labels?${text}` : "/dashboard/inventory/labels";
   };
   const showAll = linkFor({ q: undefined, location: undefined, category: undefined });
+  // switching type clears the picks since pc labels only take computers
+  const typeLink = (pc: boolean) =>
+    linkFor({ type: pc ? "pc" : undefined, ids: undefined, page: undefined, size: undefined });
+  const lastService = (item: (typeof labels)[number]) => {
+    const resolved = item.maintenanceTickets[0]?.resolvedAt ?? null;
+    const checked = item.lastCheckedAt;
+    return resolved && (!checked || resolved > checked) ? resolved : checked;
+  };
 
   return (
-    <div className={`page label-sheet-page label-layout-${layout}`}>
+    <div className={`page label-sheet-page ${pcMode ? "pc-label-page" : `label-layout-${layout}`}`}>
       <div className="page-inner space-y-6">
         <header className="no-print flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -172,10 +199,30 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               ← Inventory
             </Link>
             <p className="eyebrow mt-5">Printing</p>
-            <h1 className="title mt-3 text-3xl">QR labels</h1>
+            <h1 className="title mt-3 text-3xl">{pcMode ? "PC labels" : "QR labels"}</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
-              Pick items, choose a size and print.
+              {pcMode
+                ? "Spec labels for PC cases with hardware, software and a QR code."
+                : "Pick items, choose a size and print."}
             </p>
+            <nav className="view-switch mt-4" aria-label="Label type">
+              <Link
+                href={typeLink(false)}
+                className="view-switch-option"
+                aria-current={pcMode ? undefined : "true"}
+              >
+                <QrCode size={16} aria-hidden="true" />
+                QR labels
+              </Link>
+              <Link
+                href={typeLink(true)}
+                className="view-switch-option"
+                aria-current={pcMode ? "true" : undefined}
+              >
+                <Monitor size={16} aria-hidden="true" />
+                PC labels
+              </Link>
+            </nav>
           </div>
           {labels.length ? <PrintSheet ids={labels.map((item) => item.id)} /> : null}
         </header>
@@ -194,6 +241,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             {selection.length ? (
               <input type="hidden" name="ids" value={selection.join(",")} />
             ) : null}
+            {pcMode ? <input type="hidden" name="type" value="pc" /> : null}
             <label className="label-picker-search">
               <span className="block text-sm font-semibold">Search</span>
               <span className="label-search mt-2">
@@ -238,20 +286,37 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
                 ))}
               </select>
             </label>
-            <label>
-              <span className="block text-sm font-semibold">Label size</span>
-              <select
-                name="layout"
-                defaultValue={layout === defaultLabelLayout ? "" : layout}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              >
-                {Object.entries(labelLayouts).map(([key, value]) => (
-                  <option key={key} value={key === defaultLabelLayout ? "" : key}>
-                    {value.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {pcMode ? (
+              <label>
+                <span className="block text-sm font-semibold">Label size</span>
+                <select
+                  name="size"
+                  defaultValue={pcSize === defaultPcLabelSize ? "" : pcSize}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  {Object.entries(pcLabelSizes).map(([key, value]) => (
+                    <option key={key} value={key === defaultPcLabelSize ? "" : key}>
+                      {value.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label>
+                <span className="block text-sm font-semibold">Label size</span>
+                <select
+                  name="layout"
+                  defaultValue={layout === defaultLabelLayout ? "" : layout}
+                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                >
+                  {Object.entries(labelLayouts).map(([key, value]) => (
+                    <option key={key} value={key === defaultLabelLayout ? "" : key}>
+                      {value.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {filtered ? (
               <p className="label-picker-reset text-sm">
                 <Link className="accent-link font-semibold" href={showAll}>
@@ -278,7 +343,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               totalMatching={totalMatching}
             />
             {!tiles.length ? (
-              <EmptyState icon={Search} title="No items found.">
+              <EmptyState icon={Search} title={pcMode ? "No PCs found." : "No items found."}>
                 <Link className="accent-link font-semibold" href={showAll}>
                   Show all items
                 </Link>
@@ -309,48 +374,73 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             <h2 className="no-print text-lg font-semibold">Preview</h2>
             <p className="muted no-print text-sm">
               {labels.length} label{labels.length === 1 ? "" : "s"} ·{" "}
-              {labelLayouts[layout].name.split(" ·")[0]} code · A4 · print at 100% with headers and
-              footers off
+              {pcMode
+                ? pcLabelSizes[pcSize].name.toLowerCase()
+                : `${labelLayouts[layout].name.split(" ·")[0]} code`}{" "}
+              · A4 · print at 100% with headers and footers off
             </p>
-            <div className="label-sheet-preview">
-              {labelPages(labels, labelLayouts[layout].perPage).map((sheet, index) => (
+            {pcMode ? (
+              <div className="label-sheet-preview">
                 <section
-                  className="label-sheet"
-                  aria-label={`Label sheet ${index + 1}`}
-                  key={index}
+                  className={`pc-label-sheet pc-label-sheet-${pcSize}`}
+                  aria-label="PC labels"
                 >
-                  {sheet.map((item) => (
-                    <article className="sheet-label" key={item.id}>
-                      {/* eager so every code is loaded before printing */}
-                      <Image
-                        unoptimized
-                        loading="eager"
-                        src={item.image}
-                        alt={`QR code for ${item.assetTag ?? item.name}`}
-                        width={320}
-                        height={320}
-                      />
-                      <div>
-                        <p className="sheet-label-brand">CEIT</p>
-                        <h2>{item.name}</h2>
-                        <p className="sheet-label-tag">{item.assetTag ?? item.qrCode}</p>
-                        <p>{item.location.name}</p>
-                        <p className="sheet-label-hint">
-                          {item.itemType === "ASSET"
-                            ? "Scan to borrow or report"
-                            : "Scan to view or report"}
-                        </p>
-                      </div>
-                    </article>
+                  {labels.map((item) => (
+                    <PcLabel
+                      key={item.id}
+                      size={pcSize}
+                      item={{
+                        ...item,
+                        lastServiceAt: lastService(item),
+                        software: item.computer?.software ?? [],
+                      }}
+                    />
                   ))}
                 </section>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="label-sheet-preview">
+                {labelPages(labels, labelLayouts[layout].perPage).map((sheet, index) => (
+                  <section
+                    className="label-sheet"
+                    aria-label={`Label sheet ${index + 1}`}
+                    key={index}
+                  >
+                    {sheet.map((item) => (
+                      <article className="sheet-label" key={item.id}>
+                        {/* eager so every code is loaded before printing */}
+                        <Image
+                          unoptimized
+                          loading="eager"
+                          src={item.image}
+                          alt={`QR code for ${item.assetTag ?? item.name}`}
+                          width={320}
+                          height={320}
+                        />
+                        <div>
+                          <p className="sheet-label-brand">CEIT</p>
+                          <h2>{item.name}</h2>
+                          <p className="sheet-label-tag">{item.assetTag ?? item.qrCode}</p>
+                          <p>{item.location.name}</p>
+                          <p className="sheet-label-hint">
+                            {item.itemType === "ASSET"
+                              ? "Scan to borrow or report"
+                              : "Scan to view or report"}
+                          </p>
+                        </div>
+                      </article>
+                    ))}
+                  </section>
+                ))}
+              </div>
+            )}
           </section>
         ) : appUrl ? (
           <div className="no-print">
             <EmptyState icon={QrCode} title="No labels selected yet.">
-              Click items above to add their labels.
+              {pcMode
+                ? "Click PCs above to add their labels."
+                : "Click items above to add their labels."}
             </EmptyState>
           </div>
         ) : null}

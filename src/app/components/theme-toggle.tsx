@@ -102,9 +102,7 @@ function AccentColorPicker({ color, onChange }: AccentColorPickerProps) {
             aria-hidden="true"
           />
           <div className="min-w-0">
-            <span className="block text-xs font-semibold text-[var(--foreground)]">
-              Custom color
-            </span>
+            <span className="block text-xs font-semibold text-[var(--foreground)]">Your color</span>
             <span className="block text-xs text-[var(--muted)]">
               Adjusted so text stays readable.
             </span>

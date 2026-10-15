@@ -88,6 +88,14 @@ export default async function InventoryItemPage({
             >
               Print QR code
             </Link>
+            {item.isComputer ? (
+              <Link
+                href={`/dashboard/inventory/labels?type=pc&ids=${item.id}`}
+                className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              >
+                Print PC label
+              </Link>
+            ) : null}
           </div>
         </header>
 
