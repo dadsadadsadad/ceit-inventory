@@ -9,13 +9,16 @@ import {
   MaintenancePriority,
   MaintenanceStatus,
 } from "@prisma/client";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LayoutGrid } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 import { BrandMark } from "@/app/components/brand-mark";
 import { DashboardCalendar } from "./dashboard-calendar";
 import { Bars, Columns, Donut } from "./dashboard-charts";
 import { DashboardClock } from "./dashboard-clock";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { auditSubjectLabel, auditViewWhere } from "@/lib/audit-trail";
+import { layoutFor, widgetSpan, type WidgetId } from "@/lib/dashboard-layout";
 import { borrowableInventoryStatuses } from "@/lib/borrow-availability";
 import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
 import {
@@ -31,6 +34,7 @@ import { loadCalendarMonth } from "@/lib/calendar-queries";
 import { formatManilaDate, manilaCalendarDate, manilaHour } from "@/lib/manila-date";
 import { personName } from "@/lib/person";
 import { recentMonths } from "@/lib/reports/charts";
+import { namedItemCounts } from "@/lib/reports/builders/shared";
 import { formatPesoShort } from "@/lib/reports/format";
 import { lowStockWhere, outOfStockWhere } from "@/lib/stock-queries";
 import { warrantyWhere } from "@/lib/warranty";
@@ -44,6 +48,7 @@ type GlanceRow = { label: string; count: number; href: string; tone: Tone };
 type Breakdown = { id: string; name: string; count: number }[];
 
 const inService = { status: { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] } };
+const dayMs = 24 * 60 * 60 * 1000;
 const shownGroups = 5;
 
 const statusOrder: ItemStatus[] = [
@@ -70,7 +75,7 @@ function breakdown(
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
-async function getDashboardData() {
+async function getDashboardData(extras: Set<WidgetId>) {
   const now = new Date();
   const months = recentMonths(now, 6);
   const [
@@ -94,6 +99,10 @@ async function getDashboardData() {
     warrantyEndingCount,
     dueTodayCount,
     requestDates,
+    recentActivity,
+    topBorrowed,
+    pcDates,
+    fixedTickets,
   ] = await Promise.all([
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.location.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
@@ -154,6 +163,56 @@ async function getDashboardData() {
       where: { requestedAt: { gte: months[0].start } },
       select: { requestedAt: true },
     }),
+    extras.has("activity")
+      ? prisma.inventoryAudit.findMany({
+          where: auditViewWhere("important"),
+          select: {
+            id: true,
+            summary: true,
+            entityLabel: true,
+            entityType: true,
+            createdAt: true,
+            item: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
+    extras.has("mostBorrowed")
+      ? prisma.borrowRequest
+          .groupBy({
+            by: ["inventoryItemId"],
+            where: {
+              status: {
+                in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED, BorrowStatus.RETURNED],
+              },
+              requestedAt: { gte: new Date(now.getTime() - 90 * dayMs) },
+            },
+            _count: { _all: true },
+            orderBy: { _count: { inventoryItemId: "desc" } },
+            take: 5,
+          })
+          .then((groups) =>
+            namedItemCounts(
+              groups.map((group) => ({
+                inventoryItemId: group.inventoryItemId,
+                count: group._count._all,
+              })),
+            ),
+          )
+      : Promise.resolve([]),
+    extras.has("pcAge")
+      ? prisma.inventoryItem.findMany({
+          where: { isComputer: true, ...inService },
+          select: { purchaseDate: true },
+        })
+      : Promise.resolve([]),
+    extras.has("repairs")
+      ? prisma.maintenanceTicket.findMany({
+          where: { resolvedAt: { gte: new Date(now.getTime() - 90 * dayMs) } },
+          select: { openedAt: true, resolvedAt: true },
+        })
+      : Promise.resolve([]),
   ]);
   // old notes saved the email, show the username
   const noteAuthor = dashboardNote?.updatedByName ?? null;
@@ -203,6 +262,35 @@ async function getDashboardData() {
         (request) => request.requestedAt >= month.start && request.requestedAt < month.end,
       ).length,
     })),
+    recentActivity,
+    topBorrowed,
+    pcAges: [
+      { label: "Under 2 years", min: 0, max: 2 },
+      { label: "2 to 4 years", min: 2, max: 4 },
+      { label: `4 to ${pcReplacementYears} years`, min: 4, max: pcReplacementYears },
+      { label: `${pcReplacementYears}+ years`, min: pcReplacementYears, max: Infinity },
+    ].map((bucket) => ({
+      label: bucket.label,
+      value: pcDates.filter((pc) => {
+        const years = pc.purchaseDate
+          ? (now.getTime() - pc.purchaseDate.getTime()) / (365.25 * dayMs)
+          : -1;
+        return years >= bucket.min && years < bucket.max;
+      }).length,
+    })),
+    pcNoDate: pcDates.filter((pc) => !pc.purchaseDate).length,
+    fixDays: fixedTickets.length
+      ? fixedTickets.reduce(
+          (sum, ticket) => sum + (ticket.resolvedAt!.getTime() - ticket.openedAt.getTime()) / dayMs,
+          0,
+        ) / fixedTickets.length
+      : null,
+    openByPriority: Object.values(MaintenancePriority)
+      .reverse()
+      .map((priority) => ({
+        priority,
+        count: openByPriority.find((entry) => entry.priority === priority)?._count._all ?? 0,
+      })),
     pendingBorrowCount: count(BorrowStatus.REQUESTED),
     checkedOutCount: count(BorrowStatus.BORROWED) + count(BorrowStatus.RETURN_REQUESTED),
     reservationCount: count(BorrowStatus.RESERVED),
@@ -296,9 +384,15 @@ export default async function DashboardPage() {
     console.error("Unable to load the calendar", error);
     return [];
   });
+  const saved = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { dashboardLayout: true },
+  });
+  const layout = layoutFor(saved?.dashboardLayout, canManage).filter((widget) => widget.visible);
+  const shown = new Set(layout.map((widget) => widget.id));
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
-    dashboard = await getDashboardData();
+    dashboard = await getDashboardData(shown);
   } catch (error) {
     console.error("Unable to load dashboard", error);
   }
@@ -409,6 +503,248 @@ export default async function DashboardPage() {
         dashboard.overdueCount +
         dashboard.openTicketCount
       : 0);
+  const widgets: Record<WidgetId, ReactNode> = {
+    metrics: (
+      <section
+        className={`overview-metrics ${canManage ? "is-manager" : ""}`}
+        aria-label="Inventory overview"
+      >
+        <Metric
+          href="/dashboard/inventory"
+          label="Records"
+          value={dashboard.itemCount.toLocaleString()}
+          detail={
+            dashboard.totalValue
+              ? `${formatPesoShort(dashboard.totalValue)} worth`
+              : `${dashboard.byCategory.length} ${dashboard.byCategory.length === 1 ? "category" : "categories"}`
+          }
+        />
+        <Metric
+          href="/dashboard/inventory?itemType=ASSET"
+          label="Ready to lend"
+          value={dashboard.readyToLend.toLocaleString()}
+          detail="Working, not out"
+        />
+        {canManage ? (
+          <Metric
+            href="/dashboard/borrowing?status=BORROWED"
+            label="On loan"
+            value={dashboard.checkedOutCount.toLocaleString()}
+            detail={dashboard.overdueCount ? `${dashboard.overdueCount} overdue` : "None overdue"}
+            tone={dashboard.overdueCount ? "critical" : undefined}
+          />
+        ) : null}
+        {canManage ? (
+          <Metric
+            href="/dashboard/maintenance?status=OPEN"
+            label="Open repairs"
+            value={dashboard.openTicketCount.toLocaleString()}
+            detail={
+              dashboard.urgentTicketCount ? `${dashboard.urgentTicketCount} urgent` : "None urgent"
+            }
+            tone={dashboard.urgentTicketCount ? "critical" : undefined}
+          />
+        ) : null}
+        <Metric
+          href="/dashboard/inventory?attention=1"
+          label="Needs attention"
+          value={dashboard.attentionCount.toLocaleString()}
+          detail="Items to check"
+          tone={dashboard.attentionCount ? "critical" : undefined}
+        />
+      </section>
+    ),
+    status: (
+      <section className="card glance-card rounded-lg" aria-labelledby="status-heading">
+        <div className="section-heading">
+          <h2 id="status-heading">Inventory status</h2>
+        </div>
+        <Donut
+          unit="records"
+          segments={dashboard.statusCounts.map(({ status, count }) => ({
+            label: inventoryStatusLabel(status),
+            value: count,
+            color: `var(--mix-${status.toLowerCase()})`,
+            href: `/dashboard/inventory?status=${status}`,
+          }))}
+        />
+      </section>
+    ),
+    borrowing: (
+      <article className="card glance-card rounded-lg">
+        <div className="section-heading">
+          <h2>Borrowing</h2>
+          <Link href="/dashboard/borrowing" className="accent-link text-sm font-semibold">
+            View all
+          </Link>
+        </div>
+        <GlanceList rows={borrowingRows} />
+        <p className="viz-caption">Requests per month</p>
+        <Columns unit="requests" data={dashboard.requestsPerMonth} />
+      </article>
+    ),
+    attention: (
+      <article className="card glance-card rounded-lg">
+        <div className="section-heading">
+          <h2>Needs attention</h2>
+          <Link
+            href="/dashboard/inventory?attention=1"
+            className="accent-link text-sm font-semibold"
+          >
+            View
+          </Link>
+        </div>
+        <GlanceList rows={attentionRows} />
+      </article>
+    ),
+    byCategory: (
+      <GroupCard
+        title="Items by category"
+        entries={dashboard.byCategory}
+        param="category"
+        noun={["category", "categories"]}
+      />
+    ),
+    byRoom: (
+      <GroupCard
+        title="Items by room"
+        entries={dashboard.byLocation}
+        param="location"
+        noun={["room", "rooms"]}
+      />
+    ),
+    repairs: (
+      <article className="card glance-card rounded-lg">
+        <div className="section-heading">
+          <h2>Repairs</h2>
+          <Link href="/dashboard/maintenance" className="accent-link text-sm font-semibold">
+            View all
+          </Link>
+        </div>
+        <GlanceList
+          rows={dashboard.openByPriority.map(({ priority, count }) => ({
+            label: `${priority.charAt(0)}${priority.slice(1).toLowerCase()} priority`,
+            count,
+            href: "/dashboard/maintenance?status=OPEN",
+            tone: priority === "URGENT" || priority === "HIGH" ? "critical" : "pending",
+          }))}
+        />
+        <p className="viz-caption">
+          {dashboard.fixDays === null
+            ? "Nothing fixed in the last 90 days."
+            : `Fixed in ${dashboard.fixDays < 1 ? "under a day" : `${dashboard.fixDays.toFixed(1)} days`} on average (90 days).`}
+        </p>
+      </article>
+    ),
+    mostBorrowed: (
+      <article className="card glance-card rounded-lg">
+        <div className="section-heading">
+          <h2>Most borrowed</h2>
+          <span className="muted text-sm">90 days</span>
+        </div>
+        <Bars
+          unit="loans"
+          empty="Nothing borrowed lately."
+          bars={dashboard.topBorrowed.map(([label, value]) => ({
+            id: label,
+            label,
+            value,
+            href: `/dashboard/borrowing?q=${encodeURIComponent(label)}`,
+          }))}
+        />
+      </article>
+    ),
+    pcAge: (
+      <article className="card glance-card rounded-lg">
+        <div className="section-heading">
+          <h2>PC age</h2>
+          <Link href="/dashboard/inventory?age=old" className="accent-link text-sm font-semibold">
+            Due to replace
+          </Link>
+        </div>
+        <Bars
+          unit="PCs"
+          empty="No PCs recorded yet."
+          bars={dashboard.pcAges.map((bucket, index) => ({
+            id: bucket.label,
+            label: bucket.label,
+            value: bucket.value,
+            href:
+              index === dashboard.pcAges.length - 1
+                ? "/dashboard/inventory?age=old"
+                : "/dashboard/inventory/hardware?view=pcs",
+          }))}
+        />
+        {dashboard.pcNoDate ? (
+          <p className="viz-caption">{dashboard.pcNoDate} PCs have no purchase date.</p>
+        ) : null}
+      </article>
+    ),
+    calendar: (
+      <DashboardCalendar
+        canEdit={canManage}
+        initialEntries={await calendarEntries}
+        initialMonth={calendarMonth}
+        today={today}
+      />
+    ),
+    note: (
+      <div className="card dashboard-note-card rounded-lg">
+        <div className="section-heading">
+          <h2>Department note</h2>
+          <span className="note-corner" aria-hidden="true" />
+        </div>
+        {canManage ? (
+          <DashboardNoteForm
+            initialContent={dashboard.dashboardNote?.content ?? ""}
+            updatedByName={dashboard.noteAuthorName}
+          />
+        ) : (
+          <p className="muted mt-2 whitespace-pre-wrap text-sm">
+            {dashboard.dashboardNote?.content || "No department note yet."}
+          </p>
+        )}
+      </div>
+    ),
+    activity: (
+      <article className="card glance-card rounded-lg">
+        <div className="section-heading">
+          <h2>Recent activity</h2>
+          <Link href="/dashboard/activity" className="accent-link text-sm font-semibold">
+            View all
+          </Link>
+        </div>
+        {dashboard.recentActivity.length ? (
+          <ol className="activity-mini">
+            {dashboard.recentActivity.map((event) => (
+              <li key={event.id}>
+                <span>{event.summary}</span>
+                <small className="muted">
+                  {event.item ? (
+                    <Link href={`/dashboard/inventory/${event.item.id}`}>{event.item.name}</Link>
+                  ) : (
+                    (auditSubjectLabel(event) ?? "Department records")
+                  )}
+                  {" · "}
+                  {formatManilaDate(event.createdAt, {
+                    day: "numeric",
+                    month: "short",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </small>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted text-sm">No activity yet.</p>
+        )}
+      </article>
+    ),
+  };
+  const main = layout.filter((widget) => widget.zone === "main");
+  const side = layout.filter((widget) => widget.zone === "side");
+
   const standing = waiting
     ? `${waiting.toLocaleString()} ${waiting === 1 ? "thing needs" : "things need"} a look.`
     : "Everything looks good.";
@@ -439,6 +775,12 @@ export default async function DashboardPage() {
               </time>
             </div>
             <Link
+              href="/dashboard/settings#dashboard-layout"
+              className="secondary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
+            >
+              <LayoutGrid size={16} aria-hidden="true" /> Customize
+            </Link>
+            <Link
               href="/dashboard/inventory"
               className="primary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
             >
@@ -447,144 +789,41 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <div className="dashboard-layout">
-          <div className="dashboard-main">
-            <section
-              className={`overview-metrics ${canManage ? "is-manager" : ""}`}
-              aria-label="Inventory overview"
-            >
-              <Metric
-                href="/dashboard/inventory"
-                label="Records"
-                value={dashboard.itemCount.toLocaleString()}
-                detail={
-                  dashboard.totalValue
-                    ? `${formatPesoShort(dashboard.totalValue)} worth`
-                    : `${dashboard.byCategory.length} categories`
-                }
-              />
-              <Metric
-                href="/dashboard/inventory?itemType=ASSET"
-                label="Ready to lend"
-                value={dashboard.readyToLend.toLocaleString()}
-                detail="Working, not out"
-              />
-              {canManage ? (
-                <Metric
-                  href="/dashboard/borrowing?status=BORROWED"
-                  label="On loan"
-                  value={dashboard.checkedOutCount.toLocaleString()}
-                  detail={
-                    dashboard.overdueCount ? `${dashboard.overdueCount} overdue` : "None overdue"
-                  }
-                  tone={dashboard.overdueCount ? "critical" : undefined}
-                />
-              ) : null}
-              {canManage ? (
-                <Metric
-                  href="/dashboard/maintenance?status=OPEN"
-                  label="Open repairs"
-                  value={dashboard.openTicketCount.toLocaleString()}
-                  detail={
-                    dashboard.urgentTicketCount
-                      ? `${dashboard.urgentTicketCount} urgent`
-                      : "None urgent"
-                  }
-                  tone={dashboard.urgentTicketCount ? "critical" : undefined}
-                />
-              ) : null}
-              <Metric
-                href="/dashboard/inventory?attention=1"
-                label="Needs attention"
-                value={dashboard.attentionCount.toLocaleString()}
-                detail="Items to check"
-                tone={dashboard.attentionCount ? "critical" : undefined}
-              />
-            </section>
-
-            <section className={`dashboard-cards ${canManage ? "is-manager" : ""}`}>
-              <section className="card glance-card rounded-lg" aria-labelledby="status-heading">
-                <div className="section-heading">
-                  <h2 id="status-heading">Inventory status</h2>
-                </div>
-                <Donut
-                  unit="records"
-                  segments={dashboard.statusCounts.map(({ status, count }) => ({
-                    label: inventoryStatusLabel(status),
-                    value: count,
-                    color: `var(--mix-${status.toLowerCase()})`,
-                    href: `/dashboard/inventory?status=${status}`,
-                  }))}
-                />
-              </section>
-
-              {canManage ? (
-                <article className="card glance-card rounded-lg">
-                  <div className="section-heading">
-                    <h2>Borrowing</h2>
-                    <Link href="/dashboard/borrowing" className="accent-link text-sm font-semibold">
-                      View all
-                    </Link>
-                  </div>
-                  <GlanceList rows={borrowingRows} />
-                  <p className="viz-caption">Requests per month</p>
-                  <Columns unit="requests" data={dashboard.requestsPerMonth} />
-                </article>
-              ) : null}
-
-              <article className="card glance-card rounded-lg">
-                <div className="section-heading">
-                  <h2>Needs attention</h2>
-                  <Link
-                    href="/dashboard/inventory?attention=1"
-                    className="accent-link text-sm font-semibold"
+        {layout.length ? (
+          <div className={`dashboard-layout ${side.length && main.length ? "has-rail" : ""}`}>
+            {main.length ? (
+              <div className="dashboard-cards">
+                {main.map((widget) => (
+                  <div
+                    key={widget.id}
+                    className="dashboard-widget"
+                    data-widget={widget.id}
+                    data-size={widget.size}
+                    style={{ "--span": widgetSpan(widget.size) } as CSSProperties}
                   >
-                    View
-                  </Link>
-                </div>
-                <GlanceList rows={attentionRows} />
-              </article>
-
-              <GroupCard
-                title="Items by category"
-                entries={dashboard.byCategory}
-                param="category"
-                noun={["category", "categories"]}
-              />
-              <GroupCard
-                title="Items by room"
-                entries={dashboard.byLocation}
-                param="location"
-                noun={["room", "rooms"]}
-              />
-            </section>
-          </div>
-
-          <aside className="dashboard-rail" aria-label="Calendar and note">
-            <DashboardCalendar
-              canEdit={canManage}
-              initialEntries={await calendarEntries}
-              initialMonth={calendarMonth}
-              today={today}
-            />
-            <div className="card dashboard-note-card rounded-lg">
-              <div className="section-heading">
-                <h2>Department note</h2>
-                <span className="note-corner" aria-hidden="true" />
+                    {widgets[widget.id]}
+                  </div>
+                ))}
               </div>
-              {canManage ? (
-                <DashboardNoteForm
-                  initialContent={dashboard.dashboardNote?.content ?? ""}
-                  updatedByName={dashboard.noteAuthorName}
-                />
-              ) : (
-                <p className="muted mt-2 whitespace-pre-wrap text-sm">
-                  {dashboard.dashboardNote?.content || "No department note yet."}
-                </p>
-              )}
-            </div>
-          </aside>
-        </div>
+            ) : null}
+            {side.length ? (
+              <aside className="dashboard-rail" aria-label="Side cards">
+                {side.map((widget) => (
+                  <div key={widget.id} className="dashboard-widget" data-widget={widget.id}>
+                    {widgets[widget.id]}
+                  </div>
+                ))}
+              </aside>
+            ) : null}
+          </div>
+        ) : (
+          <p className="notice rounded-lg px-5 py-4 text-sm">
+            Every card is hidden.{" "}
+            <Link href="/dashboard/settings#dashboard-layout" className="accent-link font-semibold">
+              Pick some cards
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );

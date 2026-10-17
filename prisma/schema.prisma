@@ -345,6 +345,8 @@ model User {
   lockedUntil         DateTime?
   // email notification kinds this person wants, see lib/notification-kinds.ts
   notifyOn            String[]      @default(["borrowRequests", "returns", "repairs", "dailyLoans"])
+  // chosen dashboard widgets and their order, see lib/dashboard-layout.ts, empty = default
+  dashboardLayout     Json?
   sessions            UserSession[]
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
