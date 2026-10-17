@@ -7,7 +7,7 @@ Folder layout and commands are in [docs/code-guide.md](docs/code-guide.md).
 ## Features
 
 - rooms, categories, equipment (one record and qr code per unit) and stock with low stock alerts
-- asset tags generated as `INV-CAT-ST-ROOM-0001`
+- asset tags generated as `CATEGORY-ROOM-0001`, e.g. `ROBOT-MIKRO-0001`
 - pc profiles (hardware, software, licenses) and hardware/software views across all pcs
 - warranty dates, inspection dates and custom fields
 - qr label printing, single or in batches on A4

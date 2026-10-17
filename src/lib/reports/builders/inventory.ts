@@ -20,7 +20,7 @@ import {
   humanize,
 } from "../format";
 import { itemDetailChips, itemDetailWhere } from "./item-filters";
-import { countChart, statusChart } from "../charts";
+import { countChart, statusChart, statusTones } from "../charts";
 import type { ReportModel } from "../model";
 import {
   countsByCategory,
@@ -160,6 +160,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
           { label: "Price and warranty", width: 1.2 },
           { label: "Last checked", width: 1.15 },
         ],
+        tones: items.map((item) => statusTones[item.status]),
         rows: items.map((item) => [
           [item.assetTag ?? "No asset tag", item.serialNumber && `Serial ${item.serialNumber}`]
             .filter(Boolean)

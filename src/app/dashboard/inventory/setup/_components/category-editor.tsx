@@ -2,11 +2,17 @@ import { OptimisticText } from "@/app/components/optimistic-state";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 
+import { TagCodeInput } from "./tag-code-input";
+
 import { deleteCategory, setCategoryActive, updateCategory } from "../actions";
 
 export function CategoryEditor({
   category,
+  usedCodes,
+  otherCode,
 }: {
+  usedCodes: string[];
+  otherCode: string;
   category: {
     id: string;
     name: string;
@@ -54,18 +60,14 @@ export function CategoryEditor({
             className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
           />
         </label>
-        <label>
-          <span className="muted text-xs font-bold uppercase tracking-wide">Tag code</span>
-          <input
-            required
-            name="assetTagCode"
-            defaultValue={category.assetTagCode ?? ""}
-            maxLength={3}
-            pattern="[A-Za-z0-9]{3}"
-            title="3 letters or numbers."
-            className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
-          />
-        </label>
+        <TagCodeInput
+          kind="category"
+          compact
+          required
+          defaultValue={category.assetTagCode ?? ""}
+          usedCodes={usedCodes}
+          otherCode={otherCode}
+        />
         <label>
           <span className="muted text-xs font-bold uppercase tracking-wide">Description</span>
           <input

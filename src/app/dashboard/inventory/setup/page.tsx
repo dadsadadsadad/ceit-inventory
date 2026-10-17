@@ -9,6 +9,7 @@ import { createCategory, createLocation } from "./actions";
 import { CategoryEditor } from "./_components/category-editor";
 import { CustomFieldEditor, NewCustomField } from "./_components/custom-field-editor";
 import { LocationEditor } from "./_components/location-editor";
+import { TagCodeInput } from "./_components/tag-code-input";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,13 @@ export default async function InventorySetupPage() {
     }),
     prisma.customField.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
   ]);
+  const codes = (records: { assetTagCode: string | null }[]) =>
+    records.flatMap((record) => (record.assetTagCode ? [record.assetTagCode] : []));
+  const categoryCodes = codes(setup[0]);
+  const roomCodes = codes(setup[1]);
+  // a real code from the other list makes the example tag believable
+  const sampleCategory = categoryCodes[0] ?? "CAT";
+  const sampleRoom = roomCodes[0] ?? "ROOM";
 
   return (
     <div className="page settings-page">
@@ -41,7 +49,7 @@ export default async function InventorySetupPage() {
           <section>
             <p className="muted max-w-2xl text-sm leading-6">
               Inactive rooms and categories stay on old items. Codes are used in{" "}
-              <code>INV-CAT-ST-ROOM-0001</code> new asset tags.
+              <code>CATEGORY-ROOM-0001</code> asset tags, e.g. <code>ROBOT-LAB1-0001</code>.
             </p>
           </section>
           <div className="grid gap-6 xl:grid-cols-2">
@@ -80,20 +88,7 @@ export default async function InventorySetupPage() {
                         placeholder="CEIT-201"
                       />
                     </label>
-                    <label>
-                      <span className="text-sm font-semibold">Asset-tag room code</span>
-                      <input
-                        name="assetTagCode"
-                        maxLength={2}
-                        pattern="[0-9]{2}"
-                        title="2 digits, e.g. 05."
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="Auto"
-                      />
-                      <span className="muted mt-1 block text-xs">
-                        Leave empty to use the next free code.
-                      </span>
-                    </label>
+                    <TagCodeInput kind="room" usedCodes={roomCodes} otherCode={sampleCategory} />
                   </div>
                   <label className="block">
                     <span className="text-sm font-semibold">Description</span>
@@ -115,7 +110,12 @@ export default async function InventorySetupPage() {
                 <h4 className="text-sm font-semibold">Current locations</h4>
                 {setup[1].length ? (
                   setup[1].map((location) => (
-                    <LocationEditor key={location.id} location={location} />
+                    <LocationEditor
+                      key={location.id}
+                      location={location}
+                      usedCodes={roomCodes}
+                      otherCode={sampleCategory}
+                    />
                   ))
                 ) : (
                   <p className="muted text-sm">No rooms configured yet.</p>
@@ -138,7 +138,7 @@ export default async function InventorySetupPage() {
                   }}
                   className="mt-5 space-y-4"
                 >
-                  <div className="grid gap-4 sm:grid-cols-[1fr_7rem]">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <label>
                       <span className="text-sm font-semibold">Category name *</span>
                       <input
@@ -149,17 +149,11 @@ export default async function InventorySetupPage() {
                         placeholder="Desktop Computers"
                       />
                     </label>
-                    <label>
-                      <span className="text-sm font-semibold">Tag code</span>
-                      <input
-                        name="assetTagCode"
-                        maxLength={3}
-                        pattern="[A-Za-z0-9]{3}"
-                        title="3 letters or numbers."
-                        className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                        placeholder="Auto"
-                      />
-                    </label>
+                    <TagCodeInput
+                      kind="category"
+                      usedCodes={categoryCodes}
+                      otherCode={sampleRoom}
+                    />
                   </div>
                   <label className="block">
                     <span className="text-sm font-semibold">Description</span>
@@ -182,7 +176,12 @@ export default async function InventorySetupPage() {
                 <h4 className="text-sm font-semibold">Current categories</h4>
                 {setup[0].length ? (
                   setup[0].map((category) => (
-                    <CategoryEditor key={category.id} category={category} />
+                    <CategoryEditor
+                      key={category.id}
+                      category={category}
+                      usedCodes={categoryCodes}
+                      otherCode={sampleRoom}
+                    />
                   ))
                 ) : (
                   <p className="muted text-sm">No categories configured yet.</p>

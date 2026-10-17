@@ -539,6 +539,24 @@ class Sheet {
           color: pdfTheme.rowTint,
         });
       }
+      const tone = table.tones?.[rowIndex];
+      if (tone) {
+        this.page.drawRectangle({
+          x: margin,
+          y: this.cursor - height,
+          width: contentWidth,
+          height,
+          color: pdfChartTones[tone],
+          opacity: 0.09,
+        });
+        this.page.drawRectangle({
+          x: margin,
+          y: this.cursor - height,
+          width: 2.5,
+          height,
+          color: pdfChartTones[tone],
+        });
+      }
       cells.forEach((lines, columnIndex) => {
         const column = table.columns[columnIndex];
         lines.forEach((line, lineIndex) => {

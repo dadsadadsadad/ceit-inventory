@@ -1,44 +1,41 @@
-import { ItemStatus } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import {
-  assetTagPrefix,
-  assetTagSequence,
-  deriveAssetTagCode,
-  isInventoryAssetTag,
-  nextCategoryAssetTagCode,
-  nextLocationAssetTagCode,
-} from "@/lib/asset-tag";
+import { assetTagPrefix, assetTagSequence, isInventoryAssetTag } from "@/lib/asset-tag";
+import { normalizeTagCode, suggestTagCode } from "@/lib/asset-tag-code";
 
 describe("inventory asset tags", () => {
-  it("recognizes the established CEIT inventory tag convention", () => {
-    expect(isInventoryAssetTag("INV-PCU-WK-05-0001")).toBe(true);
+  it("recognizes category-room-number tags without a status", () => {
+    expect(isInventoryAssetTag("ROBOT-MIKRO-0001")).toBe(true);
+    expect(isInventoryAssetTag("PC-CL1-0001")).toBe(true);
+    expect(isInventoryAssetTag("INV-PCU-WK-05-0001")).toBe(false);
     expect(isInventoryAssetTag("CEIT-PC-001")).toBe(false);
   });
 
-  it("creates the same category, status, room, and sequence structure", () => {
-    const prefix = assetTagPrefix("PCU", ItemStatus.WORKING, "05");
-    expect(prefix).toBe("INV-PCU-WK-05-");
-    expect(assetTagSequence("INV-PCU-WK-05-0042", prefix)).toBe(42);
+  it("builds the prefix from the category and room codes", () => {
+    const prefix = assetTagPrefix("PC", "MIKRO");
+    expect(prefix).toBe("PC-MIKRO-");
+    expect(assetTagSequence("PC-MIKRO-0042", prefix)).toBe(42);
+    expect(assetTagSequence("PC-MIKROX-0042", prefix)).toBeNull();
   });
 
-  it("derives unused codes for future setup values", () => {
-    expect(deriveAssetTagCode("Desktop Computers", 3)).toBe("DCD");
-    expect(nextCategoryAssetTagCode("Desktop Computers", ["DCD"])).toBe("DC1");
-    expect(
-      nextCategoryAssetTagCode("Desktop Computers", [
-        "DCD",
-        "DC1",
-        "DC2",
-        "DC3",
-        "DC4",
-        "DC5",
-        "DC6",
-        "DC7",
-        "DC8",
-        "DC9",
-      ]),
-    ).toBe("D10");
-    expect(nextLocationAssetTagCode(["05", "01", "02"])).toBe("03");
+  it("only accepts 2 to 6 letters or numbers", () => {
+    expect(normalizeTagCode("rob-ot")).toBe("ROBOT");
+    expect(normalizeTagCode("A")).toBeNull();
+    expect(normalizeTagCode("TOOLONGCODE")).toBeNull();
+  });
+
+  it("suggests readable codes from names", () => {
+    expect(suggestTagCode("Robotics")).toBe("ROBOT");
+    expect(suggestTagCode("Cables")).toBe("CABLES");
+    expect(suggestTagCode("COMPUTERS (MAC)")).toBe("MAC");
+    expect(suggestTagCode("Tools & Utilities")).toBe("TOOLS");
+    expect(suggestTagCode("Computer Laboratory 1")).toBe("COMP1");
+    expect(suggestTagCode("Mikrotik")).toBe("MIKRO");
+  });
+
+  it("falls back to another readable code when one is taken", () => {
+    expect(suggestTagCode("ECE Antenna", ["ECE"])).toBe("ANTEN");
+    expect(suggestTagCode("PERIPHERALS (MAC)", ["MAC"])).toBe("PERIP");
+    expect(suggestTagCode("Robotics", ["ROBOT"])).toBe("ROBO2");
   });
 });

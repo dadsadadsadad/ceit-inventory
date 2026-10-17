@@ -454,7 +454,7 @@ test("item creation, stale edits, and import preview keep records and inputs con
   const created = (
     await query('SELECT id,"assetTag" FROM "InventoryItem" WHERE name=$1', ["Launch test camera"])
   ).rows[0];
-  expect(created.assetTag).toMatch(/^INV-TST-OK-01-\d{4}$/);
+  expect(created.assetTag).toMatch(/^TST-01-\d{4}$/);
   await expect(page.locator('#edit-record input[name="updatedAt"]')).toBeAttached();
   await page.locator("#edit-record > summary").click();
   await query('UPDATE "InventoryItem" SET "updatedAt"=NOW(), name=$1 WHERE id=$2', [

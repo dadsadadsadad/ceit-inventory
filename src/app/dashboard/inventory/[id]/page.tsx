@@ -9,6 +9,7 @@ import { loadCustomFields } from "@/lib/custom-field-queries";
 import { isUuid } from "@/lib/ids";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { firstParam, type RawParam } from "@/lib/search-params";
+import { loadHardwareSuggestions } from "@/lib/computer-queries";
 import { prisma } from "@/prisma";
 
 import { ComputerSection } from "./_components/computer-profile";
@@ -36,11 +37,12 @@ export default async function InventoryItemPage({
     notFound();
   }
 
-  const [item, categories, locations, customFields] = await Promise.all([
+  const [item, categories, locations, customFields, hardware] = await Promise.all([
     prisma.inventoryItem.findUnique({ where: { id }, include: itemRecordInclude }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.location.findMany({ orderBy: { name: "asc" } }),
     loadCustomFields(),
+    loadHardwareSuggestions(),
   ]);
 
   if (!item) {
@@ -109,7 +111,7 @@ export default async function InventoryItemPage({
             item.status !== ItemStatus.RETIRED ? (
               <StockCard item={item} />
             ) : null}
-            <ComputerSection item={item} canManage={canManage} />
+            <ComputerSection item={item} canManage={canManage} suggestions={hardware} />
             <ItemHistory item={item} />
           </div>
 

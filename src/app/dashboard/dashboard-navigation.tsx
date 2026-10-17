@@ -102,6 +102,11 @@ export function DashboardNavigation({
     ...(canManageInventory
       ? [
           {
+            label: "Update many PCs",
+            href: "/dashboard/inventory/update-pcs",
+            active: pathname === "/dashboard/inventory/update-pcs",
+          },
+          {
             label: "Add or import",
             href: "/dashboard/inventory/new",
             active:

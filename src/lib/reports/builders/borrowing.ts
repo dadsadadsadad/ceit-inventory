@@ -13,7 +13,7 @@ import {
 import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatPeso, formatReportDateTime, plural } from "../format";
-import type { ReportModel } from "../model";
+import type { ReportChartTone, ReportModel } from "../model";
 import { countChart, monthChart } from "../charts";
 import { loadCapped, monthlyCounts, namedItemCounts, type BuilderContext } from "./shared";
 
@@ -34,6 +34,17 @@ function daysLate(request: Request, now: Date) {
   }
   return Math.max(1, Math.floor((end.getTime() - request.expectedReturnDate.getTime()) / dayMs));
 }
+
+// out on loan, waiting on staff, finished, or stopped
+const borrowTones: Record<BorrowStatus, ReportChartTone> = {
+  REQUESTED: "not_tested",
+  RESERVED: "working",
+  BORROWED: "deployed",
+  RETURN_REQUESTED: "deployed",
+  RETURNED: "ok",
+  DECLINED: "retired",
+  CANCELLED: "retired",
+};
 
 const dateLabels = {
   overdue: "Return due",
@@ -240,6 +251,11 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
           { label: "Status", width: 0.95 },
           { label: "Notes", width: 1.3 },
         ],
+        tones: requests.map((request) =>
+          activeStatuses.includes(request.status) && daysLate(request, now)
+            ? "defective"
+            : borrowTones[request.status],
+        ),
         rows: requests.map((request) => {
           const late = daysLate(request, now);
           return [

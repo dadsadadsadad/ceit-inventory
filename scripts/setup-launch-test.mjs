@@ -65,7 +65,7 @@ try {
       [
         randomUUID(),
         i === 1 ? "Classroom projector" : `Lab equipment ${i}`,
-        `INV-TST-OK-01-${String(i).padStart(4, "0")}`,
+        `TST-01-${String(i).padStart(4, "0")}`,
         `ceit-launch-item-${i}`,
         categoryId,
         locationId,

@@ -225,7 +225,7 @@ test.describe("QR labels", () => {
     // filter keeps the selection
     await tile("Lab equipment 10").click();
     await expect(labels).toHaveCount(1);
-    await page.getByLabel("Search", { exact: true }).fill("INV-TST-OK-01-0004");
+    await page.getByLabel("Search", { exact: true }).fill("TST-01-0004");
     await expect(tiles).toHaveCount(1);
     await tile("Lab equipment 4").click();
     await expect(labels).toHaveCount(2);

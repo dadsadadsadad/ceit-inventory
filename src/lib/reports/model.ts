@@ -18,6 +18,8 @@ export type ReportTable = {
   note?: string;
   // \n starts a smaller second line
   rows: string[][];
+  // optional status color per row, same order as rows
+  tones?: (ReportChartTone | undefined)[];
   // can be more than rows.length when trimmed
   total: number;
 };

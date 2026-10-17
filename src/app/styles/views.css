@@ -740,3 +740,40 @@
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* subtle status color on report rows */
+.report-table tr[data-tone] > td {
+  background: color-mix(in srgb, var(--row-tone) 8%, transparent);
+}
+
+.report-table tr[data-tone] > td:first-child {
+  box-shadow: inset 3px 0 0 var(--row-tone);
+}
+
+.report-table tr[data-tone="ok"] {
+  --row-tone: var(--mix-ok);
+}
+
+.report-table tr[data-tone="working"] {
+  --row-tone: var(--mix-working);
+}
+
+.report-table tr[data-tone="deployed"] {
+  --row-tone: var(--mix-deployed);
+}
+
+.report-table tr[data-tone="defective"] {
+  --row-tone: var(--mix-defective);
+}
+
+.report-table tr[data-tone="not_tested"] {
+  --row-tone: var(--mix-not_tested);
+}
+
+.report-table tr[data-tone="retired"] {
+  --row-tone: var(--mix-retired);
+}
+
+.report-table tr[data-tone="lost"] {
+  --row-tone: var(--mix-lost);
+}

@@ -92,7 +92,7 @@ enum CustomFieldType {
 model Location {
   id           String          @id @default(uuid()) @db.Uuid
   name         String          @unique
-  assetTagCode String?         @unique @db.VarChar(2)
+  assetTagCode String?         @unique @db.VarChar(6)
   roomNumber   String?
   description  String?
   isActive     Boolean         @default(true)
@@ -104,7 +104,7 @@ model Location {
 model Category {
   id           String          @id @default(uuid()) @db.Uuid
   name         String          @unique
-  assetTagCode String?         @unique @db.VarChar(3)
+  assetTagCode String?         @unique @db.VarChar(6)
   description  String?
   isActive     Boolean         @default(true)
   items        InventoryItem[]
@@ -343,6 +343,8 @@ model User {
   failedSignInCount   Int           @default(0)
   firstFailedSignInAt DateTime?
   lockedUntil         DateTime?
+  // email notification kinds this person wants, see lib/notification-kinds.ts
+  notifyOn            String[]      @default(["borrowRequests", "returns", "repairs", "dailyLoans"])
   sessions            UserSession[]
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt

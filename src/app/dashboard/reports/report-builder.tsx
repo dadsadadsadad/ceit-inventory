@@ -41,6 +41,15 @@ type Props = {
 const field = "field mt-2 w-full rounded-lg px-3 py-2.5 text-sm";
 const label = "muted text-xs font-bold uppercase tracking-wide";
 
+// form fields each control fills in
+const controlParams: Partial<Record<ReportControl, string[]>> = {
+  dates: ["period", "from", "to"],
+  price: ["priceMin", "priceMax"],
+  purchased: ["purchasedFrom", "purchasedTo"],
+  stockLevel: ["stock"],
+  maintenanceSource: ["maintenanceSource"],
+};
+
 const dateNotes: Partial<Record<ReportKind, string>> = {
   inventory: "Dates are when the item was added.",
   pcs: "Dates are when the PC was added.",
@@ -62,7 +71,14 @@ export function ReportBuilder({ initial, options }: Props) {
   const [to, setTo] = useState(initial.to ?? "");
   const [changed, setChanged] = useState(false);
   const controls = reportKindInfo[kind].controls;
+  const more = reportKindInfo[kind].more ?? [];
   const has = (control: ReportControl) => controls.includes(control);
+  const inMain = (control: ReportControl) => has(control) && !more.includes(control);
+  const inMore = (control: ReportControl) => more.includes(control);
+  // open when one of the extra filters is already set
+  const moreSet = more.some((control) =>
+    (controlParams[control] ?? [control]).some((name) => initial[name]),
+  );
 
   function collect(form: HTMLFormElement) {
     const data = new FormData(form);
@@ -114,33 +130,9 @@ export function ReportBuilder({ initial, options }: Props) {
     );
   }
 
-  return (
-    <form
-      aria-label="Report builder"
-      onSubmit={submit}
-      onChange={() => setChanged(true)}
-      className="card space-y-5 rounded-lg p-4 sm:p-6"
-    >
-      <fieldset className="report-kinds">
-        <legend className={label}>Report</legend>
-        <div className="filter-chips mt-3">
-          {reportKinds.map((value) => (
-            <label key={value} className="filter-chip">
-              <input
-                type="radio"
-                name="kind"
-                value={value}
-                checked={kind === value}
-                onChange={() => setKind(value)}
-              />
-              <span>{reportKindInfo[value].label}</span>
-            </label>
-          ))}
-        </div>
-        <p className="muted mt-3 text-sm">{reportKindInfo[kind].description}</p>
-      </fieldset>
-
-      {controls.length ? (
+  function fields(has: (control: ReportControl) => boolean) {
+    return (
+      <>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
           {has("search") ? (
             <label className="sm:col-span-2">
@@ -181,9 +173,13 @@ export function ReportBuilder({ initial, options }: Props) {
           {has("within")
             ? select(
                 "within",
-                kind === "software" ? "License ends within" : "Warranty ends within",
+                kind === "software"
+                  ? "License ends within"
+                  : kind === "checks"
+                    ? "Checked within"
+                    : "Warranty ends within",
                 options.windows,
-                "Any time",
+                kind === "checks" ? "Last 30 days" : "Any time",
               )
             : null}
           {has("missing")
@@ -346,15 +342,51 @@ export function ReportBuilder({ initial, options }: Props) {
             </>
           ) : null}
         </div>
-      ) : null}
+        {has("pcOnly") || has("attention") || has("incomplete") || has("retired") ? (
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {has("pcOnly") ? check("pcOnly", "PCs and Macs only") : null}
+            {has("attention") ? check("attention", "Needs attention only") : null}
+            {has("incomplete") ? check("incomplete", "Only PCs missing hardware details") : null}
+            {has("retired") ? check("retired", "Include retired and lost PCs") : null}
+          </div>
+        ) : null}
+      </>
+    );
+  }
 
-      {has("pcOnly") || has("attention") || has("incomplete") || has("retired") ? (
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
-          {has("pcOnly") ? check("pcOnly", "PCs and Macs only") : null}
-          {has("attention") ? check("attention", "Needs attention only") : null}
-          {has("incomplete") ? check("incomplete", "Only PCs missing hardware details") : null}
-          {has("retired") ? check("retired", "Include retired and lost PCs") : null}
+  return (
+    <form
+      aria-label="Report builder"
+      onSubmit={submit}
+      onChange={() => setChanged(true)}
+      className="card space-y-5 rounded-lg p-4 sm:p-6"
+    >
+      <fieldset className="report-kinds">
+        <legend className={label}>Report</legend>
+        <div className="filter-chips mt-3">
+          {reportKinds.map((value) => (
+            <label key={value} className="filter-chip">
+              <input
+                type="radio"
+                name="kind"
+                value={value}
+                checked={kind === value}
+                onChange={() => setKind(value)}
+              />
+              <span>{reportKindInfo[value].label}</span>
+            </label>
+          ))}
         </div>
+        <p className="muted mt-3 text-sm">{reportKindInfo[kind].description}</p>
+      </fieldset>
+
+      {controls.length ? fields(inMain) : null}
+
+      {more.length ? (
+        <details className="filter-disclosure" open={moreSet}>
+          <summary className="cursor-pointer text-sm font-semibold">More filters</summary>
+          <div className="mt-4 space-y-5">{fields(inMore)}</div>
+        </details>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">

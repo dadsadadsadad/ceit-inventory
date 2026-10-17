@@ -2,11 +2,17 @@ import { OptimisticText } from "@/app/components/optimistic-state";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { SubmitButton } from "@/app/components/submit-button";
 
+import { TagCodeInput } from "./tag-code-input";
+
 import { deleteLocation, setLocationActive, updateLocation } from "../actions";
 
 export function LocationEditor({
   location,
+  usedCodes,
+  otherCode,
 }: {
+  usedCodes: string[];
+  otherCode: string;
   location: {
     id: string;
     name: string;
@@ -66,18 +72,14 @@ export function LocationEditor({
             className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
           />
         </label>
-        <label>
-          <span className="muted text-xs font-bold uppercase tracking-wide">Tag code</span>
-          <input
-            required
-            name="assetTagCode"
-            defaultValue={location.assetTagCode ?? ""}
-            maxLength={2}
-            pattern="[0-9]{2}"
-            title="2 digits, e.g. 05."
-            className="field mt-2 w-full rounded-lg px-3 py-2 text-sm"
-          />
-        </label>
+        <TagCodeInput
+          kind="room"
+          compact
+          required
+          defaultValue={location.assetTagCode ?? ""}
+          usedCodes={usedCodes}
+          otherCode={otherCode}
+        />
         <label className="sm:col-span-2">
           <span className="muted text-xs font-bold uppercase tracking-wide">Description</span>
           <input

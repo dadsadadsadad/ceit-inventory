@@ -205,7 +205,7 @@ test.describe("hostile input is only ever data", () => {
     const name = `<img src=x onerror="window.__xss=1"> Evil <b>bold</b>`;
     await query(
       `INSERT INTO "InventoryItem" (id,name,"assetTag","qrCode","categoryId","locationId",notes,"updatedAt")
-       VALUES ($1,$2,'INV-TST-OK-01-9001','ceit-xss-item-01',$3,$4,$5,NOW())`,
+       VALUES ($1,$2,'TST-01-9001','ceit-xss-item-01',$3,$4,$5,NOW())`,
       [randomUUID(), name, source.categoryId, source.locationId, "<script>window.__xss=2</script>"],
     );
     await page.goto("/scan/ceit-xss-item-01");

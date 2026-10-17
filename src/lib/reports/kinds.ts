@@ -7,6 +7,7 @@ export const reportKinds = [
   "warranty",
   "value",
   "health",
+  "checks",
   "pcs",
   "hardware",
   "software",
@@ -46,6 +47,8 @@ export type ReportControl =
 
 export type ReportKindInfo = {
   controls: ReportControl[];
+  // shown under "More filters"
+  more?: ReportControl[];
   description: string;
   id: ReportKind;
   label: string;
@@ -81,6 +84,17 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "missing",
       "dates",
     ],
+    more: [
+      "condition",
+      "itemType",
+      "stockLevel",
+      "warranty",
+      "pcOnly",
+      "price",
+      "purchased",
+      "missing",
+      "dates",
+    ],
   },
   stock: {
     id: "stock",
@@ -104,6 +118,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "price",
       "purchased",
     ],
+    more: ["itemType", "price", "purchased"],
   },
   value: {
     id: "value",
@@ -120,6 +135,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "purchased",
       "missing",
     ],
+    more: ["itemType", "price", "purchased", "missing"],
   },
   health: {
     id: "health",
@@ -127,6 +143,13 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
     description: "Items missing a price, serial, date, warranty, photo or recent check.",
     stem: "ceit-record-health",
     controls: ["search", "category", "location", "itemType", "missing"],
+  },
+  checks: {
+    id: "checks",
+    label: "Room checks",
+    description: "What was checked lately in each room. PCs need a check every round.",
+    stem: "ceit-room-checks",
+    controls: ["search", "location", "within", "pcOnly"],
   },
   pcs: {
     id: "pcs",
@@ -185,6 +208,11 @@ export const quickReports: {
     label: "Overdue loans",
     description: "Not returned on time.",
     query: { kind: "borrowing", borrowingState: "overdue" },
+  },
+  {
+    label: "Room checks",
+    description: "PCs and equipment checked in the last 30 days.",
+    query: { kind: "checks" },
   },
   {
     label: "Needs attention",

@@ -98,8 +98,7 @@ export async function createInventoryItem(formData: FormData) {
           );
           for (let unit = 1; unit <= units; unit += 1) {
             const assetTag = isEquipment
-              ? (suppliedAssetTag ??
-                (await nextInventoryAssetTag(tx, { categoryId, locationId, status })))
+              ? (suppliedAssetTag ?? (await nextInventoryAssetTag(tx, { categoryId, locationId })))
               : suppliedAssetTag;
             const item = await tx.inventoryItem.create({
               data: {
@@ -258,7 +257,7 @@ export async function updateInventoryItem(formData: FormData) {
             ),
             assetTag:
               itemType === ItemType.ASSET && !data.assetTag
-                ? await nextInventoryAssetTag(tx, { categoryId, locationId, status })
+                ? await nextInventoryAssetTag(tx, { categoryId, locationId })
                 : data.assetTag,
           };
           const changes = updatedFields(existing, resolvedData);
@@ -463,7 +462,6 @@ export async function splitGroupedAsset(formData: FormData) {
                 (await nextInventoryAssetTag(tx, {
                   categoryId: item.categoryId,
                   locationId: item.locationId,
-                  status: item.status,
                 })),
               auditEvents: {
                 create: {
@@ -485,7 +483,6 @@ export async function splitGroupedAsset(formData: FormData) {
             const assetTag = await nextInventoryAssetTag(tx, {
               categoryId: item.categoryId,
               locationId: item.locationId,
-              status: item.status,
             });
             const unit = await tx.inventoryItem.create({
               select: { id: true },

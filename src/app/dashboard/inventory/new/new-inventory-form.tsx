@@ -303,7 +303,7 @@ export function NewInventoryForm({
                 name="assetTag"
                 label="Asset tag"
                 placeholder="Leave blank to generate"
-                hint="Looks like INV-CAT-ST-ROOM-0001."
+                hint="Looks like ROBOT-LAB1-0001."
               />
             ) : null}
             <label>

@@ -5,6 +5,7 @@ import { manilaCalendarDate } from "@/lib/manila-date";
 
 import { buildActivityReport } from "./builders/activity";
 import { buildBorrowingReport } from "./builders/borrowing";
+import { buildChecksReport } from "./builders/checks";
 import { buildHardwareReport } from "./builders/hardware";
 import { buildHealthReport } from "./builders/health";
 import { buildInventoryReport } from "./builders/inventory";
@@ -22,6 +23,7 @@ import { reportFilename, ReportRequestError, type ReportModel, type ReportPurpos
 const builders: Record<ReportKind, (context: BuilderContext) => Promise<ReportModel>> = {
   activity: buildActivityReport,
   borrowing: buildBorrowingReport,
+  checks: buildChecksReport,
   hardware: buildHardwareReport,
   health: buildHealthReport,
   inventory: buildInventoryReport,

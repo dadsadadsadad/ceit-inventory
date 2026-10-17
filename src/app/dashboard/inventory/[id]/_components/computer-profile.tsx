@@ -1,4 +1,5 @@
 import { FeedbackForm } from "@/app/components/feedback-form";
+import { PcHardwareFields, type HardwareSuggestions } from "@/app/components/pc-hardware-fields";
 import { SubmitButton } from "@/app/components/submit-button";
 import { canHaveComputerDetails } from "@/lib/inventory-pc";
 
@@ -120,45 +121,22 @@ type ComputerInfo = {
   lastCheckedAt: Date | null;
 };
 
-export function ComputerFields({ computer }: { computer?: ComputerInfo | null }) {
+export function ComputerFields({
+  computer,
+  suggestions,
+}: {
+  computer?: ComputerInfo | null;
+  suggestions: HardwareSuggestions;
+}) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          name="operatingSystem"
-          label="Operating system"
-          value={computer?.operatingSystem}
-          placeholder="Windows 11 Pro"
-          maxLength={255}
-        />
+        <PcHardwareFields computer={computer} suggestions={suggestions} />
         <TextField
           name="osVersion"
           label="OS version"
           value={computer?.osVersion}
           placeholder="24H2"
-          maxLength={255}
-        />
-        <TextField name="processor" label="Processor" value={computer?.processor} maxLength={255} />
-        <TextField name="graphics" label="Graphics" value={computer?.graphics} maxLength={255} />
-        <TextField
-          name="memoryGb"
-          label="Memory (GB)"
-          type="number"
-          value={computer?.memoryGb}
-          min={0}
-        />
-        <TextField
-          name="storageGb"
-          label="Storage (GB)"
-          type="number"
-          value={computer?.storageGb}
-          min={0}
-        />
-        <TextField
-          name="storageType"
-          label="Storage type"
-          value={computer?.storageType}
-          placeholder="NVMe SSD"
           maxLength={255}
         />
         <TextField
@@ -234,7 +212,15 @@ function ComputerSummary({ computer }: { computer: ComputerInfo }) {
   );
 }
 
-export function ComputerSection({ item, canManage }: { item: ItemRecord; canManage: boolean }) {
+export function ComputerSection({
+  item,
+  canManage,
+  suggestions,
+}: {
+  item: ItemRecord;
+  canManage: boolean;
+  suggestions: HardwareSuggestions;
+}) {
   const computer = item.computer;
 
   return (
@@ -256,7 +242,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
               >
                 <input type="hidden" name="itemId" value={item.id} />
                 <input type="hidden" name="computerId" value={computer.id} />
-                <ComputerFields computer={computer} />
+                <ComputerFields computer={computer} suggestions={suggestions} />
                 <SubmitButton
                   pendingLabel="Saving PC details..."
                   className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
@@ -357,7 +343,7 @@ export function ComputerSection({ item, canManage }: { item: ItemRecord; canMana
           <p className="muted mt-2 text-sm">Add PC details for this item.</p>
           <FeedbackForm action={addComputerDetails} className="mt-5 space-y-5">
             <input type="hidden" name="itemId" value={item.id} />
-            <ComputerFields />
+            <ComputerFields suggestions={suggestions} />
             <SubmitButton
               pendingLabel="Adding PC record..."
               className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"

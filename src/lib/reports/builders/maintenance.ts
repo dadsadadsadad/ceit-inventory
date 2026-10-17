@@ -229,6 +229,13 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           { label: "Dates", width: 1.2 },
           { label: "Details", width: 1.6 },
         ],
+        tones: tickets.map((ticket) =>
+          ticket.status !== MaintenanceStatus.OPEN
+            ? "ok"
+            : ticket.priority === "URGENT" || ticket.priority === "HIGH"
+              ? "defective"
+              : "not_tested",
+        ),
         rows: tickets.map((ticket) => [
           `${ticket.inventoryItem.name}\n${ticket.inventoryItem.assetTag ?? "No asset tag"}\n${ticket.title}`,
           `${humanize(ticket.priority)}\n${ticket.status === MaintenanceStatus.OPEN ? "Needs attention" : "Resolved"}`,

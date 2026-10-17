@@ -1,39 +1,37 @@
 "use server";
 
 import { FormError, formAction } from "@/lib/form-action";
-import { fieldLabel, optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
+import { optionalText, requiredText, requiredUuid } from "@/lib/form-fields";
 
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/prisma";
 import { auditEventData } from "@/lib/audit-event";
-import {
-  nextCategoryAssetTagCode,
-  nextLocationAssetTagCode,
-  normalizeAssetTagCode,
-} from "@/lib/asset-tag";
+import { normalizeTagCode, suggestTagCode, tagCodeLength } from "@/lib/asset-tag-code";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 
 function requiredId(formData: FormData) {
   return requiredUuid(formData, "id", "Invalid setup record.");
 }
 
-function optionalAssetTagCode(formData: FormData, key: string, length: number) {
-  const value = optionalText(formData, key, length);
+function optionalAssetTagCode(formData: FormData) {
+  const value = optionalText(formData, "assetTagCode", 20);
   if (!value) {
     return null;
   }
-  const code = normalizeAssetTagCode(value, length);
+  const code = normalizeTagCode(value);
   if (!code) {
-    throw new FormError(`${fieldLabel(key)} must use exactly ${length} letters or numbers.`);
+    throw new FormError(
+      `Tag codes use ${tagCodeLength.min} to ${tagCodeLength.max} letters or numbers.`,
+    );
   }
   return code;
 }
 
 // keep the current code or pick an unused one
 async function categoryAssetTagCode(formData: FormData, name: string, currentId?: string) {
-  const supplied = optionalAssetTagCode(formData, "assetTagCode", 3);
+  const supplied = optionalAssetTagCode(formData);
   if (supplied) {
     return supplied;
   }
@@ -41,18 +39,15 @@ async function categoryAssetTagCode(formData: FormData, name: string, currentId?
     where: currentId ? { id: { not: currentId } } : undefined,
     select: { assetTagCode: true },
   });
-  return nextCategoryAssetTagCode(
+  return suggestTagCode(
     name,
     codes.map((category) => category.assetTagCode),
   );
 }
 
 // keep the current code or pick an unused one
-async function locationAssetTagCode(formData: FormData, currentId?: string) {
-  const supplied = optionalAssetTagCode(formData, "assetTagCode", 2);
-  if (supplied && !/^\d{2}$/.test(supplied)) {
-    throw new FormError("Room codes are 2 digits, e.g. 05.");
-  }
+async function locationAssetTagCode(formData: FormData, name: string, currentId?: string) {
+  const supplied = optionalAssetTagCode(formData);
   if (supplied) {
     return supplied;
   }
@@ -60,7 +55,10 @@ async function locationAssetTagCode(formData: FormData, currentId?: string) {
     where: currentId ? { id: { not: currentId } } : undefined,
     select: { assetTagCode: true },
   });
-  return nextLocationAssetTagCode(codes.map((location) => location.assetTagCode));
+  return suggestTagCode(
+    name,
+    codes.map((location) => location.assetTagCode),
+  );
 }
 
 function refreshSetupPages() {
@@ -143,7 +141,7 @@ export async function createLocation(formData: FormData) {
       const location = await prisma.location.create({
         data: {
           name: requiredText(formData, "name"),
-          assetTagCode: await locationAssetTagCode(formData),
+          assetTagCode: await locationAssetTagCode(formData, requiredText(formData, "name")),
           roomNumber: optionalText(formData, "roomNumber", 100),
           description: optionalText(formData, "description", 2_000),
         },
@@ -177,7 +175,7 @@ export async function updateLocation(formData: FormData) {
         where: { id },
         data: {
           name: requiredText(formData, "name"),
-          assetTagCode: await locationAssetTagCode(formData, id),
+          assetTagCode: await locationAssetTagCode(formData, requiredText(formData, "name"), id),
           roomNumber: optionalText(formData, "roomNumber", 100),
           description: optionalText(formData, "description", 2_000),
         },

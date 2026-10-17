@@ -10,12 +10,8 @@ import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { stripControlCharacters } from "@/lib/clean-text";
 import { requireWriteAccess, type InventoryUser } from "@/lib/inventory-auth";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
-import {
-  isInventoryAssetTag,
-  nextCategoryAssetTagCode,
-  nextInventoryAssetTag,
-  nextLocationAssetTagCode,
-} from "@/lib/asset-tag";
+import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
+import { suggestTagCode } from "@/lib/asset-tag-code";
 import { customFieldsFor, type CustomFieldDefinition } from "@/lib/custom-fields";
 import { loadCustomFields } from "@/lib/custom-field-queries";
 import {
@@ -380,7 +376,7 @@ function parseImportRow(
   let originalTag = "";
   if (itemType === ItemType.ASSET && suppliedAssetTag && !isInventoryAssetTag(suppliedAssetTag)) {
     warn(
-      `Asset tag "${suppliedAssetTag.slice(0, 40)}" isn't in the INV- format, so a new one was made. The old tag is in the notes.`,
+      `Asset tag "${suppliedAssetTag.slice(0, 40)}" isn't in the CATEGORY-ROOM-0001 format, so a new one was made. The old tag is in the notes.`,
     );
     originalTag = suppliedAssetTag;
     suppliedAssetTag = null;
@@ -483,7 +479,7 @@ async function resolveCategory(
     category = await tx.category.create({
       data: {
         name,
-        assetTagCode: nextCategoryAssetTagCode(
+        assetTagCode: suggestTagCode(
           name,
           codes.map((entry) => entry.assetTagCode),
         ),
@@ -526,7 +522,10 @@ async function resolveLocation(
     location = await tx.location.create({
       data: {
         name,
-        assetTagCode: nextLocationAssetTagCode(codes.map((entry) => entry.assetTagCode)),
+        assetTagCode: suggestTagCode(
+          name,
+          codes.map((entry) => entry.assetTagCode),
+        ),
         roomNumber,
       },
       select: { id: true, isActive: true },
@@ -571,7 +570,6 @@ async function saveImportedRow(
           (await nextInventoryAssetTag(client, {
             categoryId: category.id,
             locationId: location.id,
-            status: row.item.status ?? ItemStatus.OK,
           })))
         : row.suppliedAssetTag;
     await client.inventoryItem.create({

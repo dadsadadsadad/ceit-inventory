@@ -45,7 +45,7 @@ test("import check reports row problems and duplicates", async ({ page }) => {
     "Valid row,Launch test equipment,Launch test lab,asset,1,REVIEW-SER-1,,,",
     "Unknown category,Review missing category,Launch test lab,asset,1,REVIEW-SER-2,,,",
     "Bad date,Launch test equipment,Launch test lab,asset,1,REVIEW-SER-3,,2026-13-45,",
-    "Existing tag,Launch test equipment,Launch test lab,asset,1,REVIEW-SER-4,INV-TST-OK-01-0001,,",
+    "Existing tag,Launch test equipment,Launch test lab,asset,1,REVIEW-SER-4,TST-01-0001,,",
     "Bad memory,Launch test equipment,Launch test lab,asset,1,REVIEW-SER-5,,,lots",
   ].join("\n");
   await page.getByLabel("CSV or Excel file").setInputFiles({
@@ -59,7 +59,7 @@ test("import check reports row problems and duplicates", async ({ page }) => {
   await expect(page.getByText("2 skipped", { exact: false })).toBeVisible();
   await expect(page.getByText(`category "Review missing category" doesn't exist`)).toBeVisible();
   await expect(
-    page.getByText("asset tag INV-TST-OK-01-0001 is already assigned to a record."),
+    page.getByText("asset tag TST-01-0001 is already assigned to a record."),
   ).toBeVisible();
   await expect(page.getByText('Purchase date "2026-13-45" is not a valid date')).toBeVisible();
   await expect(page.getByText('Memory "lots" is not a valid size')).toBeVisible();

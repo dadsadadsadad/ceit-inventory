@@ -6,7 +6,7 @@ import { manilaDateText } from "@/lib/manila-date";
 import { formatPesoShort } from "./format";
 import type { ReportChart, ReportChartTone } from "./model";
 
-const statusTones: Record<ItemStatus, ReportChartTone> = {
+export const statusTones: Record<ItemStatus, ReportChartTone> = {
   OK: "ok",
   WORKING: "working",
   DEPLOYED: "deployed",

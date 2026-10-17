@@ -109,7 +109,7 @@ export function assertTrackedAssetQuantity(
 
 export function assertAssetTag(assetTag: string | null, itemType: ItemType) {
   if (itemType === ItemType.ASSET && assetTag && !isInventoryAssetTag(assetTag)) {
-    throw new FormError("Use the INV-CAT-ST-ROOM-0001 format, or leave it blank to generate one.");
+    throw new FormError("Use the CATEGORY-ROOM-0001 format, or leave it blank to generate one.");
   }
 }
 

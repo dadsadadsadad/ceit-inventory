@@ -8,7 +8,7 @@ import { reportDateFilter } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
 
 import { chips, dateRangeChip, formatReportDateTime, humanize } from "../format";
-import { countChart } from "../charts";
+import { countChart, statusTones } from "../charts";
 import type { ReportModel } from "../model";
 import { countsByRoom, filterNames, loadCapped, type BuilderContext } from "./shared";
 
@@ -132,6 +132,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
           { label: "System and software", width: 1.9 },
           { label: "Status", width: 1 },
         ],
+        tones: pcs.map((item) => statusTones[item.status]),
         rows: pcs.map((item) => {
           const programs = software(item);
           return [

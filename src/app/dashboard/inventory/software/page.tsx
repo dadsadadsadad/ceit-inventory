@@ -16,7 +16,7 @@ import {
 } from "@/lib/computer-directory";
 import { loadSoftware } from "@/lib/computer-queries";
 import { isUuid } from "@/lib/ids";
-import { requireInventoryAccess } from "@/lib/inventory-auth";
+import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { formatManilaDate } from "@/lib/manila-date";
 import { firstParam, pageParam, textParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
@@ -88,7 +88,7 @@ export default async function SoftwarePage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireInventoryAccess();
+  const canManage = canManageInventory((await requireInventoryAccess()).role);
   const raw = await searchParams;
   const now = new Date();
   const q = textParam(raw.q);
@@ -160,12 +160,22 @@ export default async function SoftwarePage({
             <h1 className="title mt-3 text-3xl sm:text-4xl">Software</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Software across all PCs.</p>
           </div>
-          <Link
-            href={`/dashboard/reports?${reportQuery.toString()}`}
-            className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-          >
-            Open as report
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {canManage ? (
+              <Link
+                href="/dashboard/inventory/update-pcs"
+                className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              >
+                Update many PCs
+              </Link>
+            ) : null}
+            <Link
+              href={`/dashboard/reports?${reportQuery.toString()}`}
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Open as report
+            </Link>
+          </div>
         </header>
 
         <InventoryTabs current="software" />

@@ -116,7 +116,7 @@ function Table({ table }: { table: ReportTable }) {
             </thead>
             <tbody>
               {table.rows.map((row, rowIndex) => (
-                <tr key={rowIndex}>
+                <tr key={rowIndex} data-tone={table.tones?.[rowIndex]}>
                   {table.columns.map((column, columnIndex) => (
                     <td
                       key={column.label}

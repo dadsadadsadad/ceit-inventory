@@ -9,6 +9,7 @@ import {
   type SoftwareEntry,
 } from "./computer-directory";
 import { isUuid } from "./ids";
+import { commonGraphics, commonProcessors, commonSystems, withCommon } from "./pc-hardware";
 import { everyTermMatches, searchTerms } from "./search-terms";
 import { prisma } from "@/prisma";
 
@@ -189,4 +190,27 @@ export async function loadSoftware(filters: DirectoryFilters, now = new Date()) 
     },
   }));
   return { entries, truncated };
+}
+
+// hardware names already used, offered in the pc dropdowns
+export async function loadHardwareSuggestions() {
+  const used = await prisma.computer.findMany({
+    select: { operatingSystem: true, processor: true, graphics: true },
+    distinct: ["operatingSystem", "processor", "graphics"],
+    take: 500,
+  });
+  return {
+    systems: withCommon(
+      used.map((pc) => pc.operatingSystem),
+      commonSystems,
+    ),
+    processors: withCommon(
+      used.map((pc) => pc.processor),
+      commonProcessors,
+    ),
+    graphics: withCommon(
+      used.map((pc) => pc.graphics),
+      commonGraphics,
+    ),
+  };
 }

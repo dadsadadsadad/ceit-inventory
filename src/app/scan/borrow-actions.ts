@@ -3,6 +3,7 @@
 import { ItemType, Prisma, PublicRequestKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { auditEventData } from "@/lib/audit-event";
 import { stripControlCharacters } from "@/lib/clean-text";
@@ -16,6 +17,7 @@ import { assertFormToken } from "@/lib/form-token";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { borrowerDataExpiresAt } from "@/lib/borrower-data-retention";
 import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
+import { notifyBorrowRequest, notifyReturnRequest } from "@/lib/notify-events";
 import { prisma } from "@/prisma";
 
 const qrCodePattern = /^[a-z0-9_-]{8,128}$/i;
@@ -296,6 +298,7 @@ export async function submitBorrowRequest(formData: FormData) {
     // validate before rate limiting so a typo doesn't use up the quota
     await enforcePublicRequestRateLimit(PublicRequestKind.BORROW);
     await createBorrowRequest(input);
+    after(() => notifyBorrowRequest(qrCode, input));
     refreshInventoryViews();
     redirect(`/scan/${encodeURIComponent(qrCode)}?request=sent`);
   });
@@ -371,6 +374,7 @@ export async function submitReturnRequest(formData: FormData) {
       throw publicBorrowError(error);
     }
 
+    after(() => notifyReturnRequest(qrCode));
     refreshInventoryViews();
     revalidatePath(`/scan/${encodeURIComponent(qrCode)}`);
     redirect(`/scan/${encodeURIComponent(qrCode)}?return=sent`);

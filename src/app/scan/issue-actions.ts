@@ -2,6 +2,7 @@
 
 import { ItemStatus, PublicRequestKind } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { auditEventData } from "@/lib/audit-event";
 import { stripControlCharacters } from "@/lib/clean-text";
 import { FormError, formAction } from "@/lib/form-action";
@@ -10,6 +11,7 @@ import { enforcePublicRequestRateLimit } from "@/lib/public-request-protection";
 import { isInventoryQrCode } from "@/lib/qr-code";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { runTransaction } from "@/lib/database-transaction";
+import { notifyProblemReport } from "@/lib/notify-events";
 
 export async function submitIssueReport(formData: FormData) {
   return formAction(async () => {
@@ -36,6 +38,7 @@ export async function submitIssueReport(formData: FormData) {
     }
     await enforcePublicRequestRateLimit(PublicRequestKind.ISSUE);
     // reuse an identical open report
+    let created = false;
     const itemId = await runTransaction(async (tx) => {
       const item = await tx.inventoryItem.findUnique({
         where: { qrCode },
@@ -54,6 +57,7 @@ export async function submitIssueReport(formData: FormData) {
         },
       });
       if (!duplicate) {
+        created = true;
         const ticket = await tx.maintenanceTicket.create({
           data: {
             inventoryItemId: item.id,
@@ -79,6 +83,9 @@ export async function submitIssueReport(formData: FormData) {
       }
       return item.id;
     });
+    if (created) {
+      after(() => notifyProblemReport(qrCode, { description, reporterName, title }));
+    }
     refreshInventoryViews(itemId);
     redirect(`/scan/${encodeURIComponent(qrCode)}?issue=sent`);
   });
