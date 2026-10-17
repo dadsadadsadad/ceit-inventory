@@ -1,4 +1,7 @@
-import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, StandardFonts, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import sharp from "sharp";
+
+import { ceitLogoSvg } from "@/lib/ceit-logo";
 
 import { formatReportDateTime } from "../format";
 import { chartValue, hasChartData } from "../charts";
@@ -21,6 +24,7 @@ class Sheet {
     private readonly document: PDFDocument,
     private readonly fonts: Fonts,
     private readonly report: ReportModel,
+    private readonly logo: PDFImage,
   ) {
     this.page = document.addPage([pageLayout.width, pageLayout.height]);
     this.cover();
@@ -46,10 +50,18 @@ class Sheet {
       color: pdfTheme.accentBright,
     });
     this.wordmark(top - 52, pdfTheme.bandText, pdfTheme.accentBright);
+    const logoHeight = 112;
+    const logoWidth = (this.logo.width / this.logo.height) * logoHeight;
+    page.drawImage(this.logo, {
+      x: pageLayout.width - margin - logoWidth,
+      y: top - 19 - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
+    });
     const stamp = formatReportDateTime(report.generatedAt);
     const stampWidth = fonts.regular.widthOfTextAtSize(pdfText(stamp), 8.5);
     page.drawText(pdfText(stamp), {
-      x: pageLayout.width - margin - stampWidth,
+      x: pageLayout.width - margin - logoWidth - 18 - stampWidth,
       y: top - 52,
       size: 8.5,
       font: fonts.regular,
@@ -69,7 +81,7 @@ class Sheet {
       font: fonts.serif,
       color: pdfTheme.bandText,
     });
-    page.drawText(pdfText(report.description, 110), {
+    page.drawText(pdfText(report.description, 92), {
       x: margin,
       y: top - 136,
       size: 9.5,
@@ -597,7 +609,13 @@ export async function renderReportPdf(report: ReportModel) {
     bold: await document.embedFont(StandardFonts.HelveticaBold),
     serif: await document.embedFont(StandardFonts.TimesRomanBold),
   };
-  const sheet = new Sheet(document, fonts, report);
+  const logo = await document.embedPng(
+    await sharp(Buffer.from(ceitLogoSvg), { density: 300 })
+      .resize({ height: 480 })
+      .png()
+      .toBuffer(),
+  );
+  const sheet = new Sheet(document, fonts, report, logo);
   sheet.filters();
   sheet.metrics(report.metrics);
   sheet.charts(report.charts ?? []);

@@ -28,3 +28,16 @@ export function overdueInspectionWhere(now = new Date()): Prisma.InventoryItemWh
     OR: [{ lastCheckedAt: null }, { lastCheckedAt: { lt: cutoff } }],
   };
 }
+
+export const pcReplacementYears = 5;
+
+// pcs past their expected life, going by purchase date
+export function replacementDueWhere(now = new Date()): Prisma.InventoryItemWhereInput {
+  const cutoff = new Date(now);
+  cutoff.setFullYear(cutoff.getFullYear() - pcReplacementYears);
+  return {
+    isComputer: true,
+    status: { notIn: outOfServiceStatuses },
+    purchaseDate: { lte: cutoff },
+  };
+}

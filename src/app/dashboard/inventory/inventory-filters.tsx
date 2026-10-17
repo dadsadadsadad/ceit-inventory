@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ItemCondition, ItemStatus, ItemType } from "@prisma/client";
 
 import { ClearFiltersButton, FilterForm } from "@/app/components/filter-form";
-import { inspectionIntervalDays } from "@/lib/inventory-attention";
+import { inspectionIntervalDays, pcReplacementYears } from "@/lib/inventory-attention";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { humanizeEnum } from "@/lib/labels";
 
@@ -142,6 +142,10 @@ export function InventoryFilters({
               defaultChecked={search.checked === "overdue"}
             />
             <span>{`Not checked in ${inspectionIntervalDays}+ days`}</span>
+          </label>
+          <label className="filter-chip">
+            <input type="checkbox" name="age" value="old" defaultChecked={search.age === "old"} />
+            <span>{`PCs ${pcReplacementYears}+ years old`}</span>
           </label>
         </div>
         <details

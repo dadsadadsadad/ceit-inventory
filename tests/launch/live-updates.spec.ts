@@ -311,6 +311,7 @@ test("layouts fit their containers at four widths", async ({ page }) => {
     "/dashboard/reports",
     "/dashboard/activity",
     "/dashboard/settings",
+    "/dashboard/inventory/setup",
     "/dashboard/users",
     "/scan/ceit-launch-item-27?view=public",
     "/dashboard/inventory/hardware",

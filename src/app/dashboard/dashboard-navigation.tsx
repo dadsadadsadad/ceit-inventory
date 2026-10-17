@@ -1,9 +1,10 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   BarChart3,
+  ChevronDown,
   ClipboardList,
   HandHelping,
   LayoutDashboard,
@@ -45,7 +46,15 @@ export function DashboardNavigation({
   username,
 }: DashboardNavigationProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [menuOpen, setMenuOpen] = useState(false);
+  const inInventory = pathname.startsWith("/dashboard/inventory");
+  const [inventoryOpen, setInventoryOpen] = useState(inInventory);
+  const [lastInInventory, setLastInInventory] = useState(inInventory);
+  if (inInventory !== lastInInventory) {
+    setLastInInventory(inInventory);
+    setInventoryOpen(inInventory);
+  }
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) {
@@ -60,6 +69,52 @@ export function DashboardNavigation({
     document.addEventListener("keydown", dismiss);
     return () => document.removeEventListener("keydown", dismiss);
   }, [menuOpen]);
+
+  const pcView = searchParams.get("view") === "pcs";
+  const inventoryLinks = [
+    {
+      label: "All items",
+      href: "/dashboard/inventory",
+      active:
+        pathname === "/dashboard/inventory" ||
+        /^\/dashboard\/inventory\/[0-9a-f-]{36}/.test(pathname),
+    },
+    {
+      label: "PCs",
+      href: "/dashboard/inventory/hardware?view=pcs",
+      active: pathname === "/dashboard/inventory/hardware" && pcView,
+    },
+    {
+      label: "Hardware",
+      href: "/dashboard/inventory/hardware",
+      active: pathname === "/dashboard/inventory/hardware" && !pcView,
+    },
+    {
+      label: "Software",
+      href: "/dashboard/inventory/software",
+      active: pathname === "/dashboard/inventory/software",
+    },
+    {
+      label: "QR labels",
+      href: "/dashboard/inventory/labels",
+      active: pathname === "/dashboard/inventory/labels",
+    },
+    ...(canManageInventory
+      ? [
+          {
+            label: "Add or import",
+            href: "/dashboard/inventory/new",
+            active:
+              pathname === "/dashboard/inventory/new" || pathname === "/dashboard/inventory/import",
+          },
+        ]
+      : []),
+    {
+      label: "Rooms and categories",
+      href: "/dashboard/inventory/setup",
+      active: pathname === "/dashboard/inventory/setup",
+    },
+  ];
 
   const groups = [
     {
@@ -129,8 +184,12 @@ export function DashboardNavigation({
                     href === "/dashboard"
                       ? pathname === href
                       : pathname === href || pathname.startsWith(`${href}/`);
+                  const isInventory = href === "/dashboard/inventory";
                   return (
-                    <li key={href} className="dashboard-nav-item">
+                    <li
+                      key={href}
+                      className={`dashboard-nav-item ${isInventory ? "has-subnav" : ""}`}
+                    >
                       <Link
                         href={href}
                         onClick={() => setMenuOpen(false)}
@@ -141,6 +200,41 @@ export function DashboardNavigation({
                         <span>{label}</span>
                         <NavigationProgress />
                       </Link>
+                      {isInventory ? (
+                        <>
+                          <button
+                            type="button"
+                            className="subnav-toggle"
+                            aria-expanded={inventoryOpen}
+                            aria-controls="inventory-subnav"
+                            aria-label={
+                              inventoryOpen ? "Hide inventory pages" : "Show inventory pages"
+                            }
+                            onClick={() => setInventoryOpen(!inventoryOpen)}
+                          >
+                            <ChevronDown size={16} aria-hidden="true" />
+                          </button>
+                          <ul
+                            id="inventory-subnav"
+                            className="dashboard-subnav"
+                            hidden={!inventoryOpen}
+                          >
+                            {inventoryLinks.map((link) => (
+                              <li key={link.href}>
+                                <Link
+                                  href={link.href}
+                                  onClick={() => setMenuOpen(false)}
+                                  aria-current={link.active ? "page" : undefined}
+                                  className={`subnav-link ${link.active ? "subnav-link-active" : ""}`}
+                                >
+                                  <span>{link.label}</span>
+                                  <NavigationProgress />
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : null}
                     </li>
                   );
                 })}

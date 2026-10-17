@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BrandMark } from "@/app/components/brand-mark";
 import { formatManilaDate } from "@/lib/manila-date";
 import { chartValue, hasChartData } from "@/lib/reports/charts";
 import type { ReportChart, ReportModel, ReportTable } from "@/lib/reports/model";
@@ -147,7 +148,8 @@ export function ReportSheet({ actions, report }: { actions: ReactNode; report: R
   return (
     <article className="report-sheet" aria-label={`${report.title} report`}>
       <header className="report-sheet-head">
-        <div>
+        <BrandMark size={64} />
+        <div className="min-w-0 flex-1">
           <p className="eyebrow">Generated report</p>
           <h2 className="report-title">{report.title}</h2>
           <p className="muted text-sm">

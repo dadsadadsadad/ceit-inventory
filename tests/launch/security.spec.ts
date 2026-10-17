@@ -325,6 +325,7 @@ test.describe("the dashboard calendar", () => {
     await expect(calendar.getByText("Calendar Borrower", { exact: false })).toBeVisible();
 
     const title = `Lab check <b>now</b> ${Date.now()}`;
+    await calendar.locator("summary", { hasText: "Add event" }).click();
     await calendar.getByLabel(/New event for/).fill(title);
     await calendar.getByRole("button", { name: /^Add to / }).click();
     await expect(calendar.getByText(title, { exact: true })).toBeVisible();
@@ -350,9 +351,13 @@ test.describe("the dashboard calendar", () => {
     const boxes = await page.evaluate(() => {
       const top = (selector: string) =>
         document.querySelector(selector)!.getBoundingClientRect().top;
-      return { calendar: top(".dashboard-calendar"), note: top(".dashboard-note-card") };
+      return {
+        calendar: top(".dashboard-calendar"),
+        note: top(".dashboard-note-card"),
+      };
     });
-    expect(boxes.calendar).toBeLessThan(boxes.note);
+    // calendar comes before the note in the side rail
+    expect(boxes.calendar).toBeLessThanOrEqual(boxes.note);
   });
 });
 

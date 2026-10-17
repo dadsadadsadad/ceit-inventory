@@ -49,7 +49,7 @@ test("hover, press, and keyboard feedback remain distinct in both themes", async
       .toBeGreaterThan(0);
     await page.mouse.move(300, 0);
     await page.mouse.up();
-    const queue = page.locator(".queue-row").first();
+    const queue = page.locator(".glance-row").first();
     const rowBackground = await queue.evaluate((node) => getComputedStyle(node).backgroundColor);
     await queue.hover();
     await expect
@@ -89,10 +89,10 @@ test("reduced motion preserves feedback without moving controls", async ({ page 
       .getByRole("link", { name: "Inventory", exact: true })
       .evaluate((node) => getComputedStyle(node).transform),
   ).toBe("none");
-  await page.locator(".queue-row").first().hover();
+  await page.locator(".glance-row").first().hover();
   expect(
     await page
-      .locator(".queue-row > svg")
+      .locator(".glance-row")
       .first()
       .evaluate((node) => getComputedStyle(node).transform),
   ).toBe("none");
@@ -211,8 +211,8 @@ test("dashboard supporting text is readable without browser zoom", async ({ page
   expect(smallText).toEqual([]);
   for (const width of [1440, 1280, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 700 });
-    await expect(page.locator(".overview-metrics strong")).toHaveCount(4);
-    const rows = await page.locator(".overview-metrics > div").evaluateAll((metrics) => {
+    await expect(page.locator(".overview-metrics strong")).toHaveCount(5);
+    const rows = await page.locator(".overview-metrics > a").evaluateAll((metrics) => {
       const byRow = new Map<number, number[]>();
       for (const metric of metrics) {
         const row = Math.round(metric.getBoundingClientRect().top);
@@ -229,26 +229,6 @@ test("dashboard supporting text is readable without browser zoom", async ({ page
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
-    const overlappingSymbols = await page.locator(".overview-metrics > div").evaluateAll(
-      (metrics) =>
-        metrics.filter((metric) => {
-          const symbol = metric.querySelector(".metric-symbol")!;
-          if (getComputedStyle(symbol).display === "none") {
-            return false;
-          }
-          const icon = symbol.getBoundingClientRect();
-          const range = document.createRange();
-          range.selectNodeContents(metric.querySelector("p")!);
-          return [...range.getClientRects()].some(
-            (text) =>
-              text.left < icon.right &&
-              text.right > icon.left &&
-              text.top < icon.bottom &&
-              text.bottom > icon.top,
-          );
-        }).length,
-    );
-    expect(overlappingSymbols, `Metric caption overlap at ${width}px`).toBe(0);
   }
   await page.screenshot({ path: "test-results/ui-dashboard-narrow.png", fullPage: true });
 });
@@ -299,9 +279,9 @@ test("both themes use neutral surfaces and accents visibly update controls, link
         return {
           background: css("body").backgroundColor,
           sidebar: css(".dashboard-sidebar").backgroundColor,
-          card: css(".work-queue").backgroundColor,
+          card: css(".glance-card").backgroundColor,
           button: css(".dashboard-header .primary-button").backgroundColor,
-          link: css(".activity-ledger .accent-link").color,
+          link: css(".glance-card .accent-link").color,
           selection: css(".nav-link-active").boxShadow,
         };
       });
@@ -327,7 +307,7 @@ test("both themes use neutral surfaces and accents visibly update controls, link
     await page.screenshot({ path: `test-results/ui-appearance-${mode.toLowerCase()}.png` });
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", mode.toLowerCase());
-    await expect(page.locator(".work-queue")).toBeVisible();
+    await expect(page.locator(".glance-card").first()).toBeVisible();
     expect(await colors()).toEqual(custom);
     await page.screenshot({ path: `test-results/ui-dashboard-${mode.toLowerCase()}.png` });
   }

@@ -124,6 +124,7 @@ export function InventoryRecords({
               <li
                 key={item.id}
                 data-inventory-row-url={`/dashboard/inventory/${item.id}`}
+                data-status={item.status}
                 tabIndex={0}
                 aria-label={`Open ${item.name}`}
                 className="record-tile"
@@ -191,6 +192,7 @@ export function InventoryRecords({
               <li
                 key={item.id}
                 data-inventory-row-url={`/dashboard/inventory/${item.id}`}
+                data-status={item.status}
                 tabIndex={0}
                 aria-label={`Open ${item.name}`}
                 className="record-compact-row"
@@ -236,6 +238,7 @@ export function InventoryRecords({
                   <article
                     key={item.id}
                     data-inventory-row-url={`/dashboard/inventory/${item.id}`}
+                    data-status={item.status}
                     tabIndex={0}
                     aria-label={`Open ${item.name}`}
                     className="cursor-pointer space-y-3 p-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
@@ -318,6 +321,7 @@ export function InventoryRecords({
                       <tr
                         key={item.id}
                         data-inventory-row-url={`/dashboard/inventory/${item.id}`}
+                        data-status={item.status}
                         tabIndex={0}
                         aria-label={`Open ${item.name}`}
                         className="table-row cursor-pointer border-b last:border-0 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"

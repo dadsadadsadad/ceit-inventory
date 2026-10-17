@@ -4,7 +4,6 @@ import Image from "next/image";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import QRCode from "qrcode";
 
 import { FilterForm } from "@/app/components/filter-form";
 import { PrintLabel } from "@/app/components/print-label";
@@ -12,6 +11,7 @@ import { requireInventoryAccess } from "@/lib/inventory-auth";
 import { inventoryLabelAppUrl } from "@/lib/inventory-label-url";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/search-params";
+import { qrWithLogo } from "@/lib/qr-image";
 import { prisma } from "@/prisma";
 
 export const dynamic = "force-dynamic";
@@ -56,9 +56,7 @@ export default async function ItemLabelPage({
     process.env.VERCEL_PROJECT_PRODUCTION_URL,
   );
   const scanUrl = appUrl ? `${appUrl}/scan/${encodeURIComponent(item.qrCode)}` : null;
-  const qrDataUrl = scanUrl
-    ? await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "M", margin: 1, width: 900 })
-    : null;
+  const qrDataUrl = scanUrl ? await qrWithLogo(scanUrl, 900) : null;
 
   return (
     <main className="page label-page">

@@ -574,8 +574,8 @@ test("faculty staff can use every page except account management", async ({ page
     await expect(page.getByRole("heading", { name: /Something went wrong/i })).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`${path}$`));
   }
-  await page.goto("/dashboard/settings");
-  await expect(page.getByRole("heading", { name: "Locations and categories" })).toBeVisible();
+  await page.goto("/dashboard/inventory/setup");
+  await expect(page.getByRole("heading", { name: "Rooms and categories" })).toBeVisible();
 });
 
 test("all main pages fit mobile and desktop without page errors", async ({ page }) => {

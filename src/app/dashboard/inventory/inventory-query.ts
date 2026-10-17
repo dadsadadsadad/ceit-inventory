@@ -20,6 +20,7 @@ export const pageSize = 25;
 export const maxBulkSelection = 10_000;
 
 export type SearchParams = {
+  age?: string;
   attention?: string;
   bulk?: string;
   category?: string;
@@ -117,6 +118,9 @@ export function inventoryFilterParams(search: SearchParams) {
   }
   if (search.checked === "overdue") {
     parameters.set("checked", "overdue");
+  }
+  if (search.age === "old") {
+    parameters.set("age", "old");
   }
   if (search.stock === "low" || search.stock === "out") {
     parameters.set("stock", search.stock);

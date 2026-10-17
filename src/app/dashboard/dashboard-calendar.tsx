@@ -233,40 +233,43 @@ export function DashboardCalendar({
         )}
 
         {canEdit ? (
-          <FeedbackForm
-            action={createCalendarEvent}
-            successMessage="Event added."
-            className="cal-add"
-          >
-            <input type="hidden" name="day" value={activeDay} />
-            <label className="sr-only" htmlFor="calendar-event-title">
-              New event for {dayHeading(activeDay)}
-            </label>
-            <input
-              id="calendar-event-title"
-              name="title"
-              required
-              maxLength={120}
-              className="field w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Add event"
-            />
-            <label className="sr-only" htmlFor="calendar-event-notes">
-              Note (optional)
-            </label>
-            <input
-              id="calendar-event-notes"
-              name="notes"
-              maxLength={500}
-              className="field w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Note (optional)"
-            />
-            <SubmitButton
-              pendingLabel="Adding..."
-              className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+          <details className="cal-add-toggle">
+            <summary className="accent-link text-sm font-semibold">Add event</summary>
+            <FeedbackForm
+              action={createCalendarEvent}
+              successMessage="Event added."
+              className="cal-add"
             >
-              Add to {monthTitle(month).split(" ")[0]} {dayNumber(activeDay)}
-            </SubmitButton>
-          </FeedbackForm>
+              <input type="hidden" name="day" value={activeDay} />
+              <label className="sr-only" htmlFor="calendar-event-title">
+                New event for {dayHeading(activeDay)}
+              </label>
+              <input
+                id="calendar-event-title"
+                name="title"
+                required
+                maxLength={120}
+                className="field w-full rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Add event"
+              />
+              <label className="sr-only" htmlFor="calendar-event-notes">
+                Note (optional)
+              </label>
+              <input
+                id="calendar-event-notes"
+                name="notes"
+                maxLength={500}
+                className="field w-full rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Note (optional)"
+              />
+              <SubmitButton
+                pendingLabel="Adding..."
+                className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+              >
+                Add to {monthTitle(month).split(" ")[0]} {dayNumber(activeDay)}
+              </SubmitButton>
+            </FeedbackForm>
+          </details>
         ) : null}
       </div>
     </section>

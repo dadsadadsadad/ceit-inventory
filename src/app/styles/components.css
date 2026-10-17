@@ -152,7 +152,6 @@
     .nav-link,
     .request-choice
   ):is(:hover, :active),
-  .queue-row:is(:hover, :focus-visible, :active) > svg:last-child,
   .request-choice:hover svg {
     transform: none !important;
   }
@@ -1140,119 +1139,6 @@ a.pc-chip:hover {
   grid-column: 1 / -1;
 }
 
-/* status bar */
-.inventory-mix {
-  padding: 1.3rem 1.4rem;
-}
-
-.mix-heading {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 0.875rem;
-  gap: 0.75rem;
-  justify-content: space-between;
-}
-
-.mix-heading h2 {
-  font-size: 1.1rem;
-}
-
-.mix-track {
-  display: flex;
-  gap: 3px;
-  height: 12px;
-  margin: 1rem 0 0.8rem;
-  overflow: hidden;
-}
-
-.mix-segment {
-  background: var(--mix-color, var(--muted));
-  border-radius: 2px;
-  flex: var(--share) 1 0;
-  min-width: 3px;
-}
-
-.mix-ok {
-  --mix-color: var(--mix-ok);
-}
-
-.mix-working {
-  --mix-color: var(--mix-working);
-}
-
-.mix-deployed {
-  --mix-color: var(--mix-deployed);
-}
-
-.mix-defective {
-  --mix-color: var(--mix-defective);
-}
-
-.mix-not_tested {
-  --mix-color: var(--mix-not_tested);
-}
-
-.mix-retired {
-  --mix-color: var(--mix-retired);
-}
-
-.mix-lost {
-  --mix-color: var(--mix-lost);
-}
-
-.mix-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.2rem;
-}
-
-.mix-legend a {
-  align-items: center;
-  display: inline-flex;
-  font-size: 0.875rem;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-}
-
-.mix-legend a:is(:hover, :focus-visible) {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.mix-legend b {
-  font-variant-numeric: tabular-nums;
-}
-
-.mix-dot {
-  background: var(--mix-color, var(--muted));
-  border-radius: 50%;
-  flex: 0 0 auto;
-  height: 8px;
-  width: 8px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .mix-segment {
-    animation: mix-arrive 400ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-    transform-origin: left;
-  }
-
-  .mix-segment:nth-child(2) {
-    animation-delay: 35ms;
-  }
-
-  .mix-segment:nth-child(3) {
-    animation-delay: 70ms;
-  }
-}
-
-@media (max-width: 639px) {
-  .inventory-mix {
-    padding: 1rem;
-  }
-}
-
 /* hold to confirm */
 .hold-action {
   max-width: 100%;
@@ -1959,4 +1845,40 @@ a.pc-chip:hover {
   display: inline-flex;
   flex: none;
   gap: 0.25rem;
+}
+
+/* subtle status tint on inventory rows */
+[data-inventory-row-url][data-status] {
+  --row-tone: transparent;
+  --row-tint: transparent;
+  background-image: linear-gradient(var(--row-tint), var(--row-tint));
+}
+
+[data-inventory-row-url][data-status]:not(tr),
+tr[data-inventory-row-url][data-status] > :first-child {
+  box-shadow: inset 3px 0 0 var(--row-tone);
+}
+
+[data-inventory-row-url]:is([data-status="OK"], [data-status="WORKING"]) {
+  --row-tone: color-mix(in srgb, var(--status-positive) 55%, transparent);
+}
+
+[data-inventory-row-url][data-status="DEPLOYED"] {
+  --row-tone: var(--status-deployed);
+  --row-tint: color-mix(in srgb, var(--status-deployed-bg) 45%, transparent);
+}
+
+[data-inventory-row-url][data-status="NOT_TESTED"] {
+  --row-tone: var(--status-pending);
+  --row-tint: color-mix(in srgb, var(--status-pending-bg) 45%, transparent);
+}
+
+[data-inventory-row-url]:is([data-status="DEFECTIVE"], [data-status="LOST"]) {
+  --row-tone: var(--status-critical);
+  --row-tint: color-mix(in srgb, var(--status-critical-bg) 50%, transparent);
+}
+
+[data-inventory-row-url][data-status="RETIRED"] {
+  --row-tone: var(--status-retired);
+  --row-tint: color-mix(in srgb, var(--status-retired-bg) 50%, transparent);
 }

@@ -1,5 +1,6 @@
-import { BorrowStatus, ItemStatus, ItemType, type Prisma } from "@prisma/client";
+import { BorrowStatus, ItemType, type Prisma } from "@prisma/client";
 
+import { borrowableInventoryStatuses } from "@/lib/borrow-availability";
 import { borrowStatusLabel } from "@/lib/borrow-status";
 import { dueTodayWhere } from "@/lib/loan-due";
 import { borrowSearchWhere } from "@/lib/record-search";
@@ -54,9 +55,13 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
     ...borrowSearchWhere(filters.query),
   ];
   const where: Prisma.BorrowRequestWhereInput = { AND: conditions };
+  // only the full report lists idle equipment, and only what students can actually borrow
+  const showIdle = filters.borrowingState === "all" && !filters.borrowingStatus && !filters.query;
   const idleWhere: Prisma.InventoryItemWhereInput = {
     itemType: ItemType.ASSET,
-    status: { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] },
+    status: { in: [...borrowableInventoryStatuses] },
+    category: { isActive: true },
+    location: { isActive: true },
     borrowRequests: { none: range ? { requestedAt: range } : {} },
   };
 
@@ -121,13 +126,15 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
       take: 10_000,
     }),
     // items nobody borrowed in this period
-    prisma.inventoryItem.findMany({
-      where: idleWhere,
-      include: { category: true, location: true },
-      orderBy: [{ purchasePrice: { sort: "desc", nulls: "last" } }, { name: "asc" }],
-      take: 30,
-    }),
-    prisma.inventoryItem.count({ where: idleWhere }),
+    showIdle
+      ? prisma.inventoryItem.findMany({
+          where: idleWhere,
+          include: { category: true, location: true },
+          orderBy: [{ purchasePrice: { sort: "desc", nulls: "last" } }, { name: "asc" }],
+          take: 30,
+        })
+      : Promise.resolve([]),
+    showIdle ? prisma.inventoryItem.count({ where: idleWhere }) : Promise.resolve(0),
   ]);
   const late = finished.filter(
     (loan) => loan.returnedAt && loan.returnedAt > loan.expectedReturnDate,
@@ -192,11 +199,15 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         value: averageLoan === null ? "-" : `${averageLoan.toFixed(1)} days`,
         note: "from check-out to return",
       },
-      {
-        label: "Equipment never requested",
-        value: idleCount.toLocaleString(),
-        note: range ? "in this period" : "since records began",
-      },
+      ...(showIdle
+        ? [
+            {
+              label: "Borrowable, never requested",
+              value: idleCount.toLocaleString(),
+              note: range ? "in this period" : "since records began",
+            },
+          ]
+        : []),
     ],
     charts: [
       monthChart("Requests per month", byMonth, "requests"),
@@ -269,22 +280,28 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         total,
         emptyText: "No requests found.",
       },
-      {
-        heading: range ? "Equipment not requested in this period" : "Equipment never requested",
-        note: "Never borrowed, most valuable first.",
-        columns: [
-          { label: "Item", width: 2, primary: true },
-          { label: "Room", width: 1.2 },
-          { label: "Price", width: 1, align: "right" },
-        ],
-        rows: idle.map((item) => [
-          [item.name, item.assetTag].filter(Boolean).join(" · "),
-          `${item.location.name}\n${item.category.name}`,
-          item.purchasePrice === null ? "No price" : formatPeso(item.purchasePrice),
-        ]),
-        total: idleCount,
-        emptyText: "Everything has been borrowed at least once.",
-      },
+      ...(showIdle
+        ? [
+            {
+              heading: range
+                ? "Borrowable equipment not requested in this period"
+                : "Borrowable equipment never requested",
+              note: "Working equipment students can borrow, most valuable first.",
+              columns: [
+                { label: "Item", width: 2, primary: true },
+                { label: "Room", width: 1.2 },
+                { label: "Price", width: 1, align: "right" as const },
+              ],
+              rows: idle.map((item) => [
+                [item.name, item.assetTag].filter(Boolean).join(" · "),
+                `${item.location.name}\n${item.category.name}`,
+                item.purchasePrice === null ? "No price" : formatPeso(item.purchasePrice),
+              ]),
+              total: idleCount,
+              emptyText: "Everything has been borrowed at least once.",
+            },
+          ]
+        : []),
     ],
     csv: [
       [

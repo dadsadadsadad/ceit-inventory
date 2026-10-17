@@ -950,7 +950,7 @@ export async function importInventory(
 
   if (!previewOnly) {
     refreshInventoryViews();
-    revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/inventory/setup");
   }
 
   const notices: string[] = [];

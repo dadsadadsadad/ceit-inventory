@@ -42,39 +42,11 @@
 }
 
 .brand-mark {
-  background: var(--foreground);
-  border-radius: 0.4rem;
-  color: var(--background);
-  position: relative;
-}
-
-.brand-mark.brand-monogram {
-  align-items: center;
-  display: flex;
-  flex: 0 0 39px;
-  flex-direction: column;
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-variation-settings: "opsz" 24;
-  font-weight: 700;
-  height: 43px;
-  justify-content: center;
-  line-height: 0.95;
-  width: 39px;
-}
-
-.brand-monogram span {
-  letter-spacing: 0.05em;
-}
-
-.brand-mark.brand-monogram::after {
-  background: var(--accent);
-  content: "";
-  height: 3px;
-  position: absolute;
-  right: -3px;
-  top: 6px;
-  width: 10px;
+  display: block;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.18));
+  height: 46px;
+  width: auto;
 }
 
 /* sidebar */
@@ -200,6 +172,79 @@
 
 .nav-progress {
   margin-left: auto;
+}
+
+.dashboard-nav-item.has-subnav {
+  grid-column: 1 / -1;
+  position: relative;
+}
+
+.has-subnav > .nav-link {
+  padding-right: 2.75rem;
+}
+
+.subnav-toggle {
+  align-items: center;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  display: flex;
+  height: 2rem;
+  justify-content: center;
+  position: absolute;
+  right: 0.4rem;
+  top: 0.4rem;
+  transition:
+    background-color var(--interaction-duration) ease,
+    transform var(--interaction-duration) ease;
+  width: 2rem;
+}
+
+.subnav-toggle:hover {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  color: var(--foreground);
+}
+
+.subnav-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.dashboard-subnav {
+  border-left: 1px solid var(--border);
+  display: grid;
+  gap: 0.1rem;
+  margin: 0.2rem 0 0.35rem 1.55rem;
+  padding-left: 0.6rem;
+}
+
+.dashboard-subnav[hidden] {
+  display: none;
+}
+
+.subnav-link {
+  align-items: center;
+  border-radius: var(--radius-control);
+  color: var(--muted-strong);
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 500;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.35rem 0.7rem;
+  transition:
+    background-color var(--interaction-duration) ease,
+    color var(--interaction-duration) ease;
+}
+
+.subnav-link:hover {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  color: var(--foreground);
+}
+
+.subnav-link-active,
+.subnav-link:has(.nav-progress) {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 .sidebar-utilities {

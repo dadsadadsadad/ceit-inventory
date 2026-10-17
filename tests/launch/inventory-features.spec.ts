@@ -140,7 +140,7 @@ test("equipment can be added as several units, each with its own asset tag and Q
 
 test("warranty and extra fields are optional, saved, filtered, and reported", async ({ page }) => {
   await signIn(page);
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/inventory/setup");
   await page.getByText("Add extra field", { exact: true }).click();
   await page.getByLabel("Field name").fill("Lens mount");
   await page.getByRole("button", { name: "Add field" }).click();
@@ -211,7 +211,7 @@ test("an extra field can be created from the item forms, not only from Settings"
   await page.getByRole("button", { name: "Save update" }).click();
   await expect(page.getByRole("alert").filter({ hasText: /already a field called/ })).toBeVisible();
 
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/inventory/setup");
   await expect(page.getByText("Sample Color").first()).toBeVisible();
   await expect(page.getByText("Sample Funding").first()).toBeVisible();
 });

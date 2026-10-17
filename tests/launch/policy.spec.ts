@@ -205,7 +205,7 @@ test("staff cannot extend a loan beyond the total limit", async ({ page }) => {
 
 test("faculty staff can add and delete categories", async ({ page }) => {
   await signIn(page, "launch.staff");
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/inventory/setup");
   await page.locator("summary", { hasText: "Add category" }).click();
   await page.getByRole("textbox", { name: /Category name/ }).fill("Staff test category");
   await page.getByRole("button", { name: "Add category", exact: true }).click();

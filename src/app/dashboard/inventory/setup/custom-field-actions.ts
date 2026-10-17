@@ -12,7 +12,7 @@ import { prisma } from "@/prisma";
 import { runTransaction } from "@/lib/database-transaction";
 
 function refreshPages() {
-  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/inventory/setup");
   revalidatePath("/dashboard/inventory/new");
   revalidatePath("/dashboard/inventory/[id]", "page");
   revalidatePath("/dashboard/reports");

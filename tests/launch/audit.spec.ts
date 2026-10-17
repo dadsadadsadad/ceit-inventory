@@ -270,6 +270,7 @@ test("every route has a readable mobile and desktop view in both themes", async 
     ["student-survey", "/dashboard/student-survey"],
     ["activity", "/dashboard/activity"],
     ["settings", "/dashboard/settings"],
+    ["setup", "/dashboard/inventory/setup"],
     ["users", "/dashboard/users"],
     ["scanner", "/scan"],
     ["public-item", "/scan/ceit-launch-item-24?view=public"],

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
-import QRCode from "qrcode";
+import { qrWithLogo } from "@/lib/qr-image";
 
 export const metadata = { title: "Student survey · CEIT Inventory" };
 
@@ -8,12 +8,7 @@ const studentSurveyUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSdoHxFXWctUNOmfltMSVA7TBNU3w7AfII5QLsPtrdM2_MeVvg/viewform?usp=dialog";
 
 export default async function StudentSurveyPage() {
-  const qrDataUrl = await QRCode.toDataURL(studentSurveyUrl, {
-    errorCorrectionLevel: "M",
-    margin: 4,
-    width: 640,
-    color: { dark: "#000000", light: "#ffffff" },
-  });
+  const qrDataUrl = await qrWithLogo(studentSurveyUrl, 640);
 
   return (
     <div className="page">

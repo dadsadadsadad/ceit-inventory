@@ -5,7 +5,6 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import type { Prisma } from "@prisma/client";
 import { Monitor, QrCode, Search } from "lucide-react";
-import QRCode from "qrcode";
 
 import { EmptyState } from "@/app/components/empty-state";
 import { PcLabel } from "@/app/components/pc-label";
@@ -25,6 +24,7 @@ import {
 import { defaultPcLabelSize, pcLabelSizeOf, pcLabelSizes } from "@/lib/pc-label";
 import { firstParam, pageParam, textParam } from "@/lib/search-params";
 import { everyTermMatches, searchTerms } from "@/lib/search-terms";
+import { qrWithLogo } from "@/lib/qr-image";
 import { prisma } from "@/prisma";
 
 import { LabelItemGrid } from "./label-item-grid";
@@ -150,11 +150,10 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
     ? await Promise.all(
         chosen.map(async (item) => ({
           ...item,
-          image: await QRCode.toDataURL(`${appUrl}/scan/${encodeURIComponent(item.qrCode)}`, {
-            errorCorrectionLevel: "M",
-            margin: 1,
-            width: layout === "poster" || (pcMode && pcSize === "large") ? 720 : 320,
-          }),
+          image: await qrWithLogo(
+            `${appUrl}/scan/${encodeURIComponent(item.qrCode)}`,
+            layout === "poster" || (pcMode && pcSize === "large") ? 720 : 320,
+          ),
         })),
       )
     : [];

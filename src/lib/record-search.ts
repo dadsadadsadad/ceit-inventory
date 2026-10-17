@@ -1,12 +1,17 @@
 import { ItemCondition, ItemStatus, ItemType, type Prisma } from "@prisma/client";
 
 import { isUuid } from "./ids";
-import { inventoryAttentionWhere, overdueInspectionWhere } from "./inventory-attention";
+import {
+  inventoryAttentionWhere,
+  overdueInspectionWhere,
+  replacementDueWhere,
+} from "./inventory-attention";
 import { everyTermMatches, searchTerms } from "./search-terms";
 import { lowStockWhere, outOfStockWhere } from "./stock-queries";
 import { isWarrantyFilter, warrantyWhere } from "./warranty";
 
 export type InventorySearch = {
+  age?: string;
   attention?: string;
   category?: string;
   checked?: string;
@@ -58,6 +63,9 @@ export function inventoryWhere(search: InventorySearch) {
   }
   if (search.checked === "overdue") {
     requirements.push(overdueInspectionWhere());
+  }
+  if (search.age === "old") {
+    requirements.push(replacementDueWhere());
   }
   if (search.stock === "low") {
     requirements.push(lowStockWhere());
