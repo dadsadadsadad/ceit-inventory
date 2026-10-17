@@ -241,7 +241,6 @@ export default async function ScannedItemPage({
           </div>
         ) : null}
 
-        {/* availability first */}
         {isAsset ? (
           <div className={`availability-banner availability-${availability.state} rounded-lg`}>
             {availability.state === "now" ? (

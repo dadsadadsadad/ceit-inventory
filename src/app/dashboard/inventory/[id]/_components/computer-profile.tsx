@@ -287,13 +287,13 @@ export function ComputerSection({
                           Save software
                         </SubmitButton>
                       </FeedbackForm>
-                      <FeedbackForm action={removeComputerSoftware} className="mt-2">
+                      <FeedbackForm action={removeComputerSoftware} className="mt-3">
                         <input type="hidden" name="itemId" value={item.id} />
                         <input type="hidden" name="computerId" value={computer.id} />
                         <input type="hidden" name="id" value={software.id} />
                         <SubmitButton
                           pendingLabel="Removing..."
-                          className="accent-link text-xs font-semibold"
+                          className="danger-button rounded-lg px-3 py-2 text-sm font-semibold"
                         >
                           Remove software
                         </SubmitButton>

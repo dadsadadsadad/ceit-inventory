@@ -73,7 +73,6 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         where,
         _count: { _all: true },
         orderBy: { _count: { inventoryItemId: "desc" } },
-        take: 7,
       })
       .then((groups) =>
         namedItemCounts(
@@ -101,7 +100,6 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         _max: { openedAt: true },
         having: { inventoryItemId: { _count: { gt: 1 } } },
         orderBy: { _count: { inventoryItemId: "desc" } },
-        take: 25,
       })
       .then(async (groups) => {
         const named = await namedItemCounts(
@@ -207,7 +205,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
             value: priorityCount.get(priority) ?? 0,
           })),
       },
-      countChart("Most reported equipment", topItems, "requests", 7),
+      countChart("Reports by equipment", topItems, "requests"),
       {
         title: "How long open requests have waited",
         kind: "bars",

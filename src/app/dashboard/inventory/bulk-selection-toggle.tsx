@@ -69,39 +69,56 @@ export function BulkSelectionToggle({
     notifySelectionChange(selectionKey);
   }
 
+  // just the rows on this page, added to what is already picked
+  function selectPage() {
+    const pageIds = [...document.querySelectorAll<HTMLInputElement>(itemSelector)].map(
+      (input) => input.value,
+    );
+    const itemIds = [...new Set([...selectedItemIds(selectionKey), ...pageIds])];
+    saveSelectedItemIds(selectionKey, itemIds);
+    syncVisibleItemSelection(itemIds);
+    notifySelectionChange(selectionKey);
+  }
+
   const allSelected = allItemIds.length > 0 && selectedCount === allItemIds.length;
   const hasSelectionLimit = totalRecords > allItemIds.length;
-  const selectionLabel = selectedCount
-    ? `${selectedCount} of ${allItemIds.length} selected`
-    : hasSelectionLimit
-      ? `${allItemIds.length.toLocaleString()} of ${totalRecords.toLocaleString()} selectable`
-      : `${allItemIds.length} matching items`;
+  const selectionLabel = `${selectedCount.toLocaleString()} of ${totalRecords.toLocaleString()} selected`;
 
   return (
     <div
-      className="flex flex-wrap items-center justify-end gap-2 text-xs font-semibold"
+      className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold"
       role="group"
       aria-label="Inventory selection controls"
     >
-      <span className="muted whitespace-nowrap font-medium">{selectionLabel}</span>
-      <div className="flex items-center gap-2">
+      <span className="muted whitespace-nowrap text-sm font-medium">{selectionLabel}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={selectPage}
+          disabled={allSelected}
+          className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold disabled:pointer-events-none disabled:opacity-50"
+        >
+          Select this page
+        </button>
         <button
           type="button"
           onClick={() => setAllSelection(true)}
           disabled={!allItemIds.length || allSelected}
-          className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50"
+          className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold disabled:pointer-events-none disabled:opacity-50"
           aria-label={`Select all ${allItemIds.length} matching inventory records`}
         >
-          Select all
+          {allSelected
+            ? `All ${allItemIds.length.toLocaleString()} selected`
+            : `Select all ${allItemIds.length.toLocaleString()} matching`}
         </button>
         <button
           type="button"
           onClick={() => setAllSelection(false)}
           disabled={!selectedCount}
-          className="secondary-button rounded-lg px-3 py-2 text-xs font-semibold disabled:pointer-events-none disabled:opacity-50"
-          aria-label={`Deselect all ${selectedCount} selected inventory records`}
+          className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold disabled:pointer-events-none disabled:opacity-50"
+          aria-label={`Clear all ${selectedCount} selected inventory records`}
         >
-          Deselect all
+          Clear selection
         </button>
       </div>
       {hasSelectionLimit ? (

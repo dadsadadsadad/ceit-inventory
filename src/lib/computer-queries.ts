@@ -214,3 +214,45 @@ export async function loadHardwareSuggestions() {
     ),
   };
 }
+
+// pcs grouped by room for the bulk update panel
+export async function loadBulkPcs() {
+  const computers = await prisma.computer.findMany({
+    where: { item: { status: { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] } } },
+    select: {
+      software: { select: { name: true }, orderBy: { name: "asc" } },
+      item: {
+        select: {
+          id: true,
+          name: true,
+          assetTag: true,
+          location: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: [{ item: { location: { name: "asc" } } }, { item: { name: "asc" } }],
+  });
+  const rooms = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      pcs: { id: string; name: string; assetTag: string | null; software: string[] }[];
+    }
+  >();
+  for (const pc of computers) {
+    const { location } = pc.item;
+    const room = rooms.get(location.id) ?? { id: location.id, name: location.name, pcs: [] };
+    room.pcs.push({
+      id: pc.item.id,
+      name: pc.item.name,
+      assetTag: pc.item.assetTag,
+      software: pc.software.map((entry) => entry.name),
+    });
+    rooms.set(location.id, room);
+  }
+  const softwareNames = [
+    ...new Set(computers.flatMap((pc) => pc.software.map((entry) => entry.name))),
+  ].sort((a, b) => a.localeCompare(b));
+  return { rooms: [...rooms.values()], softwareNames };
+}

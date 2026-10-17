@@ -401,7 +401,7 @@ export function ReportBuilder({ initial, options }: Props) {
           className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
           onClick={() => router.push(`/dashboard/reports?kind=${kind}`)}
         >
-          Clear filters
+          Clear all filters
         </button>
         {changed ? (
           <span className="muted text-sm" role="status">

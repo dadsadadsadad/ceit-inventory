@@ -53,7 +53,6 @@ export default async function InventorySetupPage() {
             </p>
           </section>
           <div className="grid gap-6 xl:grid-cols-2">
-            {/* rooms */}
             <section className="card rounded-lg p-5 sm:p-6">
               <h3 className="card-title text-lg font-semibold">Rooms and locations</h3>
               <details className="section-disclosure mt-5">
@@ -123,7 +122,6 @@ export default async function InventorySetupPage() {
               </div>
             </section>
 
-            {/* categories */}
             <section className="card rounded-lg p-5 sm:p-6">
               <h3 className="card-title text-lg font-semibold">Item categories</h3>
               <details className="section-disclosure mt-5">
@@ -190,7 +188,6 @@ export default async function InventorySetupPage() {
             </section>
           </div>
 
-          {/* custom fields */}
           <section>
             <p className="eyebrow">Item details</p>
             <h2 className="mt-2 text-xl font-semibold">Extra fields</h2>

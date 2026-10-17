@@ -1847,38 +1847,71 @@ a.pc-chip:hover {
   gap: 0.25rem;
 }
 
-/* subtle status tint on inventory rows */
+/* status color on inventory rows: a solid edge and a tint that fades across */
 [data-inventory-row-url][data-status] {
   --row-tone: transparent;
-  --row-tint: transparent;
-  background-image: linear-gradient(var(--row-tint), var(--row-tint));
+  --row-strength: 16%;
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--row-tone) var(--row-strength), transparent) 0%,
+    color-mix(in srgb, var(--row-tone) 5%, transparent) 55%,
+    transparent 100%
+  );
 }
 
 [data-inventory-row-url][data-status]:not(tr),
 tr[data-inventory-row-url][data-status] > :first-child {
-  box-shadow: inset 3px 0 0 var(--row-tone);
+  box-shadow: inset 4px 0 0 var(--row-tone);
 }
 
 [data-inventory-row-url]:is([data-status="OK"], [data-status="WORKING"]) {
-  --row-tone: color-mix(in srgb, var(--status-positive) 55%, transparent);
+  --row-tone: var(--mix-ok);
+  --row-strength: 9%;
+}
+
+[data-inventory-row-url][data-status="WORKING"] {
+  --row-tone: var(--mix-working);
 }
 
 [data-inventory-row-url][data-status="DEPLOYED"] {
-  --row-tone: var(--status-deployed);
-  --row-tint: color-mix(in srgb, var(--status-deployed-bg) 45%, transparent);
+  --row-tone: var(--mix-deployed);
 }
 
 [data-inventory-row-url][data-status="NOT_TESTED"] {
-  --row-tone: var(--status-pending);
-  --row-tint: color-mix(in srgb, var(--status-pending-bg) 45%, transparent);
+  --row-tone: var(--mix-not_tested);
+  --row-strength: 20%;
 }
 
 [data-inventory-row-url]:is([data-status="DEFECTIVE"], [data-status="LOST"]) {
-  --row-tone: var(--status-critical);
-  --row-tint: color-mix(in srgb, var(--status-critical-bg) 50%, transparent);
+  --row-tone: var(--mix-defective);
+  --row-strength: 22%;
+}
+
+[data-inventory-row-url][data-status="LOST"] {
+  --row-tone: var(--mix-lost);
 }
 
 [data-inventory-row-url][data-status="RETIRED"] {
-  --row-tone: var(--status-retired);
-  --row-tint: color-mix(in srgb, var(--status-retired-bg) 50%, transparent);
+  --row-tone: var(--mix-retired);
+}
+
+/* table rows: the cells carry the tint so it spans the whole row */
+tr[data-inventory-row-url][data-status] {
+  background-image: none;
+}
+
+tr[data-inventory-row-url][data-status] > td {
+  background: color-mix(in srgb, var(--row-tone) 6%, transparent);
+}
+
+tr[data-inventory-row-url][data-status] > td:first-child {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--row-tone) var(--row-strength), transparent),
+    color-mix(in srgb, var(--row-tone) 6%, transparent)
+  );
+}
+
+tr[data-inventory-row-url][data-status]:hover > td {
+  background-color: color-mix(in srgb, var(--row-tone) 12%, var(--surface-soft));
 }

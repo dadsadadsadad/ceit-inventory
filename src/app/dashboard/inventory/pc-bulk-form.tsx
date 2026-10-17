@@ -6,7 +6,7 @@ import { FeedbackForm } from "@/app/components/feedback-form";
 import { PcHardwareFields, type HardwareSuggestions } from "@/app/components/pc-hardware-fields";
 import { SubmitButton } from "@/app/components/submit-button";
 
-import { updateManyPcs } from "../actions/pc-bulk";
+import { updateManyPcs } from "./actions/pc-bulk";
 
 export type BulkPc = { id: string; name: string; assetTag: string | null; software: string[] };
 export type BulkRoom = { id: string; name: string; pcs: BulkPc[] };

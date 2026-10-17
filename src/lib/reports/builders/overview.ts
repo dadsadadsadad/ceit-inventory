@@ -94,7 +94,6 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
       where: inventoryAttentionWhere,
       include: { category: true, location: true },
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
-      take: 25,
     }),
     prisma.inventoryItem.count({ where: { isComputer: true } }),
     prisma.maintenanceTicket.count({ where: { status: MaintenanceStatus.OPEN } }),
@@ -110,19 +109,16 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
       where: { status: MaintenanceStatus.OPEN },
       include: { inventoryItem: { select: { assetTag: true, name: true } } },
       orderBy: [{ priority: "desc" }, { openedAt: "asc" }],
-      take: 20,
     }),
     prisma.borrowRequest.findMany({
       where: { ...out, expectedReturnDate: { lt: now } },
       include: { inventoryItem: { select: { assetTag: true, name: true } } },
       orderBy: { expectedReturnDate: "asc" },
-      take: 20,
     }),
     prisma.borrowRequest.findMany({
       where: { status: BorrowStatus.RESERVED, expectedReturnDate: { gt: now } },
       include: { inventoryItem: { select: { assetTag: true, name: true } } },
       orderBy: { startsAt: "asc" },
-      take: 20,
     }),
     loadSoftware({ license: "expiring" }, now),
     loadSoftware({ license: "expired" }, now),
@@ -131,20 +127,17 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
       where: lowStockWhere(),
       include: { category: true, location: true },
       orderBy: [{ quantity: "asc" }, { name: "asc" }],
-      take: 20,
     }),
     prisma.inventoryItem.count({ where: warrantyWhere("ending", now) }),
     prisma.inventoryItem.findMany({
       where: warrantyWhere("ending", now),
       include: { category: true, location: true },
       orderBy: { warrantyEndsAt: "asc" },
-      take: 20,
     }),
     prisma.borrowRequest.findMany({
       where: dueTodayWhere(now),
       include: { inventoryItem: { select: { assetTag: true, name: true } } },
       orderBy: { expectedReturnDate: "asc" },
-      take: 20,
     }),
   ]);
 
@@ -156,12 +149,11 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
     entries
       .filter((entry) => entry._count.items > 0)
       .sort((a, b) => b._count.items - a._count.items)
-      .slice(0, 12)
       .map((entry) => [entry.name, entry._count.items]);
   const licenseGroups = sortSoftwareGroups(
     groupSoftware([...expired.entries, ...expiring.entries], now),
     "expiry",
-  ).slice(0, 15);
+  );
   const acquisition = Number(summary._sum.purchasePrice?.toString() ?? 0);
 
   return {

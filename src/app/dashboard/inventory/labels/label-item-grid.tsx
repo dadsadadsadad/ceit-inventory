@@ -19,6 +19,8 @@ export function LabelItemGrid({
   items,
   matchingIds,
   max,
+  maxAll,
+  allMode,
   selected,
   totalMatching,
 }: {
@@ -26,6 +28,8 @@ export function LabelItemGrid({
   // only set when the matches fit in one batch
   matchingIds: string[] | null;
   max: number;
+  maxAll: number;
+  allMode: boolean;
   selected: string[];
   totalMatching: number;
 }) {
@@ -43,20 +47,20 @@ export function LabelItemGrid({
     setPicked(selected);
   }
 
-  const pickedSet = new Set(picked);
+  const pickedSet = new Set(allMode ? (matchingIds ?? []) : picked);
+  const count = allMode ? (matchingIds?.length ?? totalMatching) : picked.length;
   const pageIds = items.map((item) => item.id);
   const allOnPagePicked = pageIds.length > 0 && pageIds.every((id) => pickedSet.has(id));
-  const allMatchingPicked =
-    matchingIds !== null && matchingIds.length > 0 && matchingIds.every((id) => pickedSet.has(id));
 
   function commit(next: string[]) {
     if (next.length > max) {
-      setMessage(`One batch holds up to ${max} labels at a time.`);
+      setMessage(`Picking one by one works up to ${max} labels. Use Select all matching for more.`);
       return;
     }
     setMessage("");
     setPicked(next);
     const query = new URLSearchParams(parameters.toString());
+    query.delete("all");
     if (next.length) {
       query.set("ids", next.join(","));
     } else {
@@ -69,26 +73,39 @@ export function LabelItemGrid({
   }
 
   function toggle(id: string) {
-    commit(pickedSet.has(id) ? picked.filter((entry) => entry !== id) : [...picked, id]);
+    // leaving select all turns it into a normal list of picks
+    commit(pickedSet.has(id) ? current.filter((entry) => entry !== id) : [...current, id]);
   }
 
+  function selectAllMatching() {
+    setMessage("");
+    const query = new URLSearchParams(parameters.toString());
+    query.delete("ids");
+    query.set("all", "1");
+    startTransition(() => {
+      router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+    });
+  }
+
+  const current = allMode ? (matchingIds ?? []) : picked;
+
   function addAll(ids: string[]) {
-    commit([...picked, ...ids.filter((id) => !pickedSet.has(id))]);
+    commit([...current, ...ids.filter((id) => !pickedSet.has(id))]);
   }
 
   function removeAll(ids: string[]) {
     const remove = new Set(ids);
-    commit(picked.filter((id) => !remove.has(id)));
+    commit(current.filter((id) => !remove.has(id)));
   }
 
   return (
     <div className="label-grid-block" aria-busy={pending || undefined}>
       <div className="label-grid-toolbar">
         <p className="text-sm">
-          <strong>{picked.length}</strong> selected
+          <strong>{count}</strong> selected
           <span className="muted">
             {" "}
-            · {totalMatching.toLocaleString()} item{totalMatching === 1 ? "" : "s"} shown
+            · {totalMatching.toLocaleString()} item{totalMatching === 1 ? "" : "s"} match
           </span>
         </p>
         <div className="label-grid-actions">
@@ -101,21 +118,22 @@ export function LabelItemGrid({
               {allOnPagePicked ? "Deselect this page" : "Select this page"}
             </button>
           ) : null}
-          {matchingIds && matchingIds.length > items.length ? (
+          {totalMatching ? (
             <button
               type="button"
               className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
-              onClick={() => (allMatchingPicked ? removeAll(matchingIds) : addAll(matchingIds))}
+              disabled={allMode || totalMatching > maxAll}
+              onClick={selectAllMatching}
             >
-              {allMatchingPicked
-                ? `Deselect all ${matchingIds.length}`
-                : `Select all ${matchingIds.length}`}
+              {allMode
+                ? `All ${totalMatching.toLocaleString()} selected`
+                : `Select all ${totalMatching.toLocaleString()} matching`}
             </button>
           ) : null}
-          {picked.length ? (
+          {count ? (
             <button
               type="button"
-              className="accent-link px-1 text-sm font-semibold"
+              className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
               onClick={() => commit([])}
             >
               Clear selection
@@ -128,9 +146,9 @@ export function LabelItemGrid({
           {message}
         </p>
       ) : null}
-      {matchingIds === null && totalMatching > max ? (
+      {totalMatching > maxAll ? (
         <p className="muted text-sm">
-          More than {max} items match. Narrow the filters to select all.
+          More than {maxAll} items match. Narrow the filters to select them all at once.
         </p>
       ) : null}
 

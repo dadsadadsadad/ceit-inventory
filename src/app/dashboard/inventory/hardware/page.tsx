@@ -12,13 +12,14 @@ import {
   isHardwareComponent,
   isIncompleteProfile,
 } from "@/lib/computer-directory";
-import { loadComputers } from "@/lib/computer-queries";
+import { loadBulkPcs, loadComputers, loadHardwareSuggestions } from "@/lib/computer-queries";
 import { isUuid } from "@/lib/ids";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { firstParam, pageParam, textParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
 import { InventoryTabs } from "../inventory-tabs";
+import { PcBulkForm } from "../pc-bulk-form";
 import { PcChips } from "../pc-chips";
 import { Cpu } from "lucide-react";
 import { EmptyState } from "@/app/components/empty-state";
@@ -28,6 +29,7 @@ export const dynamic = "force-dynamic";
 const pageSize = 25;
 
 type SearchParams = {
+  update?: RawParam;
   component?: RawParam;
   incomplete?: RawParam;
   location?: RawParam;
@@ -50,6 +52,7 @@ export default async function HardwarePage({
   const includeRetired = firstParam(raw.retired) === "1";
   const onlyIncomplete = firstParam(raw.incomplete) === "1";
   const mode = firstParam(raw.view) === "pcs" ? "pcs" : "components";
+  const openBulk = firstParam(raw.update) === "1";
   const componentParam = firstParam(raw.component);
   const component = isHardwareComponent(componentParam) ? componentParam : "processor";
   const requestedPage = pageParam(raw.page);
@@ -62,6 +65,11 @@ export default async function HardwarePage({
     }),
     loadComputers({ q, location, includeRetired }),
   ]);
+  // bulk changes sit on the pc view for people who can edit
+  const bulk =
+    canManage && mode === "pcs"
+      ? { ...(await loadBulkPcs()), suggestions: await loadHardwareSuggestions() }
+      : null;
   const allComputers = loaded.computers;
   const computers = onlyIncomplete ? allComputers.filter(isIncompleteProfile) : allComputers;
   const incompleteCount = allComputers.filter(isIncompleteProfile).length;
@@ -119,14 +127,6 @@ export default async function HardwarePage({
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Hardware across all PCs.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {canManage ? (
-              <Link
-                href="/dashboard/inventory/update-pcs"
-                className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
-              >
-                Update many PCs
-              </Link>
-            ) : null}
             <Link
               href={`/dashboard/inventory/labels?type=pc${location ? `&location=${location}` : ""}`}
               className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
@@ -143,6 +143,28 @@ export default async function HardwarePage({
         </header>
 
         <InventoryTabs current="hardware" />
+
+        {bulk ? (
+          <details id="update-pcs" className="card update-pcs rounded-lg" open={openBulk}>
+            <summary>
+              <strong>Update many PCs</strong>
+              <span className="muted text-sm">
+                Add, update or remove software, or change hardware, on a room or picked PCs.
+              </span>
+            </summary>
+            {bulk.rooms.length ? (
+              <PcBulkForm
+                rooms={bulk.rooms}
+                softwareNames={bulk.softwareNames}
+                suggestions={bulk.suggestions}
+              />
+            ) : (
+              <p className="muted text-sm">
+                No PCs have PC details yet. Open a PC in the inventory and add its details first.
+              </p>
+            )}
+          </details>
+        ) : null}
 
         <section className="directory-stats" aria-label="Hardware summary">
           <div>
@@ -240,7 +262,7 @@ export default async function HardwarePage({
               />
               Include retired and lost PCs
             </label>
-            <ClearFiltersButton className="accent-link text-sm font-semibold sm:ml-auto">
+            <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold sm:ml-auto">
               Clear all filters
             </ClearFiltersButton>
           </div>

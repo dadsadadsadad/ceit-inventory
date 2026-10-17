@@ -112,7 +112,7 @@ export function AuditFilters({ filters }: { filters: AuditTrailFilters }) {
       </details>
 
       <div>
-        <ClearFiltersButton className="accent-link text-sm font-semibold">
+        <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
           Clear all filters
         </ClearFiltersButton>
       </div>

@@ -15,6 +15,8 @@ export function labelLayoutOf(value: string | null | undefined): LabelLayout {
 }
 
 export const maxLabelCount = 100;
+// select all keeps the filters in the url instead of ids, so it can go higher
+export const maxAllLabels = 500;
 
 export function labelPages<T>(items: T[], perPage: number): T[][] {
   if (!Number.isInteger(perPage) || perPage < 1) {

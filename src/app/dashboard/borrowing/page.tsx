@@ -191,10 +191,13 @@ export default async function BorrowingPage({
             />
           </label>
           <div className="flex flex-wrap items-center gap-4 sm:col-span-2 xl:col-span-5">
-            <ClearFiltersButton className="accent-link text-sm font-semibold">
+            <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
               Clear all filters
             </ClearFiltersButton>
-            <Link href={reportHref(search)} className="accent-link text-sm font-semibold">
+            <Link
+              href={reportHref(search)}
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
               Open as report
             </Link>
           </div>

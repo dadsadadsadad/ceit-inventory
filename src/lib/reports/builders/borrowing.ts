@@ -120,7 +120,6 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         where,
         _count: { _all: true },
         orderBy: { _count: { inventoryItemId: "desc" } },
-        take: 7,
       })
       .then((groups) =>
         namedItemCounts(
@@ -142,7 +141,6 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
           where: idleWhere,
           include: { category: true, location: true },
           orderBy: [{ purchasePrice: { sort: "desc", nulls: "last" } }, { name: "asc" }],
-          take: 30,
         })
       : Promise.resolve([]),
     showIdle ? prisma.inventoryItem.count({ where: idleWhere }) : Promise.resolve(0),
@@ -230,7 +228,7 @@ export async function buildBorrowingReport(context: BuilderContext): Promise<Rep
         ]),
         "requests",
       ),
-      countChart("Most requested equipment", topItems, "requests", 7),
+      countChart("Requests by equipment", topItems, "requests"),
       {
         title: "Returns",
         kind: "bars",

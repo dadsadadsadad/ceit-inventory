@@ -35,27 +35,16 @@ export function statusChart(
   };
 }
 
-// largest first, the rest past limit go into "Other"
-export function countChart(
-  title: string,
-  entries: [string, number][],
-  unit: string,
-  limit = 8,
-): ReportChart {
+// every entry, largest first, nothing grouped away
+export function countChart(title: string, entries: [string, number][], unit: string): ReportChart {
   const sorted = entries
     .filter(([, value]) => value > 0)
     .sort((first, second) => second[1] - first[1] || first[0].localeCompare(second[0]));
-  const shown = sorted.length > limit ? sorted.slice(0, limit - 1) : sorted;
-  const rest = sorted.slice(shown.length).reduce((total, [, value]) => total + value, 0);
   return {
     title,
     kind: "bars",
     unit,
-    note: rest ? `The ${sorted.length - shown.length} smallest are grouped as Other.` : undefined,
-    data: [
-      ...shown.map(([label, value]) => ({ label, value })),
-      ...(rest ? [{ label: "Other", value: rest }] : []),
-    ],
+    data: sorted.map(([label, value]) => ({ label, value })),
   };
 }
 

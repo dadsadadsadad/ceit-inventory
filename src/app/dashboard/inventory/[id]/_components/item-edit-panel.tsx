@@ -332,7 +332,6 @@ export function ItemEditPanel({
 
       {item.quantity > 1 && !item.isComputer ? (
         <section className="divider mt-6 border-t pt-5" aria-labelledby="individualize-heading">
-          {/* split into units */}
           <h3 id="individualize-heading" className="text-sm font-semibold">
             Split into units
           </h3>

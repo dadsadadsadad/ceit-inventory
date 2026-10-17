@@ -62,7 +62,6 @@ type Breakdown = { id: string; name: string; count: number }[];
 
 const inService = { status: { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] } };
 const dayMs = 24 * 60 * 60 * 1000;
-const shownGroups = 5;
 
 const statusOrder: ItemStatus[] = [
   "OK",
@@ -350,6 +349,7 @@ function Metric({
   );
 }
 
+// every category or room, longest first, in as many columns as fit
 function GroupCard({
   title,
   entries,
@@ -361,21 +361,19 @@ function GroupCard({
   param: string;
   noun: [string, string];
 }) {
-  const more = entries.length - shownGroups;
   return (
     <article className="card glance-card rounded-lg">
       <div className="section-heading">
         <h2>{title}</h2>
-        {more > 0 ? (
-          <Link href="/dashboard/inventory/setup" className="accent-link text-sm font-semibold">
-            {more} more {more === 1 ? noun[0] : noun[1]}
-          </Link>
-        ) : null}
+        <span className="muted text-sm">
+          {entries.length} {entries.length === 1 ? noun[0] : noun[1]}
+        </span>
       </div>
       <Bars
+        columns
         unit="items"
         empty="Nothing recorded yet."
-        bars={entries.slice(0, shownGroups).map((entry) => ({
+        bars={entries.map((entry) => ({
           id: entry.id,
           label: entry.name,
           value: entry.count,

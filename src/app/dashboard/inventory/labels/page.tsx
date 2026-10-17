@@ -18,6 +18,7 @@ import {
   labelLayoutOf,
   labelLayouts,
   labelPages,
+  maxAllLabels,
   maxLabelCount,
   selectedLabelIds,
 } from "@/lib/label-sheet";
@@ -35,6 +36,7 @@ export const dynamic = "force-dynamic";
 type Search = {
   category?: string | string[];
   created?: string | string[];
+  all?: string | string[];
   ids?: string | string[];
   layout?: string | string[];
   location?: string | string[];
@@ -50,6 +52,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   await requireInventoryAccess();
   const search = await searchParams;
   const ids = selectedLabelIds(search.ids);
+  // all=1 picks everything the filters match
+  const allMode = firstParam(search.all) === "1";
   const location = firstParam(search.location) ?? "";
   const category = firstParam(search.category) ?? "";
   const layout = labelLayoutOf(firstParam(search.layout));
@@ -101,9 +105,12 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
     }),
     prisma.inventoryItem.count({ where }),
     headers(),
-    selection.length
+    allMode || selection.length
       ? prisma.inventoryItem.findMany({
-          where: { id: { in: selection }, ...(pcMode ? { isComputer: true } : {}) },
+          where: allMode
+            ? where
+            : { id: { in: selection }, ...(pcMode ? { isComputer: true } : {}) },
+          take: maxAllLabels,
           include: {
             location: { select: { name: true } },
             computer: { include: { software: { orderBy: { name: "asc" } } } },
@@ -136,7 +143,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
       skip: (currentPage - 1) * tilesPerPage,
       take: tilesPerPage,
     }),
-    totalMatching <= maxLabelCount
+    totalMatching <= maxAllLabels
       ? prisma.inventoryItem.findMany({ where, select: { id: true }, orderBy: order })
       : Promise.resolve(null),
   ]);
@@ -167,7 +174,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
       type: pcMode ? "pc" : undefined,
       layout: pcMode || layout === defaultLabelLayout ? undefined : layout,
       size: pcMode && pcSize !== defaultPcLabelSize ? pcSize : undefined,
-      ids: selection.join(","),
+      ids: allMode ? undefined : selection.join(","),
+      all: allMode ? "1" : undefined,
       ...changes,
     };
     const parameters = new URLSearchParams();
@@ -182,7 +190,13 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   const showAll = linkFor({ q: undefined, location: undefined, category: undefined });
   // switching type clears the picks since pc labels only take computers
   const typeLink = (pc: boolean) =>
-    linkFor({ type: pc ? "pc" : undefined, ids: undefined, page: undefined, size: undefined });
+    linkFor({
+      type: pc ? "pc" : undefined,
+      ids: undefined,
+      all: undefined,
+      page: undefined,
+      size: undefined,
+    });
   const lastService = (item: (typeof labels)[number]) => {
     const resolved = item.maintenanceTickets[0]?.resolvedAt ?? null;
     const checked = item.lastCheckedAt;
@@ -237,7 +251,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
 
         <section className="no-print card overflow-hidden rounded-lg" aria-label="Choose labels">
           <FilterForm label="Label filters" className="label-picker p-5">
-            {selection.length ? (
+            {allMode ? <input type="hidden" name="all" value="1" /> : null}
+            {!allMode && selection.length ? (
               <input type="hidden" name="ids" value={selection.join(",")} />
             ) : null}
             {pcMode ? <input type="hidden" name="type" value="pc" /> : null}
@@ -338,6 +353,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               }))}
               matchingIds={matching ? matching.map((item) => item.id) : null}
               max={maxLabelCount}
+              maxAll={maxAllLabels}
+              allMode={allMode}
               selected={selection}
               totalMatching={totalMatching}
             />

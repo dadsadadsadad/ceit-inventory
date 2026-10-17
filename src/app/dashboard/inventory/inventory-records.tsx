@@ -110,7 +110,7 @@ export function InventoryRecords({
             {canManage ? (
               <Link
                 href={pageLink({ ...search, bulk: bulkMode ? undefined : "1" }, currentPage)}
-                className="accent-link text-sm font-semibold"
+                className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
               >
                 {bulkMode ? "Done selecting" : "Select items"}
               </Link>
@@ -243,7 +243,6 @@ export function InventoryRecords({
                     aria-label={`Open ${item.name}`}
                     className="cursor-pointer space-y-3 p-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
                   >
-                    {/* mobile cards */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <Link
@@ -293,7 +292,6 @@ export function InventoryRecords({
             </div>
 
             <div className="record-table hidden overflow-x-auto xl:block">
-              {/* desktop table */}
               <table className="w-full">
                 <thead>
                   <tr className="table-heading divider border-b">

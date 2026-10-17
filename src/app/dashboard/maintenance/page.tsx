@@ -342,7 +342,7 @@ export default async function MaintenancePage({
               className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
-          <ClearFiltersButton className="accent-link text-sm font-semibold">
+          <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
             Clear all filters
           </ClearFiltersButton>
         </FilterForm>

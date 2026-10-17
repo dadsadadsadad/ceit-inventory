@@ -163,7 +163,7 @@ export default async function SoftwarePage({
           <div className="flex flex-wrap items-center gap-3">
             {canManage ? (
               <Link
-                href="/dashboard/inventory/update-pcs"
+                href="/dashboard/inventory/hardware?view=pcs&update=1#update-pcs"
                 className="primary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
               >
                 Update many PCs
@@ -280,7 +280,7 @@ export default async function SoftwarePage({
               />
               Include retired and lost PCs
             </label>
-            <ClearFiltersButton className="accent-link text-sm font-semibold sm:ml-auto">
+            <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold sm:ml-auto">
               Clear all filters
             </ClearFiltersButton>
           </div>

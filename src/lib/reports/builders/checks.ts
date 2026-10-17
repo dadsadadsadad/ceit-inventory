@@ -9,7 +9,6 @@ import { filterNames, type BuilderContext } from "./shared";
 
 const dayMs = 24 * 60 * 60 * 1000;
 const defaultWindow = 30;
-const latestShown = 50;
 
 type Room = {
   name: string;
@@ -184,13 +183,11 @@ export async function buildChecksReport(context: BuilderContext): Promise<Report
           { label: "Room", width: 1.2 },
           { label: "Checked", width: 1.2 },
         ],
-        rows: latest
-          .slice(0, latestShown)
-          .map((item) => [
-            `${label(item)}${item.isComputer ? "\nPC" : ""}`,
-            item.location.name,
-            formatReportDateTime(item.lastCheckedAt),
-          ]),
+        rows: latest.map((item) => [
+          `${label(item)}${item.isComputer ? "\nPC" : ""}`,
+          item.location.name,
+          formatReportDateTime(item.lastCheckedAt),
+        ]),
         total: latest.length,
         emptyText: `Nothing checked in the last ${days} days.`,
       },

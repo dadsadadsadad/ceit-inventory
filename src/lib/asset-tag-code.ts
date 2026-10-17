@@ -13,8 +13,7 @@ export function normalizeTagCode(value: string) {
 
 const shortWord = (word: string) => (word.length <= 6 ? word : word.slice(0, 5));
 
-// readable codes in order of preference, e.g.
-// "COMPUTERS (MAC)" -> MAC, "Robotics" -> ROBOT, "Computer Laboratory 1" -> COMP1
+// short readable codes to try, best first
 export function tagCodeCandidates(name: string) {
   const upper = name.toUpperCase();
   const inner = upper.match(/\(([^)]*)\)/)?.[1] ?? "";

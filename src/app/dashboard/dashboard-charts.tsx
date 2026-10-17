@@ -92,18 +92,21 @@ export function Bars({
   unit,
   empty,
   format = (value: number) => value.toLocaleString(),
+  columns = false,
 }: {
   bars: Bar[];
   unit: string;
   empty: string;
   format?: (value: number) => string;
+  // long lists flow into columns
+  columns?: boolean;
 }) {
   if (!bars.length) {
     return <p className="muted text-sm">{empty}</p>;
   }
   const max = Math.max(1, ...bars.map((bar) => bar.value));
   return (
-    <ul className="viz-bars">
+    <ul className={`viz-bars ${columns ? "viz-bars-columns" : ""}`}>
       {bars.map((bar) => (
         <li key={bar.id}>
           <Link

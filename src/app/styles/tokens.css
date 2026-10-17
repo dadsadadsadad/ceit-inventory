@@ -47,7 +47,7 @@ html[data-theme="light"] {
   --surface-soft: #f6f1e5;
   --surface-muted: #e9e1cf;
   --foreground: #1e1a14;
-  --muted: #665e50;
+  --muted: #574f42;
   --muted-strong: #39332a;
   --rule: #1e1a14;
   --border: rgb(30 26 20 / 15%);
@@ -76,7 +76,7 @@ html[data-theme="dark"] {
   --surface-soft: #24201b;
   --surface-muted: #2e2922;
   --foreground: #f3ede0;
-  --muted: #ada390;
+  --muted: #bfb5a2;
   --muted-strong: #d9d0bd;
   --rule: #f3ede0;
   --border: rgb(243 237 224 / 14%);

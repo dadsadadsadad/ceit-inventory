@@ -19,8 +19,6 @@ export const incompletePcWhere: Prisma.InventoryItemWhereInput = {
   ],
 };
 
-const listedSoftware = 10;
-
 export async function buildPcRegisterReport(context: BuilderContext): Promise<ReportModel> {
   const { filters } = context;
   const created = reportDateFilter(filters.dateRange);
@@ -142,9 +140,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
               [item.computer?.operatingSystem, item.computer?.osVersion]
                 .filter(Boolean)
                 .join(" ") || "System not recorded",
-              programs.length
-                ? `${programs.slice(0, listedSoftware).join(", ")}${programs.length > listedSoftware ? ` and ${programs.length - listedSoftware} more` : ""}`
-                : "No software recorded",
+              programs.length ? programs.join(", ") : "No software recorded",
             ].join("\n"),
             `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}\nChecked ${formatReportDateTime(item.lastCheckedAt ?? item.computer?.lastCheckedAt)}`,
           ];

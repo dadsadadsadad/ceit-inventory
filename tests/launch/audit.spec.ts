@@ -231,7 +231,7 @@ test("the report builder clears filters and only offers controls that fit the re
   await expect(form.locator('select[name="period"]')).toHaveValue("");
   await expect(form.getByText("Filters changed", { exact: false })).toBeVisible();
 
-  await form.getByRole("button", { name: "Clear filters" }).click();
+  await form.getByRole("button", { name: "Clear all filters" }).click();
   await expect(page).toHaveURL(/\/dashboard\/reports\?kind=maintenance$/);
   await expect(form.locator('select[name="maintenanceSource"]')).toHaveValue("");
   await expect(form.locator('select[name="period"]')).toHaveValue("");

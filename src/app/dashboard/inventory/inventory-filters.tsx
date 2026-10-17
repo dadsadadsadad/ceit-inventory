@@ -202,12 +202,12 @@ export function InventoryFilters({
           </div>
         </details>
         <div className="flex flex-wrap items-center gap-4 min-[360px]:col-span-2 xl:col-span-4">
-          <ClearFiltersButton className="accent-link text-sm font-semibold">
+          <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
             Clear all filters
           </ClearFiltersButton>
           <Link
             href={`/dashboard/reports?${reportQuery.toString()}`}
-            className="accent-link text-sm font-semibold"
+            className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
           >
             Open as report
           </Link>

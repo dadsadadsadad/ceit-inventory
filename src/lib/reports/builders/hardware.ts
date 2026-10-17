@@ -13,13 +13,8 @@ import { countChart } from "../charts";
 import { capRows, type ReportModel, type ReportTable } from "../model";
 import { filterNames, type BuilderContext } from "./shared";
 
-const listedPcs = 40;
-
-export function pcNames(pcs: DirectoryPc[], max = listedPcs) {
-  const shown = pcs.slice(0, max).map((pc) => `${pc.name} (${pc.room})`);
-  return pcs.length > max
-    ? `${shown.join(", ")} and ${(pcs.length - max).toLocaleString()} more`
-    : shown.join(", ");
+export function pcNames(pcs: DirectoryPc[]) {
+  return pcs.map((pc) => `${pc.name} (${pc.room})`).join(", ");
 }
 
 export async function buildHardwareReport(context: BuilderContext): Promise<ReportModel> {
@@ -111,8 +106,7 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
         tone: incompleteCount ? "alert" : undefined,
       },
     ],
-    // charts for the first two parts
-    charts: parts.slice(0, 2).map((component) =>
+    charts: parts.map((component) =>
       countChart(
         `PCs by ${component.label.toLowerCase()}`,
         groupHardware(computers, component.value).map((group): [string, number] => [
@@ -120,7 +114,6 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
           group.count,
         ]),
         "PCs",
-        6,
       ),
     ),
     tables,

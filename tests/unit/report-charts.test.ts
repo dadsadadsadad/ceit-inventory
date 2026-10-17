@@ -27,20 +27,16 @@ describe("report charts", () => {
     ]);
   });
 
-  it("puts the largest first and folds the long tail into Other", () => {
+  it("puts the largest first and keeps every entry", () => {
     const entries: [string, number][] = Array.from({ length: 10 }, (_, index) => [
       `Room ${index + 1}`,
       index + 1,
     ]);
-    const chart = countChart("By room", entries, "records", 4);
-    expect(chart.data.map((entry) => entry.label)).toEqual([
-      "Room 10",
-      "Room 9",
-      "Room 8",
-      "Other",
-    ]);
-    expect(chart.data.at(-1)?.value).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7);
-    expect(chart.note).toMatch(/7 smallest/);
+    const chart = countChart("By room", entries, "records");
+    expect(chart.data).toHaveLength(10);
+    expect(chart.data[0]).toEqual({ label: "Room 10", value: 10 });
+    expect(chart.data.at(-1)).toEqual({ label: "Room 1", value: 1 });
+    expect(chart.data.some((entry) => entry.label === "Other")).toBe(false);
     expect(hasChartData(countChart("Empty", [["A", 0]], "records"))).toBe(false);
   });
 

@@ -187,7 +187,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               <option value="locked">Locked after failed sign-ins</option>
             </select>
           </label>
-          <ClearFiltersButton className="accent-link justify-self-start text-sm font-semibold min-[360px]:col-span-2 xl:col-span-1 xl:self-center">
+          <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold justify-self-start min-[360px]:col-span-2 xl:col-span-1 xl:self-center">
             Clear all filters
           </ClearFiltersButton>
         </FilterForm>

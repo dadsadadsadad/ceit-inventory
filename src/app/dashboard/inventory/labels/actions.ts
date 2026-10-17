@@ -5,7 +5,7 @@ import { AuditAction } from "@prisma/client";
 import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { isUuid } from "@/lib/ids";
 import { requireInventoryAccess } from "@/lib/inventory-auth";
-import { maxLabelCount } from "@/lib/label-sheet";
+import { maxAllLabels } from "@/lib/label-sheet";
 import { prisma } from "@/prisma";
 
 export async function recordInventoryLabelPrinted(itemId: string) {
@@ -39,7 +39,7 @@ export async function recordLabelSheetPrinted(ids: string[]) {
   if (
     !Array.isArray(ids) ||
     !ids.length ||
-    ids.length > maxLabelCount ||
+    ids.length > maxAllLabels ||
     ids.some((id) => !isUuid(id))
   ) {
     throw new Error("Invalid label selection.");

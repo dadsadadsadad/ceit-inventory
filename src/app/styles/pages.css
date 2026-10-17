@@ -2334,3 +2334,37 @@
 .mini-list a {
   font-weight: 600;
 }
+
+/* bulk pc panel on the pc view */
+.update-pcs {
+  padding: 0.9rem 1.1rem;
+}
+
+.update-pcs > summary {
+  cursor: pointer;
+  display: grid;
+  gap: 0.15rem;
+  list-style: none;
+}
+
+.update-pcs > summary::-webkit-details-marker {
+  display: none;
+}
+
+.update-pcs > summary strong::before {
+  content: "+ ";
+  color: var(--accent);
+}
+
+.update-pcs[open] > summary strong::before {
+  content: "- ";
+}
+
+.update-pcs[open] > summary {
+  margin-bottom: 1rem;
+}
+
+.viz-bars-columns {
+  column-gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
