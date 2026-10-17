@@ -10,7 +10,6 @@ import { prisma } from "@/prisma";
 
 function refresh() {
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/settings");
 }
 
 export async function saveDashboardLayout(formData: FormData) {

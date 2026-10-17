@@ -10,15 +10,28 @@ import {
   MaintenanceStatus,
 } from "@prisma/client";
 import { ArrowRight, LayoutGrid } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { BrandMark } from "@/app/components/brand-mark";
 import { DashboardCalendar } from "./dashboard-calendar";
 import { Bars, Columns, Donut } from "./dashboard-charts";
+import {
+  AssetValueCard,
+  DueSoonCard,
+  LicenseListCard,
+  LowStockListCard,
+  OpenRepairsCard,
+  OverdueListCard,
+  QuickActionsCard,
+  RecentItemsCard,
+  RoomChecksCard,
+  WarrantyListCard,
+} from "./dashboard-extra-cards";
+import { DashboardGrid } from "./dashboard-grid";
 import { DashboardClock } from "./dashboard-clock";
 import { DashboardNoteForm } from "./dashboard-note-form";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { auditSubjectLabel, auditViewWhere } from "@/lib/audit-trail";
-import { layoutFor, widgetSpan, type WidgetId } from "@/lib/dashboard-layout";
+import { layoutFor, type WidgetId } from "@/lib/dashboard-layout";
 import { borrowableInventoryStatuses } from "@/lib/borrow-availability";
 import { purgeExpiredBorrowerDataIfDue } from "@/lib/borrower-data-retention";
 import {
@@ -373,7 +386,12 @@ function GroupCard({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string | string[] }>;
+}) {
+  const editing = (await searchParams).edit === "1";
   const user = await requireInventoryAccess();
   after(() => purgeExpiredBorrowerDataIfDue());
   const canManage = canManageInventory(user.role);
@@ -388,8 +406,8 @@ export default async function DashboardPage() {
     where: { id: user.id },
     select: { dashboardLayout: true },
   });
-  const layout = layoutFor(saved?.dashboardLayout, canManage).filter((widget) => widget.visible);
-  const shown = new Set(layout.map((widget) => widget.id));
+  const fullLayout = layoutFor(saved?.dashboardLayout, canManage);
+  const shown = new Set(fullLayout.filter((widget) => widget.visible).map((widget) => widget.id));
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
     dashboard = await getDashboardData(shown);
@@ -504,6 +522,16 @@ export default async function DashboardPage() {
         dashboard.openTicketCount
       : 0);
   const widgets: Record<WidgetId, ReactNode> = {
+    quickActions: <QuickActionsCard canManage={canManage} />,
+    overdueList: <OverdueListCard />,
+    dueSoon: <DueSoonCard />,
+    lowStockList: <LowStockListCard />,
+    openRepairs: <OpenRepairsCard />,
+    warrantyList: <WarrantyListCard />,
+    licenseList: <LicenseListCard />,
+    recentItems: <RecentItemsCard />,
+    roomChecks: <RoomChecksCard />,
+    assetValue: <AssetValueCard />,
     metrics: (
       <section
         className={`overview-metrics ${canManage ? "is-manager" : ""}`}
@@ -715,7 +743,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
         {dashboard.recentActivity.length ? (
-          <ol className="activity-mini">
+          <ol className="mini-list">
             {dashboard.recentActivity.map((event) => (
               <li key={event.id}>
                 <span>{event.summary}</span>
@@ -742,8 +770,10 @@ export default async function DashboardPage() {
       </article>
     ),
   };
-  const main = layout.filter((widget) => widget.zone === "main");
-  const side = layout.filter((widget) => widget.zone === "side");
+  // only the cards on screen get rendered, the rest load after they are added
+  const nodes = Object.fromEntries(
+    Object.entries(widgets).filter(([id]) => shown.has(id as WidgetId)),
+  ) as Partial<Record<WidgetId, ReactNode>>;
 
   const standing = waiting
     ? `${waiting.toLocaleString()} ${waiting === 1 ? "thing needs" : "things need"} a look.`
@@ -774,12 +804,14 @@ export default async function DashboardPage() {
                 })}
               </time>
             </div>
-            <Link
-              href="/dashboard/settings#dashboard-layout"
-              className="secondary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
-            >
-              <LayoutGrid size={16} aria-hidden="true" /> Customize
-            </Link>
+            {editing ? null : (
+              <Link
+                href="/dashboard?edit=1"
+                className="secondary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
+              >
+                <LayoutGrid size={16} aria-hidden="true" /> Customize
+              </Link>
+            )}
             <Link
               href="/dashboard/inventory"
               className="primary-button overview-browse inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
@@ -789,41 +821,12 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        {layout.length ? (
-          <div className={`dashboard-layout ${side.length && main.length ? "has-rail" : ""}`}>
-            {main.length ? (
-              <div className="dashboard-cards">
-                {main.map((widget) => (
-                  <div
-                    key={widget.id}
-                    className="dashboard-widget"
-                    data-widget={widget.id}
-                    data-size={widget.size}
-                    style={{ "--span": widgetSpan(widget.size) } as CSSProperties}
-                  >
-                    {widgets[widget.id]}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {side.length ? (
-              <aside className="dashboard-rail" aria-label="Side cards">
-                {side.map((widget) => (
-                  <div key={widget.id} className="dashboard-widget" data-widget={widget.id}>
-                    {widgets[widget.id]}
-                  </div>
-                ))}
-              </aside>
-            ) : null}
-          </div>
-        ) : (
-          <p className="notice rounded-lg px-5 py-4 text-sm">
-            Every card is hidden.{" "}
-            <Link href="/dashboard/settings#dashboard-layout" className="accent-link font-semibold">
-              Pick some cards
-            </Link>
-          </p>
-        )}
+        <DashboardGrid
+          layout={fullLayout}
+          defaults={layoutFor(null, canManage)}
+          nodes={nodes}
+          editing={editing}
+        />
       </div>
     </div>
   );

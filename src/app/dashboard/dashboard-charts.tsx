@@ -87,7 +87,17 @@ export function Columns({
 type Bar = { id: string; label: string; value: number; href: string };
 
 // labelled horizontal bars, longest first
-export function Bars({ bars, unit, empty }: { bars: Bar[]; unit: string; empty: string }) {
+export function Bars({
+  bars,
+  unit,
+  empty,
+  format = (value: number) => value.toLocaleString(),
+}: {
+  bars: Bar[];
+  unit: string;
+  empty: string;
+  format?: (value: number) => string;
+}) {
   if (!bars.length) {
     return <p className="muted text-sm">{empty}</p>;
   }
@@ -99,10 +109,10 @@ export function Bars({ bars, unit, empty }: { bars: Bar[]; unit: string; empty: 
           <Link
             href={bar.href}
             className="viz-bar"
-            aria-label={`${bar.label}: ${bar.value.toLocaleString()} ${unit}`}
+            aria-label={`${bar.label}: ${format(bar.value)} ${unit}`}
           >
             <span className="viz-bar-label">{bar.label}</span>
-            <b>{bar.value.toLocaleString()}</b>
+            <b>{format(bar.value)}</b>
             <span className="viz-bar-track" aria-hidden="true">
               <span style={{ width: `${bar.value ? Math.max(3, (bar.value / max) * 100) : 0}%` }} />
             </span>
