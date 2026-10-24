@@ -51,9 +51,10 @@ export async function sendMail(to: string[], mail: Mail) {
   return true;
 }
 
+// people who saved this kind for their summary get it there instead
 export async function staffWanting(kind: NotificationKind) {
   const users = await prisma.user.findMany({
-    where: { isActive: true, notifyOn: { has: kind } },
+    where: { isActive: true, notifyOn: { has: kind }, NOT: { notifyLater: { has: kind } } },
     select: { email: true },
   });
   return users.map((user) => user.email);

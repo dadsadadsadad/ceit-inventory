@@ -325,7 +325,7 @@ export function ItemEditPanel({
             pendingLabel="Recording..."
             className="secondary-button rounded-lg px-3 py-2 text-sm font-semibold"
           >
-            Mark checked today
+            Mark as checked
           </SubmitButton>
         </FeedbackForm>
       </section>

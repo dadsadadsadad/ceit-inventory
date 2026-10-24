@@ -13,7 +13,13 @@ export default async function SettingsPage() {
   const user = await requireInventoryAccess();
   const settings = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { notifyOn: true },
+    select: {
+      notifyLater: true,
+      notifyOn: true,
+      summaryDay: true,
+      summaryFrequency: true,
+      summaryTime: true,
+    },
   });
 
   return (
@@ -31,6 +37,10 @@ export default async function SettingsPage() {
         <NotificationSettings
           email={user.email}
           notifyOn={settings?.notifyOn ?? []}
+          notifyLater={settings?.notifyLater ?? []}
+          summaryDay={settings?.summaryDay ?? 1}
+          summaryFrequency={settings?.summaryFrequency ?? "daily"}
+          summaryTime={settings?.summaryTime ?? "morning"}
           mailReady={mailConfigured()}
         />
       </div>

@@ -12,9 +12,9 @@ import { prisma } from "@/prisma";
 
 import {
   computerData,
+  licenseFields,
   optionalDate,
   optionalText,
-  optionalYesNo,
   requireComputerForItem,
   requiredId,
   requiredText,
@@ -104,8 +104,7 @@ export async function addComputerSoftware(formData: FormData) {
           name,
           version: optionalText(formData, "version", 255),
           licenseKeyHint: optionalText(formData, "licenseKeyHint", 255),
-          licenseExpiresAt: optionalDate(formData, "licenseExpiresAt"),
-          isLicensed: optionalYesNo(formData, "isLicensed"),
+          ...licenseFields(formData),
           installedAt: optionalDate(formData, "installedAt"),
         },
       }),
@@ -141,8 +140,7 @@ export async function updateComputerSoftware(formData: FormData) {
       name: requiredText(formData, "name", 255),
       version: optionalText(formData, "version", 255),
       licenseKeyHint: optionalText(formData, "licenseKeyHint", 255),
-      licenseExpiresAt: optionalDate(formData, "licenseExpiresAt"),
-      isLicensed: optionalYesNo(formData, "isLicensed"),
+      ...licenseFields(formData),
       installedAt: optionalDate(formData, "installedAt"),
     };
 

@@ -17,6 +17,7 @@ import { ItemEditPanel } from "./_components/item-edit-panel";
 import { ItemHistory } from "./_components/item-history";
 import { itemRecordInclude } from "./_components/item-record";
 import { ItemSummary } from "./_components/item-summary";
+import { MarkCheckedButton } from "./_components/mark-checked-button";
 import { ScanStrip } from "./_components/scan-strip";
 import { StockCard } from "./_components/stock-card";
 
@@ -48,6 +49,8 @@ export default async function InventoryItemPage({
   if (!item) {
     notFound();
   }
+  // the scan shortcuts have their own check button
+  const scanned = firstParam(search.scanned) === "1";
 
   return (
     <div className="page item-detail-page">
@@ -67,7 +70,7 @@ export default async function InventoryItemPage({
               {item.assetTag ? `Asset tag: ${item.assetTag}` : `QR code: ${item.qrCode}`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             {canManage ? (
               <Link
                 href={`/dashboard/inventory/${item.id}?edit=1#edit-record`}
@@ -75,6 +78,12 @@ export default async function InventoryItemPage({
               >
                 Edit record
               </Link>
+            ) : null}
+            {canManage && !scanned ? (
+              <MarkCheckedButton
+                itemId={item.id}
+                className="card card-link w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              />
             ) : null}
             {canManage ? (
               <Link
@@ -101,7 +110,12 @@ export default async function InventoryItemPage({
           </div>
         </header>
 
-        {firstParam(search.scanned) === "1" ? <ScanStrip item={item} /> : null}
+        {scanned ? (
+          <ScanStrip
+            item={item}
+            onLoan={item.borrowRequests.some((request) => request.status === "BORROWED")}
+          />
+        ) : null}
 
         <div className="item-record-layout grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="space-y-6">

@@ -107,7 +107,7 @@ test("the inventory page switches between equipment, hardware, and software", as
   await signIn(page, "launch.staff");
   await page.goto("/dashboard/inventory");
   const tabs = page.getByRole("navigation", { name: "Inventory views" });
-  await expect(tabs.getByRole("link", { name: "Inventory" })).toHaveAttribute(
+  await expect(tabs.getByRole("link", { name: "All items" })).toHaveAttribute(
     "aria-current",
     "page",
   );
@@ -174,7 +174,10 @@ test("hardware lists components and which PCs have them", async ({ page }) => {
   await expect(processorGroup).toContainText(`${marker} PC B`);
   await expect(processorGroup).not.toContainText(`${marker} PC C`);
 
-  await page.getByRole("radio", { name: "By PC" }).check({ force: true });
+  await page
+    .getByRole("navigation", { name: "Inventory views" })
+    .getByRole("link", { name: "PCs" })
+    .click();
   await expect(page).toHaveURL(/view=pcs/);
   const machines = page.getByRole("region", { name: "PCs and their hardware" });
   await expect(machines).toContainText(`${marker} PC C`);

@@ -30,6 +30,9 @@ function licenseSummary(software: Pick<SoftwareValues, "isLicensed" | "licenseEx
         ? "Not licensed"
         : null,
     software.licenseExpiresAt ? `License ends ${displayDate(software.licenseExpiresAt)}` : null,
+    software.isLicensed === false && software.licenseExpiresAt
+      ? "Check this: marked not licensed but has an end date"
+      : null,
   ].filter(Boolean);
   return parts.length ? ` · ${parts.join(" · ")}` : "";
 }

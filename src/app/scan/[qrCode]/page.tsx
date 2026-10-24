@@ -189,6 +189,8 @@ export default async function ScannedItemPage({
   const borrowable = isBorrowableItem(item, activeIndividualLoan > 0) && availableQuantity > 0;
   const availability = availabilityFor(borrowable, availableQuantity, liveBookings, now, policy);
   const isAsset = item.itemType === ItemType.ASSET;
+  // a return request was already sent once it shows as return pending
+  const canReturn = liveBookings.some((booking) => booking.status === borrowStatus.BORROWED);
   const freeFromDate = availability.freeFrom ? new Date(`${availability.freeFrom}:00+08:00`) : null;
 
   const formTokens = {
@@ -339,6 +341,7 @@ export default async function ScannedItemPage({
           maxQuantity={availableQuantity}
           isAsset={isAsset}
           canReport={item.status !== ItemStatus.RETIRED}
+          canReturn={canReturn}
         />
       </div>
     </main>

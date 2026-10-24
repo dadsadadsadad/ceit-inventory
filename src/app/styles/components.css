@@ -701,6 +701,16 @@ a.pc-chip:hover {
   margin-bottom: 1rem;
 }
 
+.tag-code-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-chip);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.1rem 0.45rem;
+}
+
 .page-inner details[open] > summary,
 .page-narrow details[open] > summary {
   color: var(--accent);
@@ -1715,7 +1725,7 @@ a.pc-chip:hover {
   gap: 0.5rem;
 }
 
-.scan-strip-actions a {
+.scan-strip-actions :is(a, button) {
   font-size: 0.875rem;
   min-height: 2.4rem;
   padding: 0.4rem 0.85rem;

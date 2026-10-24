@@ -37,6 +37,13 @@ export function LocationEditor({
           {location.roomNumber ? <span className="muted"> · {location.roomNumber}</span> : null}
         </span>
         <span className="flex items-center gap-3">
+          <span
+            className="tag-code-chip asset-code"
+            title="Code used in asset tags"
+            aria-label={`Tag code ${location.assetTagCode ?? "not set"}`}
+          >
+            {location.assetTagCode ?? "No code"}
+          </span>
           <span className="muted">
             {location._count.items} record{location._count.items === 1 ? "" : "s"}
           </span>

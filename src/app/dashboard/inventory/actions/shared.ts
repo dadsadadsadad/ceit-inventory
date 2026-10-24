@@ -312,6 +312,18 @@ export function optionalYesNo(formData: FormData, key: string) {
   return value === "yes";
 }
 
+// free software has nothing to expire
+export function licenseFields(formData: FormData) {
+  const isLicensed = optionalYesNo(formData, "isLicensed");
+  const licenseExpiresAt = optionalDate(formData, "licenseExpiresAt");
+  if (isLicensed === false && licenseExpiresAt) {
+    throw new FormError(
+      "Free or unlicensed software can't have a license end date. Clear the date or choose Licensed.",
+    );
+  }
+  return { isLicensed, licenseExpiresAt };
+}
+
 export function computerData(formData: FormData, includeCheckTime = false) {
   return {
     operatingSystem: optionalText(formData, "operatingSystem", 255),

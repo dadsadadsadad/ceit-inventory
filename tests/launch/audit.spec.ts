@@ -85,8 +85,27 @@ test("inventory overview shows real status counts and opens the matching filter"
 });
 
 test("public request choices keep keyboard focus and failed return details", async ({ page }) => {
+  const item = (
+    await query('SELECT id FROM "InventoryItem" WHERE "qrCode"=$1', ["ceit-launch-item-24"])
+  ).rows[0];
   await page.goto("/scan/ceit-launch-item-24");
   await expect(page).toHaveTitle("Equipment details · CEIT Inventory");
+  // nothing is out, so there is nothing to return
+  await expect(page.locator('[data-request-mode="return"]')).toHaveCount(0);
+  await query(
+    `INSERT INTO "BorrowRequest" (id,"inventoryItemId","borrowerName","studentNumber",contact,purpose,"requestedQuantity","expectedReturnDate","startsAt",status,"personalDataExpiresAt","updatedAt")
+     VALUES (gen_random_uuid(),$1,'Audit Borrower','AUDIT-LOAN-1','09170000009','Class',1,NOW() + INTERVAL '1 day',NOW() - INTERVAL '1 hour','BORROWED',NOW() + INTERVAL '30 days',NOW())`,
+    [item.id],
+  );
+  try {
+    await page.reload();
+    await runReturnChecks(page);
+  } finally {
+    await query(`DELETE FROM "BorrowRequest" WHERE "studentNumber"='AUDIT-LOAN-1'`);
+  }
+});
+
+async function runReturnChecks(page: Page) {
   for (const [choice, heading] of [
     ["borrow", "Borrow Lab equipment 24"],
     ["return", "Return Lab equipment 24"],
@@ -114,7 +133,7 @@ test("public request choices keep keyboard focus and failed return details", asy
   await expect(page.getByLabel("Return notes")).toHaveValue(
     "Keep these notes after validation fails.",
   );
-});
+}
 
 test("scanner handles denied camera access and opens only trusted item links", async ({ page }) => {
   await page.addInitScript(() => {

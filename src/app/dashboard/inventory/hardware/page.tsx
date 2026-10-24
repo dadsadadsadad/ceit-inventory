@@ -13,9 +13,11 @@ import {
 import { loadBulkPcs, loadComputers, loadHardwareSuggestions } from "@/lib/computer-queries";
 import { isUuid } from "@/lib/ids";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
+import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-status";
 import { firstParam, pageParam, textParam, type RawParam } from "@/lib/search-params";
 import { prisma } from "@/prisma";
 
+import { InventoryRowNavigation } from "../inventory-row-navigation";
 import { InventoryTabs } from "../inventory-tabs";
 import { PcBulkForm } from "../pc-bulk-form";
 import { PcChips } from "../pc-chips";
@@ -122,6 +124,7 @@ export default async function HardwarePage({
 
   return (
     <div className="page directory-page">
+      {mode === "pcs" ? <InventoryRowNavigation /> : null}
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -149,7 +152,7 @@ export default async function HardwarePage({
           </div>
         </header>
 
-        <InventoryTabs current="hardware" />
+        <InventoryTabs current={mode === "pcs" ? "pcs" : "hardware"} />
 
         {bulk ? (
           <details id="update-pcs" className="card update-pcs rounded-lg" open={openBulk}>
@@ -218,19 +221,7 @@ export default async function HardwarePage({
             </select>
           </label>
 
-          <fieldset className="filter-chips sm:col-span-2" aria-label="Show hardware">
-            <legend className="sr-only">Show hardware</legend>
-            {[
-              ["components", "By component"],
-              ["pcs", "By PC"],
-            ].map(([value, label]) => (
-              <label key={value} className="filter-chip">
-                <input type="radio" name="view" value={value} defaultChecked={mode === value} />
-                <span>{label}</span>
-              </label>
-            ))}
-          </fieldset>
-
+          {mode === "pcs" ? <input type="hidden" name="view" value="pcs" /> : null}
           {mode === "components" ? (
             <fieldset className="filter-chips sm:col-span-2" aria-label="Hardware component">
               <legend className="sr-only">Hardware component</legend>
@@ -333,22 +324,36 @@ export default async function HardwarePage({
               <table className="w-full">
                 <thead>
                   <tr className="table-heading divider border-b">
-                    {["PC", "Room", "Processor", "Memory", "Storage", "Graphics", "System"].map(
-                      (heading) => (
-                        <th
-                          key={heading}
-                          scope="col"
-                          className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                        >
-                          {heading}
-                        </th>
-                      ),
-                    )}
+                    {[
+                      "PC",
+                      "Room",
+                      "Status",
+                      "Processor",
+                      "Memory",
+                      "Storage",
+                      "Graphics",
+                      "System",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        scope="col"
+                        className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
+                      >
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {pagePcs.map((entry) => (
-                    <tr key={entry.pc.id} className="table-row border-b align-top last:border-0">
+                    <tr
+                      key={entry.pc.id}
+                      data-inventory-row-url={`/dashboard/inventory/${entry.pc.id}`}
+                      data-status={entry.status}
+                      tabIndex={0}
+                      aria-label={`Open ${entry.pc.name}`}
+                      className="table-row cursor-pointer border-b align-top last:border-0 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
+                    >
                       <td className="px-5 py-4 text-sm">
                         <Link
                           href={`/dashboard/inventory/${entry.pc.id}`}
@@ -361,6 +366,11 @@ export default async function HardwarePage({
                         </div>
                       </td>
                       <td className="muted px-5 py-4 text-sm">{entry.pc.room}</td>
+                      <td className="px-5 py-4">
+                        <span className={inventoryStatusClass(entry.status)}>
+                          {inventoryStatusLabel(entry.status)}
+                        </span>
+                      </td>
                       {(["processor", "memory", "storage", "graphics", "os"] as const).map(
                         (key) => {
                           const value = componentValue(entry, key);

@@ -779,9 +779,21 @@ export default async function DashboardPage({
     Object.entries(widgets).filter(([id]) => shown.has(id as WidgetId)),
   ) as Partial<Record<WidgetId, ReactNode>>;
 
+  // nothing urgent can still mean upkeep is due
+  const upkeep = (
+    [
+      [dashboard.uncheckedCount, "due for a check"],
+      [dashboard.lowStockCount, "low on stock"],
+      [dashboard.warrantyEndingCount, "with a warranty ending soon"],
+    ] as const
+  )
+    .filter(([count]) => count > 0)
+    .map(([count, text]) => `${count.toLocaleString()} ${text}`);
   const standing = waiting
     ? `${waiting.toLocaleString()} ${waiting === 1 ? "thing needs" : "things need"} a look.`
-    : "Everything looks good.";
+    : upkeep.length
+      ? `Nothing urgent. ${upkeep.join(", ")}.`
+      : "Everything looks good.";
 
   return (
     <div className="page dashboard-overview-page">

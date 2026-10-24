@@ -374,7 +374,14 @@ export default async function SoftwarePage({
                                   {install.isLicensed === true ? (
                                     "Licensed"
                                   ) : install.isLicensed === false ? (
-                                    "Free or not licensed"
+                                    <>
+                                      <span className="block">Free or not licensed</span>
+                                      {install.licenseExpiresAt ? (
+                                        <span className="status-pill status-pill-pending mt-1 rounded-md px-2 py-0.5 text-xs font-semibold">
+                                          Has an end date, check this
+                                        </span>
+                                      ) : null}
+                                    </>
                                   ) : (
                                     <span className="muted">Not set</span>
                                   )}

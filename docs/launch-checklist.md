@@ -62,6 +62,16 @@ Pick items in Inventory and click **Print QR labels**, or filter by room on the 
 
 Print on A4 at 100% scale with headers/footers off. Sizes are small (40 per sheet), medium (24), large (8) and extra large (2). Long names get cut off, use a bigger size if needed.
 
+## Email
+
+Nothing is sent until `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` and `CRON_SECRET` are set (see `.env.example`). Each person picks in Settings:
+
+- borrow requests, returns, reported problems and low stock: right away, in the summary, or off
+- the summary: every day, weekdays only, once a week (pick the day) or never, in the morning (~7 AM) or afternoon (~4 PM)
+- what the summary lists: overdue and due back, low stock, warranties/licenses/old PCs
+
+The summary is skipped when there is nothing to report. **Send me a test email** in Settings checks the mail settings.
+
 ## Limits
 
 | Where            | Limit                                                  |

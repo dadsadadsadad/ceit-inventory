@@ -10,10 +10,10 @@ import { refreshInventoryViews } from "@/lib/refresh-inventory";
 import { prisma } from "@/prisma";
 
 import {
+  licenseFields,
   optionalDate,
   optionalInteger,
   optionalText,
-  optionalYesNo,
   requiredText,
   selectedIds,
 } from "./shared";
@@ -60,8 +60,7 @@ export async function updateManyPcs(formData: FormData) {
       const name = requiredText(formData, "name", 255);
       const details = {
         version: optionalText(formData, "version", 255),
-        isLicensed: optionalYesNo(formData, "isLicensed"),
-        licenseExpiresAt: optionalDate(formData, "licenseExpiresAt"),
+        ...licenseFields(formData),
         installedAt: optionalDate(formData, "installedAt"),
       };
       // matching names count as the same program, "chrome" updates "Chrome"

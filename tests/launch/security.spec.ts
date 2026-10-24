@@ -103,12 +103,9 @@ test.describe("borrowing rules cannot be bypassed", () => {
        VALUES ($1,$2,'Early Returner','SEC-EARLY-1','09170000002','Class',1,NOW() + INTERVAL '30 hours',NOW() + INTERVAL '24 hours',true,'RESERVED',NOW() + INTERVAL '30 days',NOW())`,
       [randomUUID(), id],
     );
-    await page.goto("/scan/ceit-launch-item-12");
-    await page.getByRole("button", { name: /Return equipment/ }).click();
-    await page.getByLabel("Student number").fill("SEC-EARLY-1");
-    await page.getByLabel("Contact number").fill("09170000002");
-    await page.getByRole("button", { name: "Request return", exact: true }).click();
-    await expect(page.getByRole("alert").filter({ hasText: /No loan found/ })).toBeVisible();
+    await page.goto("/scan/ceit-launch-item-12?mode=return");
+    await expect(page.locator('[data-request-mode="return"]')).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /^Return / })).toHaveCount(0);
     expect(
       (await query('SELECT status FROM "BorrowRequest" WHERE "studentNumber"=\'SEC-EARLY-1\''))
         .rows[0].status,

@@ -9,6 +9,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { auditActorName, auditEventData } from "@/lib/audit-event";
 import { auditFieldLabel } from "@/lib/audit-trail";
@@ -17,7 +18,9 @@ import { FormError, formAction } from "@/lib/form-action";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { isSingleTrackedAsset } from "@/lib/inventory-pc";
 import { maxLabelCount } from "@/lib/label-sheet";
+import { notifyLowStock } from "@/lib/notify-events";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
+import { stockGotWorse } from "@/lib/stock-level";
 import { prisma } from "@/prisma";
 
 import {
@@ -300,6 +303,16 @@ export async function updateInventoryItem(formData: FormData) {
       throw inventoryWriteError(error);
     }
 
+    if (
+      stockGotWorse(existing, {
+        itemType,
+        lowStockThreshold: data.lowStockThreshold,
+        quantity,
+        status,
+      })
+    ) {
+      after(() => notifyLowStock(id));
+    }
     refreshInventoryViews(id);
   });
 }
@@ -314,12 +327,13 @@ export async function adjustStockQuantity(formData: FormData) {
       throw new FormError("Enter an amount.");
     }
     const note = optionalText(formData, "note", 200);
+    let droppedLow = false;
 
     await prisma.$transaction(
       async (tx) => {
         const item = await tx.inventoryItem.findUnique({
           where: { id },
-          select: { itemType: true, quantity: true, status: true },
+          select: { itemType: true, lowStockThreshold: true, quantity: true, status: true },
         });
         if (!item || item.itemType !== ItemType.SUPPLY) {
           throw new FormError("Only stock has a quantity.");
@@ -335,6 +349,7 @@ export async function adjustStockQuantity(formData: FormData) {
         if (next > 1_000_000) {
           throw new FormError("That quantity is too large.");
         }
+        droppedLow = stockGotWorse(item, { ...item, quantity: next });
         await tx.inventoryItem.update({
           where: { id },
           data: {
@@ -359,6 +374,9 @@ export async function adjustStockQuantity(formData: FormData) {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
+    if (droppedLow) {
+      after(() => notifyLowStock(id));
+    }
     refreshInventoryViews(id);
   });
 }

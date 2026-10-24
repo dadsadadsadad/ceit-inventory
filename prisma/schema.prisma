@@ -345,6 +345,14 @@ model User {
   lockedUntil         DateTime?
   // email notification kinds this person wants, see lib/notification-kinds.ts
   notifyOn            String[]      @default(["borrowRequests", "returns", "repairs", "dailyLoans"])
+  // event kinds that wait for the summary instead of sending right away
+  notifyLater         String[]      @default([])
+  // daily, weekdays, weekly or off
+  summaryFrequency    String        @default("daily")
+  // 0 = Sunday, only for weekly
+  summaryDay          Int           @default(1)
+  // morning or afternoon
+  summaryTime         String        @default("morning")
   // chosen dashboard widgets and their order, see lib/dashboard-layout.ts, empty = default
   dashboardLayout     Json?
   sessions            UserSession[]

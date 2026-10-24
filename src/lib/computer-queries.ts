@@ -110,6 +110,7 @@ const pcSelect = {
   id: true,
   name: true,
   assetTag: true,
+  status: true,
   location: { select: { name: true } },
 } satisfies Prisma.InventoryItemSelect;
 
@@ -137,6 +138,7 @@ export async function loadComputers(filters: DirectoryFilters) {
     ipAddress: string | null;
     lastCheckedAt: Date | null;
     macAddress: string | null;
+    status: ItemStatus;
   })[] = rows.slice(0, directoryRowLimit).map((row) => ({
     graphics: row.graphics,
     memoryGb: row.memoryGb,
@@ -148,6 +150,7 @@ export async function loadComputers(filters: DirectoryFilters) {
     macAddress: row.macAddress,
     ipAddress: row.ipAddress,
     lastCheckedAt: row.lastCheckedAt,
+    status: row.item.status,
     pc: {
       id: row.item.id,
       name: row.item.name,

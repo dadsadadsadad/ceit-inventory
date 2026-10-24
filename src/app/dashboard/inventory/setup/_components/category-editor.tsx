@@ -34,6 +34,13 @@ export function CategoryEditor({
           {category.description ? <span className="muted"> · {category.description}</span> : null}
         </span>
         <span className="flex items-center gap-3">
+          <span
+            className="tag-code-chip asset-code"
+            title="Code used in asset tags"
+            aria-label={`Tag code ${category.assetTagCode ?? "not set"}`}
+          >
+            {category.assetTagCode ?? "No code"}
+          </span>
           <span className="muted">
             {category._count.items} record{category._count.items === 1 ? "" : "s"}
           </span>

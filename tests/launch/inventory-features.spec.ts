@@ -304,7 +304,11 @@ test("signed in scan opens the edit page with shortcuts", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/dashboard/inventory/${id}\\?edit=1&scanned=1`));
   await expect(page.getByText("Scanned")).toBeVisible();
   await expect(page.getByRole("link", { name: "Borrow", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Return", exact: true })).toBeVisible();
+  // nothing is out, so no return shortcut
+  await expect(page.getByRole("link", { name: "Return", exact: true })).toHaveCount(0);
+  await expect(
+    page.locator(".scan-strip").getByRole("button", { name: "Mark as checked" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Report a problem", exact: true }).click();
   await expect(page).toHaveURL(/\/scan\/ceit-launch-item-8\?view=public&mode=issue/);
   await expect(page.getByRole("heading", { name: "Report a problem" })).toBeVisible();

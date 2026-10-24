@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 const views = [
-  { key: "inventory", label: "Inventory", href: "/dashboard/inventory" },
+  { key: "inventory", label: "All items", href: "/dashboard/inventory" },
+  { key: "pcs", label: "PCs", href: "/dashboard/inventory/hardware?view=pcs" },
   { key: "hardware", label: "Hardware", href: "/dashboard/inventory/hardware" },
   { key: "software", label: "Software", href: "/dashboard/inventory/software" },
 ] as const;

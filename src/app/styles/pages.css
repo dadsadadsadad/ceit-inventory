@@ -17,6 +17,13 @@
   gap: 1.1rem;
 }
 
+/* the top bar already shows the logo on smaller screens */
+@media (max-width: 1023px) {
+  .overview-intro > .brand-mark {
+    display: none;
+  }
+}
+
 .overview-header-actions {
   align-self: end;
   display: grid;
@@ -2061,6 +2068,40 @@
 .notify-option small {
   font-size: 0.875rem;
   line-height: 1.4;
+}
+
+.notify-rows {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.notify-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+}
+
+.notify-row + .notify-row {
+  border-top: 1px solid var(--border);
+}
+
+.notify-row > span {
+  display: grid;
+  flex: 1 1 16rem;
+  font-size: 0.9375rem;
+  gap: 0.15rem;
+}
+
+.notify-row small {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.notify-row select {
+  min-width: 11rem;
 }
 
 /* dashboard edit mode */

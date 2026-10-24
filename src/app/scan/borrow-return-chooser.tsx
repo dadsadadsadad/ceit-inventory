@@ -25,6 +25,8 @@ type BorrowReturnChooserProps = {
   maxQuantity: number;
   qrCode: string;
   canReport?: boolean;
+  // only while it is checked out
+  canReturn?: boolean;
   isAsset?: boolean;
 };
 
@@ -37,9 +39,12 @@ export function BorrowReturnChooser({
   maxQuantity,
   qrCode,
   canReport = true,
+  canReturn = true,
   isAsset = true,
 }: BorrowReturnChooserProps) {
-  const [mode, setMode] = useState<RequestMode | null>(initialMode);
+  const [mode, setMode] = useState<RequestMode | null>(
+    initialMode === "return" && !canReturn ? null : initialMode,
+  );
   // keep the original tokens, fresh ones from a live refresh would look "too quick"
   const [tokens] = useState(formTokens);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -113,7 +118,7 @@ export function BorrowReturnChooser({
                 setMode("borrow");
               }}
               disabled={!borrowOpen}
-              className={`${borrowOpen ? "primary-button" : "secondary-button"} request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50`}
+              className={`${borrowOpen ? "primary-button" : "secondary-button"} ${canReturn ? "" : "sm:col-span-2"} request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <CalendarDays className="mb-2" size={20} aria-hidden="true" />
               <span className="block text-base font-semibold">
@@ -127,19 +132,23 @@ export function BorrowReturnChooser({
                     : "Borrow now or reserve."}
               </span>
             </button>
-            <button
-              type="button"
-              data-request-mode="return"
-              onClick={() => {
-                previousModeRef.current = "return";
-                setMode("return");
-              }}
-              className="secondary-button request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left"
-            >
-              <Undo2 className="mb-2" size={20} aria-hidden="true" />
-              <span className="block text-base font-semibold">Return equipment</span>
-              <span className="mt-1 block text-sm font-normal opacity-90">Return it to staff.</span>
-            </button>
+            {canReturn ? (
+              <button
+                type="button"
+                data-request-mode="return"
+                onClick={() => {
+                  previousModeRef.current = "return";
+                  setMode("return");
+                }}
+                className="secondary-button request-choice min-h-24 flex-col items-start justify-center rounded-lg px-5 py-4 text-left"
+              >
+                <Undo2 className="mb-2" size={20} aria-hidden="true" />
+                <span className="block text-base font-semibold">Return equipment</span>
+                <span className="mt-1 block text-sm font-normal opacity-90">
+                  Return it to staff.
+                </span>
+              </button>
+            ) : null}
           </>
         ) : null}
         {canReport ? (

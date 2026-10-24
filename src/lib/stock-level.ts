@@ -29,6 +29,14 @@ export function stockLevel(item: StockItem): StockLevel | null {
   return item.quantity <= lowStockLevelFor(item) ? "low" : "ok";
 }
 
+const levelRank: Record<StockLevel, number> = { ok: 0, low: 1, out: 2 };
+
+// ok to low, ok to out or low to out
+export function stockGotWorse(before: StockItem, after: StockItem) {
+  const next = stockLevel(after);
+  return next !== null && levelRank[next] > levelRank[stockLevel(before) ?? "ok"];
+}
+
 export function needsRestock(item: StockItem) {
   const level = stockLevel(item);
   return level === "low" || level === "out";

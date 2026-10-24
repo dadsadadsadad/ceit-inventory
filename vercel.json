@@ -3,8 +3,12 @@
   "regions": ["sin1"],
   "crons": [
     {
-      "path": "/api/cron/daily-summary",
+      "path": "/api/cron/summary/morning",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/summary/afternoon",
+      "schedule": "0 8 * * *"
     }
   ]
 }

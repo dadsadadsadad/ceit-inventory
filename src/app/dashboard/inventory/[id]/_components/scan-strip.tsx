@@ -4,8 +4,16 @@ import Link from "next/link";
 
 import { ScanAuditLogger } from "@/app/scan/scan-audit-logger";
 
+import { MarkCheckedButton } from "./mark-checked-button";
+
 // shortcuts shown after staff scan a label
-export function ScanStrip({ item }: { item: { id: string; itemType: ItemType; qrCode: string } }) {
+export function ScanStrip({
+  item,
+  onLoan,
+}: {
+  item: { id: string; itemType: ItemType; qrCode: string };
+  onLoan: boolean;
+}) {
   const base = `/scan/${encodeURIComponent(item.qrCode)}?view=public`;
   return (
     <div className="scan-strip card rounded-lg" role="status">
@@ -20,14 +28,17 @@ export function ScanStrip({ item }: { item: { id: string; itemType: ItemType; qr
             <Link href={`${base}&mode=borrow`} className="secondary-button rounded-lg">
               Borrow
             </Link>
-            <Link href={`${base}&mode=return`} className="secondary-button rounded-lg">
-              Return
-            </Link>
+            {onLoan ? (
+              <Link href={`${base}&mode=return`} className="secondary-button rounded-lg">
+                Return
+              </Link>
+            ) : null}
           </>
         ) : null}
         <Link href={`${base}&mode=issue`} className="secondary-button rounded-lg">
           Report a problem
         </Link>
+        <MarkCheckedButton itemId={item.id} className="secondary-button w-full rounded-lg" />
         <Link href="/scan" className="secondary-button rounded-lg">
           Scan another
         </Link>

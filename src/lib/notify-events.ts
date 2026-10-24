@@ -2,6 +2,7 @@ import "server-only";
 
 import { formatManilaDate } from "./manila-date";
 import { notifyStaff } from "./notifications";
+import { lowStockLevelFor, stockLevel } from "./stock-level";
 import { prisma } from "@/prisma";
 
 const when = (date: Date) => formatManilaDate(date, { dateStyle: "medium", timeStyle: "short" });
@@ -77,5 +78,34 @@ export async function notifyProblemReport(
       `Reported by: ${report.reporterName}`,
     ],
     link: "/dashboard/maintenance?status=OPEN",
+  });
+}
+
+export async function notifyLowStock(itemId: string) {
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: itemId },
+    select: {
+      assetTag: true,
+      itemType: true,
+      lowStockThreshold: true,
+      name: true,
+      quantity: true,
+      status: true,
+      location: { select: { name: true } },
+    },
+  });
+  const level = item ? stockLevel(item) : null;
+  if (!item || (level !== "low" && level !== "out")) {
+    return;
+  }
+  await notifyStaff("lowStock", {
+    subject: `${level === "out" ? "Out of stock" : "Running low"}: ${item.name}`,
+    lines: [
+      `Item: ${[item.name, item.assetTag].filter(Boolean).join(" · ")} (${item.location.name})`,
+      level === "out"
+        ? "None left."
+        : `${item.quantity} left. Alert at ${lowStockLevelFor(item)} or fewer.`,
+    ],
+    link: `/dashboard/inventory/${itemId}`,
   });
 }

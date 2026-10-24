@@ -213,9 +213,14 @@ export const quickReports: {
     query: { kind: "borrowing", borrowingState: "overdue" },
   },
   {
-    label: "Room checks",
-    description: "PCs and equipment checked in the last 30 days.",
-    query: { kind: "checks" },
+    label: "Due back today",
+    description: "Loans due back later today.",
+    query: { kind: "borrowing", borrowingState: "due-today" },
+  },
+  {
+    label: "Open repairs",
+    description: "Not resolved yet.",
+    query: { kind: "maintenance", maintenanceStatus: "OPEN" },
   },
   {
     label: "Needs attention",
@@ -228,54 +233,9 @@ export const quickReports: {
     query: { kind: "stock", stock: "low" },
   },
   {
-    label: "Warranties ending soon",
-    description: "Warranty ends within 60 days.",
-    query: { kind: "warranty", warranty: "ending" },
-  },
-  {
-    label: "Due back today",
-    description: "Loans due back later today.",
-    query: { kind: "borrowing", borrowingState: "due-today" },
-  },
-  {
-    label: "Licenses ending soon",
-    description: "License ends within 30 days.",
-    query: { kind: "software", license: "expiring" },
-  },
-  {
-    label: "PCs missing details",
-    description: "No CPU, memory or storage recorded.",
-    query: { kind: "hardware", incomplete: "1", component: "processor" },
-  },
-  {
-    label: "Open repairs",
-    description: "Not resolved yet.",
-    query: { kind: "maintenance", maintenanceStatus: "OPEN" },
-  },
-  {
-    label: "Equipment value",
-    description: "Value by category and room.",
-    query: { kind: "value" },
-  },
-  {
-    label: "Records missing a price",
-    description: "No purchase price recorded.",
-    query: { kind: "health", missing: "price" },
-  },
-  {
-    label: "Warranties ending in 90 days",
-    description: "Warranty ends within 90 days.",
-    query: { kind: "warranty", within: "90" },
-  },
-  {
-    label: "Unlicensed software",
-    description: "Free or unlicensed copies.",
-    query: { kind: "software", license: "unlicensed" },
-  },
-  {
-    label: "Licenses ending in 90 days",
-    description: "License ends within 90 days.",
-    query: { kind: "software", within: "90" },
+    label: "Room checks",
+    description: "PCs and equipment checked in the last 30 days.",
+    query: { kind: "checks" },
   },
   {
     label: "Not checked in 90+ days",
@@ -283,8 +243,18 @@ export const quickReports: {
     query: { kind: "health", missing: "inspection" },
   },
   {
-    label: "Last 30 days of borrowing",
-    description: "Requests from the past month.",
-    query: { kind: "borrowing", period: "last-30-days" },
+    label: "Warranties ending soon",
+    description: "Warranty ends within 60 days.",
+    query: { kind: "warranty", warranty: "ending" },
+  },
+  {
+    label: "Licenses ending soon",
+    description: "License ends within 30 days.",
+    query: { kind: "software", license: "expiring" },
+  },
+  {
+    label: "Equipment value",
+    description: "Value by category and room.",
+    query: { kind: "value" },
   },
 ];
