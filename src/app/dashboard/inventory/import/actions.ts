@@ -301,7 +301,7 @@ function parseImportRow(
   );
   const locationName = boundedText(
     locationCell || settings.defaultLocation || fallbackLocationName,
-    "Location",
+    "Room",
     160,
   );
   const roomNumber = settings.locationIsRoomNumber
@@ -452,12 +452,16 @@ function parseImportRow(
   };
 }
 
+function setupKindLabel(kind: "category" | "location") {
+  return kind === "category" ? "Category" : "Room";
+}
+
 function missingSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} "${name}" doesn't exist. Turn on "Create missing categories and locations" or add it in Settings.`;
+  return `${setupKindLabel(kind)} "${name}" doesn't exist. Turn on "Create missing categories and rooms" or add it in Rooms and categories.`;
 }
 
 function inactiveSetupMessage(kind: "category" | "location", name: string) {
-  return `${kind} "${name}" is inactive. Turn it back on in Settings.`;
+  return `${setupKindLabel(kind)} "${name}" is inactive. Turn it back on in Rooms and categories.`;
 }
 
 // create only if allowed

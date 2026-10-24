@@ -25,7 +25,7 @@ const pc = {
 it("lists recorded hardware and skips empty parts", () => {
   expect(pcHardwareRows(pc)).toEqual([
     ["PC name", "CEIT-MAC09"],
-    ["Location", "Mac Lab"],
+    ["Room", "Mac Lab"],
     ["Brand", "Lenovo"],
     ["CPU", "Intel Core i5-12400"],
     ["RAM", "16 GB"],
@@ -35,7 +35,7 @@ it("lists recorded hardware and skips empty parts", () => {
   ]);
   expect(pcHardwareRows({ ...pc, manufacturer: null, computer: null })).toEqual([
     ["PC name", "CEIT-MAC09"],
-    ["Location", "Mac Lab"],
+    ["Room", "Mac Lab"],
   ]);
 });
 

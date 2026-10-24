@@ -43,7 +43,7 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
-Add rooms and categories in **Settings** first.
+Add rooms and categories in **Inventory > Rooms and categories** first.
 
 `DIRECT_URL` is only for migrations. If `SCHOOL_DATABASE_URL` is set it's used instead of `DATABASE_URL`. Don't commit any of these.
 

@@ -12,6 +12,10 @@ import { countChart, statusTones } from "../charts";
 import type { ReportModel } from "../model";
 import { countsByRoom, filterNames, loadCapped, type BuilderContext } from "./shared";
 
+function checkedText(value: Date | null | undefined) {
+  return value ? `Checked ${formatReportDateTime(value)}` : "Not checked";
+}
+
 export const incompletePcWhere: Prisma.InventoryItemWhereInput = {
   OR: [
     { computer: { is: null } },
@@ -142,7 +146,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
                 .join(" ") || "System not recorded",
               programs.length ? programs.join(", ") : "No software recorded",
             ].join("\n"),
-            `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}\nChecked ${formatReportDateTime(item.lastCheckedAt ?? item.computer?.lastCheckedAt)}`,
+            `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}\n${checkedText(item.lastCheckedAt ?? item.computer?.lastCheckedAt)}`,
           ];
         }),
         total,
@@ -155,7 +159,7 @@ export async function buildPcRegisterReport(context: BuilderContext): Promise<Re
         "QR code",
         "PC / Mac name",
         "Category",
-        "Location",
+        "Room",
         "Status",
         "Condition",
         "Last checked",

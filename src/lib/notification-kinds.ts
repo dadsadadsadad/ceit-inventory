@@ -14,7 +14,7 @@ export const notificationKinds = [
   {
     id: "repairs",
     label: "Reported problems",
-    description: "When someone reports a problem with a QR code.",
+    description: "When someone scans an item and reports a problem with it.",
   },
   {
     id: "dailyLoans",

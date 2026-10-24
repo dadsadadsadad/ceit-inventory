@@ -812,11 +812,11 @@ a.pc-chip:hover {
 }
 
 .inventory-page .record-table table {
-  min-width: 66rem;
+  min-width: 62rem;
 }
 
 .record-table .record-item {
-  min-width: 17.5rem;
+  min-width: 16rem;
 }
 
 .record-table :is(.record-tag, .record-checked) {
@@ -825,7 +825,7 @@ a.pc-chip:hover {
 }
 
 .record-table .record-location {
-  min-width: 10.5rem;
+  min-width: 9.5rem;
   overflow-wrap: break-word;
 }
 

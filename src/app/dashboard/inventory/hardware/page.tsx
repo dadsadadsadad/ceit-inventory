@@ -1,5 +1,3 @@
-export const metadata = { title: "Hardware · CEIT Inventory" };
-
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
@@ -27,6 +25,11 @@ import { EmptyState } from "@/app/components/empty-state";
 export const dynamic = "force-dynamic";
 
 const pageSize = 25;
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const view = firstParam((await searchParams).view);
+  return { title: `${view === "pcs" ? "PCs" : "Hardware"} · CEIT Inventory` };
+}
 
 type SearchParams = {
   update?: RawParam;
@@ -123,8 +126,12 @@ export default async function HardwarePage({
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="eyebrow">Equipment register</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Hardware</h1>
-            <p className="muted mt-2 max-w-2xl text-sm leading-6">Hardware across all PCs.</p>
+            <h1 className="title mt-3 text-3xl sm:text-4xl">
+              {mode === "pcs" ? "PCs" : "Hardware"}
+            </h1>
+            <p className="muted mt-2 max-w-2xl text-sm leading-6">
+              {mode === "pcs" ? "Every PC and its hardware." : "Hardware across all PCs."}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link

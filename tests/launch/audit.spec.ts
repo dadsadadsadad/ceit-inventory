@@ -267,7 +267,6 @@ test("every route has a readable mobile and desktop view in both themes", async 
     ["borrowing", "/dashboard/borrowing"],
     ["maintenance", "/dashboard/maintenance"],
     ["reports", "/dashboard/reports"],
-    ["student-survey", "/dashboard/student-survey"],
     ["activity", "/dashboard/activity"],
     ["settings", "/dashboard/settings"],
     ["setup", "/dashboard/inventory/setup"],

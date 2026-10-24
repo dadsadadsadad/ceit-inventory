@@ -51,7 +51,7 @@ export function ItemSummary({
           ) : null}
           <dl className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Detail label="Category">{item.category.name}</Detail>
-            <Detail label="Location">
+            <Detail label="Room">
               <OptimisticText entity={`item:${item.id}`} field="location">
                 {item.location.name}
               </OptimisticText>
@@ -81,7 +81,9 @@ export function ItemSummary({
                   : "Not recorded"}
               </Detail>
             ) : null}
-            <Detail label="Last checked">{displayDate(item.lastCheckedAt)}</Detail>
+            <Detail label="Last checked">
+              {item.lastCheckedAt ? displayDate(item.lastCheckedAt) : "Not checked"}
+            </Detail>
             {item.purchasePrice !== null ? (
               <Detail label="Acquisition value">{displayPurchasePrice(item.purchasePrice)}</Detail>
             ) : null}

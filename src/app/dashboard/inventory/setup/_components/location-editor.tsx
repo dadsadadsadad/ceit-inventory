@@ -54,7 +54,7 @@ export function LocationEditor({
       >
         <input type="hidden" name="id" value={location.id} />
         <label>
-          <span className="muted text-xs font-bold uppercase tracking-wide">Location name</span>
+          <span className="muted text-xs font-bold uppercase tracking-wide">Room name</span>
           <input
             required
             name="name"
@@ -93,14 +93,14 @@ export function LocationEditor({
           pendingLabel="Saving..."
           className="secondary-button justify-self-start rounded-lg px-4 py-2 text-sm font-semibold"
         >
-          Save location
+          Save room
         </SubmitButton>
       </FeedbackForm>
       <FeedbackForm action={setLocationActive} className="mt-3">
         <input type="hidden" name="id" value={location.id} />
         <input type="hidden" name="isActive" value={String(!location.isActive)} />
         <SubmitButton pendingLabel="Updating..." className="accent-link text-xs font-semibold">
-          {location.isActive ? "Deactivate location" : "Reactivate location"}
+          {location.isActive ? "Deactivate room" : "Reactivate room"}
         </SubmitButton>
         {location.isActive && location._count.items > 0 ? (
           <span className="muted ml-2 text-xs">Items stay assigned here.</span>
@@ -128,13 +128,13 @@ export function LocationEditor({
             pendingLabel="Deleting..."
             className="danger-button rounded-lg px-4 py-2 text-sm font-semibold"
           >
-            Delete location
+            Delete room
           </SubmitButton>
         </div>
         <p className="muted mt-2 text-xs">
           {hasAssignedItems
-            ? `This location has ${location._count.items} linked inventory record${location._count.items === 1 ? "" : "s"} so it can't be deleted.`
-            : "Only locations with no items can be deleted."}
+            ? `This room has ${location._count.items} linked inventory record${location._count.items === 1 ? "" : "s"} so it can't be deleted.`
+            : "Only rooms with no items can be deleted."}
         </p>
       </FeedbackForm>
     </details>

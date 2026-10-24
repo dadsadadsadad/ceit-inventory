@@ -1,8 +1,5 @@
-// "FOR_REPAIR" -> "For Repair"
+// "FOR_REPAIR" -> "For repair"
 export function humanizeEnum(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  const text = value.toLowerCase().replaceAll("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

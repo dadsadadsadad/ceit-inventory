@@ -158,18 +158,7 @@ export default async function MaintenancePage({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={`/dashboard/reports?${new URLSearchParams(
-                Object.entries({
-                  kind: "maintenance",
-                  q: query,
-                  maintenanceSource: source ?? "",
-                  maintenanceStatus: status ?? "",
-                  maintenancePriority: priority ?? "",
-                  from: fromDate,
-                  to: toDate,
-                  generate: "1",
-                }).filter(([, value]) => value),
-              )}`}
+              href="/dashboard/reports?kind=maintenance"
               className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
             >
               Maintenance reports
@@ -342,9 +331,28 @@ export default async function MaintenancePage({
               className="field mt-2 rounded-lg px-3 py-2.5 text-sm"
             />
           </label>
-          <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
-            Clear all filters
-          </ClearFiltersButton>
+          <div className="flex flex-wrap items-center gap-4">
+            <ClearFiltersButton className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">
+              Clear all filters
+            </ClearFiltersButton>
+            <Link
+              href={`/dashboard/reports?${new URLSearchParams(
+                Object.entries({
+                  kind: "maintenance",
+                  q: query,
+                  maintenanceSource: source ?? "",
+                  maintenanceStatus: status ?? "",
+                  maintenancePriority: priority ?? "",
+                  from: fromDate,
+                  to: toDate,
+                  generate: "1",
+                }).filter(([, value]) => value),
+              )}`}
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+            >
+              Open as report
+            </Link>
+          </div>
         </FilterForm>
 
         <section className="space-y-4" aria-label="Maintenance requests">

@@ -17,7 +17,13 @@ import { lowStockWhere } from "@/lib/stock-queries";
 import { warrantyWhere } from "@/lib/warranty";
 import { prisma } from "@/prisma";
 
-import { formatReportDateTime, formatReportDay, humanize, plural } from "../format";
+import {
+  formatLastChecked,
+  formatReportDateTime,
+  formatReportDay,
+  humanize,
+  plural,
+} from "../format";
 import { countChart, statusChart } from "../charts";
 import type { ReportModel, ReportTable } from "../model";
 import type { BuilderContext } from "./shared";
@@ -224,7 +230,7 @@ export async function buildOverviewReport(context: BuilderContext): Promise<Repo
           `${item.name}\n${item.assetTag ?? "No asset tag"}`,
           `${item.category.name}\n${item.location.name}`,
           `${inventoryStatusLabel(item.status)}\n${humanize(item.condition)}`,
-          formatReportDateTime(item.lastCheckedAt),
+          formatLastChecked(item.lastCheckedAt),
         ]),
         total: attentionCount,
         emptyText: "Nothing needs attention.",

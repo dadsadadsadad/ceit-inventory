@@ -41,7 +41,7 @@ Students with something overdue can't make new requests until staff confirm the 
 
 - Low stock only applies to stock records. "Running low" means quantity at or below the alert level (default 5, 0 turns it off). Retired and lost records never alert.
 - Warranty "ending soon" means within 60 days.
-- Custom fields are set up in Settings and can be limited to one item type or category. Hiding a field keeps its answers.
+- Custom fields (extra fields) are set up in Inventory > Rooms and categories and can be limited to one item type or category. Hiding a field keeps its answers.
 - Adding equipment with a quantity creates that many units (max 50), each with its own tag and qr code.
 
 ## Reminders
@@ -58,9 +58,9 @@ Students with something overdue can't make new requests until staff confirm the 
 
 ## Label printing
 
-Pick items in Inventory and click **Print QR labels**, or choose a room on the labels page. Max 100 per batch.
+Pick items in Inventory and click **Print QR labels**, or filter by room on the labels page. Max 100 picked labels per batch, or 500 with **Select all matching**.
 
-Print on A4 at 100% scale with headers/footers off. Compact labels are 62 x 32 mm (3 x 8), large are 92 x 64 mm (2 x 4), with 10 mm margins. Long names get cut off, use the large size if needed.
+Print on A4 at 100% scale with headers/footers off. Sizes are small (40 per sheet), medium (24), large (8) and extra large (2). Long names get cut off, use a bigger size if needed.
 
 ## Limits
 
@@ -75,7 +75,7 @@ Print on A4 at 100% scale with headers/footers off. Compact labels are 62 x 32 m
 | New units        | 50 at once                                             |
 | Custom fields    | 40 fields, 500 characters per answer                   |
 | Photos           | 4 per item, 3 MB each                                  |
-| QR labels        | 100 per batch                                          |
+| QR labels        | 100 per batch, 500 with select all                     |
 | Bulk changes     | 10,000 records                                         |
 
 ## Database connections

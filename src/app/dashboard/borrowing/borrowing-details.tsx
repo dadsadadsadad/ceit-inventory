@@ -51,7 +51,10 @@ export function BorrowSchedule({ request }: { request: BorrowingRecord }) {
       </p>
       {request.approvedAt ? (
         <p className="muted">
-          Approved by {personName(request.approvedByName)} · {formatDateTime(request.approvedAt)}
+          Approved
+          {personName(request.approvedByName)
+            ? ` by ${personName(request.approvedByName)}`
+            : ""} · {formatDateTime(request.approvedAt)}
         </p>
       ) : null}
       {request.cancelledAt ? (

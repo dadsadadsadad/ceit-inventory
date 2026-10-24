@@ -342,9 +342,14 @@ export function ReportBuilder({ initial, options }: Props) {
             </>
           ) : null}
         </div>
-        {has("pcOnly") || has("attention") || has("incomplete") || has("retired") ? (
+        {has("pcOnly") ||
+        has("oldPcs") ||
+        has("attention") ||
+        has("incomplete") ||
+        has("retired") ? (
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {has("pcOnly") ? check("pcOnly", "PCs and Macs only") : null}
+            {has("oldPcs") ? check("oldPcs", "PCs 5+ years old only") : null}
             {has("attention") ? check("attention", "Needs attention only") : null}
             {has("incomplete") ? check("incomplete", "Only PCs missing hardware details") : null}
             {has("retired") ? check("retired", "Include retired and lost PCs") : null}

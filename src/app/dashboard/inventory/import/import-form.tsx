@@ -104,7 +104,7 @@ export function ImportForm() {
 
       <FormSection
         title="Defaults for missing details"
-        hint="Used when a row has no category or location"
+        hint="Used when a row has no category or room"
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block text-sm">
@@ -117,7 +117,7 @@ export function ImportForm() {
             />
           </label>
           <label className="block text-sm">
-            <span className="font-medium">Location</span>
+            <span className="font-medium">Room</span>
             <input
               name="defaultLocation"
               className="field mt-1 w-full rounded-lg px-3 py-2"
@@ -149,10 +149,8 @@ export function ImportForm() {
             className="mt-0.5 h-4 w-4"
           />
           <span>
-            <strong>Create missing categories and locations</strong>
-            <span className="muted block">
-              Turn off to catch typos in category and location names.
-            </span>
+            <strong>Create missing categories and rooms</strong>
+            <span className="muted block">Turn off to catch typos in category and room names.</span>
           </span>
         </label>
         <label className="flex items-start gap-3 text-sm leading-5">

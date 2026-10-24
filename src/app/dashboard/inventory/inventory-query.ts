@@ -43,9 +43,9 @@ export type InventoryListItem = Prisma.InventoryItemGetPayload<{
   select: typeof inventoryListSelect;
 }>;
 export type SortDirection = "asc" | "desc";
-export type SortField = "assetTag" | "item" | "location" | "stock" | "status";
+export type SortField = "assetTag" | "item" | "location" | "stock" | "status" | "checked";
 
-const sortableFields: SortField[] = ["assetTag", "item", "location", "stock", "status"];
+const sortableFields: SortField[] = ["assetTag", "item", "location", "stock", "status", "checked"];
 export const inventoryListSelect = {
   id: true,
   name: true,
@@ -90,6 +90,17 @@ export function inventoryOrderBy(
       return [{ quantity: sort.direction }, { id: "asc" }];
     case "status":
       return [{ status: sort.direction }, { id: "asc" }];
+    // never checked counts as oldest
+    case "checked":
+      return [
+        {
+          lastCheckedAt: {
+            sort: sort.direction,
+            nulls: sort.direction === "asc" ? "first" : "last",
+          },
+        },
+        { id: "asc" },
+      ];
   }
 }
 

@@ -127,7 +127,7 @@ export default async function AuditTrailPage({
             Couldn&apos;t load the audit trail.
           </div>
         ) : activity.length === 0 ? (
-          <EmptyState icon={ScrollText} title="Nothing matches these filters.">
+          <EmptyState icon={ScrollText} title="No activity found.">
             Try a different view or date range.
           </EmptyState>
         ) : (

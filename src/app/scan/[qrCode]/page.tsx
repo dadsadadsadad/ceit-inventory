@@ -290,7 +290,7 @@ export default async function ScannedItemPage({
               <dd className="mt-1 text-sm font-semibold">{humanizeEnum(item.condition)}</dd>
             </div>
             <div>
-              <dt className="muted text-xs font-bold uppercase tracking-wide">Location</dt>
+              <dt className="muted text-xs font-bold uppercase tracking-wide">Room</dt>
               <dd className="mt-1 text-sm font-semibold">{item.location.name}</dd>
             </div>
           </dl>

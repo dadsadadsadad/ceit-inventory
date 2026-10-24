@@ -204,7 +204,7 @@ export async function buildWarrantyReport(context: BuilderContext): Promise<Repo
         "Item",
         "Asset tag",
         "Category",
-        "Location",
+        "Room",
         "Warranty ends",
         "Warranty status",
         "Days left",

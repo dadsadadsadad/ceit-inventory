@@ -266,7 +266,11 @@ async function getDashboardData(extras: Set<WidgetId>) {
     noteAuthorName,
     openTicketCount: openByPriority.reduce((sum, entry) => sum + entry._count._all, 0),
     urgentTicketCount: openByPriority
-      .filter((entry) => entry.priority === MaintenancePriority.URGENT)
+      .filter(
+        (entry) =>
+          entry.priority === MaintenancePriority.URGENT ||
+          entry.priority === MaintenancePriority.HIGH,
+      )
       .reduce((sum, entry) => sum + entry._count._all, 0),
     requestsPerMonth: months.map((month) => ({
       label: month.label,
@@ -566,7 +570,9 @@ export default async function DashboardPage({
             label="Open repairs"
             value={dashboard.openTicketCount.toLocaleString()}
             detail={
-              dashboard.urgentTicketCount ? `${dashboard.urgentTicketCount} urgent` : "None urgent"
+              dashboard.urgentTicketCount
+                ? `${dashboard.urgentTicketCount} high or urgent`
+                : "None high or urgent"
             }
             tone={dashboard.urgentTicketCount ? "critical" : undefined}
           />

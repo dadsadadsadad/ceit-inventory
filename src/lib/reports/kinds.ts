@@ -26,6 +26,7 @@ export type ReportControl =
   | "location"
   | "itemType"
   | "pcOnly"
+  | "oldPcs"
   | "attention"
   | "stockLevel"
   | "warranty"
@@ -66,7 +67,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
   inventory: {
     id: "inventory",
     label: "Inventory",
-    description: "Equipment and stock with status, condition and location.",
+    description: "Equipment and stock with status, condition and room.",
     stem: "ceit-inventory",
     controls: [
       "search",
@@ -78,6 +79,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "stockLevel",
       "warranty",
       "pcOnly",
+      "oldPcs",
       "attention",
       "price",
       "purchased",
@@ -90,6 +92,7 @@ export const reportKindInfo: Record<ReportKind, ReportKindInfo> = {
       "stockLevel",
       "warranty",
       "pcOnly",
+      "oldPcs",
       "price",
       "purchased",
       "missing",
@@ -231,7 +234,7 @@ export const quickReports: {
   },
   {
     label: "Due back today",
-    description: "Due back today.",
+    description: "Loans due back later today.",
     query: { kind: "borrowing", borrowingState: "due-today" },
   },
   {
@@ -261,7 +264,7 @@ export const quickReports: {
   },
   {
     label: "Warranties ending in 90 days",
-    description: "Warranties ending soon.",
+    description: "Warranty ends within 90 days.",
     query: { kind: "warranty", within: "90" },
   },
   {
@@ -271,12 +274,12 @@ export const quickReports: {
   },
   {
     label: "Licenses ending in 90 days",
-    description: "Licenses to renew soon.",
+    description: "License ends within 90 days.",
     query: { kind: "software", within: "90" },
   },
   {
-    label: "Not checked in 90 days",
-    description: "Due for a check.",
+    label: "Not checked in 90+ days",
+    description: "Never checked or last checked over 90 days ago.",
     query: { kind: "health", missing: "inspection" },
   },
   {

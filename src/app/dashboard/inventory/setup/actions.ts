@@ -156,11 +156,11 @@ export async function createLocation(formData: FormData) {
             assetTagCode: location.assetTagCode,
             roomNumber: location.roomNumber ?? "",
           },
-          summary: "Location created.",
+          summary: "Room created.",
         }),
       });
     } catch (error) {
-      throw setupWriteError(error, "location");
+      throw setupWriteError(error, "room");
     }
     refreshSetupPages();
   });
@@ -190,11 +190,11 @@ export async function updateLocation(formData: FormData) {
             assetTagCode: location.assetTagCode,
             roomNumber: location.roomNumber ?? "",
           },
-          summary: "Location updated.",
+          summary: "Room updated.",
         }),
       });
     } catch (error) {
-      throw setupWriteError(error, "location");
+      throw setupWriteError(error, "room");
     }
     refreshSetupPages();
   });
@@ -235,7 +235,7 @@ export async function setLocationActive(formData: FormData) {
         actor,
         entity: { id: location.id, label: location.name, type: "location" },
         metadata: { activityKind: "configuration", isActive },
-        summary: `Location ${isActive ? "activated" : "deactivated"}.`,
+        summary: `Room ${isActive ? "activated" : "deactivated"}.`,
       }),
     });
     refreshSetupPages();
@@ -323,11 +323,11 @@ export async function deleteLocation(formData: FormData) {
             });
 
             if (!location) {
-              throw new FormError("This location no longer exists.");
+              throw new FormError("This room no longer exists.");
             }
             if (location._count.items > 0) {
               throw new FormError(
-                `Move or remove the ${location._count.items} inventory record${location._count.items === 1 ? "" : "s"} in this location first.`,
+                `Move or remove the ${location._count.items} inventory record${location._count.items === 1 ? "" : "s"} in this room first.`,
               );
             }
 
@@ -337,7 +337,7 @@ export async function deleteLocation(formData: FormData) {
                 actor,
                 entity: { id: location.id, label: location.name, type: "location" },
                 metadata: { activityKind: "configuration" },
-                summary: "Location permanently deleted.",
+                summary: "Room permanently deleted.",
               }),
             });
             await tx.location.delete({ where: { id } });
@@ -348,7 +348,7 @@ export async function deleteLocation(formData: FormData) {
         return;
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-          throw new FormError("An item was just added to this location, so it can't be deleted.");
+          throw new FormError("An item was just added to this room, so it can't be deleted.");
         }
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -361,6 +361,6 @@ export async function deleteLocation(formData: FormData) {
       }
     }
 
-    throw new FormError("Someone else changed this location. Try again.");
+    throw new FormError("Someone else changed this room. Try again.");
   });
 }

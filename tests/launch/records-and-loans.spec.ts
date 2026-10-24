@@ -53,7 +53,7 @@ test("import check reports row problems and duplicates", async ({ page }) => {
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
   });
-  await page.getByLabel("Create missing categories and locations", { exact: false }).uncheck();
+  await page.getByLabel("Create missing categories and rooms", { exact: false }).uncheck();
   await page.getByRole("button", { name: "Check file" }).click();
   await expect(page.getByText("3 rows look good", { exact: false })).toBeVisible();
   await expect(page.getByText("2 skipped", { exact: false })).toBeVisible();

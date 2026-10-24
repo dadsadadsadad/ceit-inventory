@@ -41,6 +41,8 @@ export function InventoryFilters({
     ["attention", search.attention === "1" ? "1" : ""],
     ["stock", search.stock === "low" || search.stock === "out" ? search.stock : ""],
     ["warranty", isWarrantyFilter(search.warranty) ? search.warranty : ""],
+    ["missing", search.checked === "overdue" ? "inspection" : ""],
+    ["oldPcs", search.age === "old" ? "1" : ""],
   ]) {
     if (value) {
       reportQuery.set(key, value);
@@ -124,6 +126,15 @@ export function InventoryFilters({
               defaultChecked={search.stock === "low"}
             />
             <span>Low stock</span>
+          </label>
+          <label className="filter-chip">
+            <input
+              type="checkbox"
+              name="stock"
+              value="out"
+              defaultChecked={search.stock === "out"}
+            />
+            <span>Out of stock</span>
           </label>
           <label className="filter-chip">
             <input

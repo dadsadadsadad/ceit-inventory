@@ -1,6 +1,10 @@
 import { ItemStatus, type Prisma } from "@prisma/client";
 
-import { inventoryAttentionWhere, needsInventoryAttention } from "@/lib/inventory-attention";
+import {
+  inventoryAttentionWhere,
+  needsInventoryAttention,
+  pcReplacementYears,
+} from "@/lib/inventory-attention";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { manilaDateText } from "@/lib/manila-date";
 import { inventoryWhere } from "@/lib/record-search";
@@ -13,10 +17,10 @@ import { prisma } from "@/prisma";
 import {
   chips,
   dateRangeChip,
+  formatLastChecked,
   formatPeso,
   formatPesoShort,
   formatReportDay,
-  formatReportDateTime,
   humanize,
 } from "../format";
 import { itemDetailChips, itemDetailWhere } from "./item-filters";
@@ -42,6 +46,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
   const created = reportDateFilter(filters.dateRange);
   const listed: Prisma.InventoryItemWhereInput = {
     ...inventoryWhere({
+      age: filters.oldPcs ? "old" : undefined,
       attention: filters.attention ? "1" : undefined,
       category: filters.categoryId,
       condition: filters.condition,
@@ -97,7 +102,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
   return {
     kind: "inventory",
     title: "Inventory",
-    description: "Equipment and stock with location and condition.",
+    description: "Equipment and stock with status, condition and room.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.inventoryStatus && `Status: ${inventoryStatusLabel(filters.inventoryStatus)}`,
@@ -110,6 +115,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
       filters.warranty && `Warranty: ${warrantyChip[filters.warranty]}`,
       filters.pcOnly && "PC / Mac only",
       filters.attention && "Needs attention",
+      filters.oldPcs && `PCs ${pcReplacementYears}+ years old`,
       dateRangeChip(filters.dateRange, "Added"),
       ...itemDetailChips(filters),
     ),
@@ -181,7 +187,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
           ]
             .filter(Boolean)
             .join("\n"),
-          `${formatReportDateTime(item.lastCheckedAt)}\nAdded ${formatReportDay(item.createdAt)}`,
+          `${formatLastChecked(item.lastCheckedAt)}\nAdded ${formatReportDay(item.createdAt)}`,
         ]),
         total,
         emptyText: "No items found.",
@@ -193,7 +199,7 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
         "QR code",
         "Item",
         "Category",
-        "Location",
+        "Room",
         "Type",
         "Quantity",
         "Status",

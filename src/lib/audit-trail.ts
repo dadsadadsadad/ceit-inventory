@@ -403,7 +403,7 @@ export function auditFieldLabel(key: string) {
     customFields: "Extra fields",
     itemType: "Item type",
     lastCheckedAt: "Last checked",
-    locationId: "Location",
+    locationId: "Room",
     lowStockThreshold: "Low stock alert",
     purchaseDate: "Purchase date",
     purchasePrice: "Purchase price",

@@ -40,7 +40,7 @@ export function pcHardwareRows(item: PcLabelItem): [string, string][] {
   const pc = item.computer;
   const rows: [string, string | null | undefined][] = [
     ["PC name", item.name],
-    ["Location", item.location.name],
+    ["Room", item.location.name],
     ["Brand", item.manufacturer],
     ["Model", item.model],
     ["CPU", pc?.processor],

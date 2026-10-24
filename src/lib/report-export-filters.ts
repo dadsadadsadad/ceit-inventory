@@ -78,6 +78,8 @@ export type ReportExportFilters = {
   maintenanceSource?: "QR" | "STAFF";
   maintenanceStatus?: MaintenanceStatus;
   missing?: MissingDetail;
+  // pcs past their expected life
+  oldPcs?: boolean;
   pcOnly: boolean;
   period: ExportPeriod;
   // inclusive
@@ -314,6 +316,7 @@ export function parseReportExportFilters(
       "Invalid maintenance status.",
     ),
     missing: missing ? (missing as MissingDetail) : undefined,
+    ...(parameters.get("oldPcs") === "1" ? { oldPcs: true } : {}),
     pcOnly: parameters.get("pcOnly") === "1",
     period: requestedPeriod,
     priceMax,

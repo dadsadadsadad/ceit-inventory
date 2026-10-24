@@ -135,7 +135,7 @@ export function InventoryBulkActions({
             <option value="status">Edit status</option>
             <option value="condition">Edit condition</option>
             <option value="inspect">Record inspection (checked today)</option>
-            <option value="location">Move to location</option>
+            <option value="location">Move to room</option>
             <option value="remove">Retire</option>
             <option value="delete">Permanently delete</option>
           </select>
@@ -151,10 +151,10 @@ export function InventoryBulkActions({
               name="bulkLocationId"
               defaultValue=""
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              aria-label="New location"
+              aria-label="New room"
             >
               <option value="" disabled>
-                Choose an active location
+                Choose an active room
               </option>
               {locations.map((location) => (
                 <option key={location.value} value={location.value}>

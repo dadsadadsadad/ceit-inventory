@@ -5,7 +5,7 @@ import { missingDetails, type MissingDetail } from "@/lib/report-export-filters"
 import { inventoryWhere } from "@/lib/record-search";
 import { prisma } from "@/prisma";
 
-import { chips, formatReportDateTime } from "../format";
+import { chips, formatLastChecked } from "../format";
 import type { ReportModel } from "../model";
 import { missingDetailLabels, missingWhere } from "./item-filters";
 import { filterNames, loadCapped, type BuilderContext } from "./shared";
@@ -144,7 +144,7 @@ export async function buildHealthReport(context: BuilderContext): Promise<Report
           recordGaps(item, now)
             .map((detail) => missingDetailLabels[detail])
             .join("\n"),
-          formatReportDateTime(item.lastCheckedAt),
+          formatLastChecked(item.lastCheckedAt),
         ]),
         total,
         emptyText: "Nothing missing.",

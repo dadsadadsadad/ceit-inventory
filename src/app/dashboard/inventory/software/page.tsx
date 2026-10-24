@@ -72,13 +72,17 @@ function LicensePill({ group, now }: { group: SoftwareGroup; now: Date }) {
   }
   return (
     <span className={`${stateClass[group.state]} rounded-md px-2.5 py-1 text-xs font-semibold`}>
-      {group.state === "expired" || group.state === "expiring"
-        ? `${licenseStateLabel(group.state)} · ${date(group.soonestExpiry)}`
-        : `Valid until ${date(group.soonestExpiry)}`}
-      <span className="sr-only">
-        {" "}
-        ({licenseStateLabel(licenseState(group.soonestExpiry, now))})
-      </span>
+      {group.state === "expired" || group.state === "expiring" ? (
+        `${licenseStateLabel(group.state)} · ${date(group.soonestExpiry)}`
+      ) : (
+        <>
+          Valid until {date(group.soonestExpiry)}
+          <span className="sr-only">
+            {" "}
+            ({licenseStateLabel(licenseState(group.soonestExpiry, now))})
+          </span>
+        </>
+      )}
     </span>
   );
 }

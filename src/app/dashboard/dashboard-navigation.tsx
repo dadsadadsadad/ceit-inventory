@@ -5,7 +5,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   ChevronDown,
-  ClipboardList,
   HandHelping,
   LayoutDashboard,
   LoaderCircle,
@@ -135,7 +134,6 @@ export function DashboardNavigation({
       label: "Management",
       items: [
         { label: "Reports", href: "/dashboard/reports", Icon: BarChart3 },
-        { label: "Student survey", href: "/dashboard/student-survey", Icon: ClipboardList },
         ...(canManageInventory
           ? [{ label: "Audit trail", href: "/dashboard/activity", Icon: ScrollText }]
           : []),

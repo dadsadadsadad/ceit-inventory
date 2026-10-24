@@ -302,15 +302,10 @@ export function InventoryRecords({
                     ) : null}
                     <SortableHeader field="assetTag" label="Asset tag" search={search} />
                     <SortableHeader field="item" label="Item" search={search} />
-                    <SortableHeader field="location" label="Location" search={search} />
+                    <SortableHeader field="location" label="Room" search={search} />
                     <SortableHeader field="stock" label="Stock" search={search} />
                     <SortableHeader field="status" label="Status" search={search} />
-                    <th
-                      scope="col"
-                      className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.16em]"
-                    >
-                      Last checked
-                    </th>
+                    <SortableHeader field="checked" label="Last checked" search={search} />
                   </tr>
                 </thead>
                 <tbody>

@@ -3,7 +3,7 @@ import { ItemStatus, type Prisma } from "@prisma/client";
 import { inventoryWhere } from "@/lib/record-search";
 import { prisma } from "@/prisma";
 
-import { chips, formatReportDateTime, plural } from "../format";
+import { chips, formatLastChecked, formatReportDateTime, plural } from "../format";
 import type { ReportModel } from "../model";
 import { filterNames, type BuilderContext } from "./shared";
 
@@ -171,7 +171,7 @@ export async function buildChecksReport(context: BuilderContext): Promise<Report
         rows: pcsDue.map((item) => [
           label(item),
           item.location.name,
-          item.lastCheckedAt ? formatReportDateTime(item.lastCheckedAt) : "Never",
+          formatLastChecked(item.lastCheckedAt),
         ]),
         total: pcsDue.length,
         emptyText: "Every PC has been checked.",

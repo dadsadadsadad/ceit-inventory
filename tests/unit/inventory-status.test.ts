@@ -4,8 +4,8 @@ import { inventoryStatusClass, inventoryStatusLabel } from "@/lib/inventory-stat
 
 describe("inventory status presentation", () => {
   it("formats stored statuses for people", () => {
-    expect(inventoryStatusLabel("NOT_TESTED")).toBe("Not Tested");
-    expect(inventoryStatusLabel("FOR_REPAIR")).toBe("For Repair");
+    expect(inventoryStatusLabel("NOT_TESTED")).toBe("Not tested");
+    expect(inventoryStatusLabel("FOR_REPAIR")).toBe("For repair");
   });
 
   it("uses an explicit visual state for every supported status", () => {

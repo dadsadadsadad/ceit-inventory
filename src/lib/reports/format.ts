@@ -12,6 +12,10 @@ export function formatReportDateTime(value: Date | null | undefined) {
     : "Not recorded";
 }
 
+export function formatLastChecked(value: Date | null | undefined) {
+  return value ? formatReportDateTime(value) : "Not checked";
+}
+
 export function formatReportDay(value: Date | null | undefined) {
   return value
     ? formatManilaDate(value, { day: "numeric", month: "short", year: "numeric" })

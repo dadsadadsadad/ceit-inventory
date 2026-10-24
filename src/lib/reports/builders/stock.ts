@@ -117,7 +117,7 @@ export async function buildStockReport(context: BuilderContext): Promise<ReportM
         "Asset tag",
         "QR code",
         "Category",
-        "Location",
+        "Room",
         "Quantity",
         "Alert at",
         "Level",

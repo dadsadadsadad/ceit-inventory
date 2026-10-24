@@ -54,10 +54,10 @@ export default async function InventorySetupPage() {
           </section>
           <div className="grid gap-6 xl:grid-cols-2">
             <section className="card rounded-lg p-5 sm:p-6">
-              <h3 className="card-title text-lg font-semibold">Rooms and locations</h3>
+              <h3 className="card-title text-lg font-semibold">Rooms</h3>
               <details className="section-disclosure mt-5">
                 <summary className="accent-link cursor-pointer text-sm font-semibold">
-                  Add location
+                  Add room
                 </summary>
                 <FeedbackForm
                   action={createLocation}
@@ -69,7 +69,7 @@ export default async function InventorySetupPage() {
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label>
-                      <span className="text-sm font-semibold">Location name *</span>
+                      <span className="text-sm font-semibold">Room name *</span>
                       <input
                         required
                         name="name"
@@ -98,15 +98,15 @@ export default async function InventorySetupPage() {
                     />
                   </label>
                   <SubmitButton
-                    pendingLabel="Adding location..."
+                    pendingLabel="Adding room..."
                     className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
                   >
-                    Add location
+                    Add room
                   </SubmitButton>
                 </FeedbackForm>
               </details>
               <div className="divider mt-6 space-y-3 border-t pt-5">
-                <h4 className="text-sm font-semibold">Current locations</h4>
+                <h4 className="text-sm font-semibold">Current rooms</h4>
                 {setup[1].length ? (
                   setup[1].map((location) => (
                     <LocationEditor
