@@ -83,8 +83,11 @@ export function ItemHistory({
           <section>
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold">Preventive maintenance</h2>
-              <Link href="/dashboard/maintenance?view=preventive" className="accent-link text-xs">
-                View schedules
+              <Link
+                href={`/dashboard/maintenance?view=preventive&item=${item.id}#add-schedule`}
+                className="accent-link text-xs"
+              >
+                Add a schedule
               </Link>
             </div>
             {plans.length ? (

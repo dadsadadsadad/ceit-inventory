@@ -741,9 +741,7 @@ export default async function DashboardPage({
         <div className="section-heading">
           <h2 id="todo-heading">To do</h2>
           <span className="muted text-sm">
-            {todoRows.length
-              ? `${todoRows.length} ${todoRows.length === 1 ? "thing" : "things"}`
-              : "Nothing waiting"}
+            {todoRows.length ? "Most urgent first" : "Nothing waiting"}
           </span>
         </div>
         {todoRows.length ? (

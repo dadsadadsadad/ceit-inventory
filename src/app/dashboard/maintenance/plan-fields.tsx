@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ItemPicker, type PickedItem } from "@/app/components/item-picker";
 import { intervalChoices, maxIntervalDays } from "@/lib/maintenance-plans";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; isActive: boolean };
 
 export type PlanValues = {
   title: string;
@@ -24,18 +24,25 @@ export function PlanFields({
   categories,
   locations,
   plan,
+  startItem = null,
   today,
 }: {
   categories: Option[];
   locations: Option[];
   plan?: PlanValues;
+  startItem?: PickedItem | null;
   today: string;
 }) {
   const preset = intervalChoices.some((choice) => choice.days === plan?.intervalDays);
   const [repeat, setRepeat] = useState(
     plan ? (preset ? String(plan.intervalDays) : "custom") : "30",
   );
-  const [scope, setScope] = useState<"group" | "item">(plan?.item ? "item" : "group");
+  const [scope, setScope] = useState<"group" | "item">(plan?.item || startItem ? "item" : "group");
+  // inactive rooms and categories only show when a schedule still uses them
+  const roomOptions = locations.filter((room) => room.isActive || room.id === plan?.locationId);
+  const categoryOptions = categories.filter(
+    (category) => category.isActive || category.id === plan?.categoryId,
+  );
 
   return (
     <div className="space-y-4">
@@ -79,7 +86,7 @@ export function PlanFields({
         </div>
         {scope === "item" ? (
           <div className="mt-3">
-            <ItemPicker name="itemId" label="Item *" initial={plan?.item ?? null} />
+            <ItemPicker name="itemId" label="Item *" initial={plan?.item ?? startItem} />
           </div>
         ) : (
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -87,9 +94,9 @@ export function PlanFields({
               <span className="text-sm font-semibold">Room</span>
               <select name="locationId" defaultValue={plan?.locationId ?? ""} className={field}>
                 <option value="">Every room</option>
-                {locations.map((location) => (
+                {roomOptions.map((location) => (
                   <option key={location.id} value={location.id}>
-                    {location.name}
+                    {location.isActive ? location.name : `${location.name} (inactive)`}
                   </option>
                 ))}
               </select>
@@ -98,9 +105,9 @@ export function PlanFields({
               <span className="text-sm font-semibold">Category</span>
               <select name="categoryId" defaultValue={plan?.categoryId ?? ""} className={field}>
                 <option value="">Every category</option>
-                {categories.map((category) => (
+                {categoryOptions.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.name}
+                    {category.isActive ? category.name : `${category.name} (inactive)`}
                   </option>
                 ))}
               </select>

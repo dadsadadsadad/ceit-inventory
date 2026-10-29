@@ -95,6 +95,11 @@ test("preventive maintenance can be scheduled, done, paused and removed", async 
     ).rows[0].n;
     expect(unchecked).toBe(0);
 
+    // a paper checklist lists every covered item
+    await page.goto(`/dashboard/maintenance/checklist/${plan.id}`);
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page.locator(".checklist-table tbody tr")).toHaveCount(items);
+
     // the schedule shows on the items it covers
     const itemId = (
       await query(`SELECT id FROM "InventoryItem" WHERE "qrCode" = 'ceit-launch-item-3'`)

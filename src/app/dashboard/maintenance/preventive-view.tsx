@@ -49,27 +49,42 @@ function scopeHref(plan: {
 
 export async function PreventiveView({
   adding,
+  itemId,
   now,
   today,
 }: {
   adding: boolean;
+  itemId?: string;
   now: Date;
   today: string;
 }) {
-  const [plans, due, categories, locations] = await Promise.all([
+  const [plans, due, categories, locations, forItem] = await Promise.all([
     loadMaintenancePlans(),
     countDuePlans(today),
     prisma.category.findMany({
-      where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, isActive: true },
     }),
     prisma.location.findMany({
-      where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, isActive: true },
     }),
+    // coming from an item page, start the new schedule with that item
+    itemId
+      ? prisma.inventoryItem.findUnique({
+          where: { id: itemId },
+          select: { id: true, name: true, assetTag: true, location: { select: { name: true } } },
+        })
+      : Promise.resolve(null),
   ]);
+  const startItem = forItem
+    ? {
+        id: forItem.id,
+        name: forItem.name,
+        assetTag: forItem.assetTag,
+        location: forItem.location.name,
+      }
+    : null;
   const lastMonth = plans.reduce(
     (sum, plan) =>
       sum +
@@ -103,7 +118,7 @@ export async function PreventiveView({
       <details
         id="add-schedule"
         className="section-disclosure card scroll-mt-24 rounded-lg p-5 sm:p-6"
-        open={adding || !plans.length}
+        open={adding || Boolean(startItem) || !plans.length}
       >
         <summary className="cursor-pointer text-lg font-semibold">Add a schedule</summary>
         <p className="muted text-sm leading-6">
@@ -115,7 +130,12 @@ export async function PreventiveView({
           successMessage="Schedule added."
           className="mt-5 space-y-4"
         >
-          <PlanFields categories={categories} locations={locations} today={today} />
+          <PlanFields
+            categories={categories}
+            locations={locations}
+            startItem={startItem}
+            today={today}
+          />
           <SubmitButton
             pendingLabel="Adding..."
             className="primary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
@@ -171,7 +191,9 @@ export async function PreventiveView({
                       {plan.lastDoneAt
                         ? `Last done ${doneDate(plan.lastDoneAt)}${plan.lastDoneByName ? ` by ${plan.lastDoneByName}` : ""}`
                         : "Not done yet"}
-                      {plan.isActive ? ` · Next due ${shortDay(plan.nextDue)}` : ""}
+                      {plan.isActive && dueState.state !== "later"
+                        ? ` · Next due ${shortDay(plan.nextDue)}`
+                        : ""}
                     </p>
                     {plan.logs.length ? (
                       <details className="plan-history mt-3">
@@ -224,6 +246,22 @@ export async function PreventiveView({
                         </SubmitButton>
                       </FeedbackForm>
                     ) : null}
+                    <Link
+                      href={`/dashboard/maintenance/checklist/${plan.id}`}
+                      className="accent-link text-sm font-semibold"
+                    >
+                      Print checklist
+                    </Link>
+                    <Link
+                      href={
+                        plan.itemId
+                          ? `/dashboard/maintenance?item=${plan.itemId}#report-issue`
+                          : "/dashboard/maintenance?report=1#report-issue"
+                      }
+                      className="accent-link text-sm font-semibold"
+                    >
+                      Found a problem? Report it
+                    </Link>
                     <details className="section-disclosure min-w-0">
                       <summary className="accent-link cursor-pointer text-sm font-semibold">
                         Edit schedule

@@ -701,6 +701,36 @@
   }
 }
 
+/* preventive maintenance checklist, ticked by hand */
+.checklist-box {
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  display: inline-block;
+  height: 1.05rem;
+  width: 1.05rem;
+}
+
+.checklist-table td {
+  height: 2.6rem;
+}
+
+.checklist-signoff {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  padding-top: 2.5rem;
+}
+
+.checklist-signoff > div {
+  border-top: 1px solid var(--foreground);
+  padding-top: 0.4rem;
+}
+
+.checklist-signoff span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
 /* print only the report */
 @media print {
   .report-sheet {
@@ -712,6 +742,7 @@
   }
 
   .report-actions,
+  .checklist-page .page-inner > header,
   .reports-page .page-inner > header,
   .reports-page form[aria-label="Report builder"],
   .reports-page .quick-reports {

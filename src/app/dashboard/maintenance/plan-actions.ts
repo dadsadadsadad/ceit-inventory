@@ -56,6 +56,9 @@ function readDueDay(formData: FormData) {
 // one item, or a room and/or a category
 async function readScope(formData: FormData) {
   const itemId = optionalId(formData, "itemId");
+  if (formData.get("scope") === "item" && !itemId) {
+    throw new FormError("Pick the item from the list.");
+  }
   if (itemId) {
     const item = await prisma.inventoryItem.findUnique({
       where: { id: itemId },

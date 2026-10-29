@@ -6,7 +6,12 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   reporter: "list",
-  use: { baseURL: "http://127.0.0.1:3101", trace: "retain-on-failure" },
+  // page entrance animations could move a control mid click, motion tests turn it back on
+  use: {
+    baseURL: "http://127.0.0.1:3101",
+    contextOptions: { reducedMotion: "reduce" },
+    trace: "retain-on-failure",
+  },
   webServer: {
     command:
       "node --env-file=.env.e2e.local node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1",

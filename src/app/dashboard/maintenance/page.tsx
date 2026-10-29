@@ -216,7 +216,12 @@ export default async function MaintenancePage({
         </nav>
 
         {preventive ? (
-          <PreventiveView adding={firstParam(search.add) === "1"} now={now} today={today} />
+          <PreventiveView
+            adding={firstParam(search.add) === "1"}
+            itemId={selectedItem}
+            now={now}
+            today={today}
+          />
         ) : null}
 
         {preventive ? null : (
