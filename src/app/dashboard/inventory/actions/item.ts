@@ -17,6 +17,7 @@ import { nextInventoryAssetTag } from "@/lib/asset-tag";
 import { FormError, formAction } from "@/lib/form-action";
 import { requireWriteAccess } from "@/lib/inventory-auth";
 import { isSingleTrackedAsset } from "@/lib/inventory-pc";
+import { maxNotesLength } from "@/lib/item-notes";
 import { maxLabelCount } from "@/lib/label-sheet";
 import { notifyLowStock } from "@/lib/notify-events";
 import { refreshInventoryViews } from "@/lib/refresh-inventory";
@@ -115,7 +116,6 @@ export async function createInventoryItem(formData: FormData) {
                 lowStockThreshold: readLowStockThreshold(formData, itemType),
                 status,
                 condition,
-                description: optionalText(formData, "description", 5_000),
                 manufacturer: optionalText(formData, "manufacturer", 255),
                 model: optionalText(formData, "model", 255),
                 serialNumber,
@@ -123,7 +123,7 @@ export async function createInventoryItem(formData: FormData) {
                 purchasePrice: optionalPurchasePrice(formData),
                 warrantyEndsAt: optionalDate(formData, "warrantyEndsAt"),
                 customFields,
-                notes: optionalText(formData, "notes", 5_000),
+                notes: optionalText(formData, "notes", maxNotesLength),
                 lastCheckedAt,
                 computer: isComputer
                   ? { create: { ...computerData(formData), lastCheckedAt } }
@@ -201,7 +201,6 @@ export async function updateInventoryItem(formData: FormData) {
       status,
       condition: enumValue(formData, "condition", conditions, existing.condition),
       quantity,
-      description: optionalText(formData, "description", 5_000),
       manufacturer: optionalText(formData, "manufacturer", 255),
       model: optionalText(formData, "model", 255),
       serialNumber: identifier(formData, "serialNumber"),
@@ -214,7 +213,7 @@ export async function updateInventoryItem(formData: FormData) {
         { categoryId, itemType },
         existing.customFields,
       ),
-      notes: optionalText(formData, "notes", 5_000),
+      notes: optionalText(formData, "notes", maxNotesLength),
       lastCheckedAt: checkedAtFromDate(
         optionalDate(formData, "lastCheckedAt"),
         existing.lastCheckedAt,
@@ -513,7 +512,6 @@ export async function splitGroupedAsset(formData: FormData) {
                 quantity: 1,
                 status: item.status,
                 condition: item.condition,
-                description: item.description,
                 manufacturer: item.manufacturer,
                 model: item.model,
                 purchaseDate: item.purchaseDate,

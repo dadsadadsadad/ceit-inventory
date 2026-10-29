@@ -131,8 +131,6 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
               "Storage type",
               "Operating system",
               "OS version",
-              "MAC address",
-              "IP address",
               "Last checked",
             ],
             ...capRows(computers, "csv", "PCs").rows.map((entry) => [
@@ -146,8 +144,6 @@ export async function buildHardwareReport(context: BuilderContext): Promise<Repo
               entry.storageType,
               entry.operatingSystem,
               entry.osVersion,
-              entry.macAddress,
-              entry.ipAddress,
               entry.lastCheckedAt ? manilaDateText(entry.lastCheckedAt) : "",
             ]),
           ]

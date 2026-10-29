@@ -41,9 +41,6 @@ export function computerWhere(filters: DirectoryFilters): Prisma.ComputerWhereIn
             { operatingSystem: { contains: term, mode: "insensitive" } },
             { osVersion: { contains: term, mode: "insensitive" } },
             { storageType: { contains: term, mode: "insensitive" } },
-            { macAddress: { contains: term, mode: "insensitive" } },
-            { ipAddress: { contains: term, mode: "insensitive" } },
-            { hardwareDescription: { contains: term, mode: "insensitive" } },
             { item: { is: { name: { contains: term, mode: "insensitive" } } } },
             { item: { is: { assetTag: { contains: term, mode: "insensitive" } } } },
             { item: { is: { location: { name: { contains: term, mode: "insensitive" } } } } },
@@ -84,7 +81,6 @@ export function softwareWhere(
           AND: everyTermMatches<Prisma.ComputerSoftwareWhereInput>(terms, (term) => [
             { name: { contains: term, mode: "insensitive" } },
             { version: { contains: term, mode: "insensitive" } },
-            { licenseKeyHint: { contains: term, mode: "insensitive" } },
             {
               computer: { is: { item: { is: { name: { contains: term, mode: "insensitive" } } } } },
             },
@@ -125,8 +121,6 @@ export async function loadComputers(filters: DirectoryFilters) {
       processor: true,
       storageGb: true,
       storageType: true,
-      macAddress: true,
-      ipAddress: true,
       lastCheckedAt: true,
       item: { select: pcSelect },
     },
@@ -135,9 +129,7 @@ export async function loadComputers(filters: DirectoryFilters) {
   });
   const truncated = rows.length > directoryRowLimit;
   const computers: (DirectoryComputer & {
-    ipAddress: string | null;
     lastCheckedAt: Date | null;
-    macAddress: string | null;
     status: ItemStatus;
   })[] = rows.slice(0, directoryRowLimit).map((row) => ({
     graphics: row.graphics,
@@ -147,8 +139,6 @@ export async function loadComputers(filters: DirectoryFilters) {
     processor: row.processor,
     storageGb: row.storageGb,
     storageType: row.storageType,
-    macAddress: row.macAddress,
-    ipAddress: row.ipAddress,
     lastCheckedAt: row.lastCheckedAt,
     status: row.item.status,
     pc: {
@@ -168,7 +158,6 @@ export async function loadSoftware(filters: DirectoryFilters, now = new Date()) 
     select: {
       name: true,
       version: true,
-      licenseKeyHint: true,
       licenseExpiresAt: true,
       isLicensed: true,
       installedAt: true,
@@ -181,7 +170,6 @@ export async function loadSoftware(filters: DirectoryFilters, now = new Date()) 
   const entries: SoftwareEntry[] = rows.slice(0, directoryRowLimit).map((row) => ({
     name: row.name,
     version: row.version,
-    licenseKeyHint: row.licenseKeyHint,
     licenseExpiresAt: row.licenseExpiresAt,
     isLicensed: row.isLicensed,
     installedAt: row.installedAt,

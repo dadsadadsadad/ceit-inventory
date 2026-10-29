@@ -10,9 +10,6 @@ const pc = {
   location: { name: "Mac Lab" },
   computer: {
     graphics: null,
-    hardwareDescription: "Board: H610M\n PSU: 500W",
-    ipAddress: null,
-    macAddress: null,
     memoryGb: 16,
     operatingSystem: "Windows 11",
     osVersion: "23H2",
@@ -31,7 +28,6 @@ it("lists recorded hardware and skips empty parts", () => {
     ["RAM", "16 GB"],
     ["Storage", "512 GB SSD"],
     ["OS", "Windows 11 23H2"],
-    ["Other", "Board: H610M PSU: 500W"],
   ]);
   expect(pcHardwareRows({ ...pc, manufacturer: null, computer: null })).toEqual([
     ["PC name", "CEIT-MAC09"],

@@ -53,8 +53,6 @@ export function inventoryWhere(search: InventorySearch) {
         { category: { name: { contains: term, mode: "insensitive" } } },
         { location: { name: { contains: term, mode: "insensitive" } } },
         { location: { roomNumber: { contains: term, mode: "insensitive" } } },
-        { computer: { is: { macAddress: { contains: term, mode: "insensitive" } } } },
-        { computer: { is: { ipAddress: { contains: term, mode: "insensitive" } } } },
       ]),
     );
   }

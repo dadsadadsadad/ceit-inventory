@@ -6,8 +6,10 @@ import { CustomFieldInputs } from "@/app/components/custom-field-inputs";
 import { FeedbackForm } from "@/app/components/feedback-form";
 import { FormSection } from "@/app/components/form-section";
 import { NewExtraField } from "@/app/components/new-extra-field";
+import { PcHardwareFields, type HardwareSuggestions } from "@/app/components/pc-hardware-fields";
 import { SubmitButton } from "@/app/components/submit-button";
 import { customFieldsFor, type CustomFieldDefinition } from "@/lib/custom-fields";
+import { maxNotesLength } from "@/lib/item-notes";
 import { defaultLowStockThreshold } from "@/lib/stock-level";
 import { manilaCalendarDate } from "@/lib/manila-date";
 
@@ -79,10 +81,12 @@ function InputField({
 export function NewInventoryForm({
   categories,
   customFields,
+  hardwareSuggestions,
   locations,
 }: {
   categories: SetupOption[];
   customFields: CustomFieldDefinition[];
+  hardwareSuggestions: HardwareSuggestions;
   locations: LocationOption[];
 }) {
   const [isComputer, setIsComputer] = useState(false);
@@ -346,22 +350,13 @@ export function NewInventoryForm({
               />
             </label>
             <label className="sm:col-span-2">
-              <span className="text-sm font-semibold">Description</span>
-              <textarea
-                name="description"
-                rows={2}
-                maxLength={5_000}
-                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                placeholder="Optional"
-              />
-            </label>
-            <label className="sm:col-span-2">
               <span className="text-sm font-semibold">Notes</span>
               <textarea
                 name="notes"
-                rows={2}
-                maxLength={5_000}
+                rows={3}
+                maxLength={maxNotesLength}
                 className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Anything worth knowing, like parts, accessories or history."
               />
             </label>
           </div>
@@ -387,61 +382,10 @@ export function NewInventoryForm({
         </FormSection>
 
         {isComputer ? (
-          <FormSection
-            title="PC hardware and software"
-            defaultOpen
-            hint="Specs and network details"
-          >
+          <FormSection title="PC hardware and software" defaultOpen hint="Specs">
             <div className="grid gap-4 sm:grid-cols-2">
-              <InputField
-                name="operatingSystem"
-                label="Operating system"
-                placeholder="Windows 11 Pro"
-              />
+              <PcHardwareFields suggestions={hardwareSuggestions} />
               <InputField name="osVersion" label="OS version" placeholder="24H2" />
-              <InputField name="processor" label="Processor" />
-              <InputField name="graphics" label="Graphics" />
-              <label>
-                <span className="text-sm font-semibold">Memory (GB)</span>
-                <input
-                  name="memoryGb"
-                  type="number"
-                  min="0"
-                  max="16384"
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                />
-              </label>
-              <label>
-                <span className="text-sm font-semibold">Storage (GB)</span>
-                <input
-                  name="storageGb"
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                />
-              </label>
-              <InputField name="storageType" label="Storage type" placeholder="NVMe SSD" />
-              <InputField name="macAddress" label="MAC address" />
-              <InputField name="ipAddress" label="IP address" />
-              <label className="sm:col-span-2">
-                <span className="text-sm font-semibold">Hardware description</span>
-                <textarea
-                  name="hardwareDescription"
-                  rows={2}
-                  maxLength={5_000}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                />
-              </label>
-              <label className="sm:col-span-2">
-                <span className="text-sm font-semibold">Software description</span>
-                <textarea
-                  name="softwareDescription"
-                  rows={2}
-                  maxLength={5_000}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                />
-              </label>
             </div>
             <p className="muted mt-3 text-xs leading-5">Software can be added after saving.</p>
           </FormSection>

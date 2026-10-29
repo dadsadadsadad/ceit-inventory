@@ -36,8 +36,9 @@ export const summaryKinds = [
   },
   {
     id: "dailyUpkeep",
-    label: "Warranties, licenses and old PCs",
-    description: "Warranties or licenses ending soon and PCs due for replacement.",
+    label: "Upkeep",
+    description:
+      "Preventive maintenance that's due, warranties or licenses ending soon, and PCs due for replacement.",
   },
 ] as const;
 

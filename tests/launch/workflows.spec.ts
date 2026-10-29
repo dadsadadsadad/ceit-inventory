@@ -102,9 +102,7 @@ test("maintenance suggests equipment as you type and accepts an exact item link"
 }) => {
   await signIn(page);
   await page.goto("/dashboard/maintenance?item=------------------------------------");
-  await expect(
-    page.getByRole("heading", { name: "Maintenance requests", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Maintenance", exact: true })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Equipment" })).toHaveCount(0);
   await page.getByRole("link", { name: "Report an issue", exact: true }).click();
   const search = page.getByRole("combobox", { name: "Equipment" });

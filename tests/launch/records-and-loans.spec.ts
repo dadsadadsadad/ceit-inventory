@@ -117,7 +117,7 @@ test("overdue loans are listed, can get a new return time, and cannot overlap a 
   await signIn(page);
   const overdueRow = page
     .locator(".glance-row")
-    .filter({ has: page.locator(".glance-label", { hasText: /^Overdue$/ }) });
+    .filter({ has: page.locator(".glance-label", { hasText: /^Overdue loans$/ }) });
   await expect(overdueRow).toContainText("1");
   await overdueRow.click();
   await expect(page).toHaveURL(/status=OVERDUE/);

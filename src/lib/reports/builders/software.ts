@@ -243,7 +243,6 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
               "Licensed",
               "License ends",
               "License status",
-              "License key hint",
             ],
             ...installs.rows.map(({ install }) => [
               install.name,
@@ -255,7 +254,6 @@ export async function buildSoftwareReport(context: BuilderContext): Promise<Repo
               licensedText(install.isLicensed),
               install.licenseExpiresAt ? manilaDateText(install.licenseExpiresAt) : "",
               licenseStateLabel(licenseState(install.licenseExpiresAt, now)),
-              install.licenseKeyHint,
             ]),
           ]
         : undefined,

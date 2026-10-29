@@ -13,7 +13,7 @@ Folder layout and commands are in [docs/code-guide.md](docs/code-guide.md).
 - qr label printing, single or in batches on A4
 - scanning with a phone camera. staff go to the edit page, students can borrow, return or report a problem
 - borrowing requests, reservations, checkout, returns, overdue tracking and reminders
-- maintenance tickets
+- maintenance tickets and preventive maintenance schedules (per item, room or category)
 - csv/xlsx import with a check mode that doesn't save
 - reports on the page or as pdf/csv, with charts and filters
 - audit trail

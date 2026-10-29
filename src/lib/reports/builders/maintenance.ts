@@ -1,5 +1,7 @@
 import { MaintenancePriority, MaintenanceStatus, type Prisma } from "@prisma/client";
 
+import { intervalLabel, planDue, planScopeLabel, shortDay } from "@/lib/maintenance-plans";
+import { manilaCalendarDate } from "@/lib/manila-date";
 import { maintenanceSearchWhere } from "@/lib/record-search";
 import { reportDateFilter } from "@/lib/report-export-filters";
 import { prisma } from "@/prisma";
@@ -43,6 +45,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
     topItems,
     openTickets,
     repeats,
+    plans,
   ] = await Promise.all([
     loadCapped(context, {
       find: (take) =>
@@ -114,7 +117,24 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
           last: group._max.openedAt,
         }));
       }),
+    prisma.maintenancePlan.findMany({
+      include: {
+        category: { select: { name: true } },
+        location: { select: { name: true } },
+        item: { select: { name: true } },
+      },
+      orderBy: [{ isActive: "desc" }, { nextDueOn: "asc" }],
+      take: 500,
+    }),
   ]);
+  const today = manilaCalendarDate(now);
+  const planRows = plans.map((plan) => ({
+    plan,
+    due: planDue(plan.nextDueOn.toISOString().slice(0, 10), today),
+  }));
+  const overduePlans = planRows.filter(
+    ({ plan, due }) => plan.isActive && due.state === "overdue",
+  ).length;
   const ageBands = [
     { label: "Under a week", below: 7 },
     { label: "1 to 4 weeks", below: 30 },
@@ -146,7 +166,7 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
   return {
     kind: "maintenance",
     title: "Maintenance",
-    description: "Repairs and how long they took.",
+    description: "Repairs, how long they took, and preventive maintenance.",
     filters: chips(
       filters.query && `Search: "${filters.query}"`,
       filters.maintenanceStatus &&
@@ -189,6 +209,12 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         value: repeats.length.toLocaleString(),
         note: "equipment reported more than once",
         tone: repeats.length ? "alert" : undefined,
+      },
+      {
+        label: "Preventive overdue",
+        value: overduePlans.toLocaleString(),
+        note: "schedules past their due date",
+        tone: overduePlans ? "alert" : undefined,
       },
     ],
     charts: [
@@ -270,6 +296,41 @@ export async function buildMaintenanceReport(context: BuilderContext): Promise<R
         ]),
         total: repeats.length,
         emptyText: "No repeat reports.",
+      },
+      {
+        heading: "Preventive maintenance",
+        note: "Upkeep schedules and when they were last done.",
+        columns: [
+          { label: "Task", width: 1.4, primary: true },
+          { label: "Applies to", width: 1.3 },
+          { label: "Repeat", width: 0.9 },
+          { label: "Last done", width: 1 },
+          { label: "Next due", width: 1 },
+        ],
+        tones: planRows.map(({ plan, due }) =>
+          !plan.isActive
+            ? "retired"
+            : due.state === "overdue"
+              ? "defective"
+              : due.state === "later"
+                ? "ok"
+                : "not_tested",
+        ),
+        rows: planRows.map(({ plan, due }) => [
+          plan.title,
+          planScopeLabel(plan),
+          intervalLabel(plan.intervalDays),
+          plan.lastDoneAt
+            ? [formatReportDateTime(plan.lastDoneAt), plan.lastDoneByName]
+                .filter(Boolean)
+                .join("\n")
+            : "Not done yet",
+          plan.isActive
+            ? `${shortDay(plan.nextDueOn.toISOString().slice(0, 10))}\n${due.label}`
+            : "Paused",
+        ]),
+        total: planRows.length,
+        emptyText: "No schedules yet.",
       },
     ],
     csv: [

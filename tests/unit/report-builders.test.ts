@@ -15,6 +15,7 @@ const { database, computers } = vi.hoisted(() => ({
     location: { findMany: vi.fn(), findUnique: vi.fn() },
     borrowRequest: { count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
     maintenanceTicket: { count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
+    maintenancePlan: { findMany: vi.fn() },
   },
   computers: { loadComputers: vi.fn(), loadSoftware: vi.fn() },
 }));
@@ -45,8 +46,6 @@ const computer = (
   processor: "Core i5",
   storageGb: 512,
   storageType: "SSD",
-  macAddress: null,
-  ipAddress: null,
   lastCheckedAt: null,
   pc: pc(name, room),
   ...parts,
@@ -74,6 +73,7 @@ describe("report builders", () => {
       _max: { purchasePrice: null },
     });
     database.maintenanceTicket.findMany.mockResolvedValue([]);
+    database.maintenancePlan.findMany.mockResolvedValue([]);
     database.borrowRequest.findMany.mockResolvedValue([]);
   });
 
@@ -157,7 +157,6 @@ describe("report builders", () => {
       name,
       version,
       licenseExpiresAt,
-      licenseKeyHint: null,
       installedAt: null,
       pc: pc(pcName, "Lab A"),
     });

@@ -90,27 +90,29 @@ enum CustomFieldType {
 
 // rooms and storage areas
 model Location {
-  id           String          @id @default(uuid()) @db.Uuid
-  name         String          @unique
-  assetTagCode String?         @unique @db.VarChar(6)
+  id           String            @id @default(uuid()) @db.Uuid
+  name         String            @unique
+  assetTagCode String?           @unique @db.VarChar(6)
   roomNumber   String?
   description  String?
-  isActive     Boolean         @default(true)
+  isActive     Boolean           @default(true)
   items        InventoryItem[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  plans        MaintenancePlan[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 model Category {
-  id           String          @id @default(uuid()) @db.Uuid
-  name         String          @unique
-  assetTagCode String?         @unique @db.VarChar(6)
+  id           String            @id @default(uuid()) @db.Uuid
+  name         String            @unique
+  assetTagCode String?           @unique @db.VarChar(6)
   description  String?
-  isActive     Boolean         @default(true)
+  isActive     Boolean           @default(true)
   items        InventoryItem[]
   customFields CustomField[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  plans        MaintenancePlan[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 model InventoryItem {
@@ -118,7 +120,6 @@ model InventoryItem {
   assetTag           String?              @unique
   qrCode             String               @unique @default(cuid())
   name               String
-  description        String?
   itemType           ItemType             @default(ASSET)
   isComputer         Boolean              @default(false)
   quantity           Int                  @default(1)
@@ -145,6 +146,7 @@ model InventoryItem {
   photos             InventoryItemPhoto[]
   borrowRequests     BorrowRequest[]
   maintenanceTickets MaintenanceTicket[]
+  maintenancePlans   MaintenancePlan[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
@@ -191,24 +193,20 @@ model CustomField {
 }
 
 model Computer {
-  id                  String             @id @default(uuid()) @db.Uuid
-  itemId              String             @unique @db.Uuid
-  operatingSystem     String?
-  osVersion           String?
-  processor           String?
-  memoryGb            Int?
-  storageGb           Int?
-  storageType         String?
-  graphics            String?
-  macAddress          String?            @unique
-  ipAddress           String?
-  hardwareDescription String?
-  softwareDescription String?
-  lastCheckedAt       DateTime?
-  item                InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  software            ComputerSoftware[]
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  id              String             @id @default(uuid()) @db.Uuid
+  itemId          String             @unique @db.Uuid
+  operatingSystem String?
+  osVersion       String?
+  processor       String?
+  memoryGb        Int?
+  storageGb       Int?
+  storageType     String?
+  graphics        String?
+  lastCheckedAt   DateTime?
+  item            InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  software        ComputerSoftware[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
 model ComputerSoftware {
@@ -216,7 +214,6 @@ model ComputerSoftware {
   computerId       String    @db.Uuid
   name             String
   version          String?
-  licenseKeyHint   String?
   licenseExpiresAt DateTime?
   // null = not set
   isLicensed       Boolean?
@@ -379,4 +376,41 @@ model DashboardNote {
   updatedByName String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// preventive maintenance, a repeating job for one item or a room and/or category
+model MaintenancePlan {
+  id             String               @id @default(uuid()) @db.Uuid
+  title          String
+  notes          String?
+  intervalDays   Int
+  categoryId     String?              @db.Uuid
+  locationId     String?              @db.Uuid
+  itemId         String?              @db.Uuid
+  nextDueOn      DateTime             @db.Date
+  lastDoneAt     DateTime?
+  lastDoneByName String?
+  isActive       Boolean              @default(true)
+  createdByName  String?
+  category       Category?            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  location       Location?            @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  item           InventoryItem?       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  logs           MaintenancePlanLog[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([isActive, nextDueOn])
+  @@index([itemId])
+}
+
+model MaintenancePlanLog {
+  id         String          @id @default(uuid()) @db.Uuid
+  planId     String          @db.Uuid
+  doneAt     DateTime        @default(now())
+  doneByName String?
+  notes      String?
+  itemCount  Int
+  plan       MaintenancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, doneAt])
 }

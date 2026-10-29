@@ -14,6 +14,7 @@ import { isInventoryAssetTag, nextInventoryAssetTag } from "@/lib/asset-tag";
 import { suggestTagCode } from "@/lib/asset-tag-code";
 import { customFieldsFor, type CustomFieldDefinition } from "@/lib/custom-fields";
 import { loadCustomFields } from "@/lib/custom-field-queries";
+import { maxNotesLength } from "@/lib/item-notes";
 import {
   fieldLabels,
   matchHeaders,
@@ -149,9 +150,13 @@ function legacyInspectionState(value: string) {
 }
 
 // keep old/unknown columns in the notes
-function combinedNotes(primaryNotes: string, values: Array<[string, string]>) {
+function combinedNotes(primaryNotes: string[], values: Array<[string, string]>) {
   const context = values.filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
-  return optionalText([primaryNotes, ...context].filter(Boolean).join("\n"), "notes", 5_000);
+  return optionalText(
+    [...primaryNotes, ...context].filter(Boolean).join("\n"),
+    "notes",
+    maxNotesLength,
+  );
 }
 
 function rowCells(row: ExcelJS.Row): HeaderCell[] {
@@ -234,7 +239,7 @@ function messageForImportError(error: unknown) {
     return error.message;
   }
   if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
-    return "the tag, serial number or MAC address is already used.";
+    return "the tag or serial number is already used.";
   }
   return "couldn't be imported. Check the row.";
 }
@@ -246,7 +251,6 @@ type ParsedRow = {
   item: Pick<
     Prisma.InventoryItemUncheckedCreateInput,
     | "condition"
-    | "description"
     | "isComputer"
     | "itemType"
     | "lastCheckedAt"
@@ -316,7 +320,6 @@ function parseImportRow(
         "operatingSystem",
         "processor",
         "memoryGb",
-        "macAddress",
         "hardwareDescription",
         "softwareDescription",
       ] as const
@@ -340,12 +343,9 @@ function parseImportRow(
     optionalText(valueAt("assetTag"), "Asset tag", 255)?.toUpperCase() ?? null;
   const serialNumber =
     optionalText(valueAt("serialNumber"), "Serial number", 255)?.toUpperCase() ?? null;
-  const macAddress = hasComputerDetails
-    ? (optionalText(valueAt("macAddress"), "MAC address", 255)?.toUpperCase() ?? null)
-    : null;
-  if (units > 1 && (suppliedAssetTagText || serialNumber || macAddress)) {
+  if (units > 1 && (suppliedAssetTagText || serialNumber)) {
     throw new ImportRowError(
-      `has quantity ${units} but only one tag, serial or MAC address. Use one row per unit or leave them blank.`,
+      `has quantity ${units} but only one tag or serial number. Use one row per unit or leave them blank.`,
     );
   }
   if (units > 1 && hasComputerDetails) {
@@ -386,16 +386,24 @@ function parseImportRow(
     settings.customColumns.map(({ column, field }) => ({ field, raw: cellAt(column) })),
     warn,
   );
-  const notes = combinedNotes(valueAt("notes"), [
-    ["Old tag", originalTag],
-    ["Unit", valueAt("legacyUnit")],
-    ["Counter", valueAt("legacyCounter")],
-    ["Checked", legacyChecked],
-    ["Acquired", legacyAcquisition && !purchaseDate ? legacyAcquisition : ""],
-    ["Year encoded", valueAt("legacyYearEncoded")],
-    ["Comments", valueAt("legacyComments")],
-    ...settings.keptColumns.map(({ column, header }): [string, string] => [header, cellAt(column)]),
-  ]);
+  const notes = combinedNotes(
+    [valueAt("description"), valueAt("notes")],
+    [
+      ["Hardware", valueAt("hardwareDescription")],
+      ["Software", valueAt("softwareDescription")],
+      ["Old tag", originalTag],
+      ["Unit", valueAt("legacyUnit")],
+      ["Counter", valueAt("legacyCounter")],
+      ["Checked", legacyChecked],
+      ["Acquired", legacyAcquisition && !purchaseDate ? legacyAcquisition : ""],
+      ["Year encoded", valueAt("legacyYearEncoded")],
+      ["Comments", valueAt("legacyComments")],
+      ...settings.keptColumns.map(({ column, header }): [string, string] => [
+        header,
+        cellAt(column),
+      ]),
+    ],
+  );
 
   return {
     categoryName,
@@ -407,7 +415,6 @@ function parseImportRow(
     item: {
       name,
       serialNumber,
-      description: optionalText(valueAt("description"), "Description", 5_000),
       manufacturer: optionalText(valueAt("manufacturer"), "Manufacturer", 255),
       model: optionalText(valueAt("model"), "Model", 255),
       notes,
@@ -434,18 +441,6 @@ function parseImportRow(
           storageGb: looseSizeGb(valueAt("storageGb"), "Storage", warn),
           storageType: optionalText(valueAt("storageType"), "Storage type", 255),
           graphics: optionalText(valueAt("graphics"), "Graphics", 255),
-          macAddress,
-          ipAddress: optionalText(valueAt("ipAddress"), "IP address", 255),
-          hardwareDescription: optionalText(
-            valueAt("hardwareDescription"),
-            "Hardware description",
-            5_000,
-          ),
-          softwareDescription: optionalText(
-            valueAt("softwareDescription"),
-            "Software description",
-            5_000,
-          ),
           lastCheckedAt,
         }
       : null,
@@ -607,7 +602,6 @@ async function saveImportedRow(
 
 type PreviewRow = {
   assetTag: string | null;
-  macAddress: string | null;
   rowNumber: number;
   serialNumber: string | null;
 };
@@ -616,10 +610,9 @@ type PreviewRow = {
 async function existingIdentifierProblems(rows: PreviewRow[]) {
   const assetTags = rows.flatMap((row) => (row.assetTag ? [row.assetTag] : []));
   const serials = rows.flatMap((row) => (row.serialNumber ? [row.serialNumber] : []));
-  const macs = rows.flatMap((row) => (row.macAddress ? [row.macAddress] : []));
-  const [items, computers] = await Promise.all([
+  const items =
     assetTags.length || serials.length
-      ? prisma.inventoryItem.findMany({
+      ? await prisma.inventoryItem.findMany({
           where: {
             OR: [
               ...(assetTags.length ? [{ assetTag: { in: assetTags } }] : []),
@@ -628,20 +621,10 @@ async function existingIdentifierProblems(rows: PreviewRow[]) {
           },
           select: { assetTag: true, serialNumber: true },
         })
-      : Promise.resolve([]),
-    macs.length
-      ? prisma.computer.findMany({
-          where: { macAddress: { in: macs } },
-          select: { macAddress: true },
-        })
-      : Promise.resolve([]),
-  ]);
+      : [];
   const knownTags = new Set(items.flatMap((item) => (item.assetTag ? [item.assetTag] : [])));
   const knownSerials = new Set(
     items.flatMap((item) => (item.serialNumber ? [item.serialNumber] : [])),
-  );
-  const knownMacs = new Set(
-    computers.flatMap((computer) => (computer.macAddress ? [computer.macAddress] : [])),
   );
   const problems = new Map<number, string>();
   for (const row of rows) {
@@ -652,8 +635,6 @@ async function existingIdentifierProblems(rows: PreviewRow[]) {
         row.rowNumber,
         `serial number ${row.serialNumber} is already assigned to a record.`,
       );
-    } else if (row.macAddress && knownMacs.has(row.macAddress)) {
-      problems.set(row.rowNumber, `MAC address ${row.macAddress} is already assigned to a PC.`);
     }
   }
   return problems;
@@ -864,22 +845,17 @@ export async function importInventory(
         if (locationActive === false) {
           throw new ImportRowError(inactiveSetupMessage("location", parsed.locationName));
         }
-        const identifiers = [
-          parsed.suppliedAssetTag,
-          parsed.item.serialNumber,
-          parsed.computer?.macAddress,
-        ].filter(Boolean) as string[];
+        const identifiers = [parsed.suppliedAssetTag, parsed.item.serialNumber].filter(
+          Boolean,
+        ) as string[];
         if (identifiers.some((identifier) => previewIdentifiers.has(identifier))) {
-          throw new ImportRowError(
-            "the tag, serial number or MAC address is repeated in this file.",
-          );
+          throw new ImportRowError("the tag or serial number is repeated in this file.");
         }
         identifiers.forEach((identifier) => previewIdentifiers.add(identifier));
         previewRows.push({
           rowNumber,
           assetTag: parsed.suppliedAssetTag,
           serialNumber: parsed.item.serialNumber ?? null,
-          macAddress: parsed.computer?.macAddress ?? null,
         });
         imported += 1;
         records += parsed.units;

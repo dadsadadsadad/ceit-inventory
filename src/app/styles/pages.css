@@ -255,6 +255,127 @@
   color: var(--status-retired);
 }
 
+/* to do: two columns when there's room, a chevron that moves on hover */
+.todo-card .glance-list {
+  column-gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+
+.todo-card .glance-row,
+.todo-card .glance-list li:first-child .glance-row {
+  border-bottom: 1px solid var(--border);
+  border-top: 0;
+}
+
+.todo-card .glance-row::after {
+  border-right: 2px solid currentColor;
+  border-top: 2px solid currentColor;
+  color: var(--muted);
+  content: "";
+  flex: none;
+  height: 0.4rem;
+  transform: rotate(45deg);
+  transition: transform var(--interaction-duration) var(--interaction-ease);
+  width: 0.4rem;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .todo-card .glance-row:hover::after {
+    transform: translateX(3px) rotate(45deg);
+  }
+}
+
+.todo-more > summary {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.todo-more[open] > summary {
+  margin-bottom: 0.25rem;
+}
+
+.todo-clear {
+  align-items: center;
+  background: var(--status-positive-bg);
+  border-radius: var(--radius-control);
+  color: var(--status-positive);
+  display: flex;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+}
+
+/* preventive maintenance card */
+.plan-glance {
+  display: grid;
+  margin: 0;
+  padding: 0;
+}
+
+.plan-glance a {
+  align-items: center;
+  border-radius: var(--radius-control);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.55rem 0.6rem;
+  transition: background-color var(--interaction-duration) ease;
+}
+
+.plan-glance li:first-child a {
+  border-top-color: transparent;
+}
+
+.plan-glance a:is(:hover, :focus-visible) {
+  background: var(--accent-soft);
+}
+
+.plan-glance-text {
+  display: grid;
+  min-width: 0;
+}
+
+.plan-glance-text strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.plan-glance-text small {
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-glance .status-pill {
+  flex: none;
+}
+
+.plan-glance-foot {
+  align-items: center;
+  border-top: 1px dashed var(--border-input);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 0.9rem;
+}
+
+/* the footer sits at the bottom when the card is stretched to its row */
+.glance-card:has(> .plan-glance-foot) {
+  display: flex;
+  flex-direction: column;
+}
+
+.glance-card > :has(+ .plan-glance-foot) {
+  margin-bottom: 0.9rem;
+}
+
 /* dashboard note */
 .dashboard-note-card {
   min-height: 15rem;
@@ -1354,6 +1475,10 @@
 
 .cal-dot-warranty {
   background: var(--muted);
+}
+
+.cal-dot-upkeep {
+  background: var(--mix-deployed);
 }
 
 .cal-legend {

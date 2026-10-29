@@ -17,7 +17,6 @@ type SoftwareValues = {
   installedAt: Date | null;
   isLicensed: boolean | null;
   licenseExpiresAt: Date | null;
-  licenseKeyHint: string | null;
   name: string;
   version: string | null;
 };
@@ -86,16 +85,6 @@ function SoftwareFields({ software }: { software?: SoftwareValues }) {
         />
       </label>
       <label>
-        <span className="text-sm font-semibold">License hint</span>
-        <input
-          name="licenseKeyHint"
-          defaultValue={software?.licenseKeyHint ?? ""}
-          maxLength={255}
-          className={field}
-          placeholder="Last 4 characters of the key"
-        />
-      </label>
-      <label>
         <span className="text-sm font-semibold">Installed on</span>
         <input
           name="installedAt"
@@ -117,10 +106,6 @@ type ComputerInfo = {
   memoryGb: number | null;
   storageGb: number | null;
   storageType: string | null;
-  macAddress: string | null;
-  ipAddress: string | null;
-  hardwareDescription: string | null;
-  softwareDescription: string | null;
   lastCheckedAt: Date | null;
 };
 
@@ -132,53 +117,15 @@ export function ComputerFields({
   suggestions: HardwareSuggestions;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <PcHardwareFields computer={computer} suggestions={suggestions} />
-        <TextField
-          name="osVersion"
-          label="OS version"
-          value={computer?.osVersion}
-          placeholder="24H2"
-          maxLength={255}
-        />
-        <TextField
-          name="macAddress"
-          label="MAC address"
-          value={computer?.macAddress}
-          maxLength={255}
-        />
-        <TextField
-          name="ipAddress"
-          label="IP address"
-          value={computer?.ipAddress}
-          maxLength={255}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label>
-          <span className="text-sm font-semibold">Hardware description</span>
-          <textarea
-            name="hardwareDescription"
-            rows={4}
-            defaultValue={computer?.hardwareDescription ?? ""}
-            maxLength={5_000}
-            className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Parts, display and peripherals."
-          />
-        </label>
-        <label>
-          <span className="text-sm font-semibold">Software description</span>
-          <textarea
-            name="softwareDescription"
-            rows={4}
-            defaultValue={computer?.softwareDescription ?? ""}
-            maxLength={5_000}
-            className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Notes on software and licenses."
-          />
-        </label>
-      </div>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <PcHardwareFields computer={computer} suggestions={suggestions} />
+      <TextField
+        name="osVersion"
+        label="OS version"
+        value={computer?.osVersion}
+        placeholder="24H2"
+        maxLength={255}
+      />
     </div>
   );
 }
@@ -199,18 +146,6 @@ function ComputerSummary({ computer }: { computer: ComputerInfo }) {
           ? "Not recorded"
           : `${computer.storageGb} GB${computer.storageType ? ` · ${computer.storageType}` : ""}`}
       </Detail>
-      <Detail label="MAC address">{computer.macAddress ?? "Not recorded"}</Detail>
-      <Detail label="IP address">{computer.ipAddress ?? "Not recorded"}</Detail>
-      {computer.hardwareDescription ? (
-        <Detail label="Hardware description" wide>
-          {computer.hardwareDescription}
-        </Detail>
-      ) : null}
-      {computer.softwareDescription ? (
-        <Detail label="Software description" wide>
-          {computer.softwareDescription}
-        </Detail>
-      ) : null}
     </dl>
   );
 }

@@ -22,7 +22,6 @@ const entry = (
 ): SoftwareEntry => ({
   name,
   version: null,
-  licenseKeyHint: null,
   licenseExpiresAt: null,
   isLicensed: null,
   installedAt: null,

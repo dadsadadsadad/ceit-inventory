@@ -9,6 +9,7 @@ import { NewExtraField } from "@/app/components/new-extra-field";
 import { SubmitButton } from "@/app/components/submit-button";
 import { customFieldsFor, readCustomValues, type CustomFieldDefinition } from "@/lib/custom-fields";
 import { inventoryStatusLabel } from "@/lib/inventory-status";
+import { maxNotesLength } from "@/lib/item-notes";
 import { defaultLowStockThreshold } from "@/lib/stock-level";
 
 import {
@@ -234,22 +235,13 @@ export function ItemEditPanel({
                 type="date"
               />
               <label className="block">
-                <span className="text-sm font-semibold">Description</span>
-                <textarea
-                  name="description"
-                  rows={3}
-                  defaultValue={item.description ?? ""}
-                  maxLength={5_000}
-                  className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-                />
-              </label>
-              <label className="block">
                 <span className="text-sm font-semibold">Notes</span>
                 <textarea
                   name="notes"
-                  rows={3}
+                  rows={4}
                   defaultValue={item.notes ?? ""}
-                  maxLength={5_000}
+                  maxLength={maxNotesLength}
+                  placeholder="Anything worth knowing, like parts, accessories or history."
                   className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
                 />
               </label>

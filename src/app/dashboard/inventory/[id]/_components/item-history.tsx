@@ -1,11 +1,23 @@
 import Link from "next/link";
 
+import { borrowStatusLabel } from "@/lib/borrow-status";
+import { intervalLabel, planDue, planDueClass } from "@/lib/maintenance-plans";
 import { formatManilaDate } from "@/lib/manila-date";
 import { personName } from "@/lib/person";
 
 import type { ItemRecord } from "./item-record";
 
-export function ItemHistory({ item }: { item: ItemRecord }) {
+type ItemPlan = { id: string; intervalDays: number; nextDue: string; title: string };
+
+export function ItemHistory({
+  item,
+  plans,
+  today,
+}: {
+  item: ItemRecord;
+  plans: ItemPlan[];
+  today: string;
+}) {
   return (
     <>
       <article className="card rounded-lg p-5 sm:p-6">
@@ -28,7 +40,7 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
                       {request.isReservation ? "Reservation" : "Borrowing"} · {request.borrowerName}
                     </p>
                     <p className="muted mt-1 text-xs">
-                      {request.status.toLowerCase().replaceAll("_", " ")} ·{" "}
+                      {borrowStatusLabel(request.status)} ·{" "}
                       {formatManilaDate(request.startsAt, {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -66,6 +78,39 @@ export function ItemHistory({ item }: { item: ItemRecord }) {
               </ul>
             ) : (
               <p className="muted mt-2 text-sm">No open issues.</p>
+            )}
+          </section>
+          <section>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Preventive maintenance</h2>
+              <Link href="/dashboard/maintenance?view=preventive" className="accent-link text-xs">
+                View schedules
+              </Link>
+            </div>
+            {plans.length ? (
+              <ul className="mt-3 space-y-2">
+                {plans.map((plan) => {
+                  const due = planDue(plan.nextDue, today);
+                  return (
+                    <li key={plan.id} className="flex flex-wrap items-center gap-2 text-sm">
+                      <Link
+                        href={`/dashboard/maintenance?view=preventive#plan-${plan.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {plan.title}
+                      </Link>
+                      <span className="muted text-xs">{intervalLabel(plan.intervalDays)}</span>
+                      <span
+                        className={`${planDueClass(due.state)} rounded-md px-2 py-0.5 text-xs font-semibold`}
+                      >
+                        {due.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="muted mt-2 text-sm">No schedules cover this item.</p>
             )}
           </section>
         </div>

@@ -133,7 +133,9 @@ describe("audit trail views", () => {
 
   it("scopes quick views by what the event is about", () => {
     expect(auditViewWhere("borrowing")).toEqual({ entityType: "borrow-request" });
-    expect(auditViewWhere("maintenance")).toEqual({ entityType: "maintenance-ticket" });
+    expect(auditViewWhere("maintenance")).toEqual({
+      entityType: { in: ["maintenance-ticket", "maintenance-plan"] },
+    });
     expect(auditViewWhere("setup")).toEqual({
       entityType: {
         in: ["account", "category", "location", "custom-field", "calendar-event", "dashboard-note"],

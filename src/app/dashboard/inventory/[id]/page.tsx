@@ -10,6 +10,8 @@ import { isUuid } from "@/lib/ids";
 import { canManageInventory, requireInventoryAccess } from "@/lib/inventory-auth";
 import { firstParam, type RawParam } from "@/lib/search-params";
 import { loadHardwareSuggestions } from "@/lib/computer-queries";
+import { loadPlansForItem } from "@/lib/maintenance-plan-queries";
+import { manilaCalendarDate } from "@/lib/manila-date";
 import { prisma } from "@/prisma";
 
 import { ComputerSection } from "./_components/computer-profile";
@@ -49,6 +51,8 @@ export default async function InventoryItemPage({
   if (!item) {
     notFound();
   }
+  const today = manilaCalendarDate();
+  const plans = await loadPlansForItem(item);
   // the scan shortcuts have their own check button
   const scanned = firstParam(search.scanned) === "1";
 
@@ -125,7 +129,7 @@ export default async function InventoryItemPage({
               <StockCard item={item} />
             ) : null}
             <ComputerSection item={item} canManage={canManage} suggestions={hardware} />
-            <ItemHistory item={item} />
+            <ItemHistory item={item} plans={plans} today={today} />
           </div>
 
           {canManage ? (

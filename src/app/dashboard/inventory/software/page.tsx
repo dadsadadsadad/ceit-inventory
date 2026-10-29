@@ -338,22 +338,17 @@ export default async function SoftwarePage({
                         <table className="w-full">
                           <thead>
                             <tr className="table-heading divider border-b">
-                              {[
-                                "PC",
-                                "Version",
-                                "Installed",
-                                "Licensed",
-                                "License ends",
-                                "License hint",
-                              ].map((heading) => (
-                                <th
-                                  key={heading}
-                                  scope="col"
-                                  className="px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.12em]"
-                                >
-                                  {heading}
-                                </th>
-                              ))}
+                              {["PC", "Version", "Installed", "Licensed", "License ends"].map(
+                                (heading) => (
+                                  <th
+                                    key={heading}
+                                    scope="col"
+                                    className="px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.12em]"
+                                  >
+                                    {heading}
+                                  </th>
+                                ),
+                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -398,9 +393,6 @@ export default async function SoftwarePage({
                                   ) : (
                                     <span className="muted">Not recorded</span>
                                   )}
-                                </td>
-                                <td className="muted px-3 py-3 text-sm">
-                                  {install.licenseKeyHint ?? "-"}
                                 </td>
                               </tr>
                             ))}

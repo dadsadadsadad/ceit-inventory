@@ -97,11 +97,11 @@ export function ItemSummary({
             ))}
           </dl>
         </div>
-        {item.description ? (
-          <p className="divider mt-5 border-t pt-5 text-sm leading-6">{item.description}</p>
-        ) : null}
         {item.notes ? (
-          <p className="muted mt-3 whitespace-pre-line text-sm leading-6">Notes: {item.notes}</p>
+          <div className="divider mt-5 border-t pt-5">
+            <h3 className="muted text-xs font-bold uppercase tracking-wide">Notes</h3>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6">{item.notes}</p>
+          </div>
         ) : null}
         {item.itemType === ItemType.ASSET && item.quantity > 1 ? (
           <p className="notice mt-5 rounded-lg px-4 py-3 text-sm leading-6">

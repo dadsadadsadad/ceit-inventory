@@ -212,10 +212,10 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
         "Purchase price (PHP)",
         "Last checked",
         "PC operating system",
-        "PC last checked",
         "Low stock alert",
         "Warranty ends",
         ...customFields.map((field) => field.label),
+        "Notes",
       ],
       ...items.map((item) => [
         item.assetTag,
@@ -235,12 +235,12 @@ export async function buildInventoryReport(context: BuilderContext): Promise<Rep
         item.purchasePrice === null ? "" : Number(item.purchasePrice.toString()),
         item.lastCheckedAt ? manilaDateText(item.lastCheckedAt) : "",
         item.computer?.operatingSystem,
-        item.computer?.lastCheckedAt ? manilaDateText(item.computer.lastCheckedAt) : "",
         item.itemType === "SUPPLY" ? lowStockLevelFor(item) : "",
         item.warrantyEndsAt ? manilaDateText(item.warrantyEndsAt) : "",
         ...customFields.map((field) =>
           formatCustomValue(field, readCustomValues(item.customFields)[field.id]),
         ),
+        item.notes,
       ]),
     ],
   };

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { NewInventoryForm } from "./new-inventory-form";
 import { prisma } from "@/prisma";
+import { loadHardwareSuggestions } from "@/lib/computer-queries";
 import { loadCustomFields } from "@/lib/custom-field-queries";
 import { requireInventoryManagementPageAccess } from "@/lib/inventory-auth";
 
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewInventoryItemPage() {
   await requireInventoryManagementPageAccess();
-  const [categories, locations, pcCounts, customFields] = await Promise.all([
+  const [categories, locations, pcCounts, customFields, hardwareSuggestions] = await Promise.all([
     prisma.category.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -28,6 +29,7 @@ export default async function NewInventoryItemPage() {
       _count: { _all: true },
     }),
     loadCustomFields(),
+    loadHardwareSuggestions(),
   ]);
   const ready = categories.length > 0 && locations.length > 0;
   const pcCountsByLocation = new Map(
@@ -46,12 +48,17 @@ export default async function NewInventoryItemPage() {
         </header>
         {!ready ? (
           <div className="notice rounded-lg px-5 py-4 text-sm">
-            Add a category and location in Settings first.
+            Add a room and a category in{" "}
+            <Link href="/dashboard/inventory/setup" className="accent-link font-semibold">
+              Rooms and categories
+            </Link>{" "}
+            first.
           </div>
         ) : (
           <NewInventoryForm
             categories={categories}
             customFields={customFields}
+            hardwareSuggestions={hardwareSuggestions}
             locations={locations.map((location) => ({
               ...location,
               nextPcNumber: (pcCountsByLocation.get(location.id) ?? 0) + 1,

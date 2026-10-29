@@ -103,7 +103,6 @@ export async function addComputerSoftware(formData: FormData) {
           computerId,
           name,
           version: optionalText(formData, "version", 255),
-          licenseKeyHint: optionalText(formData, "licenseKeyHint", 255),
           ...licenseFields(formData),
           installedAt: optionalDate(formData, "installedAt"),
         },
@@ -139,7 +138,6 @@ export async function updateComputerSoftware(formData: FormData) {
     const data = {
       name: requiredText(formData, "name", 255),
       version: optionalText(formData, "version", 255),
-      licenseKeyHint: optionalText(formData, "licenseKeyHint", 255),
       ...licenseFields(formData),
       installedAt: optionalDate(formData, "installedAt"),
     };

@@ -1,10 +1,11 @@
 // days are "YYYY-MM-DD" and months "YYYY-MM", in manila time
 
-export type CalendarKind = "return" | "pickup" | "license" | "warranty" | "event";
+export type CalendarKind = "return" | "pickup" | "upkeep" | "license" | "warranty" | "event";
 
 export const calendarKinds: Record<CalendarKind, { label: string; plural: string }> = {
   return: { label: "Return", plural: "Returns" },
   pickup: { label: "Pickup", plural: "Pickups" },
+  upkeep: { label: "Maintenance due", plural: "Maintenance" },
   license: { label: "License ends", plural: "Licenses ending" },
   warranty: { label: "Warranty ends", plural: "Warranties ending" },
   event: { label: "Event", plural: "Events" },
@@ -116,7 +117,7 @@ export function dayHeading(day: string) {
 }
 
 export function entriesByDay(entries: CalendarEntry[]) {
-  const order: CalendarKind[] = ["return", "pickup", "event", "license", "warranty"];
+  const order: CalendarKind[] = ["return", "pickup", "upkeep", "event", "license", "warranty"];
   const byDay = new Map<string, CalendarEntry[]>();
   for (const entry of entries) {
     byDay.set(entry.day, [...(byDay.get(entry.day) ?? []), entry]);

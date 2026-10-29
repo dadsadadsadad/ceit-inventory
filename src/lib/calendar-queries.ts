@@ -5,6 +5,8 @@ import { BorrowStatus, ItemStatus } from "@prisma/client";
 import { prisma } from "@/prisma";
 
 import { monthBounds, type CalendarEntry } from "./calendar";
+import { planScopeLabel } from "./maintenance-plans";
+import { loadPlansDueBetween } from "./maintenance-plan-queries";
 import { manilaCalendarDate } from "./manila-date";
 
 // just a safety cap
@@ -21,7 +23,7 @@ function timeText(date: Date) {
 // loans, reservations, licenses, warranties and staff events for one month
 export async function loadCalendarMonth(month: string, now = new Date()): Promise<CalendarEntry[]> {
   const { start, end, startDay, endDay } = monthBounds(month);
-  const [returns, pickups, licenses, warranties, events] = await Promise.all([
+  const [returns, pickups, licenses, warranties, events, plans] = await Promise.all([
     prisma.borrowRequest.findMany({
       where: {
         status: { in: [BorrowStatus.BORROWED, BorrowStatus.RETURN_REQUESTED] },
@@ -81,6 +83,7 @@ export async function loadCalendarMonth(month: string, now = new Date()): Promis
       orderBy: [{ eventDate: "asc" }, { createdAt: "asc" }],
       take: perSource,
     }),
+    loadPlansDueBetween(startDay, endDay, perSource),
   ]);
 
   const entries: CalendarEntry[] = [];
@@ -123,6 +126,19 @@ export async function loadCalendarMonth(month: string, now = new Date()): Promis
       id: `warranty:${item.id}`,
       kind: "warranty",
       title: item.name,
+    });
+  }
+  const today = manilaCalendarDate(now);
+  for (const plan of plans) {
+    const day = plan.nextDueOn.toISOString().slice(0, 10);
+    entries.push({
+      day,
+      detail: planScopeLabel(plan),
+      href: `/dashboard/maintenance?view=preventive#plan-${plan.id}`,
+      id: `upkeep:${plan.id}`,
+      kind: "upkeep",
+      late: day < today,
+      title: plan.title,
     });
   }
   for (const event of events) {

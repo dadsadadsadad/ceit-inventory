@@ -22,7 +22,7 @@ import {
 import { createCalendarEvent, deleteCalendarEvent } from "./calendar-actions";
 
 const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const legend: CalendarKind[] = ["return", "pickup", "event", "license", "warranty"];
+const legend: CalendarKind[] = ["return", "pickup", "upkeep", "event", "license", "warranty"];
 
 function dotClass(entry: CalendarEntry) {
   return entry.late ? "cal-dot-late" : `cal-dot-${entry.kind}`;
@@ -199,7 +199,11 @@ export function DashboardCalendar({
                 <i className={`cal-dot ${dotClass(entry)}`} aria-hidden="true" />
                 <div className="cal-entry-text">
                   <span className="cal-entry-kind">
-                    {entry.late ? "Overdue return" : calendarKinds[entry.kind].label}
+                    {entry.late
+                      ? entry.kind === "upkeep"
+                        ? "Maintenance overdue"
+                        : "Overdue return"
+                      : calendarKinds[entry.kind].label}
                   </span>
                   {entry.href ? (
                     <Link href={entry.href} className="cal-entry-title accent-link">

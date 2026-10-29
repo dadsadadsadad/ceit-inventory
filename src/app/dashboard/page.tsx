@@ -9,7 +9,7 @@ import {
   MaintenancePriority,
   MaintenanceStatus,
 } from "@prisma/client";
-import { ArrowRight, LayoutGrid } from "lucide-react";
+import { ArrowRight, CircleCheck, LayoutGrid } from "lucide-react";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/app/components/brand-mark";
 import { DashboardCalendar } from "./dashboard-calendar";
@@ -44,6 +44,8 @@ import {
 import { inventoryStatusLabel } from "@/lib/inventory-status";
 import { dueTodayWhere } from "@/lib/loan-due";
 import { loadCalendarMonth } from "@/lib/calendar-queries";
+import { planDue, planDueClass, planScopeLabel } from "@/lib/maintenance-plans";
+import { countDuePlans, loadUpcomingPlans } from "@/lib/maintenance-plan-queries";
 import { formatManilaDate, manilaCalendarDate, manilaHour } from "@/lib/manila-date";
 import { personName } from "@/lib/person";
 import { recentMonths } from "@/lib/reports/charts";
@@ -62,6 +64,9 @@ type Breakdown = { id: string; name: string; count: number }[];
 
 const inService = { status: { notIn: [ItemStatus.RETIRED, ItemStatus.LOST] } };
 const dayMs = 24 * 60 * 60 * 1000;
+
+// the rest of the to do list folds away
+const todoShown = 7;
 
 const statusOrder: ItemStatus[] = [
   "OK",
@@ -87,7 +92,7 @@ function breakdown(
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
-async function getDashboardData(extras: Set<WidgetId>) {
+async function getDashboardData(extras: Set<WidgetId>, today: string) {
   const now = new Date();
   const months = recentMonths(now, 6);
   const [
@@ -115,6 +120,8 @@ async function getDashboardData(extras: Set<WidgetId>) {
     topBorrowed,
     pcDates,
     fixedTickets,
+    duePlans,
+    upcomingPlans,
   ] = await Promise.all([
     prisma.inventoryItem.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.location.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
@@ -225,6 +232,8 @@ async function getDashboardData(extras: Set<WidgetId>) {
           select: { openedAt: true, resolvedAt: true },
         })
       : Promise.resolve([]),
+    countDuePlans(today),
+    extras.has("preventive") ? loadUpcomingPlans(today) : Promise.resolve([]),
   ]);
   // old notes saved the email, show the username
   const noteAuthor = dashboardNote?.updatedByName ?? null;
@@ -312,6 +321,8 @@ async function getDashboardData(extras: Set<WidgetId>) {
     reservationCount: count(BorrowStatus.RESERVED),
     returnCount: count(BorrowStatus.RETURN_REQUESTED),
     overdueCount: overdueCount(BorrowStatus.BORROWED) + overdueCount(BorrowStatus.RETURN_REQUESTED),
+    duePlans,
+    upcomingPlans,
   };
 }
 
@@ -412,7 +423,7 @@ export default async function DashboardPage({
   const shown = new Set(fullLayout.filter((widget) => widget.visible).map((widget) => widget.id));
   let dashboard: Awaited<ReturnType<typeof getDashboardData>> | null = null;
   try {
-    dashboard = await getDashboardData(shown);
+    dashboard = await getDashboardData(shown, today);
   } catch (error) {
     console.error("Unable to load dashboard", error);
   }
@@ -515,13 +526,123 @@ export default async function DashboardPage({
       tone: "positive",
     },
   ];
+  const plansDue = dashboard.duePlans.overdue + dashboard.duePlans.dueToday;
+  // most urgent first, only what needs someone
+  const allTodo: (GlanceRow & { manage?: boolean })[] = [
+    {
+      label: "Overdue loans",
+      count: dashboard.overdueCount,
+      href: "/dashboard/borrowing?status=OVERDUE",
+      tone: "critical",
+      manage: true,
+    },
+    {
+      label: "Requests to review",
+      count: dashboard.pendingBorrowCount,
+      href: "/dashboard/borrowing?status=REQUESTED",
+      tone: "pending",
+      manage: true,
+    },
+    {
+      label: "Returns to confirm",
+      count: dashboard.returnCount,
+      href: "/dashboard/borrowing?status=RETURN_REQUESTED",
+      tone: "pending",
+      manage: true,
+    },
+    {
+      label: "Maintenance overdue",
+      count: dashboard.duePlans.overdue,
+      href: "/dashboard/maintenance?view=preventive",
+      tone: "critical",
+      manage: true,
+    },
+    {
+      label: "High or urgent repairs",
+      count: dashboard.urgentTicketCount,
+      href: "/dashboard/maintenance?status=OPEN",
+      tone: "critical",
+      manage: true,
+    },
+    {
+      label: "Defective items",
+      count: dashboard.defectiveCount,
+      href: "/dashboard/inventory?status=DEFECTIVE",
+      tone: "critical",
+    },
+    {
+      label: "Out of stock",
+      count: dashboard.outOfStockCount,
+      href: "/dashboard/inventory?stock=out",
+      tone: "critical",
+    },
+    {
+      label: "Due back today",
+      count: dashboard.dueTodayCount,
+      href: "/dashboard/borrowing?status=DUE_TODAY",
+      tone: "pending",
+      manage: true,
+    },
+    {
+      label: "Maintenance due this week",
+      count: dashboard.duePlans.dueToday + dashboard.duePlans.soon,
+      href: "/dashboard/maintenance?view=preventive",
+      tone: "pending",
+      manage: true,
+    },
+    {
+      label: "Other open repairs",
+      count: dashboard.openTicketCount - dashboard.urgentTicketCount,
+      href: "/dashboard/maintenance?status=OPEN",
+      tone: "pending",
+      manage: true,
+    },
+    {
+      label: "Low stock",
+      count: dashboard.lowStockCount,
+      href: "/dashboard/inventory?stock=low",
+      tone: "pending",
+    },
+    {
+      label: "Not tested",
+      count: dashboard.notTestedCount,
+      href: "/dashboard/inventory?status=NOT_TESTED",
+      tone: "pending",
+    },
+    {
+      label: "Poor or for repair",
+      count: dashboard.poorConditionCount,
+      href: "/dashboard/inventory?attention=1",
+      tone: "pending",
+    },
+    {
+      label: "Warranty ending soon",
+      count: dashboard.warrantyEndingCount,
+      href: "/dashboard/inventory?warranty=ending",
+      tone: "pending",
+    },
+    {
+      label: `PCs ${pcReplacementYears}+ years old`,
+      count: dashboard.replacementCount,
+      href: "/dashboard/inventory?age=old",
+      tone: "retired",
+    },
+    {
+      label: `Not checked in ${inspectionIntervalDays}+ days`,
+      count: dashboard.uncheckedCount,
+      href: "/dashboard/inventory?checked=overdue",
+      tone: "retired",
+    },
+  ];
+  const todoRows = allTodo.filter((row) => row.count > 0 && (canManage || !row.manage));
   const waiting =
     dashboard.attentionCount +
     (canManage
       ? dashboard.pendingBorrowCount +
         dashboard.returnCount +
         dashboard.overdueCount +
-        dashboard.openTicketCount
+        dashboard.openTicketCount +
+        plansDue
       : 0);
   const widgets: Record<WidgetId, ReactNode> = {
     quickActions: <QuickActionsCard canManage={canManage} />,
@@ -613,6 +734,88 @@ export default async function DashboardPage({
         <GlanceList rows={borrowingRows} />
         <p className="viz-caption">Requests per month</p>
         <Columns unit="requests" data={dashboard.requestsPerMonth} />
+      </article>
+    ),
+    todo: (
+      <article className="card glance-card todo-card rounded-lg" aria-labelledby="todo-heading">
+        <div className="section-heading">
+          <h2 id="todo-heading">To do</h2>
+          <span className="muted text-sm">
+            {todoRows.length
+              ? `${todoRows.length} ${todoRows.length === 1 ? "thing" : "things"}`
+              : "Nothing waiting"}
+          </span>
+        </div>
+        {todoRows.length ? (
+          <>
+            <GlanceList rows={todoRows.slice(0, todoShown)} />
+            {todoRows.length > todoShown ? (
+              <details className="todo-more">
+                <summary className="accent-link cursor-pointer text-sm font-semibold">
+                  Show {todoRows.length - todoShown} more
+                </summary>
+                <GlanceList rows={todoRows.slice(todoShown)} />
+              </details>
+            ) : null}
+          </>
+        ) : (
+          <p className="todo-clear">
+            <CircleCheck size={20} aria-hidden="true" />
+            All caught up. Nothing needs a look right now.
+          </p>
+        )}
+      </article>
+    ),
+    preventive: (
+      <article className="card glance-card rounded-lg" aria-labelledby="preventive-heading">
+        <div className="section-heading">
+          <h2 id="preventive-heading">Preventive maintenance</h2>
+          <Link
+            href="/dashboard/maintenance?view=preventive"
+            className="accent-link text-sm font-semibold"
+          >
+            View all
+          </Link>
+        </div>
+        {dashboard.upcomingPlans.length ? (
+          <ul className="plan-glance">
+            {dashboard.upcomingPlans.map((plan) => {
+              const due = planDue(plan.nextDue, today);
+              return (
+                <li key={plan.id}>
+                  <Link href={`/dashboard/maintenance?view=preventive#plan-${plan.id}`}>
+                    <span className="plan-glance-text">
+                      <strong>{plan.title}</strong>
+                      <small className="muted">{planScopeLabel(plan)}</small>
+                    </span>
+                    <span
+                      className={`${planDueClass(due.state)} rounded-md px-2 py-0.5 text-xs font-semibold`}
+                    >
+                      {due.label}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="muted text-sm leading-6">
+            {dashboard.duePlans.active
+              ? "Nothing due this week."
+              : "No schedules yet. Add one for upkeep that repeats, like cleaning a lab's PCs."}
+          </p>
+        )}
+        <p className="plan-glance-foot muted text-sm">
+          {dashboard.duePlans.active
+            ? `${dashboard.duePlans.active} active ${dashboard.duePlans.active === 1 ? "schedule" : "schedules"}`
+            : "Nothing scheduled"}
+          <Link
+            href="/dashboard/maintenance?view=preventive&add=1#add-schedule"
+            className="accent-link font-semibold"
+          >
+            Add a schedule
+          </Link>
+        </p>
       </article>
     ),
     attention: (
@@ -782,6 +985,7 @@ export default async function DashboardPage({
   // nothing urgent can still mean upkeep is due
   const upkeep = (
     [
+      [dashboard.duePlans.soon, "with maintenance due this week"],
       [dashboard.uncheckedCount, "due for a check"],
       [dashboard.lowStockCount, "low on stock"],
       [dashboard.warrantyEndingCount, "with a warranty ending soon"],

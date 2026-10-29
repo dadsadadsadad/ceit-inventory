@@ -23,9 +23,6 @@ type PcLabelItem = {
   location: { name: string };
   computer: {
     graphics: string | null;
-    hardwareDescription: string | null;
-    ipAddress: string | null;
-    macAddress: string | null;
     memoryGb: number | null;
     operatingSystem: string | null;
     osVersion: string | null;
@@ -54,9 +51,6 @@ export function pcHardwareRows(item: PcLabelItem): [string, string][] {
     ],
     ["OS", [pc?.operatingSystem, pc?.osVersion].filter(Boolean).join(" ") || null],
     ["Serial", item.serialNumber],
-    ["MAC", pc?.macAddress],
-    ["IP", pc?.ipAddress],
-    ["Other", pc?.hardwareDescription?.replace(/\s+/g, " ").trim()],
   ];
   return rows
     .filter((row, index) => index < 2 || Boolean(row[1]))

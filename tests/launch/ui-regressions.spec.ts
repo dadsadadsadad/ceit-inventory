@@ -61,8 +61,10 @@ test("hover, press, and keyboard feedback remain distinct in both themes", async
     await expect(queue).toBeFocused();
     expect(await queue.evaluate((node) => node.matches(":focus-visible"))).toBe(true);
     expect(await queue.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe("solid");
+    // the first to do row depends on what is waiting
+    const target = (await queue.getAttribute("href"))!;
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/dashboard\/borrowing\?status=REQUESTED$/);
+    await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === target);
     await expect(page.locator("main h1")).toBeVisible();
     await page.goto("/dashboard");
     await expect(

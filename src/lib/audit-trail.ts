@@ -142,6 +142,7 @@ const singleLabelPrintSummary = "Label printed.";
 const nonInventoryEntities = [
   "borrow-request",
   "maintenance-ticket",
+  "maintenance-plan",
   "account",
   "category",
   "location",
@@ -170,7 +171,7 @@ export function auditViewWhere(view: AuditView): Prisma.InventoryAuditWhereInput
     case "borrowing":
       return { entityType: "borrow-request" };
     case "maintenance":
-      return { entityType: "maintenance-ticket" };
+      return { entityType: { in: ["maintenance-ticket", "maintenance-plan"] } };
     case "setup":
       return {
         entityType: {
@@ -357,7 +358,7 @@ export function auditCategory(event: AuditTrailEvent) {
   if (event.entityType === "borrow-request") {
     return "Borrowing";
   }
-  if (event.entityType === "maintenance-ticket") {
+  if (event.entityType === "maintenance-ticket" || event.entityType === "maintenance-plan") {
     return "Maintenance";
   }
 

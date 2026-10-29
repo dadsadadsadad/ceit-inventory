@@ -116,7 +116,7 @@ export function assertAssetTag(assetTag: string | null, itemType: ItemType) {
 // unique constraint errors -> form errors
 export function inventoryWriteError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return new FormError("That tag, serial number or MAC address is already used.");
+    return new FormError("That asset tag or serial number is already used.");
   }
   return error;
 }
@@ -333,10 +333,6 @@ export function computerData(formData: FormData, includeCheckTime = false) {
     storageGb: optionalInteger(formData, "storageGb", 1_000_000),
     storageType: optionalText(formData, "storageType", 255),
     graphics: optionalText(formData, "graphics", 255),
-    macAddress: identifier(formData, "macAddress"),
-    ipAddress: optionalText(formData, "ipAddress", 255),
-    hardwareDescription: optionalText(formData, "hardwareDescription", 5_000),
-    softwareDescription: optionalText(formData, "softwareDescription", 5_000),
     ...(includeCheckTime ? { lastCheckedAt: new Date() } : {}),
   };
 }

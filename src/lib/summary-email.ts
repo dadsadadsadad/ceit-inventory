@@ -3,8 +3,9 @@ import "server-only";
 import { BorrowStatus, ItemStatus, MaintenanceStatus } from "@prisma/client";
 
 import { replacementDueWhere } from "./inventory-attention";
+import { addDays, planDue, planScopeLabel } from "./maintenance-plans";
 import { dueTodayWhere, outLoanStatuses } from "./loan-due";
-import { formatManilaDate } from "./manila-date";
+import { formatManilaDate, manilaCalendarDate } from "./manila-date";
 import { manilaWeekday, summaryDueOn, type SummaryTime } from "./notification-kinds";
 import { appLink, sendMail } from "./notifications";
 import { lowStockWhere } from "./stock-queries";
@@ -81,6 +82,7 @@ export async function sendSummaries(time: SummaryTime, now = new Date()) {
     requests,
     returns,
     problems,
+    plans,
   ] = await Promise.all([
     prisma.borrowRequest.findMany({
       where: { status: { in: outLoanStatuses }, expectedReturnDate: { lt: now } },
@@ -139,7 +141,20 @@ export async function sendSummaries(time: SummaryTime, now = new Date()) {
       select: { title: true, openedAt: true, inventoryItem: { select: { name: true } } },
       orderBy: { openedAt: "desc" },
     }),
+    prisma.maintenancePlan.findMany({
+      where: {
+        isActive: true,
+        nextDueOn: { lte: new Date(`${addDays(manilaCalendarDate(now), 7)}T00:00:00.000Z`) },
+      },
+      include: {
+        category: { select: { name: true } },
+        location: { select: { name: true } },
+        item: { select: { name: true } },
+      },
+      orderBy: { nextDueOn: "asc" },
+    }),
   ]);
+  const today = manilaCalendarDate(now);
 
   let sent = 0;
   for (const user of users) {
@@ -207,6 +222,20 @@ export async function sendSummaries(time: SummaryTime, now = new Date()) {
         : null,
       ...(wants("dailyUpkeep")
         ? [
+            section(
+              weekly ? "Preventive maintenance this week" : "Preventive maintenance due",
+              plans
+                .map((plan) => ({
+                  plan,
+                  due: planDue(plan.nextDueOn.toISOString().slice(0, 10), today),
+                }))
+                .filter(({ due }) => weekly || due.state === "overdue" || due.state === "today")
+                .map(
+                  ({ plan, due }) =>
+                    `${plan.title}, ${planScopeLabel(plan)}, ${due.label.toLowerCase()}`,
+                ),
+              "/dashboard/maintenance?view=preventive",
+            ),
             section(
               "Warranties ending soon",
               warranties.map((item) => `${item.name}, ${day(item.warrantyEndsAt!)}`),

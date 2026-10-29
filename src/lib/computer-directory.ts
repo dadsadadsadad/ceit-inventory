@@ -51,7 +51,6 @@ export type SoftwareEntry = {
   // null = not set
   isLicensed: boolean | null;
   licenseExpiresAt: Date | null;
-  licenseKeyHint: string | null;
   name: string;
   pc: DirectoryPc;
   version: string | null;
