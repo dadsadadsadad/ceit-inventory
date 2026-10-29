@@ -211,8 +211,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
               ← Inventory
             </Link>
-            <p className="eyebrow mt-5">Printing</p>
-            <h1 className="title mt-3 text-3xl">{pcMode ? "PC labels" : "QR labels"}</h1>
+            <h1 className="title mt-4 text-3xl">{pcMode ? "PC labels" : "QR labels"}</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
               {pcMode
                 ? "Spec labels for PC cases with hardware, software and a QR code."
@@ -257,21 +256,20 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             ) : null}
             {pcMode ? <input type="hidden" name="type" value="pc" /> : null}
             <label className="label-picker-search">
-              <span className="block text-sm font-semibold">Search</span>
-              <span className="label-search mt-2">
-                <Search size={16} aria-hidden="true" />
-                <input
-                  name="q"
-                  type="search"
-                  defaultValue={query}
-                  maxLength={120}
-                  className="field w-full rounded-lg py-2.5 pr-3 text-sm"
-                  placeholder="Name, tag or serial"
-                />
-              </span>
+              <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
+              <input
+                type="search"
+                enterKeyHint="search"
+                aria-keyshortcuts="/"
+                name="q"
+                defaultValue={query}
+                maxLength={120}
+                className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
+                placeholder="Name, tag or serial"
+              />
             </label>
             <label>
-              <span className="block text-sm font-semibold">Room</span>
+              <span className="muted text-xs font-bold uppercase tracking-wide">Room</span>
               <select
                 name="location"
                 defaultValue={location}
@@ -286,7 +284,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               </select>
             </label>
             <label>
-              <span className="block text-sm font-semibold">Category</span>
+              <span className="muted text-xs font-bold uppercase tracking-wide">Category</span>
               <select
                 name="category"
                 defaultValue={category}
@@ -302,7 +300,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
             </label>
             {pcMode ? (
               <label>
-                <span className="block text-sm font-semibold">Label size</span>
+                <span className="muted text-xs font-bold uppercase tracking-wide">Label size</span>
                 <select
                   name="size"
                   defaultValue={pcSize === defaultPcLabelSize ? "" : pcSize}
@@ -317,7 +315,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
               </label>
             ) : (
               <label>
-                <span className="block text-sm font-semibold">Label size</span>
+                <span className="muted text-xs font-bold uppercase tracking-wide">Label size</span>
                 <select
                   name="layout"
                   defaultValue={layout === defaultLabelLayout ? "" : layout}

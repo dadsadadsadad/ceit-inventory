@@ -19,8 +19,7 @@ export default async function ImportInventoryPage() {
           <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
             ← Inventory
           </Link>
-          <p className="eyebrow mt-5">Bulk import</p>
-          <h1 className="title mt-3 text-3xl">Import inventory data</h1>
+          <h1 className="title mt-4 text-3xl">Import inventory data</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Import items from a CSV or Excel file.
           </p>

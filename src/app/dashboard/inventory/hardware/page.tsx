@@ -128,10 +128,7 @@ export default async function HardwarePage({
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Equipment register</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">
-              {mode === "pcs" ? "PCs" : "Hardware"}
-            </h1>
+            <h1 className="title text-3xl sm:text-4xl">{mode === "pcs" ? "PCs" : "Hardware"}</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
               {mode === "pcs" ? "Every PC and its hardware." : "Hardware across all PCs."}
             </p>
@@ -198,11 +195,14 @@ export default async function HardwarePage({
           <label className="sm:col-span-2 xl:col-span-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
+              type="search"
+              enterKeyHint="search"
+              aria-keyshortcuts="/"
               name="q"
               defaultValue={q}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Search hardware, PC or room"
+              placeholder="Hardware, PC or room"
             />
           </label>
           <label>
@@ -361,11 +361,11 @@ export default async function HardwarePage({
                         >
                           {entry.pc.name}
                         </Link>
-                        <div className="muted asset-code mt-1 text-xs">
+                        <div className="muted asset-code mt-1 whitespace-nowrap text-xs">
                           {entry.pc.assetTag ?? "No asset tag"}
                         </div>
                       </td>
-                      <td className="muted px-5 py-4 text-sm">{entry.pc.room}</td>
+                      <td className="muted whitespace-nowrap px-5 py-4 text-sm">{entry.pc.room}</td>
                       <td className="px-5 py-4">
                         <span className={inventoryStatusClass(entry.status)}>
                           {inventoryStatusLabel(entry.status)}
@@ -375,7 +375,10 @@ export default async function HardwarePage({
                         (key) => {
                           const value = componentValue(entry, key);
                           return (
-                            <td key={key} className="px-5 py-4 text-sm">
+                            <td
+                              key={key}
+                              className={`px-5 py-4 text-sm ${key === "memory" || key === "storage" ? "whitespace-nowrap" : ""}`}
+                            >
                               {value ?? <span className="muted">Not recorded</span>}
                             </td>
                           );

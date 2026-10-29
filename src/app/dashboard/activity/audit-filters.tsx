@@ -29,6 +29,8 @@ export function AuditFilters({ filters }: { filters: AuditTrailFilters }) {
         <span className="sr-only">Search the audit trail</span>
         <input
           type="search"
+          enterKeyHint="search"
+          aria-keyshortcuts="/"
           name="q"
           defaultValue={filters.query ?? ""}
           maxLength={120}

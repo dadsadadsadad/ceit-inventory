@@ -26,8 +26,7 @@ export default async function SettingsPage() {
     <div className="page settings-page">
       <div className="page-inner space-y-6">
         <header>
-          <p className="eyebrow">Workspace preferences</p>
-          <h1 className="title mt-3 text-3xl sm:text-4xl">Settings</h1>
+          <h1 className="title text-3xl sm:text-4xl">Settings</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Your account, password and email notifications.
           </p>

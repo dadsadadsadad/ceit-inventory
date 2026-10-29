@@ -103,10 +103,7 @@ export function DashboardCalendar({
     <section className="card dashboard-calendar rounded-lg" aria-labelledby="calendar-heading">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Coming up</p>
-          <h2 id="calendar-heading" className="mt-1">
-            Calendar
-          </h2>
+          <h2 id="calendar-heading">Calendar</h2>
         </div>
         <div className="cal-nav">
           <button

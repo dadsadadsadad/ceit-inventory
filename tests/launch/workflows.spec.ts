@@ -80,7 +80,7 @@ test("inventory handles repeated filters and keeps bulk selection across sorting
   await signIn(page);
   await page.goto("/dashboard/inventory?q=Lab%20equipment&q=ignored&sort=item&sort=status");
   await expect(page.getByRole("heading", { name: "Inventory", exact: true })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Search", exact: true })).toHaveValue(
+  await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toHaveValue(
     "Lab equipment",
   );
   await expect(page.locator('input[data-bulk-selection-item="true"]')).toHaveCount(0);

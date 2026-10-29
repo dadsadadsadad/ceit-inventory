@@ -623,7 +623,7 @@ export default async function DashboardPage({
             href="/dashboard/inventory?attention=1"
             className="accent-link text-sm font-semibold"
           >
-            View
+            View all
           </Link>
         </div>
         <GlanceList rows={attentionRows} />

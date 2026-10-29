@@ -4,8 +4,7 @@ export default function NotFound() {
   return (
     <main className="page system-page grid min-h-screen place-items-center">
       <section className="card w-full max-w-lg rounded-lg p-7 text-center">
-        <p className="eyebrow">Not found</p>
-        <h1 className="title mt-3 text-3xl">Page not found</h1>
+        <h1 className="title text-3xl">Page not found</h1>
         <p className="muted mt-3 text-sm leading-6">
           The link might be wrong or the item was deleted. If you scanned a label, try again or ask
           CEIT staff.

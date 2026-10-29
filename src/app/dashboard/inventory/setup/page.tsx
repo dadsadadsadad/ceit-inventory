@@ -38,8 +38,7 @@ export default async function InventorySetupPage() {
     <div className="page settings-page">
       <div className="page-inner space-y-6">
         <header>
-          <p className="eyebrow">Inventory setup</p>
-          <h1 className="title mt-3 text-3xl sm:text-4xl">Rooms and categories</h1>
+          <h1 className="title text-3xl sm:text-4xl">Rooms and categories</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Rooms, item categories and extra fields used across the inventory.
           </p>
@@ -189,8 +188,7 @@ export default async function InventorySetupPage() {
           </div>
 
           <section>
-            <p className="eyebrow">Item details</p>
-            <h2 className="mt-2 text-xl font-semibold">Extra fields</h2>
+            <h2 className="text-xl font-semibold">Extra fields</h2>
             <p className="muted mt-1 max-w-2xl text-sm leading-6">
               Extra details you want to track on items, like a funding source.
             </p>

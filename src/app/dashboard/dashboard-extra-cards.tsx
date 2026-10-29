@@ -82,7 +82,7 @@ const actions: { href: string; label: string; Icon: LucideIcon; manage?: boolean
   { href: "/scan", label: "Scan QR code", Icon: ScanLine },
   { href: "/dashboard/inventory/labels", label: "Print labels", Icon: Printer },
   { href: "/dashboard/inventory/import", label: "Import", Icon: FileUp, manage: true },
-  { href: "/dashboard/maintenance", label: "Repairs", Icon: Wrench, manage: true },
+  { href: "/dashboard/maintenance", label: "Maintenance", Icon: Wrench, manage: true },
   { href: "/dashboard/reports", label: "Reports", Icon: BarChart3 },
 ];
 

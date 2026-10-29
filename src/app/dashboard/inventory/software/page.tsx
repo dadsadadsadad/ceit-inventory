@@ -160,8 +160,7 @@ export default async function SoftwarePage({
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Equipment register</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Software</h1>
+            <h1 className="title text-3xl sm:text-4xl">Software</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Software across all PCs.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -223,11 +222,14 @@ export default async function SoftwarePage({
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
+              type="search"
+              enterKeyHint="search"
+              aria-keyshortcuts="/"
               name="q"
               defaultValue={q}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Search software, PC or room"
+              placeholder="Software, PC or room"
             />
           </label>
           <label>

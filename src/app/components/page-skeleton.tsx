@@ -10,8 +10,8 @@ export function PageSkeleton({
     <div className="page loading-page" aria-busy="true">
       <div className="page-inner space-y-6">
         <div className="space-y-3">
-          <div className="skeleton h-4 w-28" />
           <div className="skeleton h-10 w-64 max-w-full" />
+          <div className="skeleton h-4 w-80 max-w-full" />
         </div>
         {variant === "list" ? (
           <>

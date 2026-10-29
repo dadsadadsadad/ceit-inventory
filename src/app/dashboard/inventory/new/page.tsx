@@ -41,8 +41,7 @@ export default async function NewInventoryItemPage() {
           <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
             ← Inventory
           </Link>
-          <p className="eyebrow mt-5">New record</p>
-          <h1 className="title mt-3 text-3xl">Add item</h1>
+          <h1 className="title mt-4 text-3xl">Add item</h1>
           <p className="muted mt-2 text-sm leading-6">Add equipment or stock.</p>
         </header>
         {!ready ? (

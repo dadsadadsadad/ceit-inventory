@@ -99,6 +99,37 @@ export function FilterForm({
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  // "/" jumps to the search box unless someone is already typing
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if (
+        event.key !== "/" ||
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest("input, textarea, select, [role=dialog]"))
+      ) {
+        return;
+      }
+      const field = formRef.current?.querySelector<HTMLInputElement>('input[name="q"]');
+      if (!field || field.offsetParent === null) {
+        return;
+      }
+      event.preventDefault();
+      field.focus();
+      field.select();
+    }
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
+  }, []);
+
   function handleInput(event: FormEvent<HTMLFormElement>) {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {

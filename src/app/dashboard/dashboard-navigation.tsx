@@ -171,6 +171,11 @@ export function DashboardNavigation({
         </button>
       </div>
 
+      <div
+        className={`mobile-nav-backdrop lg:hidden ${menuOpen ? "is-open" : ""}`}
+        aria-hidden="true"
+        onClick={() => setMenuOpen(false)}
+      />
       <div id="dashboard-navigation" className={`sidebar-content ${menuOpen ? "is-open" : ""}`}>
         <nav aria-label="Dashboard navigation">
           {groups.map((group) => (

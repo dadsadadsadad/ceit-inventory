@@ -80,7 +80,7 @@ export async function createMaintenanceTicket(formData: FormData) {
       async (tx) => {
         const item = await tx.inventoryItem.findUnique({
           where: { id: itemId },
-          select: { id: true, status: true },
+          select: { id: true, assetTag: true, name: true, status: true },
         });
         if (!item || item.status === ItemStatus.RETIRED) {
           throw new FormError("Pick an active item.");
@@ -104,7 +104,12 @@ export async function createMaintenanceTicket(formData: FormData) {
             data: auditEventData({
               action: AuditAction.STATUS_CHANGED,
               actor,
-              entity: { id: itemId, itemId, label: title, type: "inventory-item" },
+              entity: {
+                id: itemId,
+                itemId,
+                label: item.assetTag ?? item.name,
+                type: "inventory-item",
+              },
               metadata: {
                 source: "maintenance-request",
                 maintenanceTicketId: ticket.id,
@@ -181,7 +186,6 @@ export async function updateMaintenanceTicket(formData: FormData) {
         if (itemStatus && existing.inventoryItem.status === ItemStatus.RETIRED) {
           throw new FormError("Restore this item first.");
         }
-        //
         if (itemStatus === ItemStatus.OK || itemStatus === ItemStatus.WORKING) {
           const outstanding = await tx.borrowRequest.count({
             where: {

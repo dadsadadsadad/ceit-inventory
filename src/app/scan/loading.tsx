@@ -2,7 +2,6 @@ export default function ScanLoading() {
   return (
     <main className="page scan-page" aria-busy="true">
       <div className="page-narrow space-y-6">
-        <p className="eyebrow">CEIT Inventory</p>
         <p className="title text-3xl" role="status">
           Loading equipment...
         </p>

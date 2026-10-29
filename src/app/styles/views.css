@@ -647,6 +647,7 @@
 }
 
 .quick-report {
+  align-content: start;
   display: grid;
   gap: 0.25rem;
   height: 100%;

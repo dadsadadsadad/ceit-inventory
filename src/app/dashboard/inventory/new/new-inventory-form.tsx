@@ -128,8 +128,7 @@ export function NewInventoryForm({
       className="card space-y-6 rounded-lg p-5 sm:p-7"
     >
       <section aria-labelledby="new-item-essentials">
-        <p className="eyebrow">The basics</p>
-        <h2 id="new-item-essentials" className="mt-2 text-lg font-semibold">
+        <h2 id="new-item-essentials" className="text-lg font-semibold">
           What are you adding?
         </h2>
         <fieldset className="mt-4 grid gap-3 sm:grid-cols-2">

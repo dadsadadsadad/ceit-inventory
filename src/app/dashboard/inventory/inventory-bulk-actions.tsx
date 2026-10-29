@@ -95,8 +95,7 @@ export function InventoryBulkActions({
       ))}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-xl">
-          <p className="eyebrow">Selected inventory</p>
-          <h2 className="mt-2 text-lg font-bold tracking-tight">{countLabel}</h2>
+          <h2 className="text-lg font-bold tracking-tight">{countLabel}</h2>
           <p className="muted mt-1 text-sm leading-6">Pick an action.</p>
         </div>
 

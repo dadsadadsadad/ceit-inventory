@@ -23,8 +23,7 @@ export default async function ScanPage() {
           <Link href="/dashboard" className="accent-link text-sm font-semibold">
             ← Dashboard
           </Link>
-          <p className="eyebrow mt-5">Mobile inventory</p>
-          <h1 className="title mt-3 text-3xl">Scan a QR code</h1>
+          <h1 className="title mt-4 text-3xl">Scan a QR code</h1>
           <p className="muted mt-2 text-sm leading-6">Scan a label to open the item.</p>
         </header>
         <QrScanner trustedQrOrigin={trustedQrOrigin} />

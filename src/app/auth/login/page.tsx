@@ -44,8 +44,7 @@ export default async function LoginPage({
           </div>
         </div>
         <div className="max-w-xl">
-          <p className="eyebrow">CEIT Inventory</p>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight">CEIT equipment inventory</h2>
+          <h2 className="text-4xl font-bold tracking-tight">CEIT equipment inventory</h2>
           <p className="login-caption">Track equipment, borrowing and repairs.</p>
           <ul className="login-points">
             <li>
@@ -76,8 +75,7 @@ export default async function LoginPage({
         </div>
         <div className="card w-full max-w-md rounded-lg p-6 sm:p-8">
           <div className="mb-7">
-            <p className="eyebrow">Staff access</p>
-            <h1 className="title mt-3 text-3xl">Sign in</h1>
+            <h1 className="title text-3xl">Sign in</h1>
             <p className="muted mt-2 text-sm leading-6">Sign in to continue.</p>
           </div>
           {error && messages[error] ? (

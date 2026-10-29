@@ -63,8 +63,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     <div className="page users-page">
       <div className="page-inner space-y-6">
         <header>
-          <p className="eyebrow">Administration</p>
-          <h1 className="title mt-3 text-3xl sm:text-4xl">Users</h1>
+          <h1 className="title text-3xl sm:text-4xl">Users</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Add accounts, change roles and reset passwords.
           </p>
@@ -152,6 +151,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           <label className="min-[360px]:col-span-2 xl:col-span-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
+              type="search"
+              enterKeyHint="search"
+              aria-keyshortcuts="/"
               name="q"
               defaultValue={query}
               maxLength={120}
@@ -166,7 +168,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               defaultValue={role ?? ""}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             >
-              <option value="">All account types</option>
+              <option value="">All types</option>
               {accountRoles.map((entry) => (
                 <option key={entry.value} value={entry.value}>
                   {entry.label}

@@ -135,8 +135,7 @@ export default async function InventoryPage({
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Equipment register</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Inventory</h1>
+            <h1 className="title text-3xl sm:text-4xl">Inventory</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">All equipment and stock.</p>
           </div>
           {canManage ? (

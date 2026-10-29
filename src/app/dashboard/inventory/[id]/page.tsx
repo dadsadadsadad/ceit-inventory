@@ -60,8 +60,7 @@ export default async function InventoryItemPage({
             <Link href="/dashboard/inventory" className="accent-link text-sm font-semibold">
               ← Inventory
             </Link>
-            <p className="eyebrow mt-5">Inventory record</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">
+            <h1 className="title mt-4 text-3xl sm:text-4xl">
               <OptimisticText entity={`item:${item.id}`} field="name">
                 {item.name}
               </OptimisticText>
@@ -70,7 +69,7 @@ export default async function InventoryItemPage({
               {item.assetTag ? `Asset tag: ${item.assetTag}` : `QR code: ${item.qrCode}`}
             </p>
           </div>
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {canManage ? (
               <Link
                 href={`/dashboard/inventory/${item.id}?edit=1#edit-record`}
@@ -82,27 +81,27 @@ export default async function InventoryItemPage({
             {canManage && !scanned ? (
               <MarkCheckedButton
                 itemId={item.id}
-                className="card card-link w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+                className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
               />
             ) : null}
             {canManage ? (
               <Link
                 href={`/dashboard/maintenance?item=${item.id}`}
-                className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+                className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
               >
                 Report an issue
               </Link>
             ) : null}
             <Link
               href={`/dashboard/inventory/${item.id}/label`}
-              className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+              className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
             >
               Print QR code
             </Link>
             {item.isComputer ? (
               <Link
                 href={`/dashboard/inventory/labels?type=pc&ids=${item.id}`}
-                className="card card-link rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+                className="secondary-button rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
               >
                 Print PC label
               </Link>

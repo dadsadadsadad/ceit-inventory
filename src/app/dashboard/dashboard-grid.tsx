@@ -25,6 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type CSSProperties,
@@ -107,6 +108,8 @@ export function DashboardGrid({ layout, defaults, nodes, editing }: Props) {
   const side = shown.filter((widget) => widget.zone === "side");
   const hidden = items.filter((widget) => !widget.visible);
 
+  // fixed id so the drag aria ids match between server and client
+  const dndId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -287,6 +290,7 @@ export function DashboardGrid({ layout, defaults, nodes, editing }: Props) {
       ) : null}
 
       <DndContext
+        id={dndId}
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragOver={dragOver}

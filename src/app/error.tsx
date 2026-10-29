@@ -16,8 +16,7 @@ export default function ApplicationError({
   return (
     <main className="page system-page grid min-h-screen place-items-center">
       <section className="card w-full max-w-lg rounded-lg p-7 text-center">
-        <p className="eyebrow">Something went wrong</p>
-        <h1 className="title mt-3 text-3xl">Something went wrong</h1>
+        <h1 className="title text-3xl">Something went wrong</h1>
         <p className="muted mt-3 text-sm leading-6">
           Reload the page. If it keeps happening, go back to the dashboard and check if your change
           was saved.
@@ -31,7 +30,7 @@ export default function ApplicationError({
           </button>
           <a
             href="/dashboard"
-            className="card card-link rounded-lg px-4 py-2.5 text-sm font-semibold"
+            className="secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold"
           >
             Dashboard
           </a>

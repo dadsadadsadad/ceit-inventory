@@ -68,11 +68,14 @@ export function InventoryFilters({
         <label className="min-[360px]:col-span-2">
           <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
           <input
+            type="search"
+            enterKeyHint="search"
+            aria-keyshortcuts="/"
             name="q"
             defaultValue={search.q?.slice(0, 120) ?? ""}
             maxLength={120}
             className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Search name, tag, serial, room"
+            placeholder="Name, tag, serial or room"
           />
         </label>
         <label>

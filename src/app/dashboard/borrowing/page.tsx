@@ -106,8 +106,7 @@ export default async function BorrowingPage({
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Equipment lending</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Borrowing</h1>
+            <h1 className="title text-3xl sm:text-4xl">Borrowing</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">
               Requests, reservations, checkouts and returns.
             </p>
@@ -126,11 +125,14 @@ export default async function BorrowingPage({
           <label>
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
+              type="search"
+              enterKeyHint="search"
+              aria-keyshortcuts="/"
               name="q"
               defaultValue={textParam(search.q)}
               maxLength={120}
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Name, student no., contact, item or tag"
+              placeholder="Name, student no., item or tag"
             />
           </label>
           <label>

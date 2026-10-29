@@ -152,8 +152,7 @@ export default async function MaintenancePage({
       <div className="page-inner space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Maintenance</p>
-            <h1 className="title mt-3 text-3xl sm:text-4xl">Maintenance requests</h1>
+            <h1 className="title text-3xl sm:text-4xl">Maintenance requests</h1>
             <p className="muted mt-2 max-w-2xl text-sm leading-6">Reported problems and repairs.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -264,10 +263,13 @@ export default async function MaintenancePage({
           <label className="min-w-0 flex-1">
             <span className="muted text-xs font-bold uppercase tracking-wide">Search</span>
             <input
+              type="search"
+              enterKeyHint="search"
+              aria-keyshortcuts="/"
               name="q"
               defaultValue={query}
               maxLength={120}
-              placeholder="Search issue, item or tag"
+              placeholder="Issue, item or tag"
               className="field mt-2 w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </label>

@@ -8,8 +8,7 @@ export function AccountSettings({ email, username }: { email: string; username: 
   return (
     <section className="card rounded-lg p-5 sm:p-6">
       <div>
-        <p className="eyebrow">Your account</p>
-        <h2 className="mt-2 text-lg font-semibold">Sign-in details</h2>
+        <h2 className="text-lg font-semibold">Sign-in details</h2>
         <p className="muted mt-1 max-w-2xl text-sm leading-6">
           You can sign in with your email or username. Your current password is needed to save
           changes.

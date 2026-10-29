@@ -613,10 +613,16 @@ a.pc-chip:hover {
 
 /* tabs and pagination */
 .view-tabs {
-  border-bottom: 1px solid var(--border);
+  /* inset line, a border would clip the active underline when scrolling */
+  box-shadow: inset 0 -1px 0 var(--border);
   display: flex;
-  flex-wrap: wrap;
   gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.view-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .view-tab {
@@ -624,8 +630,8 @@ a.pc-chip:hover {
   color: var(--muted);
   font-size: 0.9375rem;
   font-weight: 700;
-  margin-bottom: -1px;
   padding: 0.7rem 1rem;
+  white-space: nowrap;
   transition:
     color var(--interaction-duration) ease,
     border-color var(--interaction-duration) ease;
@@ -714,6 +720,12 @@ a.pc-chip:hover {
 .page-inner details[open] > summary,
 .page-narrow details[open] > summary {
   color: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(.page-inner, .page-narrow) details:not(.secondary-actions)[open] > :not(summary) {
+    animation: feedback-in 200ms ease-out;
+  }
 }
 
 .secondary-actions {
@@ -1560,6 +1572,10 @@ a.pc-chip:hover {
   flex-wrap: wrap;
   gap: 0.5rem 1rem;
   justify-content: space-between;
+}
+
+.request-card-head > :last-child {
+  margin-left: auto;
 }
 
 .request-card-grid {

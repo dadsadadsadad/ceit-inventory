@@ -125,7 +125,7 @@ export function availableScheduledQuantity(
     events.push({ at: Math.max(start, loanStart), delta: loan.requestedQuantity });
     events.push({ at: Math.min(end, loanEnd), delta: -loan.requestedQuantity });
   }
-  //
+  // ends before starts at the same moment, so back-to-back loans don't overlap
   events.sort((a, b) => a.at - b.at || a.delta - b.delta);
   let demand = 0;
   let peak = 0;

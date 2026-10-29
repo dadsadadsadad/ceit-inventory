@@ -146,8 +146,7 @@ export default async function ReportsPage({
     <div className="page reports-page">
       <div className="page-inner space-y-6">
         <header>
-          <p className="eyebrow">Department records</p>
-          <h1 className="title mt-3 text-3xl sm:text-4xl">Reports</h1>
+          <h1 className="title text-3xl sm:text-4xl">Reports</h1>
           <p className="muted mt-2 max-w-2xl text-sm leading-6">
             Pick a report and filters, then print or download it as PDF or CSV.
           </p>

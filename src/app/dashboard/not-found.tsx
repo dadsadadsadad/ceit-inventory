@@ -9,8 +9,7 @@ export default function DashboardNotFound() {
     <div className="page">
       <div className="page-inner space-y-6">
         <header>
-          <p className="eyebrow">Not found</p>
-          <h1 className="title mt-3 text-3xl">Item not found</h1>
+          <h1 className="title text-3xl">Item not found</h1>
         </header>
         <EmptyState
           icon={SearchX}

@@ -219,8 +219,7 @@ export default async function ScannedItemPage({
             )}
             <span className="muted text-sm font-semibold">CEIT Inventory</span>
           </div>
-          <p className="eyebrow mt-5">Scanned item</p>
-          <h1 className="title mt-3 text-3xl">{item.name}</h1>
+          <h1 className="title mt-4 text-3xl">{item.name}</h1>
           <p className="muted mt-2 text-sm leading-6">
             {item.category.name} · {item.location.name}
           </p>

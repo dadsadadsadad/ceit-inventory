@@ -79,6 +79,17 @@
   transition: background-color var(--interaction-duration) ease;
 }
 
+/* odd tile out fills the last row on two columns */
+.overview-metrics > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+@container workspace (min-width: 44rem) {
+  .overview-metrics > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
+
 .overview-metrics > a:hover {
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
@@ -531,10 +542,6 @@
   color: #b9b09e;
 }
 
-.login-panel .eyebrow {
-  color: #c9bfab;
-}
-
 .login-panel h2 {
   font-family: var(--font-display);
   font-size: clamp(2.4rem, 4vw, 3.8rem);
@@ -595,6 +602,10 @@
   text-align: center;
 }
 
+.system-page .card > .title {
+  margin-top: 1.4rem;
+}
+
 .system-page .card::before {
   background: var(--accent);
   content: "";
@@ -604,10 +615,6 @@
   top: 1.4rem;
   transform: rotate(45deg);
   width: 0.55rem;
-}
-
-.system-page .eyebrow {
-  margin-top: 1.8rem;
 }
 
 /* qr labels */
@@ -971,24 +978,6 @@
   }
 }
 
-.label-search {
-  display: block;
-  position: relative;
-}
-
-.label-search > svg {
-  color: var(--muted);
-  left: 0.8rem;
-  pointer-events: none;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.label-search > .field {
-  padding-left: 2.3rem;
-}
-
 .label-grid-block {
   display: grid;
   gap: 0.9rem;
@@ -1024,6 +1013,7 @@
 }
 
 .label-tile {
+  align-content: start;
   background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: var(--radius-control);
@@ -1516,6 +1506,25 @@
   align-items: start;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-widget:not(.editable-widget) {
+    animation: page-enter 320ms var(--interaction-ease) backwards;
+    animation-delay: 100ms;
+  }
+
+  .dashboard-widget:not(.editable-widget):nth-child(2) {
+    animation-delay: 150ms;
+  }
+
+  .dashboard-widget:not(.editable-widget):nth-child(3) {
+    animation-delay: 200ms;
+  }
+
+  .dashboard-widget:not(.editable-widget):nth-child(n + 4) {
+    animation-delay: 250ms;
+  }
+}
+
 .dashboard-overview-page .overview-metrics > a {
   padding: 0.6rem 1rem 0.7rem;
 }
@@ -1783,10 +1792,6 @@
 }
 
 /* side rail */
-.dashboard-rail .dashboard-calendar .eyebrow {
-  display: none;
-}
-
 .dashboard-rail :is(.cal-nav-button, .cal-today) {
   min-height: 1.9rem;
 }

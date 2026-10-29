@@ -43,7 +43,13 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
-Add rooms and categories in **Inventory > Rooms and categories** first.
+On a new database, create the first admin account. It prints a temporary password, change it in **Settings** after signing in:
+
+```bash
+npm run db:create-admin -- admin admin@example.com
+```
+
+Then add rooms and categories in **Inventory > Rooms and categories**.
 
 `DIRECT_URL` is only for migrations. If `SCHOOL_DATABASE_URL` is set it's used instead of `DATABASE_URL`. Don't commit any of these.
 
@@ -61,7 +67,8 @@ Set `NEXT_PUBLIC_APP_URL` to the real public address before printing labels, sin
 2. Create the `ceit_inventory_migrator` and `ceit_inventory_app` roles.
 3. Set `SCHOOL_DATABASE_URL` (app role) and `DIRECT_URL` (migrator role).
 4. Run `npm run db:migrate:deploy`, then remove `DIRECT_URL` from the app's env.
-5. Serve it over https (needed for cookies and the phone camera).
+5. Run `npm run db:create-admin -- <username> <email>` for the first account.
+6. Serve it over https (needed for cookies and the phone camera).
 
 Details in [docs/school-postgresql.md](docs/school-postgresql.md). Release steps and borrowing rules are in [docs/launch-checklist.md](docs/launch-checklist.md).
 

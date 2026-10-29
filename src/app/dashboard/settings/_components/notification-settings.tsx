@@ -26,8 +26,7 @@ export function NotificationSettings({
 }: Props) {
   return (
     <section className="card rounded-lg p-5 sm:p-6">
-      <p className="eyebrow">Email</p>
-      <h2 className="mt-2 text-lg font-semibold">Email notifications</h2>
+      <h2 className="text-lg font-semibold">Email notifications</h2>
       <p className="muted mt-1 max-w-2xl text-sm leading-6">
         Pick what gets sent to <strong>{email}</strong>, and when.
         {mailReady ? null : " Email isn't set up on the server yet, so nothing is sent for now."}

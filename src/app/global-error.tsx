@@ -52,18 +52,6 @@ export default function GlobalError({
               width: "9px",
             }}
           />
-          <p
-            style={{
-              color: "#665e50",
-              fontFamily: "Consolas, 'SFMono-Regular', monospace",
-              fontSize: ".875rem",
-              letterSpacing: ".1em",
-              margin: "1.1rem 0 0",
-              textTransform: "uppercase",
-            }}
-          >
-            Temporary issue
-          </p>
           <h1
             style={{
               fontFamily: "'Iowan Old Style', 'Palatino Linotype', Georgia, serif",
@@ -71,7 +59,7 @@ export default function GlobalError({
               fontWeight: 600,
               letterSpacing: "-.02em",
               lineHeight: 1.1,
-              margin: ".85rem 0 0",
+              margin: "1.4rem 0 0",
             }}
           >
             CEIT Inventory is down
